@@ -40,7 +40,7 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Caminho padrão do Chrome interno do container Puppeteer Docker
+        // Caminho padrão do Chrome instalado via APT_PACKAGES no Linux do Render
         executablePath: '/usr/bin/google-chrome-stable', 
         args: [
             '--no-sandbox', 
