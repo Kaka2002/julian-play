@@ -37,8 +37,8 @@ app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
 // Função dinâmica que descobre automaticamente a versão do Chrome instalada no Render
 function obterCaminhoChrome() {
-    // Aponta para a nova pasta local persistida no deploy
-    const caminhoLocal = path.join(__dirname, 'chrome-cache', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
+    // Aponta para o caminho absoluto definitivo criado no build
+    const caminhoLocal = path.join('/opt/render/project/src/', 'chrome-cache', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
     console.log(`🔍 Buscando Chrome em: ${caminhoLocal}`);
     return caminhoLocal;
 }
