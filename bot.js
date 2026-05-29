@@ -1,4 +1,5 @@
-const qrcode = require('qrcode-terminal');
+//const qrcode = require('qrcode-terminal');
+const QRCode = require('qrcode');
 //const { Client, MessageMedia } = require('whatsapp-web.js');
 const { Client, RemoteAuth } = require('whatsapp-web.js'); // Mudamos para RemoteAuth ou mantemos LocalAuth temporariamente
 const QRCode = require('qrcode');
@@ -10,21 +11,43 @@ const path = require('path');
 let qrAtual = '';
 
 //app.get('/', (req, res) => res.send('Bot Ativo!'));
-app.get('/qr', (req, res) => {
+//app.get('/qr', (req, res) => {
+  //  if (!qrAtual) {
+    //    return res.send('QR Code ainda não gerado ou já escaneado. Aguarde ou reinicie.');
+    //}
+    // Gera uma imagem de QR Code limpa na tela do navegador
+    //res.send(`
+      //  <html>
+        //    <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
+          //      <h2>Escaneie o QR Code abaixo:</h2>
+            //    <img src="https://qrserver.com{encodeURIComponent(qrAtual)}" />
+              //  <p>Atualize a página se o celular não ler de primeira.</p>
+            //</body>
+        //</html>
+    //`);
+//})
+app.get('/qr', async (req, res) => {
     if (!qrAtual) {
         return res.send('QR Code ainda não gerado ou já escaneado. Aguarde ou reinicie.');
     }
-    // Gera uma imagem de QR Code limpa na tela do navegador
-    res.send(`
-        <html>
-            <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
-                <h2>Escaneie o QR Code abaixo:</h2>
-                <img src="https://qrserver.com{encodeURIComponent(qrAtual)}" />
-                <p>Atualize a página se o celular não ler de primeira.</p>
-            </body>
-        </html>
-    `);
-})
+    try {
+        // Gera a imagem diretamente em formato Base64 (sem depender de APIs externas)
+        const qrImage = await QRCode.toDataURL(qrAtual);
+        res.send(`
+            <html>
+                <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background-color:#f0f2f5;">
+                    <div style="background:white;padding:30px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);text-align:center;">
+                        <h2 style="color:#128c7e;">Escaneie o QR Code abaixo:</h2>
+                        <img src="${qrImage}" style="width:300px;height:300px;margin:20px 0;" />
+                        <p style="color:#666;">Abra o WhatsApp > Aparelhos conectados > Conectar dispositivo</p>
+                    </div>
+                </body>
+            </html>
+        `);
+    } catch (err) {
+        res.status(500).send('Erro ao gerar a imagem do QR Code.');
+    }
+});
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
