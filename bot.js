@@ -1,7 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const QRCode = require('qrcode');
 const express = require('express');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
-const path = require('path');
 const usuarios = new Map();
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const app = express();
@@ -34,24 +35,46 @@ app.get('/qr', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
-// Instanciação ultra-leve do Puppeteer para não estourar os 512MB de RAM
+const fs = require('fs');
+const path = require('path');
+
+// Função dinâmica que descobre automaticamente a versão do Chrome instalada no Render
+function obterCaminhoChrome() {
+    const pastaBase = '/opt/render/.cache/puppeteer/chrome';
+    try {
+        if (fs.existsSync(pastaBase)) {
+            const subpastas = fs.readdirSync(pastaBase);
+            if (subpastas.length > 0) {
+                // Pega a pasta da versão atual instalada no cache (ex: linux-127.0...)
+                const caminhoFinal = path.join(pastaBase, subpastas[0], 'chrome-linux64', 'chrome');
+                console.log(`🔍 Chrome dinâmico encontrado em: ${caminhoFinal}`);
+                return caminhoFinal;
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao mapear pasta do Chrome:', e.message);
+    }
+    // Caminho reserva caso a automação falhe
+    return '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome';
+}
+
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: './.wwebjs_auth'
+        dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        headless: true,
-        // Força o uso do Chrome instalado no cache do Render
-        executablePath: '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
+        // Executa a função que detecta a versão correta instalada no build
+        executablePath: obterCaminhoChrome(),
         args: [
-            '--no-sandbox',
+            '--no-sandbox', 
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
+            '--disable-gpu',
             '--no-first-run',
             '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
+            '--single-process', 
+            '--disable-extensions',
+            '--disable-audio-output'
         ],
     }
 });
