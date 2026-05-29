@@ -94,7 +94,6 @@ client.on('loading_screen', async () => {
     }
 });
 
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function enviarMensagem(to, texto) {
     try {
         await delay(1000); 
