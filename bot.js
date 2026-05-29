@@ -40,7 +40,7 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Aponta para o Chrome baixado de forma limpa pelo comando de build acima
+        // Caminho exato da nova instalação limpa gerada pelo buildpack
         executablePath: path.join(__dirname, 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
         args: [
             '--no-sandbox', 
