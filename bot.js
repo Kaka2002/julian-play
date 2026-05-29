@@ -40,8 +40,8 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Caminho padrão do Chrome instalado via APT_PACKAGES no Linux do Render
-        executablePath: '/usr/bin/google-chrome-stable', 
+        // Alinha o código com a pasta local persistida no Render
+        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -51,8 +51,7 @@ const client = new Client({
             '--no-zygote',
             '--single-process', 
             '--disable-extensions',
-            '--disable-audio-output',
-            '--js-flags=--max-old-space-size=150'
+            '--disable-audio-output'
         ],
     }
 });
