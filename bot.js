@@ -40,8 +40,7 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Caminho exato da nova instalação limpa gerada pelo buildpack
-        executablePath: path.join(__dirname, 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
+        // Sem caminho manual! Deixamos o pacote gerenciar a localização do Chrome
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -55,6 +54,7 @@ const client = new Client({
         ],
     }
 });
+
 
 // Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
 client.on('qr', (qr) => {
