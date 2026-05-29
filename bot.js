@@ -21,7 +21,7 @@ const client = new Client({
             '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', // Reduz drasticamente o uso de memória RAM
+            '--single-process', // Ajuda a economizar memória no Render
             '--disable-gpu'
         ],
     }
