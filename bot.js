@@ -7,8 +7,10 @@ const usuarios = new Map();
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const app = express();
 const PORT = process.env.PORT || 10000;
+const chromePath = '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome';
 
 let qrAtual = '';
+console.log('Chrome configurado em:', chromePath);
 
 // Rota Otimizada para carregar o QR Code de forma estática (Base64)
 app.get('/qr', async (req, res) => {
@@ -40,6 +42,7 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
+        executablePath: chromePath,
         headless: true,
         args: [
             '--no-sandbox',
@@ -292,6 +295,12 @@ client.on('auth_failure', (msg) => console.error('❌ Falha na autenticação:',
 client.on('disconnected', (reason) => console.log('❌ Desconectado:', reason));
 
 console.log('🚀 Iniciando bot JULIAN PLAY TV...\n');
+
+console.log(
+    'Chrome existe?',
+    fs.existsSync(chromePath)
+);
+
 client.initialize();
 
 process.on('SIGINT', async () => {
