@@ -9,10 +9,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-  "express": "^4.19.2",
-  "qrcode": "^1.5.3",
-  "whatsapp-web.js": "1.23.0",
-  "puppeteer-core": "21.6.0"
+    "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "whatsapp-web.js": "1.23.0",
+    "puppeteer-core": "21.6.0"
   }
 }

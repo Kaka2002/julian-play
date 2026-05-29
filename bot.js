@@ -58,10 +58,20 @@ const client = new Client({
             '--disable-features=Translate',
             '--disable-ipc-flooding-protection',
             '--disable-renderer-backgrounding',
-            '--enable-features=NetworkService,NetworkServiceInProcess'
+            '--enable-features=NetworkService,NetworkServiceInProcess',
+            '--js-flags="--max-old-space-size=150"'
         ],
     }
 });
+
+// Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
+client.on('qr', (qr) => {
+    qrAtual = qr;
+    console.log('👉 Novo QR Code guardado. Acesse a rota /qr para escanear.');
+});
+
+const usuarios = new Map();
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // BLOQUEADOR DE MÍDIA (Garante que fotos/áudios não consumam os 512MB de RAM)
 client.on('loading_screen', async () => {
@@ -84,12 +94,6 @@ client.on('loading_screen', async () => {
     } catch (e) {
         console.log('Erro ao otimizar interceptação de mídia');
     }
-});
-
-// Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
-client.on('qr', (qr) => {
-    qrAtual = qr;
-    console.log('👉 Novo QR Code guardado. Acesse a rota /qr para escanear.');
 });
 
 const usuarios = new Map();
