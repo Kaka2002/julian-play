@@ -40,8 +40,8 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Alinha o código com a pasta local persistida no Render
-        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
+        // Aponta para o Chrome baixado de forma limpa pelo comando de build acima
+        executablePath: path.join(__dirname, 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
