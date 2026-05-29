@@ -40,7 +40,8 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Sem caminho manual! Deixamos o pacote gerenciar a localização do Chrome
+        // Caminho exato baseado no que o Render acabou de instalar com sucesso
+        executablePath: '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
