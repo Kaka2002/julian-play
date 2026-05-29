@@ -63,6 +63,29 @@ const client = new Client({
     }
 });
 
+// BLOQUEADOR DE MÍDIA (Garante que fotos/áudios não consumam os 512MB de RAM)
+client.on('loading_screen', async () => {
+    try {
+        const puppeteerBrowser = client.puppeteer;
+        if (puppeteerBrowser) {
+            const pages = await puppeteerBrowser.pages();
+            if (pages.length > 0) {
+                await pages[0].setRequestInterception(true);
+                pages[0].on('request', (req) => {
+                    const resourceType = req.resourceType();
+                    if (['image', 'stylesheet', 'media', 'font'].includes(resourceType)) {
+                        req.abort();
+                    } else {
+                        req.continue();
+                    }
+                });
+            }
+        }
+    } catch (e) {
+        console.log('Erro ao otimizar interceptação de mídia');
+    }
+});
+
 // Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
 client.on('qr', (qr) => {
     qrAtual = qr;
