@@ -37,25 +37,24 @@ app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 // Instanciação ultra-leve do Puppeteer para não estourar os 512MB de RAM
 const client = new Client({
     authStrategy: new LocalAuth({
-        dataPath: path.join(__dirname, '.wwebjs_auth')
+        dataPath: './.wwebjs_auth'
     }),
     puppeteer: {
-        // Caminho exato baseado no que o Render acabou de instalar com sucesso
-        executablePath: '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome',
+        headless: true,
+        // Força o uso do Chrome instalado no cache do Render
+        executablePath: '/opt/render/.cache/puppeteer/chrome/linux-146.0.7680.31/chrome-linux64/chrome',
         args: [
-            '--no-sandbox', 
+            '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
-            '--disable-gpu',
+            '--disable-accelerated-2d-canvas',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', 
-            '--disable-extensions',
-            '--disable-audio-output'
+            '--single-process',
+            '--disable-gpu'
         ],
     }
 });
-
 
 // Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
 client.on('qr', (qr) => {
