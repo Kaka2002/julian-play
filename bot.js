@@ -2,7 +2,6 @@
 const QRCode = require('qrcode');
 //const { Client, MessageMedia } = require('whatsapp-web.js');
 const { Client, RemoteAuth } = require('whatsapp-web.js'); // Mudamos para RemoteAuth ou mantemos LocalAuth temporariamente
-const QRCode = require('qrcode');
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
