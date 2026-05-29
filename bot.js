@@ -40,7 +40,8 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome', '--js-flags="--max-old-space-size=150"'),
+        // Caminho padrão do Chrome interno do container Puppeteer Docker
+        executablePath: '/usr/bin/google-chrome-stable', 
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -51,16 +52,7 @@ const client = new Client({
             '--single-process', 
             '--disable-extensions',
             '--disable-audio-output',
-            '--disable-background-networking',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-breakpad',
-            '--disable-component-extensions-with-background-pages',
-            '--disable-features=Translate',
-            '--disable-ipc-flooding-protection',
-            '--disable-renderer-backgrounding',
-            '--enable-features=NetworkService,NetworkServiceInProcess',
-            '--js-flags="--max-old-space-size=150"'
+            '--js-flags=--max-old-space-size=150'
         ],
     }
 });
