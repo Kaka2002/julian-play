@@ -2,7 +2,8 @@ const QRCode = require('qrcode');
 const express = require('express');
 const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
 const path = require('path');
-
+const usuarios = new Map();
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -70,9 +71,6 @@ client.on('qr', (qr) => {
     console.log('👉 Novo QR Code guardado. Acesse a rota /qr para escanear.');
 });
 
-const usuarios = new Map();
-const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-
 // BLOQUEADOR DE MÍDIA (Garante que fotos/áudios não consumam os 512MB de RAM)
 client.on('loading_screen', async () => {
     try {
@@ -96,7 +94,6 @@ client.on('loading_screen', async () => {
     }
 });
 
-const usuarios = new Map();
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function enviarMensagem(to, texto) {
     try {
