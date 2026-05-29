@@ -1,17 +1,9 @@
-# Exported from Render on 2026-05-29T17:29:16Z
-version: "1"
 services:
-- type: web
-  name: meu-whatsapp-bot
-  runtime: node
-  repo: https://github.com/Kaka2002/alteracao
-  plan: free
-  envVars:
-  - key: PUPPETEER_EXECUTABLE_PATH
-    sync: false
-  - key: PUPPETEER_SKIP_CHROMIUM_DOWNLOAD
-    sync: false
-  region: oregon
-  buildCommand: npm install
-  startCommand: node bot.js
-  autoDeployTrigger: commit
+  - type: web
+    name: julian-play
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20

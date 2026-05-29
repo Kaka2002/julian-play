@@ -35,31 +35,23 @@ app.get('/qr', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
-// Função dinâmica que descobre automaticamente a versão do Chrome instalada no Render
-function obterCaminhoChrome() {
-    // Aponta para o caminho absoluto definitivo criado no build
-    const caminhoLocal = path.join('/opt/render/project/src/', 'chrome-cache', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
-    console.log(`🔍 Buscando Chrome em: ${caminhoLocal}`);
-    return caminhoLocal;
-}
-
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        executablePath: obterCaminhoChrome(),
+        headless: true,
         args: [
-            '--no-sandbox', 
+            '--no-sandbox',
             '--disable-setuid-sandbox',
             '--disable-dev-shm-usage',
             '--disable-gpu',
             '--no-first-run',
             '--no-zygote',
-            '--single-process', 
+            '--single-process',
             '--disable-extensions',
             '--disable-audio-output'
-        ],
+        ]
     }
 });
 
