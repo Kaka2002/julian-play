@@ -32,13 +32,14 @@ app.get('/qr', async (req, res) => {
 });
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
+
 // Instanciação ultra-leve do Puppeteer para não estourar os 512MB de RAM
 const client = new Client({
     authStrategy: new LocalAuth({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
+        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome', '--js-flags="--max-old-space-size=150"'),
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -72,10 +73,8 @@ const usuarios = new Map();
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function enviarMensagem(to, texto) {
     try {
-        const chat = await client.getChatById(to);
-        await delay(2000); 
-        await chat.sendStateTyping(); 
-        await delay(1500); 
+        await delay(1000); 
+        // Envia direto para o ID sem precisar dar getChatById, economizando RAM
         await client.sendMessage(to, texto);
         console.log(`✅ Mensagem enviada`);
         return true;
@@ -87,23 +86,16 @@ async function enviarMensagem(to, texto) {
 
 async function enviarQRCodePIX(to, pixCode, valor, plano) {
     try {
-        const chat = await client.getChatById(to);
-        await delay(2000);
-        await chat.sendStateTyping();
         await delay(1500);
-        
-        const qrCodeBuffer = await QRCode.toBuffer(pixCode, { width: 400, margin: 2, color: { dark: '#000000', light: '#FFFFFF' } });
+        const qrCodeBuffer = await QRCode.toBuffer(pixCode, { width: 350, margin: 2 });
         const base64Image = qrCodeBuffer.toString('base64');
-        const media = new MessageMedia('image/png', base64Image, `pix_${plano}.png`);
+        const media = new MessageMedia('image/png', base64Image, `pix.png`);
         
-        await client.sendMessage(to, media, { caption: `*💰 PIX PARA ${plano}*\n\n` +
-            `💎 *Valor:* R$ ${valor}\n\n` + `📱 *Como pagar:*\n` + `1️⃣ Abra o app do seu banco\n` + `2️⃣ Escolha a opção PIX\n` +
-            `3️⃣ Selecione "Ler QR Code"\n` + `4️⃣ Escaneie a imagem acima\n` + `5️⃣ Confirme o pagamento\n\n` + `✅ *Após o pagamento, envie o comprovante aqui para ativação imediata*\n\n` + `Digite *0* para voltar ao Menu Principal` });
-        console.log(`✅ QR Code PIX ${plano} enviado com sucesso`);
+        await client.sendMessage(to, media, { caption: `*💰 PIX PARA ${plano}*\n\n💎 *Valor:* R$ ${valor}\n\nDigite *0* para voltar.` });
+        console.log(`✅ QR Code PIX enviado`);
         return true;
     } catch (error) {
-        console.error(`❌ Erro ao gerar QR Code: ${error.message}`);
-        await enviarMensagem(to, `❌ Erro ao gerar QR Code. Por favor, tente novamente ou escolha outro plano.\n\nDigite *0* para voltar ao Menu Principal`);
+        console.error(`❌ Erro PIX: ${error.message}`);
         return false;
     }
 }
