@@ -5,15 +5,35 @@ const QRCode = require('qrcode');
 const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const path = require('path');
+// Crie uma variável global para guardar o texto do QR
+let qrAtual = '';
 
-app.get('/', (req, res) => res.send('Bot Ativo!'));
+//app.get('/', (req, res) => res.send('Bot Ativo!'));
+app.get('/qr', (req, res) => {
+    if (!qrAtual) {
+        return res.send('QR Code ainda não gerado ou já escaneado. Aguarde ou reinicie.');
+    }
+    // Gera uma imagem de QR Code limpa na tela do navegador
+    res.send(`
+        <html>
+            <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;">
+                <h2>Escaneie o QR Code abaixo:</h2>
+                <img src="https://qrserver.com{encodeURIComponent(qrAtual)}" />
+                <p>Atualize a página se o celular não ler de primeira.</p>
+            </body>
+        </html>
+    `);
+})
+
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
 // Cliente SIMPLES sem LocalAuth
 //const client = new Client({puppeteer: {executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',}});
 const client = new Client({
     puppeteer: {
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+        // Aponta para a pasta local criada pelo arquivo de configuração acima
+        executablePath: path.join(__dirname, '.cache', 'puppeteer', 'chrome', 'linux-146.0.7680.31', 'chrome-linux64', 'chrome'),
         args: [
             '--no-sandbox', 
             '--disable-setuid-sandbox',
@@ -21,6 +41,11 @@ const client = new Client({
             '--disable-gpu'
         ],
     }
+});
+
+client.on('qr', (qr) => {
+    qrAtual = qr;
+    console.log('Novo QR Code gerado. Acesse a rota /qr para escanear.');
 });
 
 // Armazenamento de usuários
