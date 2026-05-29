@@ -35,9 +35,6 @@ app.get('/qr', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
-const fs = require('fs');
-const path = require('path');
-
 // Função dinâmica que descobre automaticamente a versão do Chrome instalada no Render
 function obterCaminhoChrome() {
     const pastaBase = '/opt/render/.cache/puppeteer/chrome';
