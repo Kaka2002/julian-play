@@ -37,22 +37,10 @@ app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
 // Função dinâmica que descobre automaticamente a versão do Chrome instalada no Render
 function obterCaminhoChrome() {
-    const pastaBase = '/opt/render/.cache/puppeteer/chrome';
-    try {
-        if (fs.existsSync(pastaBase)) {
-            const subpastas = fs.readdirSync(pastaBase);
-            if (subpastas.length > 0) {
-                // Pega a pasta da versão atual instalada no cache (ex: linux-127.0...)
-                const caminhoFinal = path.join(pastaBase, subpastas[0], 'chrome-linux64', 'chrome');
-                console.log(`🔍 Chrome dinâmico encontrado em: ${caminhoFinal}`);
-                return caminhoFinal;
-            }
-        }
-    } catch (e) {
-        console.error('Erro ao mapear pasta do Chrome:', e.message);
-    }
-    // Caminho reserva caso a automação falhe
-    return '/opt/render/.cache/puppeteer/chrome/linux-127.0.6533.88/chrome-linux64/chrome';
+    // Aponta para a nova pasta local persistida no deploy
+    const caminhoLocal = path.join(__dirname, 'chrome-cache', 'chrome', 'linux-127.0.6533.88', 'chrome-linux64', 'chrome');
+    console.log(`🔍 Buscando Chrome em: ${caminhoLocal}`);
+    return caminhoLocal;
 }
 
 const client = new Client({
@@ -60,7 +48,6 @@ const client = new Client({
         dataPath: path.join(__dirname, '.wwebjs_auth')
     }),
     puppeteer: {
-        // Executa a função que detecta a versão correta instalada no build
         executablePath: obterCaminhoChrome(),
         args: [
             '--no-sandbox', 
