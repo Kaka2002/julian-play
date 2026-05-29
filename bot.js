@@ -26,26 +26,27 @@ let qrAtual = '';
         //</html>
     //`);
 //})
+// Substitua a sua rota app.get('/qr', ...) antiga por esta nova:
 app.get('/qr', async (req, res) => {
     if (!qrAtual) {
         return res.send('QR Code ainda não gerado ou já escaneado. Aguarde ou reinicie.');
     }
     try {
-        // Gera a imagem diretamente em formato Base64 (sem depender de APIs externas)
+        // Isso gera a imagem em texto puro (Base64) direto do servidor do Render
         const qrImage = await QRCode.toDataURL(qrAtual);
         res.send(`
             <html>
                 <body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background-color:#f0f2f5;">
                     <div style="background:white;padding:30px;border-radius:10px;box-shadow:0 4px 6px rgba(0,0,0,0.1);text-align:center;">
-                        <h2 style="color:#128c7e;">Escaneie o QR Code abaixo:</h2>
+                        <h2 style="color:#128c7e;margin-bottom:10px;">Escaneie o QR Code abaixo:</h2>
                         <img src="${qrImage}" style="width:300px;height:300px;margin:20px 0;" />
-                        <p style="color:#666;">Abra o WhatsApp > Aparelhos conectados > Conectar dispositivo</p>
+                        <p style="color:#666;font-size:14px;">Abra o WhatsApp > Aparelhos conectados > Conectar dispositivo</p>
                     </div>
                 </body>
             </html>
         `);
     } catch (err) {
-        res.status(500).send('Erro ao gerar a imagem do QR Code.');
+        res.status(500).send('Erro ao gerar a imagem interna do QR Code.');
     }
 });
 
