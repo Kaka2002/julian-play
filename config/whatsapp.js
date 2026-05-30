@@ -4,7 +4,8 @@ const { responderMensagem } = require('../services/conversaService');
 
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
-const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 90000);
+const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 180000);
+const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 180000);
 
 let client;
 let qrAtual = '';
@@ -54,7 +55,7 @@ async function iniciarWhatsApp() {
             puppeteer: {
                 executablePath,
                 headless: true,
-                protocolTimeout: 120000,
+                protocolTimeout: PROTOCOL_TIMEOUT_MS,
                 args: [
                     ...chromium.args,
                     '--no-sandbox',
@@ -195,7 +196,8 @@ function getStatusWhatsApp() {
         ultimoQrEm,
         authDataPath: AUTH_DATA_PATH,
         takeoverAtivo: TAKEOVER_ATIVO,
-        authTimeoutMs: AUTH_TIMEOUT_MS
+        authTimeoutMs: AUTH_TIMEOUT_MS,
+        protocolTimeoutMs: PROTOCOL_TIMEOUT_MS
     };
 }
 

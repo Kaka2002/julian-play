@@ -9,7 +9,7 @@ const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
 const assetsDir = path.join(__dirname, '..', 'assets');
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 15000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
 
 function comTimeout(promessa, ms, descricao) {
     return Promise.race([
