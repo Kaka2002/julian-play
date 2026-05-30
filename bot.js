@@ -1,13 +1,12 @@
 const express = require('express');
-const iniciarWhatsApp = require('./config/whatsapp');
+const qrRoute = require('./routes/qrRoute');
+const { iniciarWhatsApp } = require('./config/whatsapp');
 
 const app = express();
 
-const PORT = process.env.PORT || 10000;
+app.use('/', qrRoute);
 
-app.get('/', (req, res) => {
-    res.send('Julian Play Bot Online');
-});
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);

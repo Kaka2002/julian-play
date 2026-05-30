@@ -1,49 +1,78 @@
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const path = require('path');
+
+let client;
+let qrAtual = '';
 
 async function iniciarWhatsApp() {
 
-    try {
+    const executablePath = await chromium.executablePath();
 
-        const executablePath = await chromium.executablePath();
+    console.log('Chrome encontrado:', executablePath);
 
-        console.log('Chrome encontrado:', executablePath);
+    client = new Client({
+        authStrategy: new LocalAuth(),
+        puppeteer: {
+            executablePath,
+            headless: true,
+            args: chromium.args
+        }
+    });
 
-        const client = new Client({
-            authStrategy: new LocalAuth({
-                dataPath: path.join(__dirname, '../.wwebjs_auth')
-            }),
-            puppeteer: {
-                executablePath,
-                headless: true,
-                args: chromium.args
-            }
-        });
+    client.on('qr', (qr) => {
+        qrAtual = qr;
+        console.log('📱 QR Code gerado');
+    });
 
-        client.on('qr', () => {
-            console.log('📱 QR Code gerado');
-        });
+    client.on('ready', () => {
+        console.log('✅ WhatsApp conectado');
+    });
 
-        client.on('ready', () => {
-            console.log('✅ WhatsApp conectado');
-        });
+    client.on('auth_failure', (msg) => {
+        console.log('❌ Falha autenticação:', msg);
+    });
 
-        client.on('auth_failure', (msg) => {
-            console.log('❌ Falha autenticação:', msg);
-        });
+    client.on('disconnected', (reason) => {
+        console.log('❌ Desconectado:', reason);
+    });
 
-        client.on('disconnected', (reason) => {
-            console.log('❌ Desconectado:', reason);
-        });
+    client.on('message', async (message) => {
 
-        await client.initialize();
+        const texto = message.body.toLowerCase();
 
-    } catch (error) {
+        if (
+            texto === 'oi' ||
+            texto === 'ola' ||
+            texto === 'olá' ||
+            texto === 'menu'
+        ) {
 
-        console.error('Erro ao iniciar WhatsApp:', error);
+            await message.reply(
+`📺 *JULIAN PLAY TV*
 
-    }
+1 - Planos
+
+2 - Teste grátis
+
+3 - Renovação
+
+4 - Aplicativos
+
+0 - Sair`
+            );
+
+        }
+
+    });
+
+    await client.initialize();
 }
 
-module.exports = iniciarWhatsApp;
+function getQrCode() {
+    return qrAtual;
+}
+
+module.exports = {
+    iniciarWhatsApp,
+    getQrCode
+};
