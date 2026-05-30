@@ -1,4 +1,4 @@
-name: Mirror Safe
+name: Git Mirror Sync
 
 on:
   push:
@@ -10,16 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout completo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Push mirror seguro
+      - name: Configurar Git
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
+      - name: Add remote com auth correta
+        run: |
+          git remote remove mirror || true
           git remote add mirror https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Kaka2002/alteracao.git
 
+      - name: Push mirror
+        run: |
           git push mirror main --force
