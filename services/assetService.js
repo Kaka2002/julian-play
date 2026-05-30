@@ -21,8 +21,9 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
 
     const arquivo = caminhoAsset(nomeArquivo);
     const media = MessageMedia.fromFilePath(arquivo);
+    const chat = await message.getChat();
 
-    await message.reply(media, undefined, { caption: legenda });
+    await chat.sendMessage(media, { caption: legenda });
     return true;
 }
 

@@ -8,8 +8,7 @@ const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY TV';
 const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
 const assetsDir = path.join(__dirname, '..', 'assets');
-const RODAPE_ATENDIMENTO = `Digite *menu* para retornar ao Menu Principal.
-Digite *sair* para encerrar o atendimento.`;
+const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 
 const planos = {
     '1': {
@@ -139,8 +138,9 @@ async function gerarQRCodeAutomatico(plano) {
 async function enviarQRCodePIX(message, plano) {
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
+        const chat = await message.getChat();
 
-        await message.reply(media, undefined, {
+        await chat.sendMessage(media, {
             caption: legendaPix(plano)
         });
 
@@ -148,8 +148,9 @@ async function enviarQRCodePIX(message, plano) {
         return true;
     } catch (error) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
+        const chat = await message.getChat();
 
-        await message.reply(`Erro ao gerar QR Code.
+        await chat.sendMessage(`Erro ao gerar QR Code.
 
 Por favor, tente novamente ou escolha outro plano.
 

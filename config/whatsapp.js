@@ -2,17 +2,28 @@ const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { responderMensagem } = require('../services/conversaService');
 
+const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
+const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
+
 let client;
 let qrAtual = '';
 let inicializando = false;
 let conectado = false;
 let tentativaReconexao = null;
+let statusWhatsApp = 'iniciando';
+let ultimoQrEm = null;
 
 function agendarReconexao() {
     if (tentativaReconexao) return;
 
     tentativaReconexao = setTimeout(() => {
         tentativaReconexao = null;
+
+        if (statusWhatsApp === 'aguardando_qr') {
+            console.log('Reconexao pausada: aguardando leitura do QR Code atual');
+            return;
+        }
+
         iniciarWhatsApp();
     }, 5000);
 }
@@ -24,6 +35,7 @@ async function iniciarWhatsApp() {
     }
 
     inicializando = true;
+    statusWhatsApp = 'iniciando';
 
     try {
         const executablePath = await chromium.executablePath();
@@ -33,10 +45,10 @@ async function iniciarWhatsApp() {
         client = new Client({
             authStrategy: new LocalAuth({
                 clientId: 'julianplay',
-                dataPath: './.wwebjs_auth'
+                dataPath: AUTH_DATA_PATH
             }),
-            takeoverOnConflict: true,
-            takeoverTimeoutMs: 0,
+            takeoverOnConflict: TAKEOVER_ATIVO,
+            takeoverTimeoutMs: 30000,
             puppeteer: {
                 executablePath,
                 headless: true,
@@ -61,10 +73,14 @@ async function iniciarWhatsApp() {
 
         client.on('qr', (qr) => {
             qrAtual = qr;
+            ultimoQrEm = new Date();
+            statusWhatsApp = 'aguardando_qr';
             console.log('QR Code gerado');
         });
 
         client.on('authenticated', () => {
+            statusWhatsApp = 'autenticado';
+            qrAtual = '';
             console.log('Autenticado');
         });
 
@@ -73,6 +89,8 @@ async function iniciarWhatsApp() {
 
             conectado = true;
             inicializando = false;
+            statusWhatsApp = 'conectado';
+            qrAtual = '';
             console.log('WhatsApp conectado');
         });
 
@@ -83,6 +101,7 @@ async function iniciarWhatsApp() {
         client.on('auth_failure', (msg) => {
             conectado = false;
             inicializando = false;
+            statusWhatsApp = 'falha_autenticacao';
             console.log('Falha autenticacao:', msg);
             agendarReconexao();
         });
@@ -90,6 +109,7 @@ async function iniciarWhatsApp() {
         client.on('disconnected', (reason) => {
             conectado = false;
             inicializando = false;
+            statusWhatsApp = 'desconectado';
             console.log('Desconectado:', reason);
             agendarReconexao();
         });
@@ -110,6 +130,7 @@ async function iniciarWhatsApp() {
         console.log('Initialize executado');
     } catch (err) {
         inicializando = false;
+        statusWhatsApp = 'erro';
         console.log('Erro geral:', err);
 
         const mensagem = err && err.message ? err.message : String(err);
@@ -117,6 +138,28 @@ async function iniciarWhatsApp() {
         if (mensagem.includes('Execution context was destroyed')) {
             agendarReconexao();
         }
+    }
+}
+
+async function encerrarWhatsApp() {
+    if (tentativaReconexao) {
+        clearTimeout(tentativaReconexao);
+        tentativaReconexao = null;
+    }
+
+    conectado = false;
+    inicializando = false;
+    statusWhatsApp = 'encerrando';
+
+    if (!client) return;
+
+    try {
+        await client.destroy();
+        console.log('Cliente WhatsApp encerrado com seguranca');
+    } catch (err) {
+        console.log('Erro ao encerrar cliente WhatsApp:', err.message);
+    } finally {
+        client = null;
     }
 }
 
@@ -128,8 +171,22 @@ function getClient() {
     return client;
 }
 
+function getStatusWhatsApp() {
+    return {
+        status: statusWhatsApp,
+        conectado,
+        inicializando,
+        temQr: Boolean(qrAtual),
+        ultimoQrEm,
+        authDataPath: AUTH_DATA_PATH,
+        takeoverAtivo: TAKEOVER_ATIVO
+    };
+}
+
 module.exports = {
     iniciarWhatsApp,
+    encerrarWhatsApp,
     getQrCode,
-    getClient
+    getClient,
+    getStatusWhatsApp
 };

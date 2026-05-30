@@ -23,8 +23,7 @@ const imagensRespostas = {
     erro: null,
     encerramento: null
 };
-const RODAPE_ATENDIMENTO = `Digite *menu* para retornar ao Menu Principal.
-Digite *sair* para encerrar o atendimento.`;
+const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -52,7 +51,8 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
     if (enviouComImagem) return;
 
-    await message.reply(resposta);
+    const chat = await message.getChat();
+    await chat.sendMessage(resposta);
 }
 
 function adicionarOpcaoSair(texto) {
@@ -123,7 +123,7 @@ async function responderMensagem(message) {
         conversas.delete(telefone);
         await responderComDigitacao(message, `Atendimento encerrado.
 
-Quando precisar novamente basta enviar *menu*.`, imagensRespostas.encerramento);
+Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerramento);
         return;
     }
 
