@@ -18,19 +18,21 @@ jobs:
           fetch-depth: 0
 
       - name: Push para Repositório de Alteração
+        env:
+          TOKEN_OK: ${{ secrets.MEU_TOKEN_SECRETO }}
         run: |
           export GIT_TERMINAL_PROMPT=0
           
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
-          # Autenticação automática usando o GITHUB_TOKEN nativo
-          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com" target_repo
+          # Clona usando o novo token configurado individualmente
+          git clone "https://x-access-token:${TOKEN_OK}@://github.com" target_repo
           
-          # Limpa o conteúdo antigo do repositório de destino
+          # Limpa o conteúdo antigo
           find target_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           
-          # Copia a estrutura atual do principal (incluindo pastas) para o destino
+          # Copia os novos arquivos e pastas
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'target_repo' -exec cp -r {} target_repo/ \;
           
           cd target_repo
@@ -38,7 +40,7 @@ jobs:
           
           if ! git diff-index --quiet HEAD; then
             git commit -m "Sync: Automação espelhada do repositório principal"
-            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@://github.com" main
+            git push "https://x-access-token:${TOKEN_OK}@://github.com" main
           else
             echo "Nenhuma alteração detectada para sincronizar."
           fi
