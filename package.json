@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js"
+    "start": "node supervisor.js",
+    "start:bot": "node bot.js"
   },
   "dependencies": {
     "@puppeteer/browsers": "^2.2.3",

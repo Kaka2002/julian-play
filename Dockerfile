@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
+    curl \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -30,5 +31,8 @@ COPY . .
 ENV NODE_ENV=production
 
 EXPOSE 10000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS http://localhost:${PORT:-10000}/health || exit 1
 
 CMD ["npm", "start"]
