@@ -12,4 +12,4 @@ app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);
 });
 
-iniciarWhatsApp();
+iniciarWhatsApp(); //
