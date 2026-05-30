@@ -75,20 +75,22 @@ async function iniciarWhatsApp() {
             texto === 'menu'
         ){
 
-        console.log('MENU ACIONADO');
+            console.log('MENU ACIONADO');
 
-        await message.reply(`
+            await message.reply(`
+                📺 JULIAN PLAY TV
 
-            📺 JULIAN PLAY TV
+                1 - Solicitar Planos
+                2 - Teste Grátis
+                3 - Renovar Assinatura
+                4 - Ativar Aplicativos
+                0 - Encerrar Atendimento
+            `);
+        }
+    });
 
-            1 - Solicitar Planos
-            2 - Teste Grátis
-            3 - Renovar Assinatura
-            4 - Ativar Aplicativos
-            0 - Encerrar Atendimento
-        `);
-    }
-});
+    await client.initialize();
+}
 
 function getQrCode() {
     return qrAtual;
