@@ -1,23 +1,13 @@
 function menuDispositivos() {
-    return `🎯 *TESTE GRÁTIS*
+    return `📲 *ATIVACAO DE APLICATIVOS*
 
-[1] TV Box
+Escolha o aparelho:
 
-[2] iPhone
-
-[3] Smart TV
-
-[4] Android TV
-
-[5] Computador
-
-[6] Mi Stick
-
-[7] Fire Stick
-
-[8] Android
-
-[0] Voltar`;
+1 - Smart TV
+2 - TV Box
+3 - Android
+4 - iPhone
+0 - Voltar`;
 }
 
 module.exports = menuDispositivos;
