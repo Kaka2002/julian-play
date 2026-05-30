@@ -4,6 +4,7 @@ const menuDispositivos = require('../menus/dispositivos');
 const menuRenovacao = require('../menus/renovacao');
 const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
 const { enviarImagemComLegenda } = require('./assetService');
+const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
     cadastrarOuAtualizarCliente,
     buscarClientePorNomeOuTelefone
@@ -13,7 +14,7 @@ const conversas = new Map();
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 1000);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const imagensRespostas = {
-    menu: null,
+    menu: 'Logo 1_7.png',
     planos: null,
     teste: null,
     testeLiberado: null,
@@ -22,29 +23,46 @@ const imagensRespostas = {
     erro: null,
     encerramento: null
 };
+const RODAPE_ATENDIMENTO = `Digite *menu* para retornar ao Menu Principal.
+Digite *sair* para encerrar o atendimento.`;
 
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function responderComDigitacao(message, texto, imagem = null) {
-    if (DIGITACAO_ATIVA && TEMPO_RESPOSTA_MS > 0) {
-        try {
-            const chat = await message.getChat();
-            await chat.sendStateTyping();
-            await esperar(TEMPO_RESPOSTA_MS);
-            await chat.clearState();
-        } catch (err) {
-            console.log('Nao foi possivel simular digitacao:', err.message);
-            await esperar(TEMPO_RESPOSTA_MS);
-        }
-    }
+async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
+    if (!DIGITACAO_ATIVA || tempo <= 0) return;
 
-    const enviouComImagem = await enviarImagemComLegenda(message, imagem, texto);
+    try {
+        const chat = await message.getChat();
+        await chat.sendStateTyping();
+        await esperar(tempo);
+        await chat.clearState();
+    } catch (err) {
+        console.log('Nao foi possivel simular digitacao:', err.message);
+        await esperar(tempo);
+    }
+}
+
+async function responderComDigitacao(message, texto, imagem = null) {
+    await simularDigitacao(message);
+    const resposta = adicionarOpcaoSair(texto);
+
+    const enviouComImagem = await enviarImagemComLegenda(message, imagem, resposta);
 
     if (enviouComImagem) return;
 
-    await message.reply(texto);
+    await message.reply(resposta);
+}
+
+function adicionarOpcaoSair(texto) {
+    if (!texto) return RODAPE_ATENDIMENTO;
+    if (texto.toLowerCase().includes('atendimento encerrado')) return texto;
+    if (texto.toLowerCase().includes('sair')) return texto;
+
+    return `${texto}
+
+${RODAPE_ATENDIMENTO}`;
 }
 
 function normalizar(texto) {
@@ -112,6 +130,26 @@ Quando precisar novamente basta enviar *menu*.`, imagensRespostas.encerramento);
     if (texto === 'menu') {
         conversas.delete(telefone);
         await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
+        return;
+    }
+
+    if (conversa?.etapa === 'planos_escolha') {
+        const plano = buscarPlano(texto);
+
+        if (!plano) {
+            await responderComDigitacao(message, `Escolha uma opcao valida:
+
+1 - Mensal
+2 - Trimestral
+3 - Semestral
+4 - Anual
+0 - Voltar`, imagensRespostas.planos);
+            return;
+        }
+
+        conversas.delete(telefone);
+        await simularDigitacao(message, 1500);
+        await enviarQRCodePIX(message, plano);
         return;
     }
 
@@ -186,6 +224,7 @@ Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
     }
 
     if (texto === '1' || texto.includes('plano')) {
+        conversas.set(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(), imagensRespostas.planos);
         return;
     }
