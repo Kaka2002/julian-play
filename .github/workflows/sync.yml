@@ -1,4 +1,4 @@
-name: Git Mirror Sync
+name: Git Mirror Sync (Safe)
 
 on:
   push:
@@ -15,16 +15,19 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push mirror para repo destino
+      - name: Configurar Git
         run: |
-          set -e
-
-          echo "Configurando git..."
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
-          echo "Adicionando remote do repo destino..."
+      - name: Enviar mirror SEM workflows
+        run: |
           git remote add mirror https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Kaka2002/alteracao.git
 
-          echo "Fazendo push mirror..."
-          git push mirror --mirror
+          # CRÍTICO: remove workflows antes do push
+          rm -rf .github/workflows
+
+          git add .
+          git commit -m "mirror update" || echo "sem mudanças"
+
+          git push mirror main --force
