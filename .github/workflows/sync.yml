@@ -24,8 +24,8 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
-          # Passagem direta do segredo do repositório para evitar falha de escopo
-          git clone "https://x-access-token:${{ secrets.MEU_TOKEN_SECRETO }}@://github.com" target_repo
+          # Usa a variável global que vamos cadastrar corretamente agora
+          git clone "https://x-access-token:${{ secrets.SYNC_TOKEN }}@://github.com" target_repo
           
           find target_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'target_repo' -exec cp -r {} target_repo/ \;
@@ -35,7 +35,7 @@ jobs:
           
           if ! git diff-index --quiet HEAD; then
             git commit -m "Sync: Automação espelhada do repositório principal"
-            git push "https://x-access-token:${{ secrets.MEU_TOKEN_SECRETO }}@://github.com" main
+            git push "https://x-access-token:${{ secrets.SYNC_TOKEN }}@://github.com" main
           else
             echo "Nenhuma alteração detectada para sincronizar."
           fi
