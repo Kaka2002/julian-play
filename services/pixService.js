@@ -4,7 +4,7 @@ const QRCode = require('qrcode');
 const { MessageMedia } = require('whatsapp-web.js');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '61319147704';
-const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY TV';
+const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY';
 const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
 const assetsDir = path.join(__dirname, '..', 'assets');
@@ -92,23 +92,23 @@ function gerarPixCopiaECola(plano) {
 }
 
 function legendaPix(plano) {
-    return `*PIX PARA ${plano.nome}*
+    return `💳 *PIX - PLANO ${plano.nome}*
+━━━━━━━━━━━━━━━━━━━━
+Confira os dados antes de pagar:
 
-*Valor:* R$ ${plano.valor}
+💰 *Valor:* R$ ${plano.valor}
+🔑 *Chave PIX:* ${CHAVE_PIX}
 
-*Chave PIX:*
-${CHAVE_PIX}
-
-*Como pagar:*
+📲 *Como pagar:*
 1 - Abra o app do seu banco
-2 - Escolha a opcao PIX
-3 - Selecione Ler QR Code
+2 - Escolha *PIX*
+3 - Toque em *Ler QR Code*
 4 - Escaneie a imagem acima
 5 - Confirme o pagamento
 
-Depois do pagamento, envie o comprovante aqui para ativacao.
+✅ Depois do pagamento, envie o comprovante aqui para ativacao.
 
-Digite *0* para voltar ao Menu Principal
+*0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`;
 }
 
@@ -150,11 +150,13 @@ async function enviarQRCodePIX(message, plano) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
         const chat = await message.getChat();
 
-        await chat.sendMessage(`Erro ao gerar QR Code.
+        await chat.sendMessage(`⚠️ *ERRO AO GERAR QR CODE*
+━━━━━━━━━━━━━━━━━━━━
+Nao foi possivel gerar o QR Code neste momento.
 
-Por favor, tente novamente ou escolha outro plano.
+Tente novamente ou escolha outro plano.
 
-Digite *0* para voltar ao Menu Principal
+*0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`);
         return false;
     }

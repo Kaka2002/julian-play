@@ -20,23 +20,13 @@ function getSaudacao() {
 function isPalavraChave(texto) {
     const textoNormalizado = normalizarTexto(texto);
 
-    const palavras = [
-        'oi',
-        'ola',
-        'dia',
-        'tarde',
-        'noite',
-        'gratis',
-        'teste'
-    ];
-
-    return palavras.some(palavra => textoNormalizado.includes(palavra));
+    return /\b(oi|ola|dia|tarde|noite|gratis|teste)\b/.test(textoNormalizado);
 }
 
 function isPedidoTeste(texto) {
     const textoNormalizado = normalizarTexto(texto);
 
-    return textoNormalizado.includes('gratis') || textoNormalizado.includes('teste');
+    return /\b(gratis|teste)\b/.test(textoNormalizado);
 }
 
 module.exports = {

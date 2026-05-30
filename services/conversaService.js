@@ -15,7 +15,7 @@ const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 1000);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const imagensRespostas = {
     menu: 'Logo 1_7.png',
-    planos: null,
+    planos: 'Plano.png',
     teste: null,
     testeLiberado: null,
     renovacao: null,
@@ -86,25 +86,53 @@ function formatarData(dataIso) {
 
 function tutorialDispositivo(opcao) {
     const tutoriais = {
-        '1': '*Smart TV*\n\nInstale o IPTV Smarters Pro ou aplicativo indicado na loja da TV. Depois envie uma foto da tela inicial do app.',
-        '2': '*TV Box*\n\nAbra a Play Store, instale IPTV Smarters Pro e envie uma foto da tela inicial do aplicativo.',
-        '3': '*Android*\n\nInstale IPTV Smarters Pro pela Play Store. Se o aparelho pedir permissao, aceite e envie uma foto da tela inicial.',
-        '4': '*iPhone*\n\nInstale Smarters Player Lite pela App Store e envie uma foto da tela inicial do aplicativo.'
+        '1': `📺 *SMART TV*
+━━━━━━━━━━━━━━━━━━━━
+1 - Abra a loja de aplicativos da sua TV
+2 - Procure por *IPTV Smarters Pro*
+3 - Instale o aplicativo
+4 - Abra o app e envie uma foto da tela inicial
+
+Com a foto, enviamos os dados corretos para ativacao.`,
+        '2': `📦 *TV BOX*
+━━━━━━━━━━━━━━━━━━━━
+1 - Abra a Play Store
+2 - Procure por *IPTV Smarters Pro*
+3 - Instale e abra o aplicativo
+4 - Envie uma foto da tela inicial
+
+Assim conseguimos orientar a configuracao sem erro.`,
+        '3': `📱 *ANDROID*
+━━━━━━━━━━━━━━━━━━━━
+1 - Abra a Play Store
+2 - Instale *IPTV Smarters Pro*
+3 - Aceite as permissoes solicitadas
+4 - Envie uma foto da tela inicial do app`,
+        '4': `🍎 *IPHONE*
+━━━━━━━━━━━━━━━━━━━━
+1 - Abra a App Store
+2 - Instale *Smarters Player Lite*
+3 - Abra o aplicativo
+4 - Envie uma foto da tela inicial para continuarmos`
     };
 
     return tutoriais[opcao] || null;
 }
 
 function mensagemTesteLiberado(cliente) {
-    return `*TESTE GRATIS LIBERADO*
+    return `🎁 *TESTE GRATIS LIBERADO*
+━━━━━━━━━━━━━━━━━━━━
+Seu acesso de teste foi preparado com sucesso.
 
-Nome: ${cliente.nome}
-Aparelho: ${cliente.aparelho}
-Usuario: ${cliente.usuario}
-Senha: ${cliente.senha}
-Vencimento: ${formatarData(cliente.vencimento)}
+👤 *Nome:* ${cliente.nome}
+📲 *Aparelho:* ${cliente.aparelho}
+🔐 *Usuario:* ${cliente.usuario}
+🔑 *Senha:* ${cliente.senha}
+📅 *Valido ate:* ${formatarData(cliente.vencimento)}
 
-Assim que abrir o aplicativo, envie uma foto da tela se precisar de ajuda.`;
+Abra o aplicativo no aparelho informado e use os dados acima.
+
+Se aparecer alguma duvida na tela, envie uma foto aqui.`;
 }
 
 async function responderMensagem(message) {
@@ -121,7 +149,9 @@ async function responderMensagem(message) {
 
     if (texto === 'sair' || texto === 'encerrar') {
         conversas.delete(telefone);
-        await responderComDigitacao(message, `Atendimento encerrado.
+        await responderComDigitacao(message, `✅ *ATENDIMENTO ENCERRADO*
+━━━━━━━━━━━━━━━━━━━━
+Obrigado por falar com a *JULIAN PLAY TV*.
 
 Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerramento);
         return;
@@ -137,13 +167,15 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
         const plano = buscarPlano(texto);
 
         if (!plano) {
-            await responderComDigitacao(message, `Escolha uma opcao valida:
+            await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha um dos planos abaixo:
 
-1 - Mensal
-2 - Trimestral
-3 - Semestral
-4 - Anual
-0 - Voltar`, imagensRespostas.planos);
+*1* - Mensal
+*2* - Trimestral
+*3* - Semestral
+*4* - Anual
+*0* - Voltar`, imagensRespostas.planos);
             return;
         }
 
@@ -159,10 +191,16 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
             nome: textoOriginal.trim()
         });
 
-        await responderComDigitacao(message, `Perfeito, ${primeiroNome(textoOriginal)}.
+        await responderComDigitacao(message, `✅ Perfeito, *${primeiroNome(textoOriginal)}*!
+━━━━━━━━━━━━━━━━━━━━
+Agora informe o aparelho que voce vai usar.
 
-Agora informe o aparelho que vai usar:
-Smart TV, TV Box, Android, iPhone ou computador.`, imagensRespostas.teste);
+Exemplos:
+• Smart TV
+• TV Box
+• Android
+• iPhone
+• Computador`, imagensRespostas.teste);
         return;
     }
 
@@ -183,21 +221,26 @@ Smart TV, TV Box, Android, iPhone ou computador.`, imagensRespostas.teste);
         conversas.delete(telefone);
 
         if (!cliente) {
-            await responderComDigitacao(message, `Nao encontrei esse cadastro ainda.
+            await responderComDigitacao(message, `🔎 *CADASTRO NAO LOCALIZADO*
+━━━━━━━━━━━━━━━━━━━━
+Nao encontrei esse cadastro automaticamente.
 
-Um atendente vai conferir manualmente. Se puder, envie o nome completo e o numero cadastrado.`, imagensRespostas.erro);
+Para conferirmos manualmente, envie:
+
+👤 Nome completo
+📱 Numero cadastrado`, imagensRespostas.erro);
             return;
         }
 
-        await responderComDigitacao(message, `Cadastro localizado:
-
-Nome: ${cliente.nome}
-Plano atual: ${cliente.plano || 'a confirmar'}
-Vencimento: ${formatarData(cliente.vencimento)}
+        await responderComDigitacao(message, `✅ *CADASTRO LOCALIZADO*
+━━━━━━━━━━━━━━━━━━━━
+👤 *Nome:* ${cliente.nome}
+📦 *Plano atual:* ${cliente.plano || 'a confirmar'}
+📅 *Vencimento:* ${formatarData(cliente.vencimento)}
 
 ${menuRenovacao()}
 
-PIX: 61319147704
+💳 *PIX:* 61319147704
 
 Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
         return;
@@ -207,14 +250,16 @@ Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
         const tutorial = tutorialDispositivo(texto);
 
         if (!tutorial) {
-            await responderComDigitacao(message, `Escolha uma opcao valida:
+            await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha um aparelho da lista:
 
-1 - Smart TV
-2 - TV Box
-3 - Android
-4 - iPhone
+*1* - Smart TV
+*2* - TV Box
+*3* - Android
+*4* - iPhone
 
-0 - Voltar`, imagensRespostas.ativacao);
+*0* - Voltar`, imagensRespostas.ativacao);
             return;
         }
 
@@ -232,9 +277,11 @@ Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
     if (texto === '2' || isPedidoTeste(texto)) {
         conversas.set(telefone, { etapa: 'teste_nome' });
 
-        await responderComDigitacao(message, `*TESTE GRATIS*
+        await responderComDigitacao(message, `🎁 *TESTE GRATIS*
+━━━━━━━━━━━━━━━━━━━━
+Vamos liberar seu acesso de teste.
 
-Para liberar seu acesso, informe seu nome completo.`, imagensRespostas.teste);
+Para comecar, envie seu *nome completo*.`, imagensRespostas.teste);
         return;
     }
 
@@ -246,9 +293,11 @@ Para liberar seu acesso, informe seu nome completo.`, imagensRespostas.teste);
     if (texto === '3' || texto.includes('renovar') || texto.includes('renovacao')) {
         conversas.set(telefone, { etapa: 'renovacao_busca' });
 
-        await responderComDigitacao(message, `*RENOVACAO*
+        await responderComDigitacao(message, `🔄 *RENOVACAO*
+━━━━━━━━━━━━━━━━━━━━
+Vamos localizar sua assinatura.
 
-Envie o nome do assinante ou numero cadastrado para localizar sua assinatura.`, imagensRespostas.renovacao);
+Envie o *nome do assinante* ou o *numero cadastrado*.`, imagensRespostas.renovacao);
         return;
     }
 
@@ -259,9 +308,14 @@ Envie o nome do assinante ou numero cadastrado para localizar sua assinatura.`, 
         return;
     }
 
-    await responderComDigitacao(message, `Nao entendi sua mensagem.
+    await responderComDigitacao(message, `⚠️ *NAO ENTENDI SUA MENSAGEM*
+━━━━━━━━━━━━━━━━━━━━
+Digite uma das opcoes do menu principal:
 
-Digite *menu* para ver as opcoes de atendimento.`, imagensRespostas.erro);
+*1* - Planos
+*2* - Teste gratis
+*3* - Renovacao
+*4* - Ativacao`, imagensRespostas.erro);
 }
 
 module.exports = {

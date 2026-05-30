@@ -7,19 +7,23 @@ function getSaudacao() {
 }
 
 function menuPrincipal(nome = '') {
-    const tratamento = nome ? ` ${nome}` : '';
+    const tratamento = nome ? `, ${nome}` : '';
 
-    return `${getSaudacao()}${tratamento}!
+    return `${getSaudacao()}${tratamento}! Seja bem-vindo(a).
 
-📺 *JULIAN PLAY TV*
+📺 *JULIAN PLAY*
+━━━━━━━━━━━━━━━━━━━━
+Sua melhor experiencia em TV online.
 
-1 - Solicitar Planos
-2 - Teste Gratis
-3 - Renovar Assinatura
-4 - Ativar Aplicativos
-0 - Voltar ao Menu
+Escolha uma opcao:
 
-Digite a opcao desejada.`;
+*1* - 💎 Planos e valores
+*2* - 🎁 Teste gratis
+*3* - 🔄 Renovar assinatura
+*4* - 📲 Ativar aplicativos
+*0* - ↩️ Voltar ao menu
+
+Digite apenas o numero da opcao desejada.`;
 }
 
 module.exports = menuPrincipal;
