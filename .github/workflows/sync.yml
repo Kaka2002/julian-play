@@ -1,43 +1,30 @@
-name: Sync to Alteracao Repo
+name: Git Mirror Sync
 
 on:
   push:
     branches:
       - main
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
-  sync:
+  mirror:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Principal
+      - name: Checkout completo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Push para Repositório de Alteração
+      - name: Push mirror para repo destino
         run: |
-          export GIT_TERMINAL_PROMPT=0
+          set -e
 
+          echo "Configurando git..."
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
-          git clone "https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Kaka2002/alteracao.git" target_repo
+          echo "Adicionando remote do repo destino..."
+          git remote add mirror https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Kaka2002/alteracao.git
 
-          find target_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
-
-          find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'target_repo' -exec cp -r {} target_repo/ \;
-
-          cd target_repo
-
-          git add -A
-
-          if ! git diff-index --quiet HEAD; then
-            git commit -m "Sync: Automação espelhada do repositório principal"
-            git push origin main
-          else
-            echo "Nenhuma alteração detectada para sincronizar."
-          fi
+          echo "Fazendo push mirror..."
+          git push mirror --mirror
