@@ -1,4 +1,5 @@
 const fs = require('fs');
+const chromium = require('@sparticuz/chromium');
 const path = require('path');
 const QRCode = require('qrcode');
 const express = require('express');
@@ -37,42 +38,38 @@ app.get('/qr', async (req, res) => {
 
 app.listen(PORT, () => console.log(`Monitor na porta ${PORT}`));
 
-const client = new Client({
-    authStrategy: new LocalAuth({
-        dataPath: path.join(__dirname, '.wwebjs_auth')
-    }),
-    puppeteer: {
-        executablePath: chromePath,
-        headless: true,
-        args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-gpu',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-extensions',
-            '--disable-audio-output'
-        ]
-    }
-});
+async function iniciarBot() {
 
-// Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
-client.on('qr', (qr) => {
-    qrAtual = qr;
-    console.log('👉 Novo QR Code guardado. Acesse a rota /qr para escanear.');
-});
+    const executablePath = await chromium.executablePath();
 
-// BLOQUEADOR DE MÍDIA (Garante que fotos/áudios não consumam os 512MB de RAM)
-client.on('loading_screen', async () => {
-    try {
-        const puppeteerBrowser = client.puppeteer;
-        if (puppeteerBrowser) {
-            const pages = await puppeteerBrowser.pages();
-            if (pages.length > 0) {
-                await pages[0].setRequestInterception(true);
-                pages[0].on('request', (req) => {
+    console.log('Chrome encontrado em:', executablePath);
+
+    const client = new Client({
+        authStrategy: new LocalAuth({
+            dataPath: path.join(__dirname, '.wwebjs_auth')
+        }),
+        puppeteer: {
+            executablePath,
+            headless: true,
+            args: chromium.args
+        }
+    });
+
+    // Captura o QR Code globalmente sem tentar renderizar em formato texto pesado
+    client.on('qr', (qr) => {
+        qrAtual = qr;
+        console.log('👉 Novo QR Code guardado. Acesse a rota /qr para escanear.');
+    });
+
+    // BLOQUEADOR DE MÍDIA (Garante que fotos/áudios não consumam os 512MB de RAM)
+    client.on('loading_screen', async () => {
+        try {
+            const puppeteerBrowser = client.puppeteer;
+            if (puppeteerBrowser) {
+                const pages = await puppeteerBrowser.pages();
+                if (pages.length > 0) {
+                    await pages[0].setRequestInterception(true);
+                    pages[0].on('request', (req) => {
                     const resourceType = req.resourceType();
                     if (['image', 'stylesheet', 'media', 'font'].includes(resourceType)) {
                         req.abort();
@@ -82,10 +79,15 @@ client.on('loading_screen', async () => {
                 });
             }
         }
-    } catch (e) {
-        console.log('Erro ao otimizar interceptação de mídia');
-    }
-});
+        } catch (e) {
+            console.log('Erro ao otimizar interceptação de mídia');
+        }
+    });
+    console.log('🚀 Iniciando bot JULIAN PLAY TV...');
+    await client.initialize();
+}
+
+iniciarBot().catch(console.error);
 
 async function enviarMensagem(to, texto) {
     try {

@@ -8,9 +8,10 @@
     "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^138.0.2",
     "express": "^4.19.2",
+    "puppeteer": "^24.10.2",
     "qrcode": "^1.5.3",
-    "whatsapp-web.js": "^1.26.0",
-    "puppeteer": "^24.10.2"
+    "whatsapp-web.js": "^1.26.0"
   }
 }
