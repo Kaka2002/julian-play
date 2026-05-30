@@ -36,6 +36,7 @@ async function iniciarWhatsApp() {
         console.log('❌ Desconectado:', reason);
     });
 
+    // MENU PRINCIPAL
     client.on('message', async (message) => {
 
         const texto = message.body.toLowerCase();
@@ -50,15 +51,15 @@ async function iniciarWhatsApp() {
             await message.reply(
 `📺 *JULIAN PLAY TV*
 
-1 - Planos
+1 - Solicitar Planos
 
-2 - Teste grátis
+2 - Teste Grátis
 
-3 - Renovação
+3 - Renovar Assinatura
 
-4 - Aplicativos
+4 - Ativar Aplicativos
 
-0 - Sair`
+0 - Encerrar Atendimento`
             );
 
         }
@@ -72,7 +73,12 @@ function getQrCode() {
     return qrAtual;
 }
 
+function getClient() {
+    return client;
+}
+
 module.exports = {
     iniciarWhatsApp,
-    getQrCode
+    getQrCode,
+    getClient
 };
