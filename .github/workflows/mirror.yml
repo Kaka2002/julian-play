@@ -20,10 +20,6 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
 
-      - name: Testar acesso ao repositório destino
-        run: |
-          git ls-remote https://x-access-token:${{ secrets.SYNC_TOKEN }}@github.com/Kaka2002/alteracao.git
-
       - name: Adicionar remote mirror
         run: |
           git remote remove mirror || true
