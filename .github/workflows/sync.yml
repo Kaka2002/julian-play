@@ -3,7 +3,10 @@ name: Sync to Alteracao Repo
 on:
   push:
     branches:
-      - main  # Mude para 'master' se a sua branch principal não for 'main'
+      - main
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Remove o aviso de depreciação
 
 jobs:
   sync:
@@ -15,27 +18,27 @@ jobs:
           fetch-depth: 0
 
       - name: Push para Repositório de Alteração
+        env:
+          MY_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
-          # Clona o repositório secundário em uma pasta temporária
-          git clone https://${{ secrets.GH_PAT }}@://github.com target_repo
+          # Clona o repositório usando a variável de ambiente segura
+          git clone "https://${MY_TOKEN}@://github.com" target_repo
           
-          # Remove todos os arquivos antigos do secundário (exceto a pasta .git)
+          # Limpa o conteúdo antigo
           find target_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
           
-          # Copia todos os arquivos e pastas do principal para o secundário (exceto a pasta .git)
+          # Copia os novos arquivos e pastas
           find . -mindepth 1 -maxdepth 1 ! -name '.git' ! -name 'target_repo' -exec cp -r {} target_repo/ \;
           
-          # Entra na pasta do secundário, commita e envia as mudanças
           cd target_repo
           git add -A
           
-          # Só faz o commit se houver alterações reais
           if ! git diff-index --quiet HEAD; then
             git commit -m "Sync: Automação espelhada do repositório principal"
-            git push origin main # Mude para master se o secundário usar master
+            git push origin main
           else
             echo "Nenhuma alteração detectada para sincronizar."
           fi
