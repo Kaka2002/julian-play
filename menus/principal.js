@@ -17,7 +17,7 @@ function menuPrincipal(nome = '') {
 2 - Teste Gratis
 3 - Renovar Assinatura
 4 - Ativar Aplicativos
-0 - Encerrar Atendimento
+0 - Voltar ao Menu
 
 Digite a opcao desejada.`;
 }

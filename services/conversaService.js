@@ -2,13 +2,50 @@ const menuPrincipal = require('../menus/principal');
 const menuPlanos = require('../menus/planos');
 const menuDispositivos = require('../menus/dispositivos');
 const menuRenovacao = require('../menus/renovacao');
-const { isPalavraChave } = require('../utils/helpers');
+const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
+const { enviarImagemComLegenda } = require('./assetService');
 const {
     cadastrarOuAtualizarCliente,
     buscarClientePorNomeOuTelefone
 } = require('./clientes');
 
 const conversas = new Map();
+const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 1000);
+const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
+const imagensRespostas = {
+    menu: null,
+    planos: null,
+    teste: null,
+    testeLiberado: null,
+    renovacao: null,
+    ativacao: null,
+    erro: null,
+    encerramento: null
+};
+
+function esperar(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function responderComDigitacao(message, texto, imagem = null) {
+    if (DIGITACAO_ATIVA && TEMPO_RESPOSTA_MS > 0) {
+        try {
+            const chat = await message.getChat();
+            await chat.sendStateTyping();
+            await esperar(TEMPO_RESPOSTA_MS);
+            await chat.clearState();
+        } catch (err) {
+            console.log('Nao foi possivel simular digitacao:', err.message);
+            await esperar(TEMPO_RESPOSTA_MS);
+        }
+    }
+
+    const enviouComImagem = await enviarImagemComLegenda(message, imagem, texto);
+
+    if (enviouComImagem) return;
+
+    await message.reply(texto);
+}
 
 function normalizar(texto) {
     return (texto || '')
@@ -41,7 +78,7 @@ function tutorialDispositivo(opcao) {
 }
 
 function mensagemTesteLiberado(cliente) {
-    return `✅ *TESTE GRATIS LIBERADO*
+    return `*TESTE GRATIS LIBERADO*
 
 Nome: ${cliente.nome}
 Aparelho: ${cliente.aparelho}
@@ -58,20 +95,23 @@ async function responderMensagem(message) {
     const texto = normalizar(textoOriginal);
     const conversa = conversas.get(telefone);
 
-    if (texto === '0' || texto === 'sair' || texto === 'encerrar') {
+    if (texto === '0' || texto === 'voltar') {
         conversas.delete(telefone);
+        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
+        return;
+    }
 
-        await message.reply(`Obrigado pelo contato.
+    if (texto === 'sair' || texto === 'encerrar') {
+        conversas.delete(telefone);
+        await responderComDigitacao(message, `Atendimento encerrado.
 
-Quando precisar novamente basta enviar *menu*.
-
-JULIAN PLAY TV`);
+Quando precisar novamente basta enviar *menu*.`, imagensRespostas.encerramento);
         return;
     }
 
     if (texto === 'menu') {
         conversas.delete(telefone);
-        await message.reply(menuPrincipal(''));
+        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
         return;
     }
 
@@ -81,10 +121,10 @@ JULIAN PLAY TV`);
             nome: textoOriginal.trim()
         });
 
-        await message.reply(`Perfeito, ${primeiroNome(textoOriginal)}.
+        await responderComDigitacao(message, `Perfeito, ${primeiroNome(textoOriginal)}.
 
 Agora informe o aparelho que vai usar:
-Smart TV, TV Box, Android, iPhone ou computador.`);
+Smart TV, TV Box, Android, iPhone ou computador.`, imagensRespostas.teste);
         return;
     }
 
@@ -96,7 +136,7 @@ Smart TV, TV Box, Android, iPhone ou computador.`);
         });
 
         conversas.delete(telefone);
-        await message.reply(mensagemTesteLiberado(cliente));
+        await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
         return;
     }
 
@@ -105,13 +145,13 @@ Smart TV, TV Box, Android, iPhone ou computador.`);
         conversas.delete(telefone);
 
         if (!cliente) {
-            await message.reply(`Nao encontrei esse cadastro ainda.
+            await responderComDigitacao(message, `Nao encontrei esse cadastro ainda.
 
-Um atendente vai conferir manualmente. Se puder, envie o nome completo e o numero cadastrado.`);
+Um atendente vai conferir manualmente. Se puder, envie o nome completo e o numero cadastrado.`, imagensRespostas.erro);
             return;
         }
 
-        await message.reply(`Cadastro localizado:
+        await responderComDigitacao(message, `Cadastro localizado:
 
 Nome: ${cliente.nome}
 Plano atual: ${cliente.plano || 'a confirmar'}
@@ -121,7 +161,7 @@ ${menuRenovacao()}
 
 PIX: 61319147704
 
-Depois do pagamento, envie o comprovante aqui.`);
+Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
         return;
     }
 
@@ -129,60 +169,60 @@ Depois do pagamento, envie o comprovante aqui.`);
         const tutorial = tutorialDispositivo(texto);
 
         if (!tutorial) {
-            await message.reply(`Escolha uma opcao valida:
+            await responderComDigitacao(message, `Escolha uma opcao valida:
 
 1 - Smart TV
 2 - TV Box
 3 - Android
 4 - iPhone
 
-0 - Voltar`);
+0 - Voltar`, imagensRespostas.ativacao);
             return;
         }
 
         conversas.delete(telefone);
-        await message.reply(tutorial);
-        return;
-    }
-
-    if (isPalavraChave(texto)) {
-        await message.reply(menuPrincipal(''));
+        await responderComDigitacao(message, tutorial, imagensRespostas.ativacao);
         return;
     }
 
     if (texto === '1' || texto.includes('plano')) {
-        await message.reply(menuPlanos());
+        await responderComDigitacao(message, menuPlanos(), imagensRespostas.planos);
         return;
     }
 
-    if (texto === '2' || texto.includes('teste')) {
+    if (texto === '2' || isPedidoTeste(texto)) {
         conversas.set(telefone, { etapa: 'teste_nome' });
 
-        await message.reply(`🎁 *TESTE GRATIS*
+        await responderComDigitacao(message, `*TESTE GRATIS*
 
-Para liberar seu acesso, informe seu nome completo.`);
+Para liberar seu acesso, informe seu nome completo.`, imagensRespostas.teste);
+        return;
+    }
+
+    if (isPalavraChave(texto)) {
+        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
         return;
     }
 
     if (texto === '3' || texto.includes('renovar') || texto.includes('renovacao')) {
         conversas.set(telefone, { etapa: 'renovacao_busca' });
 
-        await message.reply(`🔄 *RENOVACAO*
+        await responderComDigitacao(message, `*RENOVACAO*
 
-Envie o nome do assinante ou numero cadastrado para localizar sua assinatura.`);
+Envie o nome do assinante ou numero cadastrado para localizar sua assinatura.`, imagensRespostas.renovacao);
         return;
     }
 
     if (texto === '4' || texto.includes('ativar') || texto.includes('aplicativo')) {
         conversas.set(telefone, { etapa: 'ativacao_dispositivo' });
 
-        await message.reply(menuDispositivos());
+        await responderComDigitacao(message, menuDispositivos(), imagensRespostas.ativacao);
         return;
     }
 
-    await message.reply(`Nao entendi sua mensagem.
+    await responderComDigitacao(message, `Nao entendi sua mensagem.
 
-Digite *menu* para ver as opcoes de atendimento.`);
+Digite *menu* para ver as opcoes de atendimento.`, imagensRespostas.erro);
 }
 
 module.exports = {

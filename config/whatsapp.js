@@ -4,8 +4,27 @@ const { responderMensagem } = require('../services/conversaService');
 
 let client;
 let qrAtual = '';
+let inicializando = false;
+let conectado = false;
+let tentativaReconexao = null;
+
+function agendarReconexao() {
+    if (tentativaReconexao) return;
+
+    tentativaReconexao = setTimeout(() => {
+        tentativaReconexao = null;
+        iniciarWhatsApp();
+    }, 5000);
+}
 
 async function iniciarWhatsApp() {
+    if (inicializando) {
+        console.log('Inicializacao do WhatsApp ja esta em andamento');
+        return;
+    }
+
+    inicializando = true;
+
     try {
         const executablePath = await chromium.executablePath();
 
@@ -13,11 +32,15 @@ async function iniciarWhatsApp() {
 
         client = new Client({
             authStrategy: new LocalAuth({
-                clientId: 'julianplay'
+                clientId: 'julianplay',
+                dataPath: './.wwebjs_auth'
             }),
+            takeoverOnConflict: true,
+            takeoverTimeoutMs: 0,
             puppeteer: {
                 executablePath,
                 headless: true,
+                protocolTimeout: 120000,
                 args: [
                     ...chromium.args,
                     '--no-sandbox',
@@ -25,8 +48,7 @@ async function iniciarWhatsApp() {
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
                     '--no-first-run',
-                    '--no-zygote',
-                    '--single-process'
+                    '--no-zygote'
                 ]
             }
         });
@@ -46,14 +68,12 @@ async function iniciarWhatsApp() {
             console.log('Autenticado');
         });
 
-        client.on('ready', async () => {
-            console.log('WhatsApp conectado');
+        client.on('ready', () => {
+            if (conectado) return;
 
-            try {
-                console.log('Estado:', await client.getState());
-            } catch (err) {
-                console.log('Erro ao consultar estado:', err);
-            }
+            conectado = true;
+            inicializando = false;
+            console.log('WhatsApp conectado');
         });
 
         client.on('change_state', (state) => {
@@ -61,11 +81,17 @@ async function iniciarWhatsApp() {
         });
 
         client.on('auth_failure', (msg) => {
+            conectado = false;
+            inicializando = false;
             console.log('Falha autenticacao:', msg);
+            agendarReconexao();
         });
 
         client.on('disconnected', (reason) => {
+            conectado = false;
+            inicializando = false;
             console.log('Desconectado:', reason);
+            agendarReconexao();
         });
 
         client.on('message', async (message) => {
@@ -79,16 +105,18 @@ async function iniciarWhatsApp() {
             }
         });
 
-        client.on('message_create', async (message) => {
-            if (message.fromMe) return;
-            console.log('Message create:', message.body);
-        });
-
         await client.initialize();
 
         console.log('Initialize executado');
     } catch (err) {
+        inicializando = false;
         console.log('Erro geral:', err);
+
+        const mensagem = err && err.message ? err.message : String(err);
+
+        if (mensagem.includes('Execution context was destroyed')) {
+            agendarReconexao();
+        }
     }
 }
 
