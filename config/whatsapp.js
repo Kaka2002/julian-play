@@ -11,12 +11,31 @@ async function iniciarWhatsApp() {
     console.log('Chrome encontrado:', executablePath);
 
     client = new Client({
-        authStrategy: new LocalAuth(),
+        authStrategy: new LocalAuth({dataPath: './.wwebjs_auth'}),
         puppeteer: {
             executablePath,
             headless: true,
-            args: chromium.args
+            args: [
+                ...chromium.args,
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process'
+            ]
         }
+    });
+
+    console.log('Iniciando cliente WhatsApp...');
+
+    client.on('loading_screen', (percent, message) => {
+        console.log(`Carregando: ${percent}% - ${message}`);
+    });
+
+    client.on('authenticated', () => {
+        console.log('✅ Autenticado');
     });
 
     client.on('qr', (qr) => {
