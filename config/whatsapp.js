@@ -43,8 +43,15 @@ async function iniciarWhatsApp() {
         console.log('📱 QR Code gerado');
     });
 
-    client.on('ready', () => {
+    client.on('ready', async () => {
         console.log('✅ WhatsApp conectado');
+
+        const numeroTeste = '5511925716232@c.us';
+
+        await client.sendMessage(
+            numeroTeste,
+            '🚀 JULIAN PLAY TV online no Render!'
+        );
     });
 
     client.on('auth_failure', (msg) => {
@@ -57,6 +64,7 @@ async function iniciarWhatsApp() {
 
     // MENU PRINCIPAL
     client.on('message', async (message) => {
+        console.log('MENSAGEM RECEBIDA:', message.body);
 
         const texto = message.body.toLowerCase();
 
@@ -65,28 +73,22 @@ async function iniciarWhatsApp() {
             texto === 'ola' ||
             texto === 'olá' ||
             texto === 'menu'
-        ) {
+        ){
 
-            await message.reply(
-`📺 *JULIAN PLAY TV*
+        console.log('MENU ACIONADO');
 
-1 - Solicitar Planos
+        await message.reply(`
 
-2 - Teste Grátis
+            📺 JULIAN PLAY TV
 
-3 - Renovar Assinatura
-
-4 - Ativar Aplicativos
-
-0 - Encerrar Atendimento`
-            );
-
-        }
-
-    });
-
-    await client.initialize();
-}
+            1 - Solicitar Planos
+            2 - Teste Grátis
+            3 - Renovar Assinatura
+            4 - Ativar Aplicativos
+            0 - Encerrar Atendimento
+        `);
+    }
+});
 
 function getQrCode() {
     return qrAtual;
