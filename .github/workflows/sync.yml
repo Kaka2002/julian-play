@@ -6,7 +6,7 @@ on:
       - main
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Remove o aviso de depreciação
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   sync:
@@ -21,11 +21,14 @@ jobs:
         env:
           MY_TOKEN: ${{ secrets.GH_PAT }}
         run: |
+          # Configura o Git para falhar imediatamente em caso de erro, sem travar pedindo senha
+          export GIT_TERMINAL_PROMPT=0
+          
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           
-          # Clona o repositório usando a variável de ambiente segura
-          git clone "https://${MY_TOKEN}@://github.com" target_repo
+          # Clona usando o formato oficial de autenticação por token do GitHub
+          git clone "https://x-token-auth:${MY_TOKEN}@://github.com" target_repo
           
           # Limpa o conteúdo antigo
           find target_repo -mindepth 1 -maxdepth 1 ! -name '.git' -exec rm -rf {} +
@@ -38,7 +41,8 @@ jobs:
           
           if ! git diff-index --quiet HEAD; then
             git commit -m "Sync: Automação espelhada do repositório principal"
-            git push origin main
+            # Usa o token também para fazer o push com segurança
+            git push "https://x-token-auth:${MY_TOKEN}@://github.com" main
           else
             echo "Nenhuma alteração detectada para sincronizar."
           fi
