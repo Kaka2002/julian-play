@@ -4,6 +4,7 @@ const { responderMensagem } = require('../services/conversaService');
 
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
+const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 90000);
 
 let client;
 let qrAtual = '';
@@ -49,6 +50,7 @@ async function iniciarWhatsApp() {
             }),
             takeoverOnConflict: TAKEOVER_ATIVO,
             takeoverTimeoutMs: 30000,
+            authTimeoutMs: AUTH_TIMEOUT_MS,
             puppeteer: {
                 executablePath,
                 headless: true,
@@ -59,6 +61,15 @@ async function iniciarWhatsApp() {
                     '--disable-setuid-sandbox',
                     '--disable-dev-shm-usage',
                     '--disable-gpu',
+                    '--disable-extensions',
+                    '--disable-default-apps',
+                    '--disable-sync',
+                    '--disable-background-networking',
+                    '--disable-background-timer-throttling',
+                    '--disable-renderer-backgrounding',
+                    '--disable-features=Translate,AudioServiceOutOfProcess',
+                    '--mute-audio',
+                    '--hide-scrollbars',
                     '--no-first-run',
                     '--no-zygote'
                 ]
@@ -84,6 +95,14 @@ async function iniciarWhatsApp() {
             console.log('Autenticado');
         });
 
+        client.on('change_state', (state) => {
+            if (state === 'CONNECTED') {
+                statusWhatsApp = 'conectando';
+            }
+
+            console.log('Estado alterado:', state);
+        });
+
         client.on('ready', () => {
             if (conectado) return;
 
@@ -92,10 +111,6 @@ async function iniciarWhatsApp() {
             statusWhatsApp = 'conectado';
             qrAtual = '';
             console.log('WhatsApp conectado');
-        });
-
-        client.on('change_state', (state) => {
-            console.log('Estado alterado:', state);
         });
 
         client.on('auth_failure', (msg) => {
@@ -179,7 +194,8 @@ function getStatusWhatsApp() {
         temQr: Boolean(qrAtual),
         ultimoQrEm,
         authDataPath: AUTH_DATA_PATH,
-        takeoverAtivo: TAKEOVER_ATIVO
+        takeoverAtivo: TAKEOVER_ATIVO,
+        authTimeoutMs: AUTH_TIMEOUT_MS
     };
 }
 

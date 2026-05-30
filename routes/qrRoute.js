@@ -4,14 +4,14 @@ const router = express.Router();
 
 const { getQrCode, getStatusWhatsApp } = require('../config/whatsapp');
 
-function pagina({ titulo, mensagem, qrImage = '' }) {
+function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
     return `
     <!doctype html>
     <html lang="pt-BR">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta http-equiv="refresh" content="5">
+        <meta http-equiv="refresh" content="${refresh}">
         <title>JULIAN PLAY - WhatsApp</title>
         <style>
             body {
@@ -53,7 +53,7 @@ function pagina({ titulo, mensagem, qrImage = '' }) {
             <h2>${titulo}</h2>
             ${qrImage ? `<img src="${qrImage}" alt="QR Code WhatsApp">` : ''}
             <p>${mensagem}</p>
-            <small>Esta pagina atualiza automaticamente a cada 5 segundos.</small>
+            <small>Esta pagina atualiza automaticamente.</small>
         </main>
     </body>
     </html>`;
@@ -73,7 +73,15 @@ router.get('/qr', async (req, res) => {
     if (status.conectado) {
         return res.send(pagina({
             titulo: 'WhatsApp conectado',
-            mensagem: 'O robo esta conectado e pronto para responder.'
+            mensagem: 'O robo esta conectado e pronto para responder.',
+            refresh: 10
+        }));
+    }
+
+    if (status.status === 'autenticado' || status.status === 'conectando') {
+        return res.send(pagina({
+            titulo: 'QR Code escaneado',
+            mensagem: 'O WhatsApp esta autenticando. Aguarde nesta tela ate aparecer conectado.'
         }));
     }
 

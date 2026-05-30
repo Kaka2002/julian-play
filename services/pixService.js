@@ -9,6 +9,16 @@ const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
 const assetsDir = path.join(__dirname, '..', 'assets');
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 15000);
+
+function comTimeout(promessa, ms, descricao) {
+    return Promise.race([
+        promessa,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`${descricao} excedeu ${ms}ms`)), ms);
+        })
+    ]);
+}
 
 const planos = {
     '1': {
@@ -138,26 +148,32 @@ async function gerarQRCodeAutomatico(plano) {
 async function enviarQRCodePIX(message, plano) {
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
-        const chat = await message.getChat();
 
-        await chat.sendMessage(media, {
-            caption: legendaPix(plano)
-        });
+        await comTimeout(
+            message.client.sendMessage(message.from, media, {
+                caption: legendaPix(plano)
+            }),
+            ENVIO_TIMEOUT_MS,
+            'Envio do QR Code PIX'
+        );
 
         console.log(`QR Code PIX ${plano.nome} enviado com sucesso`);
         return true;
     } catch (error) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
-        const chat = await message.getChat();
 
-        await chat.sendMessage(`⚠️ *ERRO AO GERAR QR CODE*
+        await comTimeout(
+            message.client.sendMessage(message.from, `⚠️ *ERRO AO GERAR QR CODE*
 ━━━━━━━━━━━━━━━━━━━━
 Nao foi possivel gerar o QR Code neste momento.
 
 Tente novamente ou escolha outro plano.
 
 *0* - Voltar ao menu principal
-${RODAPE_ATENDIMENTO}`);
+${RODAPE_ATENDIMENTO}`),
+            ENVIO_TIMEOUT_MS,
+            'Envio de erro do PIX'
+        );
         return false;
     }
 }

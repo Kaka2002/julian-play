@@ -13,6 +13,7 @@ const {
 const conversas = new Map();
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 1000);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 15000);
 const imagensRespostas = {
     menu: 'Logo 1_7.png',
     planos: 'Plano.png',
@@ -29,14 +30,23 @@ function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function comTimeout(promessa, ms, descricao) {
+    return Promise.race([
+        promessa,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`${descricao} excedeu ${ms}ms`)), ms);
+        })
+    ]);
+}
+
 async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
     if (!DIGITACAO_ATIVA || tempo <= 0) return;
 
     try {
-        const chat = await message.getChat();
-        await chat.sendStateTyping();
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat');
+        await comTimeout(chat.sendStateTyping(), 5000, 'Estado digitando');
         await esperar(tempo);
-        await chat.clearState();
+        await comTimeout(chat.clearState(), 5000, 'Limpeza do estado digitando');
     } catch (err) {
         console.log('Nao foi possivel simular digitacao:', err.message);
         await esperar(tempo);
@@ -51,8 +61,13 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
     if (enviouComImagem) return;
 
-    const chat = await message.getChat();
-    await chat.sendMessage(resposta);
+    await comTimeout(
+        message.client.sendMessage(message.from, resposta),
+        ENVIO_TIMEOUT_MS,
+        'Envio de mensagem'
+    );
+
+    console.log('Resposta enviada');
 }
 
 function adicionarOpcaoSair(texto) {
