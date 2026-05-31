@@ -79,13 +79,20 @@ function processarMensagemEmFila(message, options = {}) {
         return;
     }
 
-    if (message.fromMe && !(options.permitirFromMe && ehMensagemPropriaProcessavel(texto))) {
+    if (message.fromMe && !ehComandoControle(texto) && !(options.permitirFromMe && ehMensagemPropriaProcessavel(texto))) {
         console.log('Mensagem propria ignorada:', message.body);
         return;
     }
 
     if (message.fromMe) {
-        console.log('Mensagem propria manual processada:', message.body);
+        console.log(
+            'Mensagem propria manual processada:',
+            message.body,
+            'from:',
+            message.from,
+            'to:',
+            message.to
+        );
     }
 
     if (jaProcessouMensagem(message)) return;
@@ -94,18 +101,20 @@ function processarMensagemEmFila(message, options = {}) {
 
     if (texto === 'sair' || texto === 'encerrar') {
         filasMensagens.delete(telefone);
-        console.log('Encerramento solicitado:', message.body);
-        responderEncerramentoRapido(message).catch((err) => {
-            console.log('Erro ao encerrar atendimento:', err);
-        });
-        return;
+        console.log('Encerramento solicitado:', message.body, 'telefone:', telefone);
     }
 
     const filaAtual = filasMensagens.get(telefone) || Promise.resolve();
 
     const proximaFila = filaAtual
         .catch(() => {})
-        .then(() => responderMensagem(message))
+        .then(() => {
+            if (texto === 'sair' || texto === 'encerrar') {
+                return responderEncerramentoRapido(message);
+            }
+
+            return responderMensagem(message);
+        })
         .catch((err) => {
             console.log('Erro no evento message:', err);
         })
