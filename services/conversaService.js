@@ -113,6 +113,8 @@ async function responderComDigitacao(message, texto, imagem = null) {
 }
 
 async function responderEncerramentoRapido(message) {
+    apagarConversa(obterDestinoMensagem(message));
+
     const texto = `✅ *ATENDIMENTO ENCERRADO*
 ━━━━━━━━━━━━━━━━━━━━
 Obrigado por falar com a *JULIAN PLAY*.
@@ -302,7 +304,7 @@ Seu acesso de teste foi preparado com sucesso.
 *Senha:* __________________
 *Valido ate:* ____/____/______ as ____:____
 
-Abra o aplicativo no aparelho informado e use os dados acima.
+Aguarde o atendente informar os procedimentos corretos para ativar seu teste gratis.
 
 Se aparecer alguma duvida na tela, envie uma foto aqui.`;
 }
