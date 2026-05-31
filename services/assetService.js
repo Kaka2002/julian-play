@@ -3,7 +3,7 @@ const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 
 const assetsDir = path.join(__dirname, '..', 'assets');
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 const MAX_ASSET_BYTES = Number(process.env.MAX_ASSET_BYTES || 900000);
 
 function comTimeout(promessa, ms, descricao) {
@@ -45,14 +45,15 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
 
         const media = MessageMedia.fromFilePath(arquivo);
         const destino = message?.fromMe && message?.to ? message.to : message.from;
+        console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
 
-        await comTimeout(
+        const enviada = await comTimeout(
             message.client.sendMessage(destino, media, { caption: legenda }),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );
 
-        console.log(`Imagem enviada: ${nomeArquivo}`);
+        console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
         return true;
     } catch (err) {
         console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);

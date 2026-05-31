@@ -17,7 +17,7 @@ const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : pat
 const ARQUIVO_CONVERSAS = path.join(DATA_DIR, 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 const imagensRespostas = {
     menu: 'Logo 1_7.png',
     planos: 'Plano.png',
@@ -76,7 +76,11 @@ function comTimeout(promessa, ms, descricao) {
     return Promise.race([
         promessa,
         new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`${descricao} excedeu ${ms}ms`)), ms);
+            setTimeout(() => {
+                const err = new Error(`${descricao} excedeu ${ms}ms`);
+                err.isTimeout = true;
+                reject(err);
+            }, ms);
         })
     ]);
 }
@@ -91,7 +95,6 @@ async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
         await comTimeout(chat.clearState(), 5000, 'Limpeza do estado digitando');
     } catch (err) {
         console.log('Nao foi possivel simular digitacao:', err.message);
-        await esperar(tempo);
     }
 }
 
@@ -103,17 +106,30 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
     if (enviouComImagem) return;
 
-    await comTimeout(
-        message.client.sendMessage(obterDestinoMensagem(message), resposta),
-        ENVIO_TIMEOUT_MS,
-        'Envio de mensagem'
-    );
+    const destino = obterDestinoMensagem(message);
+    console.log('Enviando resposta para:', destino);
 
-    console.log('Resposta enviada');
+    try {
+        const enviada = await comTimeout(
+            message.client.sendMessage(destino, resposta),
+            ENVIO_TIMEOUT_MS,
+            'Envio de mensagem'
+        );
+
+        console.log('Resposta enviada:', enviada?.id?._serialized || 'sem id');
+    } catch (err) {
+        if (err.isTimeout) {
+            console.log('Envio demorou demais. O WhatsApp pode concluir em segundo plano:', err.message);
+            return;
+        }
+
+        throw err;
+    }
 }
 
 async function responderEncerramentoRapido(message) {
-    apagarConversa(obterDestinoMensagem(message));
+    const destino = obterDestinoMensagem(message);
+    apagarConversa(destino);
 
     const texto = `✅ *ATENDIMENTO ENCERRADO*
 ━━━━━━━━━━━━━━━━━━━━
@@ -121,13 +137,24 @@ Obrigado por falar com a *JULIAN PLAY*.
 
 Caso queira retornar ao atendimento, digite *menu*.`;
 
-    await comTimeout(
-        message.client.sendMessage(obterDestinoMensagem(message), texto),
-        ENVIO_TIMEOUT_MS,
-        'Envio de encerramento'
-    );
+    console.log('Enviando encerramento para:', destino);
 
-    console.log('Atendimento encerrado');
+    try {
+        const enviada = await comTimeout(
+            message.client.sendMessage(destino, texto),
+            ENVIO_TIMEOUT_MS,
+            'Envio de encerramento'
+        );
+
+        console.log('Atendimento encerrado:', enviada?.id?._serialized || 'sem id');
+    } catch (err) {
+        if (err.isTimeout) {
+            console.log('Encerramento demorou demais. Atendimento ja foi encerrado internamente:', err.message);
+            return;
+        }
+
+        throw err;
+    }
 }
 
 function adicionarOpcaoSair(texto) {

@@ -9,13 +9,17 @@ const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
 const assetsDir = path.join(__dirname, '..', 'assets');
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 
 function comTimeout(promessa, ms, descricao) {
     return Promise.race([
         promessa,
         new Promise((_, reject) => {
-            setTimeout(() => reject(new Error(`${descricao} excedeu ${ms}ms`)), ms);
+            setTimeout(() => {
+                const err = new Error(`${descricao} excedeu ${ms}ms`);
+                err.isTimeout = true;
+                reject(err);
+            }, ms);
         })
     ]);
 }
@@ -149,8 +153,9 @@ async function enviarQRCodePIX(message, plano) {
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
         const destino = message?.fromMe && message?.to ? message.to : message.from;
+        console.log(`Enviando QR Code PIX ${plano.nome} para:`, destino);
 
-        await comTimeout(
+        const enviada = await comTimeout(
             message.client.sendMessage(destino, media, {
                 caption: legendaPix(plano)
             }),
@@ -158,7 +163,7 @@ async function enviarQRCodePIX(message, plano) {
             'Envio do QR Code PIX'
         );
 
-        console.log(`QR Code PIX ${plano.nome} enviado com sucesso`);
+        console.log(`QR Code PIX ${plano.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
         return true;
     } catch (error) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
