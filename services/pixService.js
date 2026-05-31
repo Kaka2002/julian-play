@@ -126,6 +126,36 @@ Confira os dados antes de pagar:
 ${RODAPE_ATENDIMENTO}`;
 }
 
+function legendaPixRenovacao(plano, nomeCliente) {
+    return `💳 *PIX - RENOVACAO ${plano.nome}*
+━━━━━━━━━━━━━━━━━━━━
+Confira os dados antes de pagar:
+
+👤 *Cliente:* ${nomeCliente}
+💰 *Valor:* R$ ${plano.valor}
+🔑 *Chave PIX:* ${CHAVE_PIX}
+
+📲 *Como pagar:*
+1 - Abra o app do seu banco
+2 - Escolha *PIX*
+3 - Toque em *Ler QR Code*
+4 - Escaneie a imagem acima
+5 - Confirme o pagamento
+
+✅ Depois do pagamento, envie o comprovante aqui para renovarmos sua assinatura.
+
+*0* - Voltar ao menu principal
+${RODAPE_ATENDIMENTO}`;
+}
+
+function legendaPixPorContexto(plano, options = {}) {
+    if (options.tipo === 'renovacao') {
+        return legendaPixRenovacao(plano, options.nomeCliente || 'nao informado');
+    }
+
+    return legendaPix(plano);
+}
+
 function buscarQRCodeDoPlano(plano) {
     const caminho = path.join(assetsDir, plano.arquivoQr);
 
@@ -149,15 +179,16 @@ async function gerarQRCodeAutomatico(plano) {
     return new MessageMedia('image/png', base64Image, plano.arquivoQr);
 }
 
-async function enviarQRCodePIX(message, plano) {
+async function enviarQRCodePIX(message, plano, options = {}) {
+    const destino = message?.fromMe && message?.to ? message.to : message.from;
+
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
-        const destino = message?.fromMe && message?.to ? message.to : message.from;
         console.log(`Enviando QR Code PIX ${plano.nome} para:`, destino);
 
         const enviada = await comTimeout(
             message.client.sendMessage(destino, media, {
-                caption: legendaPix(plano)
+                caption: legendaPixPorContexto(plano, options)
             }),
             ENVIO_TIMEOUT_MS,
             'Envio do QR Code PIX'

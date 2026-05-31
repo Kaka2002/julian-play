@@ -8,8 +8,7 @@ const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
 const { enviarImagemComLegenda } = require('./assetService');
 const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
-    cadastrarOuAtualizarCliente,
-    buscarClientePorNomeOuTelefone
+    cadastrarOuAtualizarCliente
 } = require('./clientes');
 
 const conversas = new Map();
@@ -456,7 +455,44 @@ Escolha um aparelho da lista:
         return;
     }
 
-    if (conversa?.etapa === 'renovacao_busca') {
+    if (conversa?.etapa === 'renovacao_nome' || conversa?.etapa === 'renovacao_busca') {
+        definirConversa(telefone, {
+            etapa: 'renovacao_plano',
+            nome: textoOriginal.trim()
+        });
+
+        await responderComDigitacao(message, `✅ *DADOS RECEBIDOS*
+━━━━━━━━━━━━━━━━━━━━
+*Nome:* ${textoOriginal.trim()}
+
+${menuRenovacao()}
+
+Digite apenas o numero do plano que deseja renovar.`, imagensRespostas.renovacao);
+        return;
+    }
+
+    if (conversa?.etapa === 'renovacao_plano') {
+        const plano = buscarPlano(texto);
+
+        if (!plano) {
+            await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha um dos planos para renovar:
+
+${menuRenovacao()}`, imagensRespostas.renovacao);
+            return;
+        }
+
+        apagarConversa(telefone);
+        await simularDigitacao(message, 1500);
+        await enviarQRCodePIX(message, plano, {
+            tipo: 'renovacao',
+            nomeCliente: conversa.nome
+        });
+        return;
+    }
+
+    if (conversa?.etapa === 'renovacao_busca_antiga') {
         const cliente = await buscarClientePorNomeOuTelefone(textoOriginal.trim());
         apagarConversa(telefone);
 
@@ -531,13 +567,13 @@ Para comecar, envie seu *nome completo*.`, imagensRespostas.teste);
     }
 
     if (texto === '3' || texto.includes('renovar') || texto.includes('renovacao')) {
-        definirConversa(telefone, { etapa: 'renovacao_busca' });
+        definirConversa(telefone, { etapa: 'renovacao_nome' });
 
         await responderComDigitacao(message, `🔄 *RENOVACAO*
 ━━━━━━━━━━━━━━━━━━━━
-Vamos localizar sua assinatura.
+Vamos iniciar sua renovacao.
 
-Envie o *nome do assinante* ou o *numero cadastrado*.`, imagensRespostas.renovacao);
+Envie o *nome completo do cliente* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
         return;
     }
 
