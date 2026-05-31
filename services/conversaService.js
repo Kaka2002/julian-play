@@ -13,7 +13,8 @@ const {
 } = require('./clientes');
 
 const conversas = new Map();
-const ARQUIVO_CONVERSAS = path.join(__dirname, '..', 'database', 'conversas.json');
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const ARQUIVO_CONVERSAS = path.join(DATA_DIR, 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);

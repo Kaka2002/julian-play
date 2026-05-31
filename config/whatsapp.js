@@ -1,3 +1,4 @@
+const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const {
@@ -6,7 +7,8 @@ const {
     normalizar
 } = require('../services/conversaService');
 
-const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
