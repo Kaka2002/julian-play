@@ -162,8 +162,9 @@ async function enviarQRCodePIX(message, plano) {
     } catch (error) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
 
-        await comTimeout(
-            message.client.sendMessage(message.from, `⚠️ *ERRO AO GERAR QR CODE*
+        try {
+            await comTimeout(
+                message.client.sendMessage(message.from, `⚠️ *ERRO AO GERAR QR CODE*
 ━━━━━━━━━━━━━━━━━━━━
 Nao foi possivel gerar o QR Code neste momento.
 
@@ -171,9 +172,13 @@ Tente novamente ou escolha outro plano.
 
 *0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`),
-            ENVIO_TIMEOUT_MS,
-            'Envio de erro do PIX'
-        );
+                ENVIO_TIMEOUT_MS,
+                'Envio de erro do PIX'
+            );
+        } catch (fallbackError) {
+            console.error(`Erro ao enviar mensagem de falha do PIX: ${fallbackError.message}`);
+        }
+
         return false;
     }
 }

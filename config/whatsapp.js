@@ -14,6 +14,7 @@ let conectado = false;
 let tentativaReconexao = null;
 let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
+const filasMensagens = new Map();
 
 function agendarReconexao() {
     if (tentativaReconexao) return;
@@ -28,6 +29,25 @@ function agendarReconexao() {
 
         iniciarWhatsApp();
     }, 5000);
+}
+
+function processarMensagemEmFila(message) {
+    const telefone = message.from;
+    const filaAtual = filasMensagens.get(telefone) || Promise.resolve();
+
+    const proximaFila = filaAtual
+        .catch(() => {})
+        .then(() => responderMensagem(message))
+        .catch((err) => {
+            console.log('Erro no evento message:', err);
+        })
+        .finally(() => {
+            if (filasMensagens.get(telefone) === proximaFila) {
+                filasMensagens.delete(telefone);
+            }
+        });
+
+    filasMensagens.set(telefone, proximaFila);
 }
 
 async function iniciarWhatsApp() {
@@ -131,14 +151,10 @@ async function iniciarWhatsApp() {
         });
 
         client.on('message', async (message) => {
-            try {
-                if (message.fromMe) return;
+            if (message.fromMe) return;
 
-                console.log('Mensagem recebida:', message.body);
-                await responderMensagem(message);
-            } catch (err) {
-                console.log('Erro no evento message:', err);
-            }
+            console.log('Mensagem recebida:', message.body);
+            processarMensagemEmFila(message);
         });
 
         await client.initialize();

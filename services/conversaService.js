@@ -11,7 +11,7 @@ const {
 } = require('./clientes');
 
 const conversas = new Map();
-const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 1000);
+const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
 const imagensRespostas = {
