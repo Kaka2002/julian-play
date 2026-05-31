@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const menuPrincipal = require('../menus/principal');
 const menuPlanos = require('../menus/planos');
 const menuDispositivos = require('../menus/dispositivos');
@@ -11,6 +13,7 @@ const {
 } = require('./clientes');
 
 const conversas = new Map();
+const ARQUIVO_CONVERSAS = path.join(__dirname, '..', 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 30000);
@@ -25,6 +28,44 @@ const imagensRespostas = {
     encerramento: null
 };
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
+
+function carregarConversas() {
+    try {
+        if (!fs.existsSync(ARQUIVO_CONVERSAS)) return;
+
+        const dados = JSON.parse(fs.readFileSync(ARQUIVO_CONVERSAS, 'utf8'));
+
+        for (const [telefone, conversa] of Object.entries(dados)) {
+            if (conversa?.etapa) conversas.set(telefone, conversa);
+        }
+    } catch (err) {
+        console.log('Nao foi possivel carregar conversas salvas:', err.message);
+    }
+}
+
+function salvarConversas() {
+    try {
+        fs.mkdirSync(path.dirname(ARQUIVO_CONVERSAS), { recursive: true });
+        fs.writeFileSync(
+            ARQUIVO_CONVERSAS,
+            JSON.stringify(Object.fromEntries(conversas), null, 2)
+        );
+    } catch (err) {
+        console.log('Nao foi possivel salvar conversas:', err.message);
+    }
+}
+
+function definirConversa(telefone, conversa) {
+    conversas.set(telefone, conversa);
+    salvarConversas();
+}
+
+function apagarConversa(telefone) {
+    conversas.delete(telefone);
+    salvarConversas();
+}
+
+carregarConversas();
 
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -62,7 +103,7 @@ async function responderComDigitacao(message, texto, imagem = null) {
     if (enviouComImagem) return;
 
     await comTimeout(
-        message.client.sendMessage(message.from, resposta),
+        message.client.sendMessage(obterDestinoMensagem(message), resposta),
         ENVIO_TIMEOUT_MS,
         'Envio de mensagem'
     );
@@ -78,7 +119,7 @@ Obrigado por falar com a *JULIAN PLAY*.
 Caso queira retornar ao atendimento, digite *menu*.`;
 
     await comTimeout(
-        message.client.sendMessage(message.from, texto),
+        message.client.sendMessage(obterDestinoMensagem(message), texto),
         ENVIO_TIMEOUT_MS,
         'Envio de encerramento'
     );
@@ -102,6 +143,10 @@ function normalizar(texto) {
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
+}
+
+function obterDestinoMensagem(message) {
+    return message?.fromMe && message?.to ? message.to : message.from;
 }
 
 function primeiroNome(nome) {
@@ -235,19 +280,19 @@ Se aparecer alguma duvida na tela, envie uma foto aqui.`;
 }
 
 async function responderMensagem(message) {
-    const telefone = message.from;
+    const telefone = obterDestinoMensagem(message);
     const textoOriginal = message.body || '';
     const texto = normalizar(textoOriginal);
     const conversa = conversas.get(telefone);
 
     if (texto === '0' || texto === 'voltar') {
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await enviarMenuPrincipal(message);
         return;
     }
 
     if (texto === 'sair' || texto === 'encerrar') {
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await responderComDigitacao(message, `✅ *ATENDIMENTO ENCERRADO*
 ━━━━━━━━━━━━━━━━━━━━
 Obrigado por falar com a *JULIAN PLAY*.
@@ -257,7 +302,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     }
 
     if (texto === 'menu') {
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await enviarMenuPrincipal(message, imagensRespostas.menu);
         return;
     }
@@ -278,14 +323,14 @@ Escolha um dos planos abaixo:
             return;
         }
 
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano);
         return;
     }
 
     if (conversa?.etapa === 'teste_nome') {
-        conversas.set(telefone, {
+        definirConversa(telefone, {
             etapa: 'teste_aparelho',
             nome: textoOriginal.trim()
         });
@@ -321,7 +366,7 @@ Escolha um aparelho da lista:
         }
 
         if (aparelho === 'Smart TV') {
-            conversas.set(telefone, {
+            definirConversa(telefone, {
                 etapa: 'teste_marca_smarttv',
                 nome: conversa.nome
             });
@@ -336,7 +381,7 @@ Escolha um aparelho da lista:
             aparelho
         });
 
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
         return;
     }
@@ -351,14 +396,14 @@ Escolha um aparelho da lista:
             aparelho
         });
 
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
         return;
     }
 
     if (conversa?.etapa === 'renovacao_busca') {
         const cliente = await buscarClientePorNomeOuTelefone(textoOriginal.trim());
-        conversas.delete(telefone);
+        apagarConversa(telefone);
 
         if (!cliente) {
             await responderComDigitacao(message, `🔎 *CADASTRO NAO LOCALIZADO*
@@ -403,19 +448,19 @@ Escolha um aparelho da lista:
             return;
         }
 
-        conversas.delete(telefone);
+        apagarConversa(telefone);
         await responderComDigitacao(message, tutorial, imagensRespostas.ativacao);
         return;
     }
 
     if (texto === '1' || texto.includes('plano')) {
-        conversas.set(telefone, { etapa: 'planos_escolha' });
+        definirConversa(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(), imagensRespostas.planos);
         return;
     }
 
     if (texto === '2' || isPedidoTeste(texto)) {
-        conversas.set(telefone, { etapa: 'teste_nome' });
+        definirConversa(telefone, { etapa: 'teste_nome' });
 
         await responderComDigitacao(message, `🎁 *TESTE GRATIS*
 ━━━━━━━━━━━━━━━━━━━━
@@ -431,7 +476,7 @@ Para comecar, envie seu *nome completo*.`, imagensRespostas.teste);
     }
 
     if (texto === '3' || texto.includes('renovar') || texto.includes('renovacao')) {
-        conversas.set(telefone, { etapa: 'renovacao_busca' });
+        definirConversa(telefone, { etapa: 'renovacao_busca' });
 
         await responderComDigitacao(message, `🔄 *RENOVACAO*
 ━━━━━━━━━━━━━━━━━━━━
@@ -442,7 +487,7 @@ Envie o *nome do assinante* ou o *numero cadastrado*.`, imagensRespostas.renovac
     }
 
     if (texto === '4' || texto.includes('ativar') || texto.includes('aplicativo')) {
-        conversas.set(telefone, { etapa: 'ativacao_dispositivo' });
+        definirConversa(telefone, { etapa: 'ativacao_dispositivo' });
 
         await responderComDigitacao(message, menuDispositivos(), imagensRespostas.ativacao);
         return;

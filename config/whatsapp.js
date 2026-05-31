@@ -59,6 +59,14 @@ function ehComandoControle(texto) {
     return ['0', 'voltar', 'menu', 'sair', 'encerrar'].includes(texto);
 }
 
+function obterTelefoneMensagem(message) {
+    return message?.fromMe && message?.to ? message.to : message.from;
+}
+
+function ehMensagemPropriaProcessavel(texto) {
+    return ehComandoControle(texto) || texto.length <= 80;
+}
+
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
@@ -69,14 +77,18 @@ function processarMensagemEmFila(message, options = {}) {
         return;
     }
 
-    if (message.fromMe && !(options.permitirFromMe && ehComandoControle(texto))) {
+    if (message.fromMe && !(options.permitirFromMe && ehMensagemPropriaProcessavel(texto))) {
         console.log('Mensagem propria ignorada:', message.body);
         return;
     }
 
+    if (message.fromMe) {
+        console.log('Mensagem propria manual processada:', message.body);
+    }
+
     if (jaProcessouMensagem(message)) return;
 
-    const telefone = message.from;
+    const telefone = obterTelefoneMensagem(message);
 
     if (texto === 'sair' || texto === 'encerrar') {
         filasMensagens.delete(telefone);

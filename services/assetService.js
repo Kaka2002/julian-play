@@ -44,9 +44,10 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         }
 
         const media = MessageMedia.fromFilePath(arquivo);
+        const destino = message?.fromMe && message?.to ? message.to : message.from;
 
         await comTimeout(
-            message.client.sendMessage(message.from, media, { caption: legenda }),
+            message.client.sendMessage(destino, media, { caption: legenda }),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );

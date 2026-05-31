@@ -148,9 +148,10 @@ async function gerarQRCodeAutomatico(plano) {
 async function enviarQRCodePIX(message, plano) {
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
+        const destino = message?.fromMe && message?.to ? message.to : message.from;
 
         await comTimeout(
-            message.client.sendMessage(message.from, media, {
+            message.client.sendMessage(destino, media, {
                 caption: legendaPix(plano)
             }),
             ENVIO_TIMEOUT_MS,
@@ -164,7 +165,7 @@ async function enviarQRCodePIX(message, plano) {
 
         try {
             await comTimeout(
-                message.client.sendMessage(message.from, `⚠️ *ERRO AO GERAR QR CODE*
+                message.client.sendMessage(destino, `⚠️ *ERRO AO GERAR QR CODE*
 ━━━━━━━━━━━━━━━━━━━━
 Nao foi possivel gerar o QR Code neste momento.
 
