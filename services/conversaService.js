@@ -19,8 +19,8 @@ const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 const imagensRespostas = {
-    menu: 'Logo 1_7.png',
-    planos: 'Plano.png',
+    menu: null,
+    planos: null,
     teste: null,
     testeLiberado: null,
     renovacao: null,

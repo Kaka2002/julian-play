@@ -3,8 +3,9 @@ const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 
 const assetsDir = path.join(__dirname, '..', 'assets');
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_IMAGEM_TIMEOUT_MS || 10000);
 const MAX_ASSET_BYTES = Number(process.env.MAX_ASSET_BYTES || 900000);
+const ENVIAR_IMAGENS = process.env.ENVIAR_IMAGENS !== 'false';
 
 function comTimeout(promessa, ms, descricao) {
     return Promise.race([
@@ -32,6 +33,7 @@ function assetExiste(nomeArquivo) {
 }
 
 async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
+    if (!ENVIAR_IMAGENS) return false;
     if (!assetExiste(nomeArquivo)) return false;
 
     try {
@@ -59,8 +61,8 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);
 
         if (err.isTimeout) {
-            console.log('Envio da imagem pode terminar em segundo plano. Texto reserva nao sera enviado para evitar duplicidade.');
-            return true;
+            console.log('Envio da imagem pode terminar em segundo plano. Enviando texto reserva para garantir resposta.');
+            return false;
         }
 
         return false;
