@@ -7,13 +7,13 @@ Escolha o plano ideal para voce:
 💰 R$ 35,00
 
 *2* - Trimestral
-💰 R$ 80,00
+💰 R$ 96,00
 
 *3* - Semestral
-💰 R$ 150,00
+💰 R$ 180,00
 
 *4* - Anual
-💰 R$ 275,00
+💰 R$ 336,00
 
 *0* - ↩️ Voltar
 

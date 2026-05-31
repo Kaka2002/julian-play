@@ -29,19 +29,19 @@ const planos = {
     },
     '2': {
         nome: 'TRIMESTRAL',
-        valor: '80,00',
+        valor: '96,00',
         arquivoQr: 'pix_trimestral.png',
         pixCode: CHAVE_PIX
     },
     '3': {
         nome: 'SEMESTRAL',
-        valor: '150,00',
+        valor: '180,00',
         arquivoQr: 'pix_semestral.png',
         pixCode: CHAVE_PIX
     },
     '4': {
         nome: 'ANUAL',
-        valor: '275,00',
+        valor: '336,00',
         arquivoQr: 'pix_anual.png',
         pixCode: CHAVE_PIX
     }
