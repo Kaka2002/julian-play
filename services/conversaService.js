@@ -279,6 +279,33 @@ Abra o aplicativo no aparelho informado e use os dados acima.
 Se aparecer alguma duvida na tela, envie uma foto aqui.`;
 }
 
+function mensagemTransferenciaTesteSmartTV(nome, aparelho) {
+    return `*ATENDIMENTO TRANSFERIDO*
+--------------------
+Recebemos as informacoes para liberar seu teste gratis.
+
+Seu atendimento sera transferido para um atendente.
+Aguarde alguns minutos, por favor.
+
+*Dados informados:*
+*Nome:* ${nome}
+*Aparelho:* ${aparelho}
+
+*TESTE GRATIS LIBERADO*
+--------------------
+Seu acesso de teste foi preparado com sucesso.
+
+*Nome:* ${nome}
+*Aparelho:* ${aparelho}
+*Usuario:* __________________
+*Senha:* __________________
+*Valido ate:* ____/____/______ as ____:____
+
+Abra o aplicativo no aparelho informado e use os dados acima.
+
+Se aparecer alguma duvida na tela, envie uma foto aqui.`;
+}
+
 async function responderMensagem(message) {
     const telefone = obterDestinoMensagem(message);
     const textoOriginal = message.body || '';
@@ -390,14 +417,12 @@ Escolha um aparelho da lista:
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = `Smart TV - ${marca}`;
 
-        const cliente = await cadastrarOuAtualizarCliente({
-            telefone,
-            nome: conversa.nome,
-            aparelho
-        });
-
         apagarConversa(telefone);
-        await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
+        await responderComDigitacao(
+            message,
+            mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
+            imagensRespostas.testeLiberado
+        );
         return;
     }
 
