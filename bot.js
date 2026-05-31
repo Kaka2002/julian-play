@@ -5,8 +5,13 @@ const { iniciarWhatsApp, encerrarWhatsApp } = require('./config/whatsapp');
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
 
-    if (mensagem.includes('Execution context was destroyed')) {
-        console.log('WhatsApp Web recarregou durante a inicializacao. Aguardando reconexao...');
+    if (
+        mensagem.includes('Execution context was destroyed') ||
+        mensagem.includes('Runtime.callFunctionOn timed out') ||
+        mensagem.includes('ProtocolError') ||
+        mensagem.includes('auth timeout')
+    ) {
+        console.log('WhatsApp Web demorou/recarregou durante a inicializacao. Aguardando estabilizar...');
         return;
     }
 

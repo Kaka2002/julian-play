@@ -1,11 +1,15 @@
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const { responderMensagem } = require('../services/conversaService');
+const {
+    responderMensagem,
+    responderEncerramentoRapido,
+    normalizar
+} = require('../services/conversaService');
 
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || './.wwebjs_auth';
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
-const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 180000);
-const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 180000);
+const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
+const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
 
 let client;
 let qrAtual = '';
@@ -15,6 +19,26 @@ let tentativaReconexao = null;
 let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
 const filasMensagens = new Map();
+const mensagensProcessadas = new Set();
+
+function getMessageId(message) {
+    return message?.id?._serialized || `${message.from}:${message.timestamp}:${message.body}`;
+}
+
+function jaProcessouMensagem(message) {
+    const id = getMessageId(message);
+
+    if (mensagensProcessadas.has(id)) return true;
+
+    mensagensProcessadas.add(id);
+
+    if (mensagensProcessadas.size > 500) {
+        const [primeiro] = mensagensProcessadas;
+        mensagensProcessadas.delete(primeiro);
+    }
+
+    return false;
+}
 
 function agendarReconexao() {
     if (tentativaReconexao) return;
@@ -32,7 +56,21 @@ function agendarReconexao() {
 }
 
 function processarMensagemEmFila(message) {
+    if (!message || message.fromMe) return;
+    if (jaProcessouMensagem(message)) return;
+
     const telefone = message.from;
+    const texto = normalizar(message.body || '');
+
+    if (texto === 'sair' || texto === 'encerrar') {
+        filasMensagens.delete(telefone);
+        console.log('Encerramento solicitado:', message.body);
+        responderEncerramentoRapido(message).catch((err) => {
+            console.log('Erro ao encerrar atendimento:', err);
+        });
+        return;
+    }
+
     const filaAtual = filasMensagens.get(telefone) || Promise.resolve();
 
     const proximaFila = filaAtual
@@ -151,9 +189,14 @@ async function iniciarWhatsApp() {
         });
 
         client.on('message', async (message) => {
+            console.log('Mensagem recebida:', message.body);
+            processarMensagemEmFila(message);
+        });
+
+        client.on('message_create', async (message) => {
             if (message.fromMe) return;
 
-            console.log('Mensagem recebida:', message.body);
+            console.log('Mensagem recebida via reserva:', message.body);
             processarMensagemEmFila(message);
         });
 
@@ -167,7 +210,12 @@ async function iniciarWhatsApp() {
 
         const mensagem = err && err.message ? err.message : String(err);
 
-        if (mensagem.includes('Execution context was destroyed')) {
+        if (
+            mensagem.includes('Execution context was destroyed') ||
+            mensagem.includes('Runtime.callFunctionOn timed out') ||
+            mensagem.includes('ProtocolError') ||
+            mensagem.includes('auth timeout')
+        ) {
             agendarReconexao();
         }
     }

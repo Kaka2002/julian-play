@@ -1,8 +1,19 @@
-function getSaudacao() {
-    const hora = new Date().getHours();
+function getHoraSaoPaulo() {
+    const partes = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        hour12: false
+    }).formatToParts(new Date());
 
-    if (hora < 12) return 'Bom dia';
-    if (hora < 18) return 'Boa tarde';
+    const hora = partes.find(parte => parte.type === 'hour')?.value || '0';
+    return Number(hora);
+}
+
+function getSaudacao() {
+    const hora = getHoraSaoPaulo();
+
+    if (hora >= 5 && hora < 12) return 'Bom dia';
+    if (hora >= 12 && hora < 18) return 'Boa tarde';
     return 'Boa noite';
 }
 

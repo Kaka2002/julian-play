@@ -70,6 +70,22 @@ async function responderComDigitacao(message, texto, imagem = null) {
     console.log('Resposta enviada');
 }
 
+async function responderEncerramentoRapido(message) {
+    const texto = `✅ *ATENDIMENTO ENCERRADO*
+━━━━━━━━━━━━━━━━━━━━
+Obrigado por falar com a *JULIAN PLAY*.
+
+Caso queira retornar ao atendimento, digite *menu*.`;
+
+    await comTimeout(
+        message.client.sendMessage(message.from, texto),
+        ENVIO_TIMEOUT_MS,
+        'Envio de encerramento'
+    );
+
+    console.log('Atendimento encerrado');
+}
+
 function adicionarOpcaoSair(texto) {
     if (!texto) return RODAPE_ATENDIMENTO;
     if (texto.toLowerCase().includes('atendimento encerrado')) return texto;
@@ -90,6 +106,22 @@ function normalizar(texto) {
 
 function primeiroNome(nome) {
     return (nome || 'cliente').trim().split(/\s+/)[0];
+}
+
+async function obterNomeContato(message) {
+    try {
+        const contato = await comTimeout(message.getContact(), 5000, 'Busca do contato');
+        const nome = contato.pushname || contato.name || contato.shortName || '';
+        return nome.trim().split(/\s+/)[0] || '';
+    } catch (err) {
+        console.log('Nao foi possivel obter nome do contato:', err.message);
+        return '';
+    }
+}
+
+async function enviarMenuPrincipal(message, imagem = null) {
+    const nome = await obterNomeContato(message);
+    await responderComDigitacao(message, menuPrincipal(nome), imagem);
 }
 
 function formatarData(dataIso) {
@@ -158,7 +190,7 @@ async function responderMensagem(message) {
 
     if (texto === '0' || texto === 'voltar') {
         conversas.delete(telefone);
-        await responderComDigitacao(message, menuPrincipal(''));
+        await enviarMenuPrincipal(message);
         return;
     }
 
@@ -166,7 +198,7 @@ async function responderMensagem(message) {
         conversas.delete(telefone);
         await responderComDigitacao(message, `✅ *ATENDIMENTO ENCERRADO*
 ━━━━━━━━━━━━━━━━━━━━
-Obrigado por falar com a *JULIAN PLAY TV*.
+Obrigado por falar com a *JULIAN PLAY*.
 
 Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerramento);
         return;
@@ -174,7 +206,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
 
     if (texto === 'menu') {
         conversas.delete(telefone);
-        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
+        await enviarMenuPrincipal(message, imagensRespostas.menu);
         return;
     }
 
@@ -301,7 +333,7 @@ Para comecar, envie seu *nome completo*.`, imagensRespostas.teste);
     }
 
     if (isPalavraChave(texto)) {
-        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
+        await enviarMenuPrincipal(message, imagensRespostas.menu);
         return;
     }
 
@@ -334,5 +366,7 @@ Digite uma das opcoes do menu principal:
 }
 
 module.exports = {
-    responderMensagem
+    responderMensagem,
+    responderEncerramentoRapido,
+    normalizar
 };
