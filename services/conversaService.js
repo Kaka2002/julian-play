@@ -158,7 +158,7 @@ async function responderMensagem(message) {
 
     if (texto === '0' || texto === 'voltar') {
         conversas.delete(telefone);
-        await responderComDigitacao(message, menuPrincipal(''), imagensRespostas.menu);
+        await responderComDigitacao(message, menuPrincipal(''));
         return;
     }
 
