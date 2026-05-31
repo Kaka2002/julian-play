@@ -55,12 +55,28 @@ function agendarReconexao() {
     }, 5000);
 }
 
-function processarMensagemEmFila(message) {
-    if (!message || message.fromMe) return;
+function ehComandoControle(texto) {
+    return ['0', 'voltar', 'menu', 'sair', 'encerrar'].includes(texto);
+}
+
+function processarMensagemEmFila(message, options = {}) {
+    if (!message) return;
+
+    const texto = normalizar(message.body || '');
+
+    if (!texto) {
+        console.log('Mensagem vazia ignorada');
+        return;
+    }
+
+    if (message.fromMe && !(options.permitirFromMe && ehComandoControle(texto))) {
+        console.log('Mensagem propria ignorada:', message.body);
+        return;
+    }
+
     if (jaProcessouMensagem(message)) return;
 
     const telefone = message.from;
-    const texto = normalizar(message.body || '');
 
     if (texto === 'sair' || texto === 'encerrar') {
         filasMensagens.delete(telefone);
@@ -194,10 +210,8 @@ async function iniciarWhatsApp() {
         });
 
         client.on('message_create', async (message) => {
-            if (message.fromMe) return;
-
-            console.log('Mensagem recebida via reserva:', message.body);
-            processarMensagemEmFila(message);
+            console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}:`, message.body);
+            processarMensagemEmFila(message, { permitirFromMe: true });
         });
 
         await client.initialize();

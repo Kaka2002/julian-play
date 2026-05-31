@@ -166,6 +166,58 @@ Assim conseguimos orientar a configuracao sem erro.`,
     return tutoriais[opcao] || null;
 }
 
+function aparelhoTeste(opcao) {
+    const aparelhos = {
+        '1': 'Smart TV',
+        '2': 'TV Box',
+        '3': 'Celular Android',
+        '4': 'iPhone',
+        '5': 'Computador'
+    };
+
+    return aparelhos[opcao] || null;
+}
+
+function marcaSmartTV(opcao) {
+    const marcas = {
+        '1': 'TV LG',
+        '2': 'TV Samsung',
+        '3': 'TV TCL',
+        '4': 'TV Roku',
+        '5': 'Toshiba/Philco',
+        '6': 'TV Philips',
+        '7': 'Semp',
+        '8': 'Hisense',
+        '9': 'Panasonic',
+        '10': 'Sony',
+        '11': 'Telefunken',
+        '12': 'Thomson'
+    };
+
+    return marcas[opcao] || null;
+}
+
+function menuMarcasSmartTV() {
+    return `📺 *MARCA DA SMART TV*
+━━━━━━━━━━━━━━━━━━━━
+Escolha a marca da sua TV:
+
+*1* - TV LG
+*2* - TV Samsung
+*3* - TV TCL
+*4* - TV Roku
+*5* - Toshiba e/ou Philco
+*6* - TV Philips
+*7* - Semp
+*8* - Hisense
+*9* - Panasonic
+*10* - Sony
+*11* - Telefunken
+*12* - Thomson
+
+Se nao for nenhuma acima, digite o nome da marca da sua TV.`;
+}
+
 function mensagemTesteLiberado(cliente) {
     return `🎁 *TESTE GRATIS LIBERADO*
 ━━━━━━━━━━━━━━━━━━━━
@@ -240,22 +292,63 @@ Escolha um dos planos abaixo:
 
         await responderComDigitacao(message, `✅ Perfeito, *${primeiroNome(textoOriginal)}*!
 ━━━━━━━━━━━━━━━━━━━━
-Agora informe o aparelho que voce vai usar.
+Agora escolha o aparelho que voce vai usar:
 
-Exemplos:
-• Smart TV
-• TV Box
-• Android
-• iPhone
-• Computador`, imagensRespostas.teste);
+*1* - Smart TV
+*2* - TV Box
+*3* - Celular Android
+*4* - iPhone
+*5* - Computador
+
+Digite apenas o numero do aparelho.`, imagensRespostas.teste);
         return;
     }
 
     if (conversa?.etapa === 'teste_aparelho') {
+        const aparelho = aparelhoTeste(texto);
+
+        if (!aparelho) {
+            await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha um aparelho da lista:
+
+*1* - Smart TV
+*2* - TV Box
+*3* - Celular Android
+*4* - iPhone
+*5* - Computador`, imagensRespostas.teste);
+            return;
+        }
+
+        if (aparelho === 'Smart TV') {
+            conversas.set(telefone, {
+                etapa: 'teste_marca_smarttv',
+                nome: conversa.nome
+            });
+
+            await responderComDigitacao(message, menuMarcasSmartTV(), imagensRespostas.teste);
+            return;
+        }
+
         const cliente = await cadastrarOuAtualizarCliente({
             telefone,
             nome: conversa.nome,
-            aparelho: textoOriginal.trim()
+            aparelho
+        });
+
+        conversas.delete(telefone);
+        await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
+        return;
+    }
+
+    if (conversa?.etapa === 'teste_marca_smarttv') {
+        const marca = marcaSmartTV(texto) || textoOriginal.trim();
+        const aparelho = `Smart TV - ${marca}`;
+
+        const cliente = await cadastrarOuAtualizarCliente({
+            telefone,
+            nome: conversa.nome,
+            aparelho
         });
 
         conversas.delete(telefone);
