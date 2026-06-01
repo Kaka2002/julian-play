@@ -18,8 +18,8 @@ const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 const imagensRespostas = {
-    menu: null,
-    planos: null,
+    menu: 'Logo 1_7.png',
+    planos: 'Plano.png',
     teste: null,
     testeLiberado: null,
     renovacao: null,
@@ -186,7 +186,7 @@ async function obterNomeContato(message) {
     try {
         const contato = await comTimeout(message.getContact(), 5000, 'Busca do contato');
         const nome = contato.pushname || contato.name || contato.shortName || '';
-        return nome.trim().split(/\s+/)[0] || '';
+        return nome.trim() || '';
     } catch (err) {
         console.log('Nao foi possivel obter nome do contato:', err.message);
         return '';
@@ -194,7 +194,7 @@ async function obterNomeContato(message) {
 }
 
 async function enviarMenuPrincipal(message, imagem = null) {
-    const nome = await obterNomeContato(message);
+    const nome = primeiroNome(await obterNomeContato(message));
     await responderComDigitacao(message, menuPrincipal(nome), imagem);
 }
 
@@ -333,6 +333,22 @@ Seu acesso de teste foi preparado com sucesso.
 Aguarde o atendente informar os procedimentos corretos para ativar seu teste gratis.
 
 Se aparecer alguma duvida na tela, envie uma foto aqui.`;
+}
+
+function mensagemEscolhaAparelhoTeste(nome) {
+    return `🎁 *TESTE GRATIS*
+━━━━━━━━━━━━━━━━━━━━
+Perfeito, *${primeiroNome(nome)}*!
+
+Agora escolha o aparelho que voce vai usar:
+
+*1* - Smart TV
+*2* - TV Box
+*3* - Celular Android
+*4* - iPhone
+*5* - Computador
+
+Digite apenas o numero do aparelho.`;
 }
 
 async function responderMensagem(message) {
@@ -551,13 +567,15 @@ Escolha um aparelho da lista:
     }
 
     if (texto === '2' || isPedidoTeste(texto)) {
-        definirConversa(telefone, { etapa: 'teste_nome' });
+        const nomeContato = await obterNomeContato(message);
+        const nome = nomeContato || 'Cliente';
 
-        await responderComDigitacao(message, `🎁 *TESTE GRATIS*
-━━━━━━━━━━━━━━━━━━━━
-Vamos liberar seu acesso de teste.
+        definirConversa(telefone, {
+            etapa: 'teste_aparelho',
+            nome
+        });
 
-Para comecar, envie seu *nome completo*.`, imagensRespostas.teste);
+        await responderComDigitacao(message, mensagemEscolhaAparelhoTeste(nome), imagensRespostas.teste);
         return;
     }
 
