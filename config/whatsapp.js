@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
@@ -22,6 +23,49 @@ let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
+
+async function obterExecutablePath() {
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+        return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    if (process.platform === 'win32') {
+        const caminhosChrome = [
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+        ];
+
+        const caminho = caminhosChrome.find(fs.existsSync);
+        if (caminho) return caminho;
+
+        throw new Error('Google Chrome nao encontrado. Instale o Chrome ou defina PUPPETEER_EXECUTABLE_PATH.');
+    }
+
+    return chromium.executablePath();
+}
+
+function obterPuppeteerArgs() {
+    const argsBase = process.platform === 'win32' ? [] : chromium.args;
+
+    return [
+        ...argsBase,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-renderer-backgrounding',
+        '--disable-features=Translate,AudioServiceOutOfProcess',
+        '--mute-audio',
+        '--hide-scrollbars',
+        '--no-first-run',
+        '--no-zygote'
+    ];
+}
 
 function getMessageId(message) {
     return message?.id?._serialized || `${message.from}:${message.timestamp}:${message.body}`;
@@ -137,7 +181,7 @@ async function iniciarWhatsApp() {
     statusWhatsApp = 'iniciando';
 
     try {
-        const executablePath = await chromium.executablePath();
+        const executablePath = await obterExecutablePath();
 
         console.log('Chrome encontrado:', executablePath);
 
@@ -153,24 +197,7 @@ async function iniciarWhatsApp() {
                 executablePath,
                 headless: true,
                 protocolTimeout: PROTOCOL_TIMEOUT_MS,
-                args: [
-                    ...chromium.args,
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage',
-                    '--disable-gpu',
-                    '--disable-extensions',
-                    '--disable-default-apps',
-                    '--disable-sync',
-                    '--disable-background-networking',
-                    '--disable-background-timer-throttling',
-                    '--disable-renderer-backgrounding',
-                    '--disable-features=Translate,AudioServiceOutOfProcess',
-                    '--mute-audio',
-                    '--hide-scrollbars',
-                    '--no-first-run',
-                    '--no-zygote'
-                ]
+                args: obterPuppeteerArgs()
             }
         });
 
