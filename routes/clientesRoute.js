@@ -1316,12 +1316,32 @@ function formularioCliente(cliente = {}, listas = {}) {
                 nome: 'status',
                 label: 'Status',
                 valor: cliente.status || 'ativo',
+                attrs: 'id="statusCliente"',
                 opcoes: [
                     { valor: 'ativo', texto: 'Ativo' },
+                    { valor: 'teste', texto: 'Teste' },
                     { valor: 'pendente', texto: 'Pendente' },
                     { valor: 'expirado', texto: 'Expirado' },
                     { valor: 'suspenso', texto: 'Suspenso' },
                     { valor: 'cancelado', texto: 'Cancelado' }
+                ]
+            })}
+            ${campo({
+                nome: 'horasTeste',
+                label: 'Horas de Teste',
+                valor: cliente.horasTeste || '',
+                attrs: 'id="horasTeste"',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    { valor: '30 minutos', texto: '30 minutos' },
+                    { valor: '01 hora', texto: '01 hora' },
+                    { valor: '02 horas', texto: '02 horas' },
+                    { valor: '03 horas', texto: '03 horas' },
+                    { valor: '04 horas', texto: '04 horas' },
+                    { valor: '06 horas', texto: '06 horas' },
+                    { valor: '12 horas', texto: '12 horas' },
+                    { valor: '15 horas', texto: '15 horas' },
+                    { valor: '24 horas', texto: '24 horas' }
                 ]
             })}
             ${campo({ nome: 'dataInicio', label: 'Data/Hora de Inicio *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
@@ -1365,6 +1385,8 @@ function formularioCliente(cliente = {}, listas = {}) {
         const dataInicio = document.getElementById('dataInicio');
         const dataVencimento = document.getElementById('dataVencimento');
         const recalcular = document.getElementById('recalcularVencimento');
+        const statusCliente = document.getElementById('statusCliente');
+        const horasTeste = document.getElementById('horasTeste');
 
         function atualizarPlano() {
             const plano = planos.find(item => item.id === tipoPlano.value);
@@ -1391,6 +1413,17 @@ function formularioCliente(cliente = {}, listas = {}) {
         if (!dataVencimento.value && dataInicio.value && diasContrato.value) {
             calcularVencimento();
         }
+
+        function atualizarHorasTeste() {
+            if (!statusCliente || !horasTeste) return;
+            const habilitado = statusCliente.value === 'teste';
+            horasTeste.disabled = !habilitado;
+            horasTeste.closest('label').style.opacity = habilitado ? '1' : '.55';
+            if (!habilitado) horasTeste.value = '';
+        }
+
+        statusCliente?.addEventListener('change', atualizarHorasTeste);
+        atualizarHorasTeste();
 
         document.querySelectorAll('.multi-select').forEach((select) => {
             select.addEventListener('change', () => {
