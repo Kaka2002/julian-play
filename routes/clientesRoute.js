@@ -1447,7 +1447,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         <form class="fields client-form" method="post" action="/clientes/salvar">
             ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             <div class="form-section full">Dados pessoais</div>
-            ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'required placeholder="Nome do cliente"' })}
+            ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsApp(cliente.telefone)}
             ${campo({ nome: 'nascimento', label: 'Data de Aniversario', valor: cliente.nascimento, tipo: 'date' })}
             <div></div>
@@ -1554,6 +1554,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         const recalcular = document.getElementById('recalcularVencimento');
         const statusCliente = document.getElementById('statusCliente');
         const horasTeste = document.getElementById('horasTeste');
+        const nomeCliente = document.getElementById('nomeCliente');
 
         function atualizarPlano() {
             const plano = planos.find(item => item.id === tipoPlano.value);
@@ -1591,6 +1592,16 @@ function formularioCliente(cliente = {}, listas = {}) {
 
         statusCliente?.addEventListener('change', atualizarHorasTeste);
         atualizarHorasTeste();
+
+        function capitalizarNome(valor) {
+            return valor
+                .toLowerCase()
+                .replace(/(^|\\s)(\\S)/g, (trecho) => trecho.toUpperCase());
+        }
+
+        nomeCliente?.addEventListener('blur', () => {
+            nomeCliente.value = capitalizarNome(nomeCliente.value);
+        });
 
         document.querySelectorAll('.multi-select').forEach((select) => {
             select.addEventListener('change', () => {
