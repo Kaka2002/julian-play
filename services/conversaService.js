@@ -8,7 +8,9 @@ const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
 const { enviarImagemComLegenda } = require('./assetService');
 const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
-    cadastrarOuAtualizarCliente
+    cadastrarOuAtualizarCliente,
+    buscarClientePorNomeOuTelefone,
+    buscarClientePorUsuarioIPTV
 } = require('./clientes');
 
 const conversas = new Map();
@@ -203,6 +205,19 @@ function formatarData(dataIso) {
 
     const [ano, mes, dia] = dataIso.split('-');
     return `${dia}/${mes}/${ano}`;
+}
+
+function primeiraOpcaoJson(valor) {
+    if (!valor) return 'nao informado';
+
+    try {
+        const lista = JSON.parse(valor);
+        if (Array.isArray(lista) && lista.length) return lista[0];
+    } catch (err) {
+        return String(valor).split(',').map(item => item.trim()).filter(Boolean)[0] || 'nao informado';
+    }
+
+    return 'nao informado';
 }
 
 function tutorialDispositivo(opcao) {
@@ -611,14 +626,21 @@ Escolha um aparelho da lista:
     }
 
     if (conversa?.etapa === 'renovacao_nome' || conversa?.etapa === 'renovacao_busca') {
+        const usuarioPainel = textoOriginal.trim();
+        const cliente = await buscarClientePorUsuarioIPTV(usuarioPainel);
+        const painel = primeiraOpcaoJson(cliente?.paineisSelecionados);
+
         definirConversa(telefone, {
             etapa: 'renovacao_plano',
-            nome: textoOriginal.trim()
+            usuarioPainel,
+            painel,
+            clienteId: cliente?.id || null
         });
 
         await responderComDigitacao(message, `✅ *DADOS RECEBIDOS*
 ━━━━━━━━━━━━━━━━━━━━
-*Usuario do painel:* ${textoOriginal.trim()}
+*Usuario:* ${usuarioPainel}
+*Painel:* ${painel}
 
 ${menuRenovacao()}
 

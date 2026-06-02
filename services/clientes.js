@@ -147,11 +147,19 @@ function buscarClientePorNomeOuTelefone(valor) {
 
     return buscarUm(
         `SELECT * FROM clientes
-        WHERE telefone LIKE ? OR nome LIKE ?
+        WHERE telefone LIKE ?
+            OR nome LIKE ?
+            OR usuario LIKE ?
+            OR usuarioApp LIKE ?
+            OR paineisSelecionados LIKE ?
         ORDER BY atualizadoEm DESC
         LIMIT 1`,
-        [termo, termo]
+        [termo, termo, termo, termo, termo]
     );
+}
+
+function buscarClientePorUsuarioIPTV(usuario) {
+    return buscarUm('SELECT * FROM clientes WHERE usuario = ? LIMIT 1', [limparTexto(usuario)]);
 }
 
 function listarClientes(filtros = {}) {
@@ -325,6 +333,7 @@ module.exports = {
     cadastrarOuAtualizarCliente,
     buscarClientePorTelefone,
     buscarClientePorNomeOuTelefone,
+    buscarClientePorUsuarioIPTV,
     listarClientes,
     salvarCliente,
     buscarClientePorId,
