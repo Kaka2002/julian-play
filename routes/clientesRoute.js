@@ -739,10 +739,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .multi-chips {
+            min-height: 31px;
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             margin: 8px 0;
+        }
+
+        .multi-chips:empty::before {
+            content: attr(data-empty);
+            color: var(--muted);
+            font-style: italic;
+            font-weight: 600;
         }
 
         .selected-chip {
@@ -757,19 +765,16 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 900;
         }
 
-        .selected-chip small {
+        .selected-chip button {
+            width: auto;
+            min-height: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: var(--ink);
             font-size: 18px;
             font-weight: 500;
-        }
-
-        select[multiple] {
-            min-height: 170px;
-            padding: 8px;
-        }
-
-        select[multiple] option {
-            padding: 10px;
-            border-radius: 8px;
+            line-height: 1;
         }
 
         .toggle-line {
@@ -1221,16 +1226,23 @@ function rotuloStatus(status) {
 }
 
 function opcoesMulti(nome, label, itens, selecionados, placeholder) {
-    const set = new Set(selecionados.map(String));
     const chips = selecionados.length
-        ? `<div class="multi-chips">${selecionados.map(item => `<span class="selected-chip">${escapar(item)} <small>x</small></span>`).join('')}</div>`
-        : '<div class="helper"><em>Nenhum selecionado</em></div>';
+        ? selecionados.map(item => `<span class="selected-chip" data-value="${escapar(item)}">${escapar(item)} <button type="button" aria-label="Remover ${escapar(item)}">x</button></span>`).join('')
+        : '';
+    const hiddenInputs = selecionados
+        .map(item => `<input type="hidden" name="${nome}" value="${escapar(item)}">`)
+        .join('');
 
     return `<label>${label}
-        ${chips}
-        <select name="${nome}" multiple size="6">
-            <option value="" disabled>${escapar(placeholder)}</option>
-            ${itens.map(item => `<option value="${escapar(item.nome)}" ${set.has(String(item.nome)) ? 'selected' : ''}>${escapar(item.nome)}</option>`).join('')}
+        <div class="multi-picker" data-name="${nome}">
+            <div class="multi-chips" data-empty="Nenhum selecionado">
+                ${chips}
+            </div>
+            <div class="multi-hidden">${hiddenInputs}</div>
+        </div>
+        <select class="multi-select" data-target="${nome}">
+            <option value="">${escapar(placeholder)}</option>
+            ${itens.map(item => `<option value="${escapar(item.nome)}">${escapar(item.nome)}</option>`).join('')}
         </select>
     </label>`;
 }
@@ -1326,12 +1338,9 @@ function formularioCliente(cliente = {}, listas = {}) {
                 <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ? 'checked' : ''}>
                 <span>App instalado no dispositivo</span>
             </label>
-            ${campo({ nome: 'usuarioApp', label: 'Usuario no App', valor: cliente.usuarioApp || cliente.usuario, attrs: 'placeholder="usuario@email.com"' })}
-            ${campo({ nome: 'senhaApp', label: 'Senha no App', valor: cliente.senhaApp || cliente.senha, tipo: 'password', attrs: 'placeholder="senha"' })}
             ${campo({ nome: 'usuario', label: 'Usuario IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
-            ${campo({ nome: 'plano', label: 'Plano legado', valor: cliente.plano, attrs: 'id="planoLegado" placeholder="Preenchido pelo tipo de plano"' })}
-            ${campo({ nome: 'aparelho', label: 'Aparelho legado', valor: cliente.aparelho })}
+            <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
             ${areaTexto({ nome: 'observacoes', label: 'Observacoes', valor: cliente.observacoes })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
@@ -1379,6 +1388,59 @@ function formularioCliente(cliente = {}, listas = {}) {
         if (!dataVencimento.value && dataInicio.value && diasContrato.value) {
             calcularVencimento();
         }
+
+        document.querySelectorAll('.multi-select').forEach((select) => {
+            select.addEventListener('change', () => {
+                if (!select.value) return;
+
+                const target = select.dataset.target;
+                const picker = document.querySelector('.multi-picker[data-name="' + target + '"]');
+                const chips = picker?.querySelector('.multi-chips');
+                const hidden = picker?.querySelector('.multi-hidden');
+                const exists = Array.from(hidden?.querySelectorAll('input') || [])
+                    .some(input => input.value === select.value);
+
+                if (!picker || !chips || !hidden || exists) {
+                    select.value = '';
+                    return;
+                }
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = target;
+                input.value = select.value;
+                hidden.appendChild(input);
+
+                const chip = document.createElement('span');
+                chip.className = 'selected-chip';
+                chip.dataset.value = select.value;
+                chip.textContent = select.value + ' ';
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = 'x';
+                button.setAttribute('aria-label', 'Remover ' + select.value);
+                chip.appendChild(button);
+                chips.appendChild(chip);
+
+                select.value = '';
+            });
+        });
+
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('.selected-chip button');
+            if (!button) return;
+
+            const chip = button.closest('.selected-chip');
+            const picker = chip.closest('.multi-picker');
+            const hidden = picker.querySelector('.multi-hidden');
+            const value = chip.dataset.value;
+            const input = Array.from(hidden.querySelectorAll('input'))
+                .find(item => item.value === value);
+
+            input?.remove();
+            chip.remove();
+        });
     </script>`;
 }
 
