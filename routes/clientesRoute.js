@@ -842,7 +842,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .phone-field {
             display: grid;
-            grid-template-columns: 58px minmax(120px, 1fr);
+            grid-template-columns: 74px minmax(120px, 1fr);
             align-items: center;
             margin-top: 7px;
             border: 1px solid var(--line);
@@ -851,14 +851,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             overflow: hidden;
         }
 
-        .phone-prefix {
+        .phone-field .phone-prefix {
             min-height: 42px;
-            display: grid;
-            place-items: center;
             border-right: 1px solid var(--line);
             color: var(--ink);
             background: #f7f8fb;
             font-weight: 700;
+            text-align: center;
         }
 
         .phone-field input {
@@ -1318,11 +1317,13 @@ function areaTexto({ nome, label, valor = '' }) {
 }
 
 function campoWhatsApp(valor = '') {
-    const telefone = String(valor || '').replace(/^55/, '');
+    const numeros = String(valor || '').replace(/\D/g, '');
+    const ddi = numeros.length > 11 ? numeros.slice(0, numeros.length - 11) : '55';
+    const telefone = numeros.length > 11 ? numeros.slice(-11) : numeros.replace(/^55/, '');
 
     return `<label>WhatsApp *
         <div class="phone-field">
-            <span class="phone-prefix">+55</span>
+            <input class="phone-prefix" type="text" name="ddiTelefone" value="${escapar(ddi || '55')}" aria-label="DDI">
             <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="11999999999">
         </div>
     </label>`;

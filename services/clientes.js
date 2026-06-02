@@ -60,7 +60,9 @@ function gerarCredenciais(telefone) {
 }
 
 function montarCliente(dados = {}) {
-    const telefone = normalizarTelefone(dados.telefone);
+    const ddi = limparTexto(dados.ddiTelefone).replace(/\D/g, '');
+    const numero = limparTexto(dados.telefone).replace(/\D/g, '');
+    const telefone = normalizarTelefone(ddi ? `${ddi}${numero}` : dados.telefone);
 
     if (!limparTexto(dados.nome)) {
         throw new Error('Informe o nome do cliente.');
