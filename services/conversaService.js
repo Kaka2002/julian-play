@@ -482,7 +482,7 @@ Escolha uma das opcoes:
 ━━━━━━━━━━━━━━━━━━━━
 Vamos iniciar sua renovacao.
 
-Envie o *nome completo do cliente* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
+Envie o *usuario do painel* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
             return;
         }
 
@@ -543,7 +543,7 @@ Agora vou te enviar o PIX do plano escolhido.`, imagensRespostas.planos);
     if (conversa?.etapa === 'teste_nome') {
         definirConversa(telefone, {
             etapa: 'teste_aparelho',
-            nome: textoOriginal.trim()
+            usuarioPainel: textoOriginal.trim()
         });
 
         await responderComDigitacao(message, `✅ Perfeito, *${primeiroNome(textoOriginal)}*!
@@ -618,7 +618,7 @@ Escolha um aparelho da lista:
 
         await responderComDigitacao(message, `✅ *DADOS RECEBIDOS*
 ━━━━━━━━━━━━━━━━━━━━
-*Nome:* ${textoOriginal.trim()}
+*Usuario do painel:* ${textoOriginal.trim()}
 
 ${menuRenovacao()}
 
@@ -642,7 +642,7 @@ ${menuRenovacao()}`, imagensRespostas.renovacao);
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano, {
             tipo: 'renovacao',
-            nomeCliente: conversa.nome
+            nomeCliente: conversa.usuarioPainel
         });
         return;
     }
@@ -722,7 +722,7 @@ Escolha um aparelho da lista:
 ━━━━━━━━━━━━━━━━━━━━
 Vamos iniciar sua renovacao.
 
-Envie o *nome completo do cliente* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
+Envie o *usuario do painel* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
         return;
     }
 
