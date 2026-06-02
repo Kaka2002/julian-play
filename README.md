@@ -7,6 +7,9 @@ Com o servidor rodando, acesse:
 
 - `/clientes` para listar, buscar, cadastrar, editar e excluir clientes.
 - `/modelos` para cadastrar e editar os modelos de mensagens enviadas pelo WhatsApp.
+- `/apps` para cadastrar e editar aplicativos disponiveis.
+- `/dispositivos` para cadastrar e editar dispositivos.
+- `/paineis` para cadastrar e editar paineis.
 - `/clientes/novo` para cadastrar um novo cliente.
 - `/qr` para conectar o WhatsApp pelo QR Code.
 

@@ -17,6 +17,20 @@ const {
     obterConfiguracoes,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
+const {
+    listarApps,
+    buscarAppPorId,
+    salvarApp,
+    removerApp,
+    listarDispositivos,
+    buscarDispositivoPorId,
+    salvarDispositivo,
+    removerDispositivo,
+    listarPaineis,
+    buscarPainelPorId,
+    salvarPainel,
+    removerPainel
+} = require('../services/appsDispositivos');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -681,6 +695,70 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             padding: 14px 22px 0;
         }
 
+        .catalog-panel {
+            max-width: 980px;
+        }
+
+        .catalog-row {
+            min-height: 98px;
+            display: grid;
+            grid-template-columns: 44px minmax(180px, 1fr) auto;
+            align-items: center;
+            gap: 18px;
+            padding: 22px 30px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .catalog-row:last-child {
+            border-bottom: 0;
+        }
+
+        .catalog-icon, .device-icon {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            color: var(--blue);
+        }
+
+        .catalog-name, .device-name {
+            color: var(--ink);
+            font-size: 23px;
+            font-weight: 800;
+        }
+
+        .catalog-desc {
+            margin-top: 5px;
+            color: var(--muted);
+            font-size: 17px;
+        }
+
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(220px, 1fr));
+            gap: 18px;
+        }
+
+        .device-card {
+            min-height: 96px;
+            display: grid;
+            grid-template-columns: 64px minmax(120px, 1fr) auto;
+            align-items: center;
+            gap: 14px;
+            padding: 22px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .device-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: var(--blue-soft);
+        }
+
         @media (max-width: 980px) {
             .topbar {
                 align-items: flex-start;
@@ -700,6 +778,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
             .model-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .device-grid {
+                grid-template-columns: repeat(2, minmax(180px, 1fr));
             }
 
             .logo-config {
@@ -774,6 +856,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .row-actions {
                 justify-content: flex-start;
             }
+
+            .catalog-row, .device-card {
+                grid-template-columns: 44px 1fr;
+            }
+
+            .catalog-row .model-actions, .device-card .model-actions {
+                grid-column: 2;
+            }
+
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -788,9 +882,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
                 <a class="navlink ${ativo === 'modelos' ? 'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
-                <a class="navlink disabled" href="#">${icon('apps')} Apps</a>
-                <a class="navlink disabled" href="#">${icon('dispositivos')} Dispositivos</a>
-                <a class="navlink disabled" href="#">${icon('paineis')} Paineis</a>
+                <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
+                <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
+                <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Paineis</a>
                 <a class="navlink" href="/qr" title="WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}">${icon('sair')}</a>
             </nav>
         </div>
@@ -1105,6 +1199,172 @@ function formularioModelo(modelo = {}) {
     </section>`;
 }
 
+function appRow(app) {
+    return `<div class="catalog-row">
+        <span class="catalog-icon">${icon('apps')}</span>
+        <div>
+            <div class="catalog-name">${escapar(app.nome)}</div>
+            <div class="catalog-desc">${escapar(app.descricao || '')}</div>
+        </div>
+        <div class="model-actions">
+            <a class="button secondary icon-only" href="/apps/${app.id}/editar" title="Editar app">${icon('edit')}</a>
+            <form method="post" action="/apps/${app.id}/excluir" onsubmit="return confirm('Excluir este app?');">
+                <button class="button secondary icon-only" type="submit" title="Excluir app">${icon('trash')}</button>
+            </form>
+        </div>
+    </div>`;
+}
+
+function telaApps(apps) {
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Aplicativos</h1>
+                <div class="subtitle">Gerencie os apps disponiveis para cadastro de clientes</div>
+            </div>
+            <a class="button" href="/apps/novo">${icon('plus')} Novo App</a>
+        </div>
+    </section>
+    <section class="panel catalog-panel">
+        ${apps.length ? apps.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
+    </section>`;
+}
+
+function formularioApp(app = {}) {
+    return `<section class="page-title">
+        <h1>${app.id ? 'Editar App' : 'Novo App'}</h1>
+        <div class="subtitle">Informe o app e onde ele pode ser usado</div>
+    </section>
+    <section class="panel">
+        <form class="fields" method="post" action="/apps/salvar">
+            ${app.id ? `<input type="hidden" name="id" value="${escapar(app.id)}">` : ''}
+            ${campo({ nome: 'nome', label: 'Nome do app', valor: app.nome })}
+            ${campo({
+                nome: 'ativo',
+                label: 'Status',
+                valor: String(app.ativo ?? 1),
+                opcoes: [
+                    { valor: '1', texto: 'Ativo' },
+                    { valor: '0', texto: 'Inativo' }
+                ]
+            })}
+            ${areaTexto({ nome: 'descricao', label: 'Descricao / paineis e dispositivos compativeis', valor: app.descricao })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar app</button>
+                <a class="button secondary" href="/apps">Cancelar</a>
+            </div>
+        </form>
+    </section>`;
+}
+
+function deviceCard(dispositivo) {
+    return `<article class="device-card">
+        <span class="device-icon">${icon('apps')}</span>
+        <div class="device-name">${escapar(dispositivo.nome)}</div>
+        <div class="model-actions">
+            <a class="button secondary icon-only" href="/dispositivos/${dispositivo.id}/editar" title="Editar dispositivo">${icon('edit')}</a>
+            <form method="post" action="/dispositivos/${dispositivo.id}/excluir" onsubmit="return confirm('Excluir este dispositivo?');">
+                <button class="button secondary icon-only" type="submit" title="Excluir dispositivo">${icon('trash')}</button>
+            </form>
+        </div>
+    </article>`;
+}
+
+function telaDispositivos(dispositivos) {
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Dispositivos</h1>
+                <div class="subtitle">${dispositivos.length} dispositivos cadastrados</div>
+            </div>
+            <a class="button" href="/dispositivos/novo">${icon('plus')} Novo Dispositivo</a>
+        </div>
+    </section>
+    <section class="device-grid">
+        ${dispositivos.length ? dispositivos.map(deviceCard).join('') : '<div class="empty">Nenhum dispositivo cadastrado.</div>'}
+    </section>`;
+}
+
+function formularioDispositivo(dispositivo = {}) {
+    return `<section class="page-title">
+        <h1>${dispositivo.id ? 'Editar Dispositivo' : 'Novo Dispositivo'}</h1>
+        <div class="subtitle">Cadastre os aparelhos usados pelos clientes</div>
+    </section>
+    <section class="panel">
+        <form class="fields" method="post" action="/dispositivos/salvar">
+            ${dispositivo.id ? `<input type="hidden" name="id" value="${escapar(dispositivo.id)}">` : ''}
+            ${campo({ nome: 'nome', label: 'Nome do dispositivo', valor: dispositivo.nome })}
+            ${campo({
+                nome: 'ativo',
+                label: 'Status',
+                valor: String(dispositivo.ativo ?? 1),
+                opcoes: [
+                    { valor: '1', texto: 'Ativo' },
+                    { valor: '0', texto: 'Inativo' }
+                ]
+            })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar dispositivo</button>
+                <a class="button secondary" href="/dispositivos">Cancelar</a>
+            </div>
+        </form>
+    </section>`;
+}
+
+function panelCard(painel) {
+    return `<article class="device-card">
+        <span class="device-icon">${icon('paineis')}</span>
+        <div class="device-name">${escapar(painel.nome)}</div>
+        <div class="model-actions">
+            <a class="button secondary icon-only" href="/paineis/${painel.id}/editar" title="Editar painel">${icon('edit')}</a>
+            <form method="post" action="/paineis/${painel.id}/excluir" onsubmit="return confirm('Excluir este painel?');">
+                <button class="button secondary icon-only" type="submit" title="Excluir painel">${icon('trash')}</button>
+            </form>
+        </div>
+    </article>`;
+}
+
+function telaPaineis(paineis) {
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Paineis</h1>
+                <div class="subtitle">${paineis.length} paineis cadastrados</div>
+            </div>
+            <a class="button" href="/paineis/novo">${icon('plus')} Novo Painel</a>
+        </div>
+    </section>
+    <section class="device-grid">
+        ${paineis.length ? paineis.map(panelCard).join('') : '<div class="empty">Nenhum painel cadastrado.</div>'}
+    </section>`;
+}
+
+function formularioPainel(painel = {}) {
+    return `<section class="page-title">
+        <h1>${painel.id ? 'Editar Painel' : 'Novo Painel'}</h1>
+        <div class="subtitle">Cadastre os paineis usados no controle dos clientes</div>
+    </section>
+    <section class="panel">
+        <form class="fields" method="post" action="/paineis/salvar">
+            ${painel.id ? `<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
+            ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
+            ${campo({
+                nome: 'ativo',
+                label: 'Status',
+                valor: String(painel.ativo ?? 1),
+                opcoes: [
+                    { valor: '1', texto: 'Ativo' },
+                    { valor: '0', texto: 'Inativo' }
+                ]
+            })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar painel</button>
+                <a class="button secondary" href="/paineis">Cancelar</a>
+            </div>
+        </form>
+    </section>`;
+}
+
 router.get('/clientes', async (req, res) => {
     const clientes = await listarClientes();
     const mensagem = req.query.mensagem || '';
@@ -1164,6 +1424,165 @@ router.post('/clientes/salvar', async (req, res) => {
             ativo: 'clientes'
         });
     }
+});
+
+router.get('/apps', async (req, res) => {
+    const apps = await listarApps();
+    const mensagem = req.query.mensagem || '';
+
+    await renderizar(res, {
+        titulo: 'Apps',
+        conteudo: telaApps(apps),
+        mensagem,
+        ativo: 'apps'
+    });
+});
+
+router.get('/apps/novo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Novo app',
+        conteudo: formularioApp({ ativo: 1 }),
+        ativo: 'apps'
+    });
+});
+
+router.get('/apps/:id/editar', async (req, res) => {
+    const app = await buscarAppPorId(req.params.id);
+
+    if (!app) {
+        return res.redirect('/apps?mensagem=App nao encontrado');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar app',
+        conteudo: formularioApp(app),
+        ativo: 'apps'
+    });
+});
+
+router.post('/apps/salvar', async (req, res) => {
+    try {
+        await salvarApp(req.body);
+        res.redirect('/apps?mensagem=App salvo com sucesso');
+    } catch (err) {
+        res.status(400);
+        await renderizar(res, {
+            titulo: 'Salvar app',
+            conteudo: `${formularioApp(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'apps'
+        });
+    }
+});
+
+router.post('/apps/:id/excluir', async (req, res) => {
+    await removerApp(req.params.id);
+    res.redirect('/apps?mensagem=App excluido');
+});
+
+router.get('/dispositivos', async (req, res) => {
+    const dispositivos = await listarDispositivos();
+    const mensagem = req.query.mensagem || '';
+
+    await renderizar(res, {
+        titulo: 'Dispositivos',
+        conteudo: telaDispositivos(dispositivos),
+        mensagem,
+        ativo: 'dispositivos'
+    });
+});
+
+router.get('/dispositivos/novo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Novo dispositivo',
+        conteudo: formularioDispositivo({ ativo: 1 }),
+        ativo: 'dispositivos'
+    });
+});
+
+router.get('/dispositivos/:id/editar', async (req, res) => {
+    const dispositivo = await buscarDispositivoPorId(req.params.id);
+
+    if (!dispositivo) {
+        return res.redirect('/dispositivos?mensagem=Dispositivo nao encontrado');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar dispositivo',
+        conteudo: formularioDispositivo(dispositivo),
+        ativo: 'dispositivos'
+    });
+});
+
+router.post('/dispositivos/salvar', async (req, res) => {
+    try {
+        await salvarDispositivo(req.body);
+        res.redirect('/dispositivos?mensagem=Dispositivo salvo com sucesso');
+    } catch (err) {
+        res.status(400);
+        await renderizar(res, {
+            titulo: 'Salvar dispositivo',
+            conteudo: `${formularioDispositivo(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'dispositivos'
+        });
+    }
+});
+
+router.post('/dispositivos/:id/excluir', async (req, res) => {
+    await removerDispositivo(req.params.id);
+    res.redirect('/dispositivos?mensagem=Dispositivo excluido');
+});
+
+router.get('/paineis', async (req, res) => {
+    const paineis = await listarPaineis();
+    const mensagem = req.query.mensagem || '';
+
+    await renderizar(res, {
+        titulo: 'Paineis',
+        conteudo: telaPaineis(paineis),
+        mensagem,
+        ativo: 'paineis'
+    });
+});
+
+router.get('/paineis/novo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Novo painel',
+        conteudo: formularioPainel({ ativo: 1 }),
+        ativo: 'paineis'
+    });
+});
+
+router.get('/paineis/:id/editar', async (req, res) => {
+    const painel = await buscarPainelPorId(req.params.id);
+
+    if (!painel) {
+        return res.redirect('/paineis?mensagem=Painel nao encontrado');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar painel',
+        conteudo: formularioPainel(painel),
+        ativo: 'paineis'
+    });
+});
+
+router.post('/paineis/salvar', async (req, res) => {
+    try {
+        await salvarPainel(req.body);
+        res.redirect('/paineis?mensagem=Painel salvo com sucesso');
+    } catch (err) {
+        res.status(400);
+        await renderizar(res, {
+            titulo: 'Salvar painel',
+            conteudo: `${formularioPainel(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'paineis'
+        });
+    }
+});
+
+router.post('/paineis/:id/excluir', async (req, res) => {
+    await removerPainel(req.params.id);
+    res.redirect('/paineis?mensagem=Painel excluido');
 });
 
 router.get('/modelos', async (req, res) => {
