@@ -283,7 +283,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .topbar, main {
-            width: min(1250px, calc(100% - 36px));
+            width: min(1500px, calc(100% - 28px));
             margin: 0 auto;
         }
 
@@ -668,8 +668,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .row-actions {
             display: flex;
-            gap: 8px;
+            gap: 4px;
             justify-content: flex-end;
+        }
+
+        .row-actions .button.icon-only {
+            width: 30px;
+            min-height: 30px;
+        }
+
+        .row-actions svg {
+            width: 17px;
+            height: 17px;
         }
 
         .vars {
@@ -926,20 +936,32 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             border-radius: 14px;
             overflow: hidden;
             box-shadow: var(--shadow);
+            table-layout: auto;
         }
 
+        .clients-table th:nth-child(1), .clients-table td:nth-child(1) { width: 17%; }
+        .clients-table th:nth-child(2), .clients-table td:nth-child(2) { width: 12%; }
+        .clients-table th:nth-child(3), .clients-table td:nth-child(3) { width: 10%; white-space: nowrap; }
+        .clients-table th:nth-child(4), .clients-table td:nth-child(4) { width: 13%; white-space: nowrap; }
+        .clients-table th:nth-child(5), .clients-table td:nth-child(5) { width: 18%; }
+        .clients-table th:nth-child(6), .clients-table td:nth-child(6) { width: 15%; }
+        .clients-table th:nth-child(7), .clients-table td:nth-child(7) { width: 8%; white-space: nowrap; }
+        .clients-table th:nth-child(8), .clients-table td:nth-child(8) { width: 7%; white-space: nowrap; }
+
         .clients-table th {
-            padding: 18px 18px;
+            padding: 12px 10px;
             color: var(--muted);
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 800;
             text-transform: none;
+            white-space: nowrap;
         }
 
         .clients-table td {
-            padding: 18px;
+            padding: 12px 10px;
             border-bottom: 1px solid var(--line);
-            font-size: 15px;
+            font-size: 14px;
+            vertical-align: top;
         }
 
         .clients-table tr:last-child td {
@@ -949,14 +971,16 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .cell-title {
             font-weight: 700;
             color: var(--ink);
-            font-size: 16px;
+            font-size: 15px;
             line-height: 1.25;
+            white-space: nowrap;
         }
 
         .cell-muted {
             color: var(--muted);
-            font-size: 14px;
-            line-height: 1.35;
+            font-size: 13px;
+            line-height: 1.25;
+            white-space: nowrap;
         }
 
         .app-chip {
@@ -964,27 +988,29 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             align-items: center;
             gap: 5px;
             min-height: 24px;
-            margin: 0 6px 5px 0;
-            padding: 0 10px;
+            margin: 0 4px 4px 0;
+            padding: 0 8px;
             border-radius: 999px;
             border: 1px solid var(--line);
             background: #fff;
             color: var(--ink);
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
+            white-space: nowrap;
         }
 
         .device-chip {
             display: inline-flex;
             min-height: 24px;
-            margin: 0 6px 5px 0;
-            padding: 0 10px;
+            margin: 0 4px 4px 0;
+            padding: 0 8px;
             align-items: center;
             border-radius: 999px;
             background: #f2f4f7;
             color: var(--ink);
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
+            white-space: nowrap;
         }
 
         .installed-chip {
@@ -996,8 +1022,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             border: 1px solid #9ee7c7;
             background: #e8fbf2;
             color: #00875a;
-            font-size: 15px;
+            font-size: 13px;
             font-weight: 700;
+            white-space: nowrap;
         }
 
         .icon-action {
@@ -2118,7 +2145,7 @@ router.get('/clientes', async (req, res) => {
 router.get('/clientes/todos', async (req, res) => {
     const busca = req.query.busca || '';
     const status = req.query.status || '';
-    const clientes = await listarClientes({ busca, status });
+    const clientes = await listarClientes({ busca, status, limite: 10 });
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {

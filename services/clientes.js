@@ -207,13 +207,18 @@ async function listarClientes(filtros = {}) {
         params.push(status);
     }
 
+    const limite = Number(filtros.limite || 0);
+    const limiteSql = limite > 0 ? 'LIMIT ?' : '';
+    if (limite > 0) params.push(limite);
+
     return buscarTodos(
         `SELECT * FROM clientes
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY
             CASE WHEN vencimento IS NULL OR vencimento = '' THEN 1 ELSE 0 END,
             vencimento ASC,
-            nome ASC`,
+            nome ASC
+        ${limiteSql}`,
         params
     );
 }
