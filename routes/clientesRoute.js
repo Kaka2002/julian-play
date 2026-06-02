@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const {
     listarClientes,
     salvarCliente,
@@ -40,6 +42,7 @@ const {
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
+const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -48,6 +51,53 @@ function escapar(valor) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function lerUploadMultipart(req) {
+    return new Promise((resolve, reject) => {
+        const tipo = req.headers['content-type'] || '';
+        const match = tipo.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
+
+        if (!match) {
+            reject(new Error('Formulario de upload invalido.'));
+            return;
+        }
+
+        const boundary = `--${match[1] || match[2]}`;
+        const partes = [];
+
+        req.on('data', parte => partes.push(parte));
+        req.on('error', reject);
+        req.on('end', () => {
+            const buffer = Buffer.concat(partes);
+            const conteudo = buffer.toString('binary');
+            const inicioCabecalho = conteudo.indexOf('\r\n\r\n');
+            const filenameMatch = conteudo.match(/filename="([^"]+)"/i);
+
+            if (!filenameMatch || inicioCabecalho < 0) {
+                reject(new Error('Selecione um arquivo de logo.'));
+                return;
+            }
+
+            const inicioArquivo = inicioCabecalho + 4;
+            const fimMarcador = Buffer.from(`\r\n${boundary}`, 'binary');
+            const fimArquivo = buffer.indexOf(fimMarcador, inicioArquivo);
+
+            if (fimArquivo < 0) {
+                reject(new Error('Nao foi possivel ler o arquivo enviado.'));
+                return;
+            }
+
+            resolve({
+                filename: path.basename(filenameMatch[1]),
+                buffer: buffer.slice(inicioArquivo, fimArquivo)
+            });
+        });
+    });
+}
+
+function extensaoLogoPermitida(nome) {
+    return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(path.extname(nome).toLowerCase());
 }
 
 function formatarData(dataISO) {
@@ -697,10 +747,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .logo-config {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
+            grid-template-columns: 1fr 1fr auto auto;
             gap: 14px;
             align-items: end;
             padding: 22px;
+        }
+
+        .logo-upload input {
+            display: none;
         }
 
         .logo-preview {
@@ -1761,6 +1815,13 @@ function telaModelos({ modelos, config }) {
             ${campo({ nome: 'logoUrl', label: 'URL ou caminho do logo', valor: config.logoUrl || '', tipo: 'text' })}
             <button class="button" type="submit">${icon('image')} Salvar marca</button>
         </form>
+        <form class="logo-config" method="post" action="/configuracoes/logo" enctype="multipart/form-data" style="padding-top:0;">
+            <label class="logo-upload">
+                Escolher logo no computador
+                <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
+                <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar logo</span>
+            </label>
+        </form>
     </section>
     <section class="model-grid">
         ${modelos.length ? modelos.map(cardModelo).join('') : '<div class="empty">Nenhum modelo cadastrado.</div>'}
@@ -2326,6 +2387,34 @@ router.post('/modelos/:id/excluir', async (req, res) => {
 router.post('/configuracoes/painel', async (req, res) => {
     await salvarConfiguracoesPainel(req.body);
     res.redirect('/modelos?mensagem=Marca do painel salva');
+});
+
+router.post('/configuracoes/logo', async (req, res) => {
+    try {
+        const upload = await lerUploadMultipart(req);
+
+        if (!extensaoLogoPermitida(upload.filename)) {
+            return res.redirect('/modelos?mensagem=Use uma imagem PNG, JPG, WEBP, GIF ou SVG');
+        }
+
+        fs.mkdirSync(ASSETS_DIR, { recursive: true });
+
+        const extensao = path.extname(upload.filename).toLowerCase();
+        const nomeArquivo = `logo-painel${extensao}`;
+        const destino = path.join(ASSETS_DIR, nomeArquivo);
+
+        fs.writeFileSync(destino, upload.buffer);
+
+        const config = await obterConfiguracoes();
+        await salvarConfiguracoesPainel({
+            nomeSistema: config.nomeSistema,
+            logoUrl: `/assets/${nomeArquivo}?v=${Date.now()}`
+        });
+
+        res.redirect('/modelos?mensagem=Logo atualizada com sucesso');
+    } catch (err) {
+        res.redirect(`/modelos?mensagem=${encodeURIComponent(err.message)}`);
+    }
 });
 
 router.post('/clientes/:id/excluir', async (req, res) => {
