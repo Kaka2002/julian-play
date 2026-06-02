@@ -9,6 +9,15 @@ function executar(sql, params = []) {
     }));
 }
 
+function buscarTodos(sql, params = []) {
+    return db.ready.then(() => new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    }));
+}
+
 function buscarUm(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
         db.get(sql, params, (err, row) => {
@@ -16,6 +25,19 @@ function buscarUm(sql, params = []) {
             resolve(row);
         });
     }));
+}
+
+function limparTexto(valor) {
+    return String(valor || '').trim();
+}
+
+function normalizarTelefone(telefone) {
+    const numeros = limparTexto(telefone).replace(/\D/g, '');
+
+    if (!numeros) return '';
+    if (numeros.startsWith('55')) return numeros;
+
+    return `55${numeros}`;
 }
 
 function gerarCredenciais(telefone) {
@@ -27,6 +49,29 @@ function gerarCredenciais(telefone) {
     };
 }
 
+function montarCliente(dados = {}) {
+    const telefone = normalizarTelefone(dados.telefone);
+
+    if (!limparTexto(dados.nome)) {
+        throw new Error('Informe o nome do cliente.');
+    }
+
+    if (!telefone) {
+        throw new Error('Informe o telefone do cliente.');
+    }
+
+    return {
+        nome: limparTexto(dados.nome),
+        telefone,
+        usuario: limparTexto(dados.usuario),
+        senha: limparTexto(dados.senha),
+        plano: limparTexto(dados.plano),
+        aparelho: limparTexto(dados.aparelho),
+        vencimento: limparTexto(dados.vencimento),
+        status: limparTexto(dados.status) || 'ativo'
+    };
+}
+
 function calcularVencimentoTeste() {
     const vencimento = new Date();
     vencimento.setDate(vencimento.getDate() + 1);
@@ -34,7 +79,8 @@ function calcularVencimentoTeste() {
 }
 
 async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = 'Teste gratis' }) {
-    const clienteAtual = await buscarClientePorTelefone(telefone);
+    const telefoneNormalizado = normalizarTelefone(telefone);
+    const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
     const credenciais = clienteAtual || gerarCredenciais(telefone);
     const vencimento = clienteAtual?.vencimento || calcularVencimentoTeste();
 
@@ -53,7 +99,7 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
             atualizadoEm = CURRENT_TIMESTAMP`,
         [
             nome,
-            telefone,
+            telefoneNormalizado,
             credenciais.usuario,
             credenciais.senha,
             plano,
@@ -63,11 +109,11 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
         ]
     );
 
-    return buscarClientePorTelefone(telefone);
+    return buscarClientePorTelefone(telefoneNormalizado);
 }
 
 function buscarClientePorTelefone(telefone) {
-    return buscarUm('SELECT * FROM clientes WHERE telefone = ?', [telefone]);
+    return buscarUm('SELECT * FROM clientes WHERE telefone = ?', [normalizarTelefone(telefone)]);
 }
 
 function buscarClientePorNomeOuTelefone(valor) {
@@ -82,8 +128,130 @@ function buscarClientePorNomeOuTelefone(valor) {
     );
 }
 
+function listarClientes(filtros = {}) {
+    const busca = limparTexto(filtros.busca);
+    const status = limparTexto(filtros.status);
+    const params = [];
+    const where = [];
+
+    if (busca) {
+        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR plano LIKE ?)');
+        const termo = `%${busca}%`;
+        params.push(termo, termo, termo, termo);
+    }
+
+    if (status) {
+        where.push('status = ?');
+        params.push(status);
+    }
+
+    return buscarTodos(
+        `SELECT * FROM clientes
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY
+            CASE WHEN vencimento IS NULL OR vencimento = '' THEN 1 ELSE 0 END,
+            vencimento ASC,
+            nome ASC`,
+        params
+    );
+}
+
+async function salvarCliente(dados) {
+    const cliente = montarCliente(dados);
+
+    if (dados.id) {
+        await executar(
+            `UPDATE clientes SET
+                nome = ?,
+                telefone = ?,
+                usuario = ?,
+                senha = ?,
+                plano = ?,
+                aparelho = ?,
+                vencimento = ?,
+                status = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+            [
+                cliente.nome,
+                cliente.telefone,
+                cliente.usuario,
+                cliente.senha,
+                cliente.plano,
+                cliente.aparelho,
+                cliente.vencimento,
+                cliente.status,
+                dados.id
+            ]
+        );
+
+        return buscarClientePorId(dados.id);
+    }
+
+    const credenciais = gerarCredenciais(cliente.telefone);
+
+    const resultado = await executar(
+        `INSERT INTO clientes (
+            nome, telefone, usuario, senha, plano, aparelho, vencimento, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            cliente.nome,
+            cliente.telefone,
+            cliente.usuario || credenciais.usuario,
+            cliente.senha || credenciais.senha,
+            cliente.plano,
+            cliente.aparelho,
+            cliente.vencimento,
+            cliente.status
+        ]
+    );
+
+    return buscarClientePorId(resultado.id);
+}
+
+function buscarClientePorId(id) {
+    return buscarUm('SELECT * FROM clientes WHERE id = ?', [id]);
+}
+
+function removerCliente(id) {
+    return executar('DELETE FROM clientes WHERE id = ?', [id]);
+}
+
+function listarClientesParaAviso(dataLimite) {
+    return buscarTodos(
+        `SELECT * FROM clientes
+        WHERE status IN ('ativo', 'teste')
+            AND vencimento IS NOT NULL
+            AND vencimento != ''
+            AND date(vencimento) <= date(?)
+            AND (
+                ultimoAvisoRenovacao IS NULL
+                OR ultimoAvisoRenovacao != vencimento
+            )
+        ORDER BY vencimento ASC`,
+        [dataLimite]
+    );
+}
+
+function registrarAvisoRenovacao(id, vencimento) {
+    return executar(
+        `UPDATE clientes SET
+            ultimoAvisoRenovacao = ?,
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [vencimento, id]
+    );
+}
+
 module.exports = {
     cadastrarOuAtualizarCliente,
     buscarClientePorTelefone,
-    buscarClientePorNomeOuTelefone
+    buscarClientePorNomeOuTelefone,
+    listarClientes,
+    salvarCliente,
+    buscarClientePorId,
+    removerCliente,
+    listarClientesParaAviso,
+    registrarAvisoRenovacao,
+    normalizarTelefone
 };

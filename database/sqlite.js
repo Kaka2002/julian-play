@@ -22,6 +22,7 @@ db.serialize(() => {
             aparelho TEXT,
             vencimento TEXT,
             status TEXT DEFAULT 'teste',
+            ultimoAvisoRenovacao TEXT,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -34,6 +35,7 @@ db.serialize(() => {
         aparelho: 'TEXT',
         vencimento: 'TEXT',
         status: "TEXT DEFAULT 'teste'",
+        ultimoAvisoRenovacao: 'TEXT',
         atualizadoEm: 'DATETIME DEFAULT CURRENT_TIMESTAMP'
     };
 

@@ -1,6 +1,13 @@
 const express = require('express');
 const qrRoute = require('./routes/qrRoute');
-const { iniciarWhatsApp, encerrarWhatsApp } = require('./config/whatsapp');
+const clientesRoute = require('./routes/clientesRoute');
+const {
+    iniciarWhatsApp,
+    encerrarWhatsApp,
+    getClient,
+    getStatusWhatsApp
+} = require('./config/whatsapp');
+const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -20,6 +27,9 @@ process.on('unhandledRejection', (err) => {
 
 const app = express();
 
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+
 app.get('/health', (req, res) => {
     res.status(200).json({
         ok: true,
@@ -29,6 +39,7 @@ app.get('/health', (req, res) => {
     });
 });
 
+app.use('/', clientesRoute);
 app.use('/', qrRoute);
 
 const PORT = process.env.PORT || 10000;
@@ -47,3 +58,4 @@ process.on('SIGTERM', () => desligar('SIGTERM'));
 process.on('SIGINT', () => desligar('SIGINT'));
 
 iniciarWhatsApp();
+iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
