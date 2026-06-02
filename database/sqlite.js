@@ -39,6 +39,7 @@ db.serialize(() => {
             observacoes TEXT,
             status TEXT DEFAULT 'teste',
             ultimoAvisoRenovacao TEXT,
+            ultimoAvisoAniversario TEXT,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -133,6 +134,7 @@ db.serialize(() => {
         observacoes: 'TEXT',
         status: "TEXT DEFAULT 'teste'",
         ultimoAvisoRenovacao: 'TEXT',
+        ultimoAvisoAniversario: 'TEXT',
         atualizadoEm: 'DATETIME DEFAULT CURRENT_TIMESTAMP'
     };
 

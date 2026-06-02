@@ -162,7 +162,35 @@ function buscarClientePorUsuarioIPTV(usuario) {
     return buscarUm('SELECT * FROM clientes WHERE usuario = ? LIMIT 1', [limparTexto(usuario)]);
 }
 
-function listarClientes(filtros = {}) {
+async function atualizarStatusAutomaticoClientes() {
+    const hoje = new Date().toISOString().slice(0, 10);
+
+    await executar(
+        `UPDATE clientes SET
+            status = 'expirado',
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE status IN ('ativo', 'pendente', 'teste')
+            AND vencimento IS NOT NULL
+            AND vencimento != ''
+            AND date(vencimento) < date(?)`,
+        [hoje]
+    );
+
+    await executar(
+        `UPDATE clientes SET
+            status = 'ativo',
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE status = 'expirado'
+            AND vencimento IS NOT NULL
+            AND vencimento != ''
+            AND date(vencimento) >= date(?)`,
+        [hoje]
+    );
+}
+
+async function listarClientes(filtros = {}) {
+    await atualizarStatusAutomaticoClientes();
+
     const busca = limparTexto(filtros.busca);
     const status = limparTexto(filtros.status);
     const params = [];
@@ -304,6 +332,22 @@ function removerCliente(id) {
 }
 
 function listarClientesParaAviso(dataLimite) {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `SELECT * FROM clientes
+        WHERE status IN ('ativo', 'teste', 'pendente', 'expirado')
+            AND vencimento IS NOT NULL
+            AND vencimento != ''
+            AND date(vencimento) <= date(?)
+            AND (
+                ultimoAvisoRenovacao IS NULL
+                OR ultimoAvisoRenovacao != vencimento
+            )
+        ORDER BY vencimento ASC`,
+        [dataLimite]
+    ));
+}
+
+function listarClientesParaAvisoAntigo(dataLimite) {
     return buscarTodos(
         `SELECT * FROM clientes
         WHERE status IN ('ativo', 'teste')
@@ -319,6 +363,25 @@ function listarClientesParaAviso(dataLimite) {
     );
 }
 
+function listarClientesAniversarioHoje(ano) {
+    const hoje = new Date();
+    const mesDia = hoje.toISOString().slice(5, 10);
+
+    return buscarTodos(
+        `SELECT * FROM clientes
+        WHERE nascimento IS NOT NULL
+            AND nascimento != ''
+            AND substr(nascimento, 6, 5) = ?
+            AND status NOT IN ('cancelado', 'suspenso')
+            AND (
+                ultimoAvisoAniversario IS NULL
+                OR ultimoAvisoAniversario != ?
+            )
+        ORDER BY nome ASC`,
+        [mesDia, String(ano)]
+    );
+}
+
 function registrarAvisoRenovacao(id, vencimento) {
     return executar(
         `UPDATE clientes SET
@@ -326,6 +389,16 @@ function registrarAvisoRenovacao(id, vencimento) {
             atualizadoEm = CURRENT_TIMESTAMP
         WHERE id = ?`,
         [vencimento, id]
+    );
+}
+
+function registrarAvisoAniversario(id, ano) {
+    return executar(
+        `UPDATE clientes SET
+            ultimoAvisoAniversario = ?,
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [String(ano), id]
     );
 }
 
@@ -339,6 +412,9 @@ module.exports = {
     buscarClientePorId,
     removerCliente,
     listarClientesParaAviso,
+    listarClientesAniversarioHoje,
     registrarAvisoRenovacao,
+    registrarAvisoAniversario,
+    atualizarStatusAutomaticoClientes,
     normalizarTelefone
 };

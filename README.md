@@ -20,6 +20,8 @@ No cadastro de cliente, o tipo de plano preenche automaticamente os dias de cont
 Quando o status do cliente for `Teste`, o campo de horas de teste fica disponivel com opcoes de 30 minutos a 24 horas.
 
 Na lista `/clientes/todos`, o painel mostra inicio, vencimento, app, dispositivos, validade, status e a data de aniversario do cliente no formato dia/mes.
+O status e atualizado automaticamente conforme o vencimento, e o envio automatico usa os modelos cadastrados em `/modelos`.
+Tambem existe um modelo padrao de aniversario com bonus de 1 mes de acesso, enviado uma vez por ano no dia do aniversario do cliente.
 
 ## Avisos de renovacao pelo WhatsApp
 

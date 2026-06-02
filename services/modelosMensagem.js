@@ -42,6 +42,13 @@ const modelosPadrao = [
         titulo: 'Renovacao Anual - Vencimento Proximo',
         cor: 'green',
         texto: 'Ola, *{{nome}}!*\n\nSeu plano *anual* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 1 ano de acesso.'
+    },
+    {
+        chave: 'aniversario_bonus',
+        plano: 'aniversario',
+        titulo: 'Aniversario - Bonus de 1 Mes',
+        cor: 'green',
+        texto: 'Ola, *{{nome}}!*\n\nFeliz aniversario! Para comemorar com voce, preparamos um *bonus de 1 mes de acesso*.\n\nEntre em contato para ativar seu presente.'
     }
 ];
 
@@ -179,6 +186,17 @@ function aplicarVariaveis(texto, variaveis) {
     });
 }
 
+async function obterModeloPorChave(chave) {
+    await garantirModelosPadrao();
+
+    return buscarUm(
+        `SELECT * FROM modelos_mensagem
+        WHERE ativo = 1 AND chave = ?
+        LIMIT 1`,
+        [chave]
+    );
+}
+
 async function obterModeloParaCliente(cliente, dias) {
     await garantirModelosPadrao();
 
@@ -215,12 +233,26 @@ async function montarMensagemPorModelo(cliente, dias) {
     return aplicarVariaveis(modelo?.texto || modelosPadrao[0].texto, variaveis);
 }
 
+async function montarMensagemAniversario(cliente) {
+    const modelo = await obterModeloPorChave('aniversario_bonus');
+    const variaveis = {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano || 'assinatura',
+        vencimento: formatarData(cliente.vencimento),
+        dias: '',
+        valor: cliente.valorPlano || cliente.valor || ''
+    };
+
+    return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'aniversario_bonus').texto, variaveis);
+}
+
 module.exports = {
     listarModelos,
     buscarModeloPorId,
     salvarModelo,
     removerModelo,
     montarMensagemPorModelo,
+    montarMensagemAniversario,
     normalizarPlano,
     aplicarVariaveis,
     modelosPadrao

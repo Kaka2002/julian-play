@@ -1,10 +1,15 @@
 const { enviarMensagem } = require('./mensagemService');
 const {
     listarClientesParaAviso,
+    listarClientesAniversarioHoje,
     registrarAvisoRenovacao,
+    registrarAvisoAniversario,
     normalizarTelefone
 } = require('./clientes');
-const { montarMensagemPorModelo } = require('./modelosMensagem');
+const {
+    montarMensagemPorModelo,
+    montarMensagemAniversario
+} = require('./modelosMensagem');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 let agendador = null;
@@ -62,8 +67,10 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
 
         const limite = adicionarDiasISO(Number.isFinite(diasAviso) ? diasAviso : 3);
         const clientes = await listarClientesParaAviso(limite);
+        const aniversariantes = await listarClientesAniversarioHoje(new Date().getFullYear());
         let enviados = 0;
         let ignorados = 0;
+        let aniversarios = 0;
 
         for (const cliente of clientes) {
             const destino = montarDestinoWhatsApp(cliente.telefone);
@@ -78,7 +85,20 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
             }
         }
 
-        return { enviados, ignorados, erro: null };
+        for (const cliente of aniversariantes) {
+            const destino = montarDestinoWhatsApp(cliente.telefone);
+            const mensagem = await montarMensagemAniversario(cliente);
+            const enviado = await enviarMensagem(client, destino, mensagem);
+
+            if (enviado) {
+                aniversarios += 1;
+                await registrarAvisoAniversario(cliente.id, new Date().getFullYear());
+            } else {
+                ignorados += 1;
+            }
+        }
+
+        return { enviados, aniversarios, ignorados, erro: null };
     } finally {
         executando = false;
     }
@@ -99,7 +119,7 @@ function iniciarAgendadorRenovacao(options) {
                     return;
                 }
 
-                console.log(`Renovacao automatica: ${resultado.enviados} aviso(s) enviado(s), ${resultado.ignorados} ignorado(s).`);
+                console.log(`Renovacao automatica: ${resultado.enviados} aviso(s) de renovacao, ${resultado.aniversarios || 0} aniversario(s), ${resultado.ignorados} ignorado(s).`);
             })
             .catch((err) => {
                 console.log('Erro na renovacao automatica:', err.message);

@@ -1663,11 +1663,13 @@ function tabelaClientes(clientes) {
             <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
             <div class="cell-muted">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
         </td>
-        <td data-label="App">
+        <td data-label="Aplicativos">
             ${renderChips(cliente.appsInstalados, 'app-chip')}
-            ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
             ${cliente.validadeApp ? `<div class="cell-muted">Validade: ${escapar(cliente.validadeApp)}</div>` : ''}
             ${cliente.appInstalado ? '<span class="installed-chip">Instalado</span>' : ''}
+        </td>
+        <td data-label="Dispositivos">
+            ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
         </td>
         <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span></td>
         <td data-label="Acoes">
@@ -1691,7 +1693,8 @@ function tabelaClientes(clientes) {
                 <th>Plano</th>
                 <th>Inicio</th>
                 <th>Vencimento</th>
-                <th>App</th>
+                <th>Aplicativos</th>
+                <th>Dispositivos</th>
                 <th>Status</th>
                 <th>Acoes</th>
             </tr>
@@ -1900,7 +1903,8 @@ function formularioModelo(modelo = {}) {
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
-                    { valor: 'anual', texto: 'Anual' }
+                    { valor: 'anual', texto: 'Anual' },
+                    { valor: 'aniversario', texto: 'Aniversario' }
                 ]
             })}
             ${campo({
@@ -2483,7 +2487,7 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         return res.redirect(`/clientes?mensagem=${encodeURIComponent(resultado.erro)}`);
     }
 
-    res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) enviado(s).`)}`);
+    res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) de renovacao e ${resultado.aniversarios || 0} aniversario(s) enviado(s).`)}`);
 });
 
 module.exports = router;
