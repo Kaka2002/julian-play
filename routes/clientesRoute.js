@@ -18,6 +18,12 @@ const {
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
 const {
+    listarTiposPlanos,
+    buscarTipoPlanoPorId,
+    salvarTipoPlano,
+    removerTipoPlano
+} = require('../services/tiposPlanos');
+const {
     listarApps,
     buscarAppPorId,
     salvarApp,
@@ -139,6 +145,8 @@ function icon(nome) {
         trash: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
         info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
         image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
+        ,
+        planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>'
     };
 
     return icones[nome] || '';
@@ -881,6 +889,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             <nav>
                 <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
+                <a class="navlink ${ativo === 'planos' ? 'active' : ''}" href="/planos">${icon('planos')} Planos</a>
                 <a class="navlink ${ativo === 'modelos' ? 'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
@@ -1074,6 +1083,65 @@ function listaClientes({ clientes, busca }) {
             </div>
         </div>
         ${tabelaClientes(clientes)}
+    </section>`;
+}
+
+function planoCard(plano) {
+    return `<article class="device-card">
+        <span class="device-icon">${icon('planos')}</span>
+        <div>
+            <div class="device-name">${escapar(plano.nome)}</div>
+            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''}</div>
+        </div>
+        <div class="model-actions">
+            <a class="button secondary icon-only" href="/planos/${plano.id}/editar" title="Editar plano">${icon('edit')}</a>
+            <form method="post" action="/planos/${plano.id}/excluir" onsubmit="return confirm('Excluir este tipo de plano?');">
+                <button class="button secondary icon-only" type="submit" title="Excluir plano">${icon('trash')}</button>
+            </form>
+        </div>
+    </article>`;
+}
+
+function telaPlanos(planos) {
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Tipos de Plano</h1>
+                <div class="subtitle">${planos.length} tipos de plano cadastrados</div>
+            </div>
+            <a class="button" href="/planos/novo">${icon('plus')} Novo Plano</a>
+        </div>
+    </section>
+    <section class="device-grid">
+        ${planos.length ? planos.map(planoCard).join('') : '<div class="empty">Nenhum tipo de plano cadastrado.</div>'}
+    </section>`;
+}
+
+function formularioPlano(plano = {}) {
+    return `<section class="page-title">
+        <h1>${plano.id ? 'Editar Tipo de Plano' : 'Novo Tipo de Plano'}</h1>
+        <div class="subtitle">Exemplo: Mensal com 30 dias de duracao</div>
+    </section>
+    <section class="panel">
+        <form class="fields" method="post" action="/planos/salvar">
+            ${plano.id ? `<input type="hidden" name="id" value="${escapar(plano.id)}">` : ''}
+            ${campo({ nome: 'nome', label: 'Nome do plano', valor: plano.nome })}
+            ${campo({ nome: 'dias', label: 'Quantidade de dias', valor: plano.dias, tipo: 'number' })}
+            ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
+            ${campo({
+                nome: 'ativo',
+                label: 'Status',
+                valor: String(plano.ativo ?? 1),
+                opcoes: [
+                    { valor: '1', texto: 'Ativo' },
+                    { valor: '0', texto: 'Inativo' }
+                ]
+            })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar plano</button>
+                <a class="button secondary" href="/planos">Cancelar</a>
+            </div>
+        </form>
     </section>`;
 }
 
@@ -1424,6 +1492,59 @@ router.post('/clientes/salvar', async (req, res) => {
             ativo: 'clientes'
         });
     }
+});
+
+router.get('/planos', async (req, res) => {
+    const planos = await listarTiposPlanos();
+    const mensagem = req.query.mensagem || '';
+
+    await renderizar(res, {
+        titulo: 'Planos',
+        conteudo: telaPlanos(planos),
+        mensagem,
+        ativo: 'planos'
+    });
+});
+
+router.get('/planos/novo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Novo plano',
+        conteudo: formularioPlano({ nome: 'Mensal', dias: 30, ativo: 1 }),
+        ativo: 'planos'
+    });
+});
+
+router.get('/planos/:id/editar', async (req, res) => {
+    const plano = await buscarTipoPlanoPorId(req.params.id);
+
+    if (!plano) {
+        return res.redirect('/planos?mensagem=Plano nao encontrado');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar plano',
+        conteudo: formularioPlano(plano),
+        ativo: 'planos'
+    });
+});
+
+router.post('/planos/salvar', async (req, res) => {
+    try {
+        await salvarTipoPlano(req.body);
+        res.redirect('/planos?mensagem=Plano salvo com sucesso');
+    } catch (err) {
+        res.status(400);
+        await renderizar(res, {
+            titulo: 'Salvar plano',
+            conteudo: `${formularioPlano(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'planos'
+        });
+    }
+});
+
+router.post('/planos/:id/excluir', async (req, res) => {
+    await removerTipoPlano(req.params.id);
+    res.redirect('/planos?mensagem=Plano excluido');
 });
 
 router.get('/apps', async (req, res) => {

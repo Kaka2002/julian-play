@@ -6,6 +6,7 @@ Desenvolvimento Julian Play
 Com o servidor rodando, acesse:
 
 - `/clientes` para listar, buscar, cadastrar, editar e excluir clientes.
+- `/planos` para cadastrar tipos de plano, como Mensal com 30 dias.
 - `/modelos` para cadastrar e editar os modelos de mensagens enviadas pelo WhatsApp.
 - `/apps` para cadastrar e editar aplicativos disponiveis.
 - `/dispositivos` para cadastrar e editar dispositivos.

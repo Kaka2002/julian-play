@@ -81,6 +81,18 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS tipos_planos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE,
+            dias INTEGER NOT NULL,
+            valor TEXT,
+            ativo INTEGER DEFAULT 1,
+            dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',
