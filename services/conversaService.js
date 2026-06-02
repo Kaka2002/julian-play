@@ -525,6 +525,16 @@ Escolha um dos planos abaixo:
         }
 
         apagarConversa(telefone);
+        await responderComDigitacao(message, `*DADOS NECESSARIOS PARA ATIVACAO*
+--------------------
+Para liberar seu plano apos o pagamento, envie aqui:
+
+*Nome completo*
+*WhatsApp*
+*Data de nascimento*
+*Aparelho que vai usar*
+
+Agora vou te enviar o PIX do plano escolhido.`, imagensRespostas.planos);
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano);
         return;

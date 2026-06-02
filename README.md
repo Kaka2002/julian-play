@@ -16,6 +16,10 @@ Com o servidor rodando, acesse:
 
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 
+No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.
+
+Na lista `/clientes/todos`, o painel mostra inicio, vencimento, app, dispositivos, validade, status e a data de aniversario do cliente no formato dia/mes.
+
 ## Avisos de renovacao pelo WhatsApp
 
 O sistema verifica clientes com status `ativo` ou `teste` e vencimento proximo. Quando o WhatsApp esta conectado, ele envia uma mensagem de renovacao e registra o vencimento avisado para evitar repeticao no mesmo periodo.

@@ -40,6 +40,16 @@ function normalizarTelefone(telefone) {
     return `55${numeros}`;
 }
 
+function normalizarLista(valor) {
+    if (Array.isArray(valor)) return valor.map(limparTexto).filter(Boolean);
+    if (!valor) return [];
+    return [limparTexto(valor)].filter(Boolean);
+}
+
+function serializarLista(valor) {
+    return JSON.stringify(normalizarLista(valor));
+}
+
 function gerarCredenciais(telefone) {
     const numeros = telefone.replace(/\D/g, '').slice(-6) || Date.now().toString().slice(-6);
 
@@ -67,7 +77,22 @@ function montarCliente(dados = {}) {
         senha: limparTexto(dados.senha),
         plano: limparTexto(dados.plano),
         aparelho: limparTexto(dados.aparelho),
-        vencimento: limparTexto(dados.vencimento),
+        vencimento: limparTexto(dados.dataVencimento || dados.vencimento).slice(0, 10),
+        nascimento: limparTexto(dados.nascimento),
+        tipoPlanoId: limparTexto(dados.tipoPlanoId),
+        diasContrato: Number(dados.diasContrato || 0),
+        valorPlano: limparTexto(dados.valorPlano),
+        assinaturaApp: limparTexto(dados.assinaturaApp),
+        validadeApp: limparTexto(dados.validadeApp),
+        dataInicio: limparTexto(dados.dataInicio),
+        dataVencimento: limparTexto(dados.dataVencimento),
+        appsInstalados: serializarLista(dados.appsInstalados),
+        dispositivosSelecionados: serializarLista(dados.dispositivosSelecionados),
+        paineisSelecionados: serializarLista(dados.paineisSelecionados),
+        appInstalado: dados.appInstalado ? 1 : 0,
+        usuarioApp: limparTexto(dados.usuarioApp),
+        senhaApp: limparTexto(dados.senhaApp),
+        observacoes: limparTexto(dados.observacoes),
         status: limparTexto(dados.status) || 'ativo'
     };
 }
@@ -135,9 +160,9 @@ function listarClientes(filtros = {}) {
     const where = [];
 
     if (busca) {
-        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR plano LIKE ?)');
+        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ?)');
         const termo = `%${busca}%`;
-        params.push(termo, termo, termo, termo);
+        params.push(termo, termo, termo, termo, termo);
     }
 
     if (status) {
@@ -169,6 +194,21 @@ async function salvarCliente(dados) {
                 plano = ?,
                 aparelho = ?,
                 vencimento = ?,
+                nascimento = ?,
+                tipoPlanoId = ?,
+                diasContrato = ?,
+                valorPlano = ?,
+                assinaturaApp = ?,
+                validadeApp = ?,
+                dataInicio = ?,
+                dataVencimento = ?,
+                appsInstalados = ?,
+                dispositivosSelecionados = ?,
+                paineisSelecionados = ?,
+                appInstalado = ?,
+                usuarioApp = ?,
+                senhaApp = ?,
+                observacoes = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
@@ -180,6 +220,21 @@ async function salvarCliente(dados) {
                 cliente.plano,
                 cliente.aparelho,
                 cliente.vencimento,
+                cliente.nascimento,
+                cliente.tipoPlanoId,
+                cliente.diasContrato,
+                cliente.valorPlano,
+                cliente.assinaturaApp,
+                cliente.validadeApp,
+                cliente.dataInicio,
+                cliente.dataVencimento,
+                cliente.appsInstalados,
+                cliente.dispositivosSelecionados,
+                cliente.paineisSelecionados,
+                cliente.appInstalado,
+                cliente.usuarioApp,
+                cliente.senhaApp,
+                cliente.observacoes,
                 cliente.status,
                 dados.id
             ]
@@ -192,8 +247,12 @@ async function salvarCliente(dados) {
 
     const resultado = await executar(
         `INSERT INTO clientes (
-            nome, telefone, usuario, senha, plano, aparelho, vencimento, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            nome, telefone, usuario, senha, plano, aparelho, vencimento,
+            nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
+            validadeApp, dataInicio, dataVencimento, appsInstalados,
+            dispositivosSelecionados, paineisSelecionados, appInstalado,
+            usuarioApp, senhaApp, observacoes, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -202,6 +261,21 @@ async function salvarCliente(dados) {
             cliente.plano,
             cliente.aparelho,
             cliente.vencimento,
+            cliente.nascimento,
+            cliente.tipoPlanoId,
+            cliente.diasContrato,
+            cliente.valorPlano,
+            cliente.assinaturaApp,
+            cliente.validadeApp,
+            cliente.dataInicio,
+            cliente.dataVencimento,
+            cliente.appsInstalados,
+            cliente.dispositivosSelecionados,
+            cliente.paineisSelecionados,
+            cliente.appInstalado,
+            cliente.usuarioApp,
+            cliente.senhaApp,
+            cliente.observacoes,
             cliente.status
         ]
     );

@@ -53,7 +53,7 @@ function escapar(valor) {
 function formatarData(dataISO) {
     if (!dataISO) return '-';
 
-    const [ano, mes, dia] = dataISO.split('-');
+    const [ano, mes, dia] = dataISO.slice(0, 10).split('-');
     if (!ano || !mes || !dia) return dataISO;
 
     return `${dia}/${mes}/${ano}`;
@@ -102,6 +102,8 @@ function clientesComVencimentoProximo(clientes) {
 function statusClasse(status) {
     if (status === 'ativo') return 'ok';
     if (status === 'teste') return 'info';
+    if (status === 'pendente') return 'info';
+    if (status === 'expirado') return 'warn';
     if (status === 'suspenso') return 'warn';
     return 'muted';
 }
@@ -146,7 +148,8 @@ function icon(nome) {
         info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
         image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
         ,
-        planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>'
+        planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>',
+        refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 8h5V3"/></svg>'
     };
 
     return icones[nome] || '';
@@ -703,6 +706,211 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             padding: 14px 22px 0;
         }
 
+        .client-form {
+            grid-template-columns: repeat(2, minmax(240px, 1fr));
+        }
+
+        .form-section {
+            margin-top: 10px;
+            padding-top: 22px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: 15px;
+            font-weight: 900;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .client-form .form-section:first-of-type {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: 0;
+        }
+
+        .inline-field {
+            display: grid;
+            grid-template-columns: minmax(120px, 1fr) 46px;
+            gap: 10px;
+            margin-top: 7px;
+        }
+
+        .inline-field input {
+            margin-top: 0;
+        }
+
+        .multi-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 8px 0;
+        }
+
+        .selected-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 10px;
+            background: #f7f8fb;
+            color: var(--ink);
+            font-weight: 900;
+        }
+
+        .selected-chip small {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        select[multiple] {
+            min-height: 170px;
+            padding: 8px;
+        }
+
+        select[multiple] option {
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .toggle-line {
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 22px;
+            color: var(--ink);
+            font-size: 16px;
+        }
+
+        .toggle-line input {
+            width: 42px;
+            height: 24px;
+            min-height: 24px;
+            accent-color: var(--blue);
+        }
+
+        .clients-panel {
+            padding: 0;
+        }
+
+        .clients-toolbar {
+            display: grid;
+            grid-template-columns: minmax(260px, 1fr) 260px;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .clients-search {
+            position: relative;
+        }
+
+        .clients-search svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--muted);
+        }
+
+        .clients-search input {
+            padding-left: 46px;
+        }
+
+        .clients-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .clients-table th {
+            padding: 18px 18px;
+            color: var(--muted);
+            font-size: 16px;
+            text-transform: none;
+        }
+
+        .clients-table td {
+            padding: 18px;
+            border-bottom: 1px solid var(--line);
+            font-size: 18px;
+        }
+
+        .clients-table tr:last-child td {
+            border-bottom: 0;
+        }
+
+        .cell-title {
+            font-weight: 800;
+            color: var(--ink);
+        }
+
+        .cell-muted {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.35;
+        }
+
+        .app-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            min-height: 24px;
+            margin: 0 6px 5px 0;
+            padding: 0 10px;
+            border-radius: 999px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .device-chip {
+            display: inline-flex;
+            min-height: 24px;
+            margin: 0 6px 5px 0;
+            padding: 0 10px;
+            align-items: center;
+            border-radius: 999px;
+            background: #f2f4f7;
+            color: var(--ink);
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .installed-chip {
+            display: inline-flex;
+            min-height: 25px;
+            padding: 0 10px;
+            align-items: center;
+            border-radius: 999px;
+            border: 1px solid #9ee7c7;
+            background: #e8fbf2;
+            color: #00875a;
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .icon-action {
+            color: #637083;
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+        }
+
+        .icon-action.whats {
+            color: #009b72;
+        }
+
+        .icon-action.refresh {
+            color: #1d5cff;
+        }
+
         .catalog-panel {
             max-width: 980px;
         }
@@ -865,6 +1073,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 justify-content: flex-start;
             }
 
+            .clients-toolbar {
+                grid-template-columns: 1fr;
+            }
+
             .catalog-row, .device-card {
                 grid-template-columns: 44px 1fr;
             }
@@ -911,17 +1123,28 @@ async function renderizar(res, opcoes) {
     res.send(layout({ ...opcoes, config }));
 }
 
-function campo({ nome, label, tipo = 'text', valor = '', opcoes = [] }) {
+async function obterListasCliente() {
+    const [planos, apps, dispositivos, paineis] = await Promise.all([
+        listarTiposPlanos(),
+        listarApps(),
+        listarDispositivos(),
+        listarPaineis()
+    ]);
+
+    return { planos, apps, dispositivos, paineis };
+}
+
+function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = '' }) {
     if (opcoes.length) {
         return `<label>${label}
-            <select name="${nome}">
-                ${opcoes.map(opcao => `<option value="${escapar(opcao.valor)}" ${opcao.valor === valor ? 'selected' : ''}>${escapar(opcao.texto)}</option>`).join('')}
+            <select name="${nome}" ${attrs}>
+                ${opcoes.map(opcao => `<option value="${escapar(opcao.valor)}" ${String(opcao.valor) === String(valor) ? 'selected' : ''}>${escapar(opcao.texto)}</option>`).join('')}
             </select>
         </label>`;
     }
 
     return `<label>${label}
-        <input type="${tipo}" name="${nome}" value="${escapar(valor)}">
+        <input type="${tipo}" name="${nome}" value="${escapar(valor)}" ${attrs}>
     </label>`;
 }
 
@@ -931,38 +1154,232 @@ function areaTexto({ nome, label, valor = '' }) {
     </label>`;
 }
 
-function formularioCliente(cliente = {}) {
+function lerListaSalva(valor) {
+    if (Array.isArray(valor)) return valor.map(String);
+    if (!valor) return [];
+
+    try {
+        const lista = JSON.parse(valor);
+        return Array.isArray(lista) ? lista.map(String) : [];
+    } catch (err) {
+        return String(valor).split(',').map(item => item.trim()).filter(Boolean);
+    }
+}
+
+function formatarAniversario(dataISO) {
+    const partes = String(dataISO || '').slice(0, 10).split('-');
+    if (partes.length !== 3) return dataISO || '';
+    return `${partes[2]}/${partes[1]}`;
+}
+
+function formatarDataHoraCurta(valor) {
+    if (!valor) return '-';
+
+    const data = new Date(String(valor).length <= 10 ? `${valor}T00:00:00` : valor);
+    if (Number.isNaN(data.getTime())) return valor;
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = String(data.getFullYear()).slice(-2);
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
+
+    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+}
+
+function textoDiasRestantes(valor) {
+    if (!valor) return '-';
+
+    const hoje = new Date();
+    const data = new Date(String(valor).length <= 10 ? `${valor}T23:59:59` : valor);
+    if (Number.isNaN(data.getTime())) return '-';
+
+    const dias = Math.ceil((data - hoje) / (24 * 60 * 60 * 1000));
+    if (dias < 0) return `${Math.abs(dias)}d vencido`;
+    if (dias === 0) return 'vence hoje';
+    return `${dias}d restantes`;
+}
+
+function renderChips(valor, classe) {
+    const lista = lerListaSalva(valor);
+    if (!lista.length) return '';
+
+    return lista.map(item => `<span class="${classe}">${escapar(item)}</span>`).join('');
+}
+
+function rotuloStatus(status) {
+    const mapa = {
+        ativo: 'Ativo',
+        pendente: 'Pendente',
+        expirado: 'Expirado',
+        suspenso: 'Suspenso',
+        cancelado: 'Cancelado',
+        teste: 'Teste'
+    };
+
+    return mapa[status] || status || '-';
+}
+
+function opcoesMulti(nome, label, itens, selecionados, placeholder) {
+    const set = new Set(selecionados.map(String));
+    const chips = selecionados.length
+        ? `<div class="multi-chips">${selecionados.map(item => `<span class="selected-chip">${escapar(item)} <small>x</small></span>`).join('')}</div>`
+        : '<div class="helper"><em>Nenhum selecionado</em></div>';
+
+    return `<label>${label}
+        ${chips}
+        <select name="${nome}" multiple size="6">
+            <option value="" disabled>${escapar(placeholder)}</option>
+            ${itens.map(item => `<option value="${escapar(item.nome)}" ${set.has(String(item.nome)) ? 'selected' : ''}>${escapar(item.nome)}</option>`).join('')}
+        </select>
+    </label>`;
+}
+
+function inputDateTime(valor) {
+    return valor ? String(valor).slice(0, 16) : '';
+}
+
+function agoraLocalDateTime() {
+    const data = new Date();
+    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
+    return data.toISOString().slice(0, 16);
+}
+
+function formularioCliente(cliente = {}, listas = {}) {
+    const planos = listas.planos || [];
+    const apps = listas.apps || [];
+    const dispositivos = listas.dispositivos || [];
+    const paineis = listas.paineis || [];
+    const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
+    const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
+    const appsSelecionados = lerListaSalva(cliente.appsInstalados);
+    const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
+    const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
+    const planoAtual = cliente.tipoPlanoId || '';
+
     return `<section class="page-title">
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
-        <div class="subtitle">Dados de acesso, plano e vencimento</div>
+        <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
     <section class="panel">
-        <form class="fields" method="post" action="/clientes/salvar">
+        <form class="fields client-form" method="post" action="/clientes/salvar">
             ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
-            ${campo({ nome: 'nome', label: 'Nome', valor: cliente.nome, tipo: 'text' })}
-            ${campo({ nome: 'telefone', label: 'WhatsApp', valor: cliente.telefone, tipo: 'tel' })}
-            ${campo({ nome: 'usuario', label: 'Usuario IPTV', valor: cliente.usuario })}
-            ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
-            ${campo({ nome: 'plano', label: 'Plano', valor: cliente.plano })}
-            ${campo({ nome: 'aparelho', label: 'Aparelho', valor: cliente.aparelho })}
-            ${campo({ nome: 'vencimento', label: 'Vencimento', valor: cliente.vencimento, tipo: 'date' })}
+            <div class="form-section full">Dados pessoais</div>
+            ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'required placeholder="Nome do cliente"' })}
+            ${campo({ nome: 'telefone', label: 'WhatsApp *', valor: cliente.telefone, tipo: 'tel', attrs: 'required placeholder="11999999999"' })}
+            ${campo({ nome: 'nascimento', label: 'Data de Aniversario', valor: cliente.nascimento, tipo: 'date' })}
+            <div></div>
+
+            <div class="form-section full">Plano</div>
+            ${campo({
+                nome: 'tipoPlanoId',
+                label: 'Tipo do Plano *',
+                valor: planoAtual,
+                attrs: 'id="tipoPlanoId" required',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...planos.map(plano => ({
+                        valor: plano.id,
+                        texto: `${plano.nome} (${plano.dias} dias)`
+                    }))
+                ]
+            })}
+            ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="1"' })}
+            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" placeholder="99.90"' })}
+            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'placeholder="0.00"' })}
+            ${campo({
+                nome: 'validadeApp',
+                label: 'Validade App',
+                valor: cliente.validadeApp || '',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    { valor: '1 Ano', texto: '1 Ano' },
+                    { valor: 'Vitalicio', texto: 'Vitalicio' }
+                ]
+            })}
             ${campo({
                 nome: 'status',
                 label: 'Status',
                 valor: cliente.status || 'ativo',
                 opcoes: [
                     { valor: 'ativo', texto: 'Ativo' },
-                    { valor: 'teste', texto: 'Teste' },
+                    { valor: 'pendente', texto: 'Pendente' },
+                    { valor: 'expirado', texto: 'Expirado' },
                     { valor: 'suspenso', texto: 'Suspenso' },
                     { valor: 'cancelado', texto: 'Cancelado' }
                 ]
             })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Hora de Inicio *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
+            <label>Data/Hora de Vencimento *
+                <div class="inline-field">
+                    <input type="datetime-local" name="dataVencimento" id="dataVencimento" value="${escapar(vencimento)}" required>
+                    <button class="button secondary icon-only" type="button" id="recalcularVencimento" title="Recalcular vencimento">${icon('refresh')}</button>
+                </div>
+                <span class="helper">Clique em recalcular para usar inicio + dias</span>
+            </label>
+
+            <div class="form-section full">Acesso ao aplicativo</div>
+            ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
+            ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
+            ${opcoesMulti('paineisSelecionados', 'Paineis', paineis, paineisSelecionados, 'Adicionar painel...')}
+            <label class="toggle-line">
+                <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ? 'checked' : ''}>
+                <span>App instalado no dispositivo</span>
+            </label>
+            ${campo({ nome: 'usuarioApp', label: 'Usuario no App', valor: cliente.usuarioApp || cliente.usuario, attrs: 'placeholder="usuario@email.com"' })}
+            ${campo({ nome: 'senhaApp', label: 'Senha no App', valor: cliente.senhaApp || cliente.senha, tipo: 'password', attrs: 'placeholder="senha"' })}
+            ${campo({ nome: 'usuario', label: 'Usuario IPTV', valor: cliente.usuario })}
+            ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
+            ${campo({ nome: 'plano', label: 'Plano legado', valor: cliente.plano, attrs: 'id="planoLegado" placeholder="Preenchido pelo tipo de plano"' })}
+            ${campo({ nome: 'aparelho', label: 'Aparelho legado', valor: cliente.aparelho })}
+            ${areaTexto({ nome: 'observacoes', label: 'Observacoes', valor: cliente.observacoes })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
                 <a class="button secondary" href="/clientes/todos">Cancelar</a>
             </div>
         </form>
-    </section>`;
+    </section>
+    <script>
+        const planos = ${JSON.stringify(planos.map(plano => ({
+            id: String(plano.id),
+            nome: plano.nome,
+            dias: plano.dias,
+            valor: plano.valor || ''
+        })))};
+        const tipoPlano = document.getElementById('tipoPlanoId');
+        const diasContrato = document.getElementById('diasContrato');
+        const valorPlano = document.getElementById('valorPlano');
+        const planoLegado = document.getElementById('planoLegado');
+        const dataInicio = document.getElementById('dataInicio');
+        const dataVencimento = document.getElementById('dataVencimento');
+        const recalcular = document.getElementById('recalcularVencimento');
+
+        function atualizarPlano() {
+            const plano = planos.find(item => item.id === tipoPlano.value);
+            if (!plano) return;
+            diasContrato.value = plano.dias || '';
+            valorPlano.value = plano.valor || valorPlano.value || '';
+            planoLegado.value = plano.nome || '';
+            calcularVencimento();
+        }
+
+        function calcularVencimento() {
+            const dias = Number(diasContrato.value || 0);
+            if (!dataInicio.value || !dias) return;
+            const data = new Date(dataInicio.value);
+            data.setDate(data.getDate() + dias);
+            dataVencimento.value = new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+
+        tipoPlano?.addEventListener('change', atualizarPlano);
+        diasContrato?.addEventListener('input', calcularVencimento);
+        dataInicio?.addEventListener('change', calcularVencimento);
+        recalcular?.addEventListener('click', calcularVencimento);
+
+        if (!dataVencimento.value && dataInicio.value && diasContrato.value) {
+            calcularVencimento();
+        }
+    </script>`;
 }
 
 function metricCard({ label, valor, nota = '', tipo, icone }) {
@@ -1032,56 +1449,89 @@ function tabelaClientes(clientes) {
     }
 
     const linhas = clientes.map(cliente => `<tr>
-        <td data-label="Nome"><strong>${escapar(cliente.nome)}</strong><div class="helper">${escapar(cliente.telefone)}</div></td>
-        <td data-label="Usuario">${escapar(cliente.usuario || '-')}</td>
-        <td data-label="Plano">${escapar(cliente.plano || '-')}</td>
-        <td data-label="Aparelho">${escapar(cliente.aparelho || '-')}</td>
-        <td data-label="Vencimento">${escapar(formatarData(cliente.vencimento))}</td>
-        <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span></td>
+        <td data-label="Cliente">
+            <div class="cell-title">${escapar(cliente.nome)}</div>
+            <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
+            ${cliente.nascimento ? `<div class="cell-muted">Aniv. ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+        </td>
+        <td data-label="Plano">
+            <div class="cell-title">${escapar(cliente.plano || '-')}</div>
+            <div class="cell-muted">${escapar(cliente.diasContrato || '-')} dias</div>
+            <div class="cell-muted">${cliente.valorPlano ? `R$ ${escapar(cliente.valorPlano)}` : ''}</div>
+        </td>
+        <td data-label="Inicio">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
+        <td data-label="Vencimento">
+            <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
+            <div class="cell-muted">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
+        </td>
+        <td data-label="App">
+            ${renderChips(cliente.appsInstalados, 'app-chip')}
+            ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
+            ${cliente.validadeApp ? `<div class="cell-muted">Validade: ${escapar(cliente.validadeApp)}</div>` : ''}
+            ${cliente.appInstalado ? '<span class="installed-chip">Instalado</span>' : ''}
+        </td>
+        <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span></td>
         <td data-label="Acoes">
             <div class="row-actions">
-                <a class="button secondary" href="/clientes/${cliente.id}/editar">Editar</a>
+                <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                <form method="post" action="/clientes/verificar-renovacoes">
+                    <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
+                </form>
+                <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar" title="Editar">${icon('edit')}</a>
                 <form method="post" action="/clientes/${cliente.id}/excluir" onsubmit="return confirm('Excluir este cliente?');">
-                    <button class="button danger" type="submit">Excluir</button>
+                    <button class="button icon-only icon-action" type="submit" title="Excluir">${icon('trash')}</button>
                 </form>
             </div>
         </td>
     </tr>`).join('');
 
-    return `<table>
+    return `<table class="clients-table">
         <thead>
             <tr>
                 <th>Cliente</th>
-                <th>Usuario</th>
                 <th>Plano</th>
-                <th>Aparelho</th>
+                <th>Inicio</th>
                 <th>Vencimento</th>
+                <th>App</th>
                 <th>Status</th>
-                <th></th>
+                <th>Acoes</th>
             </tr>
         </thead>
         <tbody>${linhas}</tbody>
     </table>`;
 }
 
-function listaClientes({ clientes, busca }) {
+function listaClientes({ clientes, busca, status }) {
     return `<section class="page-title">
         <h1>Clientes</h1>
-        <div class="subtitle">Cadastro completo e gerenciamento</div>
+        <div class="subtitle">${clientes.length} clientes cadastrados</div>
     </section>
-    <section class="panel" style="padding: 22px;">
-        <div class="toolbar">
-            <form class="search" method="get" action="/clientes/todos">
-                <input name="busca" value="${escapar(busca)}" placeholder="Buscar por nome, telefone, usuario ou plano">
-                <button class="button secondary" type="submit">${icon('search')} Buscar</button>
-            </form>
-            <div class="actions">
-                <form method="post" action="/clientes/verificar-renovacoes">
-                    <button class="button green" type="submit">${icon('whats')} Enviar avisos</button>
-                </form>
-                <a class="button" href="/clientes/novo">${icon('user')} Novo cliente</a>
-            </div>
+    <form class="clients-toolbar" method="get" action="/clientes/todos">
+        <div class="clients-search">
+            ${icon('search')}
+            <input name="busca" value="${escapar(busca)}" placeholder="Buscar por nome, telefone ou email...">
         </div>
+        <select name="status" onchange="this.form.submit()">
+            ${[
+                ['', 'Todos'],
+                ['ativo', 'Ativo'],
+                ['pendente', 'Pendente'],
+                ['expirado', 'Expirado'],
+                ['suspenso', 'Suspenso'],
+                ['cancelado', 'Cancelado']
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ? 'selected' : ''}>${texto}</option>`).join('')}
+        </select>
+    </form>
+    <div class="toolbar">
+        <span></span>
+        <div class="actions">
+            <form method="post" action="/clientes/verificar-renovacoes">
+                <button class="button green" type="submit">${icon('whats')} Enviar vencimentos</button>
+            </form>
+            <a class="button" href="/clientes/novo">${icon('plus')} Novo Cliente</a>
+        </div>
+    </div>
+    <section class="clients-panel">
         ${tabelaClientes(clientes)}
     </section>`;
 }
@@ -1447,21 +1897,24 @@ router.get('/clientes', async (req, res) => {
 
 router.get('/clientes/todos', async (req, res) => {
     const busca = req.query.busca || '';
-    const clientes = await listarClientes({ busca });
+    const status = req.query.status || '';
+    const clientes = await listarClientes({ busca, status });
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
         titulo: 'Clientes',
-        conteudo: listaClientes({ clientes, busca }),
+        conteudo: listaClientes({ clientes, busca, status }),
         mensagem,
         ativo: 'clientes'
     });
 });
 
-router.get('/clientes/novo', (req, res) => {
-    renderizar(res, {
+router.get('/clientes/novo', async (req, res) => {
+    const listas = await obterListasCliente();
+
+    await renderizar(res, {
         titulo: 'Novo cliente',
-        conteudo: formularioCliente({ status: 'ativo' }),
+        conteudo: formularioCliente({ status: 'ativo' }, listas),
         ativo: 'clientes'
     });
 });
@@ -1473,9 +1926,11 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente nao encontrado');
     }
 
+    const listas = await obterListasCliente();
+
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente),
+        conteudo: formularioCliente(cliente, listas),
         ativo: 'clientes'
     });
 });
@@ -1486,9 +1941,10 @@ router.post('/clientes/salvar', async (req, res) => {
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
     } catch (err) {
         res.status(400);
+        const listas = await obterListasCliente();
         await renderizar(res, {
             titulo: 'Salvar cliente',
-            conteudo: `${formularioCliente(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            conteudo: `${formularioCliente(req.body, listas)}<div class="notice">${escapar(err.message)}</div>`,
             ativo: 'clientes'
         });
     }
