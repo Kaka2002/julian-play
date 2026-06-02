@@ -4,7 +4,7 @@ const { MessageMedia } = require('whatsapp-web.js');
 
 const assetsDir = path.join(__dirname, '..', 'assets');
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_IMAGEM_TIMEOUT_MS || 10000);
-const MAX_ASSET_BYTES = Number(process.env.MAX_ASSET_BYTES || 900000);
+const MAX_ASSET_BYTES = Number(process.env.MAX_ASSET_BYTES || 3000000);
 const ENVIAR_IMAGENS = process.env.ENVIAR_IMAGENS !== 'false';
 
 function comTimeout(promessa, ms, descricao) {
