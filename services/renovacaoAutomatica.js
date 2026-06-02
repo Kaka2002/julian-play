@@ -4,6 +4,7 @@ const {
     registrarAvisoRenovacao,
     normalizarTelefone
 } = require('./clientes');
+const { montarMensagemPorModelo } = require('./modelosMensagem');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 let agendador = null;
@@ -35,20 +36,9 @@ function calcularDiasRestantes(vencimento) {
     return Math.ceil((dataVencimento - hoje) / UM_DIA_MS);
 }
 
-function montarMensagemRenovacao(cliente) {
+async function montarMensagemRenovacao(cliente) {
     const dias = calcularDiasRestantes(cliente.vencimento);
-    const vencimento = formatarData(cliente.vencimento);
-    const saudacao = cliente.nome ? `Ola, ${cliente.nome}!` : 'Ola!';
-
-    if (dias < 0) {
-        return `${saudacao}\n\nSua assinatura JULIAN PLAY venceu em ${vencimento}.\n\nPara renovar e evitar ficar sem acesso, responda esta mensagem que ja te ajudamos.`;
-    }
-
-    if (dias === 0) {
-        return `${saudacao}\n\nSua assinatura JULIAN PLAY vence hoje (${vencimento}).\n\nPara renovar, responda esta mensagem que ja te atendemos.`;
-    }
-
-    return `${saudacao}\n\nSua assinatura JULIAN PLAY vence em ${dias} dia(s), no dia ${vencimento}.\n\nSe quiser renovar agora, responda esta mensagem que ja te atendemos.`;
+    return montarMensagemPorModelo(cliente, dias);
 }
 
 function montarDestinoWhatsApp(telefone) {
@@ -77,7 +67,7 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
 
         for (const cliente of clientes) {
             const destino = montarDestinoWhatsApp(cliente.telefone);
-            const mensagem = montarMensagemRenovacao(cliente);
+            const mensagem = await montarMensagemRenovacao(cliente);
             const enviado = await enviarMensagem(client, destino, mensagem);
 
             if (enviado) {

@@ -28,6 +28,49 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS modelos_mensagem (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chave TEXT NOT NULL UNIQUE,
+            plano TEXT DEFAULT 'padrao',
+            titulo TEXT NOT NULL,
+            texto TEXT NOT NULL,
+            cor TEXT DEFAULT 'blue',
+            ativo INTEGER DEFAULT 1,
+            dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS configuracoes (
+            chave TEXT PRIMARY KEY,
+            valor TEXT,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS apps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE,
+            descricao TEXT,
+            ativo INTEGER DEFAULT 1,
+            dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS dispositivos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL UNIQUE,
+            ativo INTEGER DEFAULT 1,
+            dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',

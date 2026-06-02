@@ -7,6 +7,16 @@ const {
 } = require('../services/clientes');
 const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
+const {
+    listarModelos,
+    buscarModeloPorId,
+    salvarModelo,
+    removerModelo
+} = require('../services/modelosMensagem');
+const {
+    obterConfiguracoes,
+    salvarConfiguracoesPainel
+} = require('../services/configuracoesPainel');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -109,21 +119,28 @@ function icon(nome) {
         whats: '<svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 10.5c.5 2 2 3.5 4 4l1.3-1.3a1 1 0 0 1 1-.2c1 .4 1.7.6 2.7.6"/></svg>',
         arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
         user: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
-        search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
+        search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
+        plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+        edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+        trash: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+        info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+        image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
     };
 
     return icones[nome] || '';
 }
 
-function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
+function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {} }) {
     const status = getStatusWhatsApp();
+    const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
+    const logoUrl = config.logoUrl || '';
 
     return `<!doctype html>
 <html lang="pt-BR">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${escapar(titulo)} - ClientPro</title>
+    <title>${escapar(titulo)} - ${escapar(nomeSistema)}</title>
     <style>
         :root {
             color-scheme: light;
@@ -203,7 +220,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
             display: inline-flex;
             align-items: center;
             gap: 10px;
-            font-size: 21px;
+            font-size: 18px;
             font-weight: 800;
         }
 
@@ -215,6 +232,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
             color: #fff;
             background: var(--blue);
             border-radius: 14px;
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            border-radius: 10px;
+            background: #fff;
+            border: 1px solid var(--line);
         }
 
         nav {
@@ -495,6 +521,20 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
             outline-color: var(--blue);
         }
 
+        textarea {
+            width: 100%;
+            min-height: 180px;
+            padding: 13px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--ink);
+            font: inherit;
+            line-height: 1.5;
+            resize: vertical;
+            outline-color: var(--blue);
+        }
+
         .search input {
             width: min(380px, 100%);
         }
@@ -545,6 +585,102 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
             justify-content: flex-end;
         }
 
+        .vars {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            padding: 20px 22px;
+            align-items: center;
+        }
+
+        .var-token {
+            display: inline-flex;
+            min-height: 28px;
+            align-items: center;
+            padding: 0 9px;
+            border-radius: 7px;
+            background: #f2f4f7;
+            border: 1px solid var(--line);
+            color: #334155;
+            font-family: Consolas, monospace;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(260px, 1fr));
+            gap: 18px;
+        }
+
+        .model-card {
+            min-height: 245px;
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 22px;
+        }
+
+        .model-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .model-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .model-preview {
+            margin-top: 14px;
+            min-height: 124px;
+            max-height: 170px;
+            overflow: hidden;
+            white-space: pre-wrap;
+            line-height: 1.55;
+            color: var(--muted);
+            background: #f7f7f8;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .chip {
+            display: inline-flex;
+            min-height: 28px;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 800;
+            background: var(--blue-soft);
+            color: var(--blue);
+            border: 1px solid #cfe0ff;
+        }
+
+        .chip.green { background: var(--green-soft); color: var(--green); border-color: #b8efd5; }
+        .chip.orange { background: var(--orange-soft); color: var(--orange); border-color: #ffd99d; }
+        .chip.red { background: var(--red-soft); color: var(--red); border-color: #ffc9cf; }
+        .chip.purple { background: #f2e8ff; color: #7c3aed; border-color: #ddd6fe; }
+
+        .logo-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 14px;
+            align-items: end;
+            padding: 22px;
+        }
+
+        .logo-preview {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            padding: 14px 22px 0;
+        }
+
         @media (max-width: 980px) {
             .topbar {
                 align-items: flex-start;
@@ -560,6 +696,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
 
             .metrics {
                 grid-template-columns: repeat(2, minmax(150px, 1fr));
+            }
+
+            .model-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logo-config {
+                grid-template-columns: 1fr;
             }
 
             .client-row {
@@ -637,13 +781,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
     <div class="top-shell">
         <div class="topbar">
             <a class="brand" href="/clientes">
-                <span class="brand-icon">${icon('logo')}</span>
-                <span>ClientPro</span>
+                ${logoUrl ? `<img class="brand-logo" src="${escapar(logoUrl)}" alt="Logo">` : `<span class="brand-icon">${icon('logo')}</span>`}
+                <span>${escapar(nomeSistema)}</span>
             </a>
             <nav>
                 <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
-                <a class="navlink disabled" href="#">${icon('modelos')} Modelos</a>
+                <a class="navlink ${ativo === 'modelos' ? 'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink disabled" href="#">${icon('apps')} Apps</a>
                 <a class="navlink disabled" href="#">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink disabled" href="#">${icon('paineis')} Paineis</a>
@@ -659,6 +803,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
 </html>`;
 }
 
+async function renderizar(res, opcoes) {
+    const config = await obterConfiguracoes();
+    res.send(layout({ ...opcoes, config }));
+}
+
 function campo({ nome, label, tipo = 'text', valor = '', opcoes = [] }) {
     if (opcoes.length) {
         return `<label>${label}
@@ -670,6 +819,12 @@ function campo({ nome, label, tipo = 'text', valor = '', opcoes = [] }) {
 
     return `<label>${label}
         <input type="${tipo}" name="${nome}" value="${escapar(valor)}">
+    </label>`;
+}
+
+function areaTexto({ nome, label, valor = '' }) {
+    return `<label class="full">${label}
+        <textarea name="${nome}">${escapar(valor)}</textarea>
     </label>`;
 }
 
@@ -828,16 +983,138 @@ function listaClientes({ clientes, busca }) {
     </section>`;
 }
 
+function variaveisDisponiveis() {
+    const variaveis = [
+        ['{{nome}}', 'Primeiro nome do cliente'],
+        ['{{plano}}', 'Tipo do plano'],
+        ['{{vencimento}}', 'Data de vencimento'],
+        ['{{dias}}', 'Dias restantes ou vencidos'],
+        ['{{valor}}', 'Valor do plano']
+    ];
+
+    return `<section class="panel" style="margin-bottom: 24px;">
+        <div class="vars">
+            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variaveis disponiveis</strong>
+            ${variaveis.map(([token, descricao]) => `<span><span class="var-token">${escapar(token)}</span> <span class="helper">- ${escapar(descricao)}</span></span>`).join('')}
+        </div>
+    </section>`;
+}
+
+function chipPlano(modelo) {
+    const label = modelo.plano === 'padrao' ? 'Padrao (todos os planos)' : modelo.plano;
+    return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
+}
+
+function cardModelo(modelo) {
+    return `<article class="model-card">
+        <div class="model-top">
+            <div>
+                ${chipPlano(modelo)}
+                <h2 class="panel-title" style="margin-top:12px;">${escapar(modelo.titulo)}</h2>
+            </div>
+            <div class="model-actions">
+                <a class="button secondary icon-only" href="/modelos/${modelo.id}/editar" title="Editar modelo">${icon('edit')}</a>
+                <form method="post" action="/modelos/${modelo.id}/excluir" onsubmit="return confirm('Excluir este modelo?');">
+                    <button class="button secondary icon-only" type="submit" title="Excluir modelo">${icon('trash')}</button>
+                </form>
+            </div>
+        </div>
+        <div class="model-preview">${escapar(modelo.texto)}</div>
+    </article>`;
+}
+
+function telaModelos({ modelos, config }) {
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Modelos de Mensagem</h1>
+                <div class="subtitle">Configure textos personalizados por tipo de plano para envio via WhatsApp</div>
+            </div>
+            <a class="button" href="/modelos/novo">${icon('plus')} Novo Modelo</a>
+        </div>
+    </section>
+    ${variaveisDisponiveis()}
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Marca do Painel</h2>
+                <div class="subtitle">Nome exibido no topo e logo opcional</div>
+            </div>
+        </div>
+        ${config.logoUrl ? `<div class="logo-preview"><img class="brand-logo" src="${escapar(config.logoUrl)}" alt="Logo atual"><span class="helper">Logo atual</span></div>` : ''}
+        <form class="logo-config" method="post" action="/configuracoes/painel">
+            ${campo({ nome: 'nomeSistema', label: 'Nome do sistema', valor: config.nomeSistema || 'Controle de Cliente IPTV e P2P' })}
+            ${campo({ nome: 'logoUrl', label: 'URL ou caminho do logo', valor: config.logoUrl || '', tipo: 'text' })}
+            <button class="button" type="submit">${icon('image')} Salvar marca</button>
+        </form>
+    </section>
+    <section class="model-grid">
+        ${modelos.length ? modelos.map(cardModelo).join('') : '<div class="empty">Nenhum modelo cadastrado.</div>'}
+    </section>`;
+}
+
+function formularioModelo(modelo = {}) {
+    return `<section class="page-title">
+        <h1>${modelo.id ? 'Editar Modelo' : 'Novo Modelo'}</h1>
+        <div class="subtitle">Use variaveis para personalizar cada mensagem enviada</div>
+    </section>
+    ${variaveisDisponiveis()}
+    <section class="panel">
+        <form class="fields" method="post" action="/modelos/salvar">
+            ${modelo.id ? `<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
+            ${campo({ nome: 'titulo', label: 'Titulo', valor: modelo.titulo })}
+            ${campo({
+                nome: 'plano',
+                label: 'Plano',
+                valor: modelo.plano || 'padrao',
+                opcoes: [
+                    { valor: 'padrao', texto: 'Padrao (todos os planos)' },
+                    { valor: 'mensal', texto: 'Mensal' },
+                    { valor: 'trimestral', texto: 'Trimestral' },
+                    { valor: 'semestral', texto: 'Semestral' },
+                    { valor: 'anual', texto: 'Anual' }
+                ]
+            })}
+            ${campo({
+                nome: 'cor',
+                label: 'Cor da etiqueta',
+                valor: modelo.cor || 'blue',
+                opcoes: [
+                    { valor: 'blue', texto: 'Azul' },
+                    { valor: 'green', texto: 'Verde' },
+                    { valor: 'orange', texto: 'Laranja' },
+                    { valor: 'purple', texto: 'Roxo' },
+                    { valor: 'red', texto: 'Vermelho' }
+                ]
+            })}
+            ${campo({
+                nome: 'ativo',
+                label: 'Status',
+                valor: String(modelo.ativo ?? 1),
+                opcoes: [
+                    { valor: '1', texto: 'Ativo' },
+                    { valor: '0', texto: 'Inativo' }
+                ]
+            })}
+            ${areaTexto({ nome: 'texto', label: 'Mensagem', valor: modelo.texto })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar modelo</button>
+                <a class="button secondary" href="/modelos">Cancelar</a>
+            </div>
+        </form>
+    </section>`;
+}
+
 router.get('/clientes', async (req, res) => {
     const clientes = await listarClientes();
     const mensagem = req.query.mensagem || '';
 
-    res.send(layout({
+    await renderizar(res, {
         titulo: 'Painel',
         conteudo: dashboard(clientes),
         mensagem,
         ativo: 'painel'
-    }));
+    });
 });
 
 router.get('/clientes/todos', async (req, res) => {
@@ -845,20 +1122,20 @@ router.get('/clientes/todos', async (req, res) => {
     const clientes = await listarClientes({ busca });
     const mensagem = req.query.mensagem || '';
 
-    res.send(layout({
+    await renderizar(res, {
         titulo: 'Clientes',
         conteudo: listaClientes({ clientes, busca }),
         mensagem,
         ativo: 'clientes'
-    }));
+    });
 });
 
 router.get('/clientes/novo', (req, res) => {
-    res.send(layout({
+    renderizar(res, {
         titulo: 'Novo cliente',
         conteudo: formularioCliente({ status: 'ativo' }),
         ativo: 'clientes'
-    }));
+    });
 });
 
 router.get('/clientes/:id/editar', async (req, res) => {
@@ -868,11 +1145,11 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente nao encontrado');
     }
 
-    res.send(layout({
+    await renderizar(res, {
         titulo: 'Editar cliente',
         conteudo: formularioCliente(cliente),
         ativo: 'clientes'
-    }));
+    });
 });
 
 router.post('/clientes/salvar', async (req, res) => {
@@ -880,12 +1157,77 @@ router.post('/clientes/salvar', async (req, res) => {
         await salvarCliente(req.body);
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
     } catch (err) {
-        res.status(400).send(layout({
+        res.status(400);
+        await renderizar(res, {
             titulo: 'Salvar cliente',
             conteudo: `${formularioCliente(req.body)}<div class="notice">${escapar(err.message)}</div>`,
             ativo: 'clientes'
-        }));
+        });
     }
+});
+
+router.get('/modelos', async (req, res) => {
+    const modelos = await listarModelos();
+    const config = await obterConfiguracoes();
+    const mensagem = req.query.mensagem || '';
+
+    await renderizar(res, {
+        titulo: 'Modelos',
+        conteudo: telaModelos({ modelos, config }),
+        mensagem,
+        ativo: 'modelos'
+    });
+});
+
+router.get('/modelos/novo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Novo modelo',
+        conteudo: formularioModelo({
+            plano: 'padrao',
+            cor: 'blue',
+            ativo: 1,
+            texto: 'Ola, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
+        }),
+        ativo: 'modelos'
+    });
+});
+
+router.get('/modelos/:id/editar', async (req, res) => {
+    const modelo = await buscarModeloPorId(req.params.id);
+
+    if (!modelo) {
+        return res.redirect('/modelos?mensagem=Modelo nao encontrado');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar modelo',
+        conteudo: formularioModelo(modelo),
+        ativo: 'modelos'
+    });
+});
+
+router.post('/modelos/salvar', async (req, res) => {
+    try {
+        await salvarModelo(req.body);
+        res.redirect('/modelos?mensagem=Modelo salvo com sucesso');
+    } catch (err) {
+        res.status(400);
+        await renderizar(res, {
+            titulo: 'Salvar modelo',
+            conteudo: `${formularioModelo(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'modelos'
+        });
+    }
+});
+
+router.post('/modelos/:id/excluir', async (req, res) => {
+    await removerModelo(req.params.id);
+    res.redirect('/modelos?mensagem=Modelo excluido');
+});
+
+router.post('/configuracoes/painel', async (req, res) => {
+    await salvarConfiguracoesPainel(req.body);
+    res.redirect('/modelos?mensagem=Marca do painel salva');
 });
 
 router.post('/clientes/:id/excluir', async (req, res) => {

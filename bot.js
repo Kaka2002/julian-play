@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const {
@@ -29,6 +30,7 @@ const app = express();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 app.get('/health', (req, res) => {
     res.status(200).json({

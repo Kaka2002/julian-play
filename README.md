@@ -6,6 +6,7 @@ Desenvolvimento Julian Play
 Com o servidor rodando, acesse:
 
 - `/clientes` para listar, buscar, cadastrar, editar e excluir clientes.
+- `/modelos` para cadastrar e editar os modelos de mensagens enviadas pelo WhatsApp.
 - `/clientes/novo` para cadastrar um novo cliente.
 - `/qr` para conectar o WhatsApp pelo QR Code.
 
@@ -19,3 +20,17 @@ Variaveis opcionais:
 
 - `RENOVACAO_DIAS_AVISO`: quantos dias antes do vencimento avisar. Padrao: `3`.
 - `RENOVACAO_INTERVALO_MINUTOS`: intervalo entre verificacoes automaticas. Padrao: `60`.
+
+## Modelos de mensagem e logo
+
+Na tela `/modelos`, use as variaveis abaixo nos textos:
+
+- `{{nome}}`
+- `{{plano}}`
+- `{{vencimento}}`
+- `{{dias}}`
+- `{{valor}}`
+
+Tambem e possivel trocar o nome exibido no topo e informar um caminho/URL de logo. Para usar a logo que ja existe no projeto, informe:
+
+`/assets/Logo%201_7.png`
