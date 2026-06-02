@@ -762,7 +762,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             border-radius: 10px;
             background: #f7f8fb;
             color: var(--ink);
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .selected-chip button {
@@ -835,14 +835,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .clients-table th {
             padding: 18px 18px;
             color: var(--muted);
-            font-size: 16px;
+            font-size: 14px;
+            font-weight: 800;
             text-transform: none;
         }
 
         .clients-table td {
             padding: 18px;
             border-bottom: 1px solid var(--line);
-            font-size: 18px;
+            font-size: 15px;
         }
 
         .clients-table tr:last-child td {
@@ -850,13 +851,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .cell-title {
-            font-weight: 800;
+            font-weight: 700;
             color: var(--ink);
+            font-size: 16px;
+            line-height: 1.25;
         }
 
         .cell-muted {
             color: var(--muted);
-            font-size: 16px;
+            font-size: 14px;
             line-height: 1.35;
         }
 
@@ -872,7 +875,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             background: #fff;
             color: var(--ink);
             font-size: 15px;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .device-chip {
@@ -885,7 +888,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             background: #f2f4f7;
             color: var(--ink);
             font-size: 15px;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .installed-chip {
@@ -898,7 +901,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             background: #e8fbf2;
             color: #00875a;
             font-size: 15px;
-            font-weight: 900;
+            font-weight: 700;
         }
 
         .icon-action {
@@ -944,8 +947,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .catalog-name, .device-name {
             color: var(--ink);
-            font-size: 23px;
-            font-weight: 800;
+            font-size: 19px;
+            font-weight: 700;
         }
 
         .catalog-desc {
@@ -1514,7 +1517,7 @@ function tabelaClientes(clientes) {
         <td data-label="Cliente">
             <div class="cell-title">${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
-            ${cliente.nascimento ? `<div class="cell-muted">Aniv. ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+            ${cliente.nascimento ? `<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
         </td>
         <td data-label="Plano">
             <div class="cell-title">${escapar(cliente.plano || '-')}</div>
