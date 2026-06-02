@@ -146,7 +146,7 @@ function clientesComVencimentoProximo(clientes) {
 
     return clientes
         .filter(cliente => cliente.vencimento && cliente.vencimento <= limiteISO)
-        .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
 }
 
 function statusClasse(status) {
@@ -840,6 +840,33 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             margin-top: 7px;
         }
 
+        .phone-field {
+            display: grid;
+            grid-template-columns: 58px minmax(120px, 1fr);
+            align-items: center;
+            margin-top: 7px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .phone-prefix {
+            min-height: 42px;
+            display: grid;
+            place-items: center;
+            border-right: 1px solid var(--line);
+            color: var(--ink);
+            background: #f7f8fb;
+            font-weight: 700;
+        }
+
+        .phone-field input {
+            margin-top: 0;
+            border: 0;
+            border-radius: 0;
+        }
+
         .inline-field input {
             margin-top: 0;
         }
@@ -1290,6 +1317,17 @@ function areaTexto({ nome, label, valor = '' }) {
     </label>`;
 }
 
+function campoWhatsApp(valor = '') {
+    const telefone = String(valor || '').replace(/^55/, '');
+
+    return `<label>WhatsApp *
+        <div class="phone-field">
+            <span class="phone-prefix">+55</span>
+            <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="11999999999">
+        </div>
+    </label>`;
+}
+
 function lerListaSalva(valor) {
     if (Array.isArray(valor)) return valor.map(String);
     if (!valor) return [];
@@ -1409,7 +1447,7 @@ function formularioCliente(cliente = {}, listas = {}) {
             ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'required placeholder="Nome do cliente"' })}
-            ${campo({ nome: 'telefone', label: 'WhatsApp *', valor: cliente.telefone, tipo: 'tel', attrs: 'required placeholder="11999999999"' })}
+            ${campoWhatsApp(cliente.telefone)}
             ${campo({ nome: 'nascimento', label: 'Data de Aniversario', valor: cliente.nascimento, tipo: 'date' })}
             <div></div>
 

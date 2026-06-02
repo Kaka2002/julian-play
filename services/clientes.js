@@ -214,10 +214,7 @@ async function listarClientes(filtros = {}) {
     return buscarTodos(
         `SELECT * FROM clientes
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-        ORDER BY
-            CASE WHEN vencimento IS NULL OR vencimento = '' THEN 1 ELSE 0 END,
-            vencimento ASC,
-            nome ASC
+        ORDER BY nome COLLATE NOCASE ASC
         ${limiteSql}`,
         params
     );
