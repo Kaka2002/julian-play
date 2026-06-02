@@ -26,7 +26,11 @@ const mensagensProcessadas = new Set();
 
 async function obterExecutablePath() {
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-        return process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+            return process.env.PUPPETEER_EXECUTABLE_PATH;
+        }
+
+        console.log('PUPPETEER_EXECUTABLE_PATH nao encontrado, usando deteccao automatica:', process.env.PUPPETEER_EXECUTABLE_PATH);
     }
 
     if (process.platform === 'win32') {
