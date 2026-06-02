@@ -9,6 +9,7 @@ const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
 
 const router = express.Router();
+const DIAS_DASHBOARD = 7;
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -28,19 +29,44 @@ function formatarData(dataISO) {
     return `${dia}/${mes}/${ano}`;
 }
 
+function hojeISO() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function adicionarDiasISO(dias) {
+    const data = new Date();
+    data.setDate(data.getDate() + dias);
+    return data.toISOString().slice(0, 10);
+}
+
+function calcularDiasRestantes(vencimento) {
+    if (!vencimento) return null;
+
+    const hoje = new Date(`${hojeISO()}T00:00:00`);
+    const dataVencimento = new Date(`${vencimento}T00:00:00`);
+    const umDia = 24 * 60 * 60 * 1000;
+
+    return Math.ceil((dataVencimento - hoje) / umDia);
+}
+
 function calcularResumo(clientes) {
-    const hoje = new Date().toISOString().slice(0, 10);
-    const limite = new Date();
-    limite.setDate(limite.getDate() + Number(process.env.RENOVACAO_DIAS_AVISO || 3));
-    const limiteISO = limite.toISOString().slice(0, 10);
+    const hoje = hojeISO();
+    const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
 
     return {
         total: clientes.length,
         ativos: clientes.filter(cliente => cliente.status === 'ativo').length,
-        testes: clientes.filter(cliente => cliente.status === 'teste').length,
-        vencendo: clientes.filter(cliente => cliente.vencimento && cliente.vencimento >= hoje && cliente.vencimento <= limiteISO).length,
-        vencidos: clientes.filter(cliente => cliente.vencimento && cliente.vencimento < hoje).length
+        vencidos: clientes.filter(cliente => cliente.vencimento && cliente.vencimento < hoje).length,
+        vencendo: clientes.filter(cliente => cliente.vencimento && cliente.vencimento >= hoje && cliente.vencimento <= limiteISO).length
     };
+}
+
+function clientesComVencimentoProximo(clientes) {
+    const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
+
+    return clientes
+        .filter(cliente => cliente.vencimento && cliente.vencimento <= limiteISO)
+        .sort((a, b) => String(a.vencimento).localeCompare(String(b.vencimento)));
 }
 
 function statusClasse(status) {
@@ -50,7 +76,46 @@ function statusClasse(status) {
     return 'muted';
 }
 
-function layout({ titulo, conteudo, mensagem = '' }) {
+function textoVencimento(cliente) {
+    const dias = calcularDiasRestantes(cliente.vencimento);
+
+    if (dias === null) return 'Sem vencimento';
+    if (dias < 0) return `Vencido ha ${Math.abs(dias)} dia(s)`;
+    if (dias === 0) return 'Vence hoje';
+
+    return `Vence em ${dias} dia(s)`;
+}
+
+function iniciais(nome) {
+    const partes = String(nome || '?').trim().split(/\s+/).filter(Boolean);
+    const letras = partes.slice(0, 2).map(parte => parte[0]).join('');
+
+    return (letras || '?').toUpperCase();
+}
+
+function icon(nome) {
+    const icones = {
+        logo: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+        painel: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+        clientes: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+        modelos: '<svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>',
+        apps: '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
+        dispositivos: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3"/><path d="M16 6V3"/><path d="M3 11h18"/></svg>',
+        paineis: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8"/><path d="M12 18v4"/></svg>',
+        sair: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>',
+        check: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
+        alert: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+        close: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>',
+        whats: '<svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/><path d="M8 10.5c.5 2 2 3.5 4 4l1.3-1.3a1 1 0 0 1 1-.2c1 .4 1.7.6 2.7.6"/></svg>',
+        arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
+        user: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
+        search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>'
+    };
+
+    return icones[nome] || '';
+}
+
+function layout({ titulo, conteudo, mensagem = '', ativo = 'painel' }) {
     const status = getStatusWhatsApp();
 
     return `<!doctype html>
@@ -58,19 +123,24 @@ function layout({ titulo, conteudo, mensagem = '' }) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>${escapar(titulo)} - Julian Play</title>
+    <title>${escapar(titulo)} - ClientPro</title>
     <style>
         :root {
             color-scheme: light;
-            --bg: #f6f7f9;
+            --bg: #f5f6f8;
             --panel: #ffffff;
-            --ink: #18212f;
-            --soft: #647084;
-            --line: #dfe4ea;
-            --brand: #0f8b6f;
-            --accent: #2563eb;
-            --danger: #b42318;
-            --warn: #a15c00;
+            --ink: #081225;
+            --muted: #6c7383;
+            --line: #e4e7ec;
+            --blue: #4368e8;
+            --blue-soft: #eef2ff;
+            --green: #16a76a;
+            --green-soft: #dff8ee;
+            --red: #ef4444;
+            --red-soft: #ffe5e7;
+            --orange: #f08a12;
+            --orange-soft: #fff2dc;
+            --shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 10px 24px rgba(15, 23, 42, .04);
         }
 
         * { box-sizing: border-box; }
@@ -79,174 +149,375 @@ function layout({ titulo, conteudo, mensagem = '' }) {
             margin: 0;
             background: var(--bg);
             color: var(--ink);
-            font-family: Arial, sans-serif;
+            font-family: Inter, Arial, sans-serif;
         }
 
-        header {
-            background: #14213d;
-            color: #fff;
-            border-bottom: 4px solid var(--brand);
+        svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            stroke-width: 2;
+            flex: 0 0 auto;
+        }
+
+        a, button, input, select {
+            font: inherit;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        button {
+            border: 0;
+            cursor: pointer;
+        }
+
+        .top-shell {
+            background: rgba(255,255,255,.94);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
         }
 
         .topbar, main {
-            width: min(1180px, calc(100% - 32px));
+            width: min(1250px, calc(100% - 36px));
             margin: 0 auto;
         }
 
         .topbar {
-            min-height: 72px;
+            min-height: 76px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 16px;
+            gap: 22px;
         }
 
-        h1 {
-            margin: 0;
-            font-size: 22px;
-            letter-spacing: 0;
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            display: grid;
+            place-items: center;
+            width: 42px;
+            height: 42px;
+            color: #fff;
+            background: var(--blue);
+            border-radius: 14px;
         }
 
         nav {
             display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        a, button {
-            font: inherit;
-        }
-
-        .navlink, .button {
-            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            min-height: 38px;
-            padding: 0 14px;
-            border-radius: 6px;
-            border: 1px solid transparent;
-            text-decoration: none;
-            cursor: pointer;
-            white-space: nowrap;
+            gap: 10px;
+            color: var(--muted);
+            font-weight: 700;
         }
 
         .navlink {
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 16px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .navlink.active {
+            background: var(--blue);
             color: #fff;
-            border-color: rgba(255,255,255,.25);
+            box-shadow: 0 8px 16px rgba(67, 104, 232, .25);
+        }
+
+        .navlink.disabled {
+            pointer-events: none;
+        }
+
+        main {
+            padding: 38px 0 54px;
+        }
+
+        .page-title {
+            margin: 0 0 34px;
+        }
+
+        h1 {
+            margin: 0 0 6px;
+            font-size: 34px;
+            line-height: 1.15;
+            letter-spacing: 0;
+        }
+
+        .subtitle, .helper {
+            color: var(--muted);
+        }
+
+        .subtitle {
+            font-size: 19px;
+        }
+
+        .notice {
+            margin-bottom: 18px;
+            padding: 13px 16px;
+            border: 1px solid #b8efd5;
+            border-radius: 10px;
+            background: #ecfbf4;
+            color: #12623f;
+            font-weight: 700;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 36px;
+        }
+
+        .metric, .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+        }
+
+        .metric {
+            min-height: 142px;
+            padding: 26px 28px;
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .metric-label {
+            display: block;
+            margin-bottom: 14px;
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .metric-value {
+            display: block;
+            color: var(--ink);
+            font-size: 35px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .metric-note {
+            display: block;
+            margin-top: 14px;
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .metric-icon {
+            display: grid;
+            place-items: center;
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+        }
+
+        .metric-icon.blue { background: var(--blue-soft); color: var(--blue); }
+        .metric-icon.green { background: var(--green-soft); color: var(--green); }
+        .metric-icon.red { background: var(--red-soft); color: var(--red); }
+        .metric-icon.orange { background: var(--orange-soft); color: var(--orange); }
+
+        .panel {
+            overflow: hidden;
+        }
+
+        .panel-head {
+            min-height: 112px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            padding: 28px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .panel-title {
+            margin: 0 0 6px;
+            font-size: 22px;
+            letter-spacing: 0;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         .button {
+            min-height: 38px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            padding: 0 16px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            background: var(--blue);
             color: #fff;
-            background: var(--accent);
-            border-color: var(--accent);
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .button.green {
+            background: #16a34a;
         }
 
         .button.secondary {
             background: #fff;
             color: var(--ink);
             border-color: var(--line);
+            box-shadow: 0 1px 6px rgba(15, 23, 42, .06);
         }
 
         .button.danger {
-            background: var(--danger);
-            border-color: var(--danger);
+            background: var(--red);
         }
 
-        main {
-            padding: 24px 0 40px;
+        .button.icon-only {
+            width: 38px;
+            padding: 0;
+            border-radius: 999px;
         }
 
-        .notice {
-            margin-bottom: 16px;
-            padding: 12px 14px;
-            border-left: 4px solid var(--brand);
-            background: #eaf7f3;
-            color: #173d34;
-        }
-
-        .status {
-            color: ${status.conectado ? '#bdf4d3' : '#ffd6a5'};
-            font-size: 14px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(130px, 1fr));
-            gap: 12px;
-            margin-bottom: 18px;
-        }
-
-        .metric, .panel {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 8px;
-        }
-
-        .metric {
-            padding: 14px;
+        .client-row {
             min-height: 84px;
+            display: grid;
+            grid-template-columns: 54px minmax(170px, 1fr) minmax(170px, auto) auto auto;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .metric strong {
-            display: block;
-            margin-top: 8px;
-            font-size: 26px;
+        .client-row:last-child {
+            border-bottom: 0;
         }
 
-        .metric span, label, .helper {
-            color: var(--soft);
+        .avatar {
+            display: grid;
+            place-items: center;
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            background: var(--blue-soft);
+            color: var(--blue);
+            font-weight: 800;
+        }
+
+        .client-name {
+            font-size: 18px;
+            font-weight: 800;
+        }
+
+        .due {
+            text-align: right;
+            color: var(--orange);
+            font-size: 16px;
+            font-weight: 800;
+        }
+
+        .due.expired {
+            color: var(--red);
+        }
+
+        .due-date {
+            margin-top: 3px;
+            color: var(--muted);
             font-size: 14px;
+            font-weight: 600;
         }
 
-        .panel {
-            padding: 18px;
-            margin-bottom: 18px;
+        .badge {
+            display: inline-flex;
+            min-height: 28px;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0 12px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .badge.ok { background: #c9f7e2; color: #047446; }
+        .badge.info { background: #dfe9ff; color: #3158cf; }
+        .badge.warn { background: #fff0d5; color: #a76100; }
+        .badge.muted { background: #eef1f5; color: #576171; }
+
+        .empty {
+            padding: 30px;
+            color: var(--muted);
+            text-align: center;
+            font-weight: 700;
         }
 
         .toolbar {
             display: flex;
             justify-content: space-between;
-            gap: 12px;
+            gap: 14px;
             flex-wrap: wrap;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .search {
             display: flex;
-            gap: 8px;
+            gap: 9px;
             flex-wrap: wrap;
         }
 
         input, select {
             width: 100%;
-            min-height: 40px;
-            padding: 8px 10px;
+            min-height: 42px;
+            padding: 9px 12px;
             border: 1px solid var(--line);
-            border-radius: 6px;
+            border-radius: 10px;
             background: #fff;
             color: var(--ink);
+            outline-color: var(--blue);
         }
 
         .search input {
-            width: min(360px, 100%);
+            width: min(380px, 100%);
         }
 
         form.fields {
             display: grid;
             grid-template-columns: repeat(4, minmax(150px, 1fr));
             gap: 14px;
+            padding: 28px;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        label input, label select {
+            margin-top: 7px;
         }
 
         .full {
             grid-column: 1 / -1;
-        }
-
-        .actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: center;
         }
 
         table {
@@ -255,33 +526,18 @@ function layout({ titulo, conteudo, mensagem = '' }) {
         }
 
         th, td {
-            padding: 11px 10px;
+            padding: 14px 12px;
             border-bottom: 1px solid var(--line);
             text-align: left;
             vertical-align: middle;
         }
 
         th {
-            color: var(--soft);
-            font-size: 13px;
-            font-weight: 700;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
             text-transform: uppercase;
         }
-
-        .badge {
-            display: inline-flex;
-            min-height: 26px;
-            align-items: center;
-            border-radius: 999px;
-            padding: 0 10px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-
-        .badge.ok { background: #e7f8ef; color: #087443; }
-        .badge.info { background: #e8f1ff; color: #1d4ed8; }
-        .badge.warn { background: #fff3df; color: var(--warn); }
-        .badge.muted { background: #eef1f5; color: #576171; }
 
         .row-actions {
             display: flex;
@@ -289,48 +545,112 @@ function layout({ titulo, conteudo, mensagem = '' }) {
             justify-content: flex-end;
         }
 
-        .empty {
-            padding: 24px;
-            text-align: center;
-            color: var(--soft);
+        @media (max-width: 980px) {
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 16px 0;
+            }
+
+            nav {
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+
+            .metrics {
+                grid-template-columns: repeat(2, minmax(150px, 1fr));
+            }
+
+            .client-row {
+                grid-template-columns: 48px 1fr;
+            }
+
+            .due, .client-row .badge, .client-row .button {
+                grid-column: 2;
+                justify-self: start;
+                text-align: left;
+            }
+
+            form.fields {
+                grid-template-columns: 1fr;
+            }
         }
 
-        @media (max-width: 860px) {
-            .topbar { align-items: flex-start; flex-direction: column; padding: 16px 0; }
-            nav { justify-content: flex-start; }
-            .grid { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
-            form.fields { grid-template-columns: 1fr; }
-            table, thead, tbody, th, td, tr { display: block; }
-            thead { display: none; }
-            tr { border-bottom: 1px solid var(--line); padding: 10px 0; }
-            td { border: 0; padding: 7px 0; }
+        @media (max-width: 640px) {
+            .topbar, main {
+                width: min(100% - 24px, 1250px);
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .metric {
+                min-height: 120px;
+            }
+
+            .panel-head {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+
+            thead {
+                display: none;
+            }
+
+            tr {
+                border-bottom: 1px solid var(--line);
+                padding: 12px 0;
+            }
+
+            td {
+                border: 0;
+                padding: 7px 14px;
+            }
+
             td::before {
                 content: attr(data-label);
                 display: block;
-                color: var(--soft);
+                color: var(--muted);
                 font-size: 12px;
-                font-weight: 700;
+                font-weight: 800;
                 text-transform: uppercase;
                 margin-bottom: 2px;
             }
-            .row-actions { justify-content: flex-start; }
+
+            .row-actions {
+                justify-content: flex-start;
+            }
         }
     </style>
 </head>
 <body>
-    <header>
+    <div class="top-shell">
         <div class="topbar">
-            <div>
-                <h1>Julian Play - Clientes</h1>
-                <div class="status">WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}</div>
-            </div>
+            <a class="brand" href="/clientes">
+                <span class="brand-icon">${icon('logo')}</span>
+                <span>ClientPro</span>
+            </a>
             <nav>
-                <a class="navlink" href="/clientes">Clientes</a>
-                <a class="navlink" href="/clientes/novo">Novo cliente</a>
-                <a class="navlink" href="/qr">QR WhatsApp</a>
+                <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
+                <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
+                <a class="navlink disabled" href="#">${icon('modelos')} Modelos</a>
+                <a class="navlink disabled" href="#">${icon('apps')} Apps</a>
+                <a class="navlink disabled" href="#">${icon('dispositivos')} Dispositivos</a>
+                <a class="navlink disabled" href="#">${icon('paineis')} Paineis</a>
+                <a class="navlink" href="/qr" title="WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}">${icon('sair')}</a>
             </nav>
         </div>
-    </header>
+    </div>
     <main>
         ${mensagem ? `<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
@@ -354,7 +674,11 @@ function campo({ nome, label, tipo = 'text', valor = '', opcoes = [] }) {
 }
 
 function formularioCliente(cliente = {}) {
-    return `<section class="panel">
+    return `<section class="page-title">
+        <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
+        <div class="subtitle">Dados de acesso, plano e vencimento</div>
+    </section>
+    <section class="panel">
         <form class="fields" method="post" action="/clientes/salvar">
             ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome', valor: cliente.nome, tipo: 'text' })}
@@ -376,10 +700,71 @@ function formularioCliente(cliente = {}) {
                 ]
             })}
             <div class="actions full">
-                <button class="button" type="submit">Salvar cliente</button>
-                <a class="button secondary" href="/clientes">Cancelar</a>
+                <button class="button" type="submit">${icon('check')} Salvar cliente</button>
+                <a class="button secondary" href="/clientes/todos">Cancelar</a>
             </div>
         </form>
+    </section>`;
+}
+
+function metricCard({ label, valor, nota = '', tipo, icone }) {
+    return `<div class="metric">
+        <div>
+            <span class="metric-label">${escapar(label)}</span>
+            <strong class="metric-value">${escapar(valor)}</strong>
+            ${nota ? `<span class="metric-note">${escapar(nota)}</span>` : ''}
+        </div>
+        <span class="metric-icon ${tipo}">${icon(icone)}</span>
+    </div>`;
+}
+
+function cardVencimento(cliente) {
+    const dias = calcularDiasRestantes(cliente.vencimento);
+    const classeVencimento = dias < 0 ? 'expired' : '';
+
+    return `<div class="client-row">
+        <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
+        <div>
+            <div class="client-name">${escapar(cliente.nome)}</div>
+            <div class="helper">${escapar(cliente.telefone || '')}</div>
+        </div>
+        <div>
+            <div class="due ${classeVencimento}">${escapar(textoVencimento(cliente))}</div>
+            <div class="due-date">${escapar(formatarData(cliente.vencimento))} 00:00</div>
+        </div>
+        <span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span>
+        <a class="button secondary icon-only" href="/clientes/${cliente.id}/editar" title="Editar cliente">${icon('whats')}</a>
+    </div>`;
+}
+
+function dashboard(clientes) {
+    const resumo = calcularResumo(clientes);
+    const proximos = clientesComVencimentoProximo(clientes);
+
+    return `<section class="page-title">
+        <h1>Painel de Controle</h1>
+        <div class="subtitle">Visao geral dos seus clientes</div>
+    </section>
+    <section class="metrics">
+        ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
+        ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
+        ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
+        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atencao', tipo: 'orange', icone: 'alert' })}
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Clientes com Vencimento Proximo</h2>
+                <div class="subtitle">Clientes que vencem nos proximos ${DIAS_DASHBOARD} dias ou ja venceram</div>
+            </div>
+            <div class="actions">
+                <form method="post" action="/clientes/verificar-renovacoes">
+                    <button class="button green" type="submit">${icon('whats')} Disparar Avisos (${proximos.length})</button>
+                </form>
+                <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
+            </div>
+        </div>
+        ${proximos.length ? proximos.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos proximos dias.</div>'}
     </section>`;
 }
 
@@ -421,43 +806,58 @@ function tabelaClientes(clientes) {
     </table>`;
 }
 
+function listaClientes({ clientes, busca }) {
+    return `<section class="page-title">
+        <h1>Clientes</h1>
+        <div class="subtitle">Cadastro completo e gerenciamento</div>
+    </section>
+    <section class="panel" style="padding: 22px;">
+        <div class="toolbar">
+            <form class="search" method="get" action="/clientes/todos">
+                <input name="busca" value="${escapar(busca)}" placeholder="Buscar por nome, telefone, usuario ou plano">
+                <button class="button secondary" type="submit">${icon('search')} Buscar</button>
+            </form>
+            <div class="actions">
+                <form method="post" action="/clientes/verificar-renovacoes">
+                    <button class="button green" type="submit">${icon('whats')} Enviar avisos</button>
+                </form>
+                <a class="button" href="/clientes/novo">${icon('user')} Novo cliente</a>
+            </div>
+        </div>
+        ${tabelaClientes(clientes)}
+    </section>`;
+}
+
 router.get('/clientes', async (req, res) => {
-    const busca = req.query.busca || '';
-    const clientes = await listarClientes({ busca });
-    const resumo = calcularResumo(clientes);
+    const clientes = await listarClientes();
     const mensagem = req.query.mensagem || '';
 
-    const conteudo = `
-        <section class="grid">
-            <div class="metric"><span>Total</span><strong>${resumo.total}</strong></div>
-            <div class="metric"><span>Ativos</span><strong>${resumo.ativos}</strong></div>
-            <div class="metric"><span>Testes</span><strong>${resumo.testes}</strong></div>
-            <div class="metric"><span>Vencendo</span><strong>${resumo.vencendo}</strong></div>
-            <div class="metric"><span>Vencidos</span><strong>${resumo.vencidos}</strong></div>
-        </section>
-        <section class="panel">
-            <div class="toolbar">
-                <form class="search" method="get" action="/clientes">
-                    <input name="busca" value="${escapar(busca)}" placeholder="Buscar por nome, telefone, usuario ou plano">
-                    <button class="button secondary" type="submit">Buscar</button>
-                </form>
-                <div class="actions">
-                    <form method="post" action="/clientes/verificar-renovacoes">
-                        <button class="button" type="submit">Enviar avisos agora</button>
-                    </form>
-                    <a class="button" href="/clientes/novo">Novo cliente</a>
-                </div>
-            </div>
-            ${tabelaClientes(clientes)}
-        </section>`;
+    res.send(layout({
+        titulo: 'Painel',
+        conteudo: dashboard(clientes),
+        mensagem,
+        ativo: 'painel'
+    }));
+});
 
-    res.send(layout({ titulo: 'Clientes', conteudo, mensagem }));
+router.get('/clientes/todos', async (req, res) => {
+    const busca = req.query.busca || '';
+    const clientes = await listarClientes({ busca });
+    const mensagem = req.query.mensagem || '';
+
+    res.send(layout({
+        titulo: 'Clientes',
+        conteudo: listaClientes({ clientes, busca }),
+        mensagem,
+        ativo: 'clientes'
+    }));
 });
 
 router.get('/clientes/novo', (req, res) => {
     res.send(layout({
         titulo: 'Novo cliente',
-        conteudo: formularioCliente({ status: 'ativo' })
+        conteudo: formularioCliente({ status: 'ativo' }),
+        ativo: 'clientes'
     }));
 });
 
@@ -470,25 +870,27 @@ router.get('/clientes/:id/editar', async (req, res) => {
 
     res.send(layout({
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente)
+        conteudo: formularioCliente(cliente),
+        ativo: 'clientes'
     }));
 });
 
 router.post('/clientes/salvar', async (req, res) => {
     try {
         await salvarCliente(req.body);
-        res.redirect('/clientes?mensagem=Cliente salvo com sucesso');
+        res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
     } catch (err) {
         res.status(400).send(layout({
             titulo: 'Salvar cliente',
-            conteudo: `${formularioCliente(req.body)}<div class="notice">${escapar(err.message)}</div>`
+            conteudo: `${formularioCliente(req.body)}<div class="notice">${escapar(err.message)}</div>`,
+            ativo: 'clientes'
         }));
     }
 });
 
 router.post('/clientes/:id/excluir', async (req, res) => {
     await removerCliente(req.params.id);
-    res.redirect('/clientes?mensagem=Cliente excluido');
+    res.redirect('/clientes/todos?mensagem=Cliente excluido');
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {
