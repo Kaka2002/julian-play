@@ -1267,7 +1267,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'modelos' ? 'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
-                <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Paineis</a>
+                <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
                 <a class="navlink" href="/qr" title="WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}">${icon('sair')}</a>
             </nav>
         </div>
@@ -1449,7 +1449,7 @@ function formularioCliente(cliente = {}, listas = {}) {
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsApp(cliente.telefone)}
-            ${campo({ nome: 'nascimento', label: 'Data de Aniversario', valor: cliente.nascimento, tipo: 'date' })}
+            ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
             <div></div>
 
             <div class="form-section full">Plano</div>
@@ -1476,7 +1476,7 @@ function formularioCliente(cliente = {}, listas = {}) {
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     { valor: '1 Ano', texto: '1 Ano' },
-                    { valor: 'Vitalicio', texto: 'Vitalicio' }
+                    { valor: 'Vitalicio', texto: 'Vitalício' }
                 ]
             })}
             ${campo({
@@ -1511,27 +1511,27 @@ function formularioCliente(cliente = {}, listas = {}) {
                     { valor: '24 horas', texto: '24 horas' }
                 ]
             })}
-            ${campo({ nome: 'dataInicio', label: 'Data/Hora de Inicio *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Hora de Início *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
             <label>Data/Hora de Vencimento *
                 <div class="inline-field">
                     <input type="datetime-local" name="dataVencimento" id="dataVencimento" value="${escapar(vencimento)}" required>
                     <button class="button secondary icon-only" type="button" id="recalcularVencimento" title="Recalcular vencimento">${icon('refresh')}</button>
                 </div>
-                <span class="helper">Clique em recalcular para usar inicio + dias</span>
+                <span class="helper">Clique em recalcular para usar início + dias</span>
             </label>
 
             <div class="form-section full">Acesso ao aplicativo</div>
             ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
             ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
-            ${opcoesMulti('paineisSelecionados', 'Paineis', paineis, paineisSelecionados, 'Adicionar painel...')}
+            ${opcoesMulti('paineisSelecionados', 'Painéis', paineis, paineisSelecionados, 'Adicionar painel...')}
             <label class="toggle-line">
                 <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ? 'checked' : ''}>
                 <span>App instalado no dispositivo</span>
             </label>
-            ${campo({ nome: 'usuario', label: 'Usuario IPTV', valor: cliente.usuario })}
+            ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
-            ${areaTexto({ nome: 'observacoes', label: 'Observacoes', valor: cliente.observacoes })}
+            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
                 <a class="button secondary" href="/clientes/todos">Cancelar</a>
@@ -1694,19 +1694,19 @@ function dashboard(clientes) {
 
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
-        <div class="subtitle">Visao geral dos seus clientes</div>
+        <div class="subtitle">Visão geral dos seus clientes</div>
     </section>
     <section class="metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
-        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atencao', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
     </section>
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Clientes com Vencimento Proximo</h2>
-                <div class="subtitle">Clientes que vencem nos proximos ${DIAS_DASHBOARD} dias ou ja venceram</div>
+                <h2 class="panel-title">Clientes com Vencimento Próximo</h2>
+                <div class="subtitle">Clientes que vencem nos próximos ${DIAS_DASHBOARD} dias ou já venceram</div>
             </div>
             <div class="actions">
                 <form method="post" action="/clientes/verificar-renovacoes">
@@ -1715,7 +1715,7 @@ function dashboard(clientes) {
                 <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
-        ${proximos.length ? proximos.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos proximos dias.</div>'}
+        ${proximos.length ? proximos.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
     </section>`;
 }
 
@@ -1735,7 +1735,7 @@ function tabelaClientes(clientes) {
             <div class="cell-muted">${escapar(cliente.diasContrato || '-')} dias</div>
             <div class="cell-muted">${cliente.valorPlano ? `R$ ${escapar(cliente.valorPlano)}` : ''}</div>
         </td>
-        <td data-label="Inicio">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
+        <td data-label="Início">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
         <td data-label="Vencimento">
             <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
             <div class="cell-muted">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
@@ -1749,7 +1749,7 @@ function tabelaClientes(clientes) {
             ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
         </td>
         <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span></td>
-        <td data-label="Acoes">
+        <td data-label="Ações">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
                 <form method="post" action="/clientes/verificar-renovacoes">
@@ -1768,12 +1768,12 @@ function tabelaClientes(clientes) {
             <tr>
                 <th>Cliente</th>
                 <th>Plano</th>
-                <th>Inicio</th>
+                <th>Início</th>
                 <th>Vencimento</th>
                 <th>Aplicativos</th>
                 <th>Dispositivos</th>
                 <th>Status</th>
-                <th>Acoes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -1849,7 +1849,7 @@ function telaPlanos(planos) {
 function formularioPlano(plano = {}) {
     return `<section class="page-title">
         <h1>${plano.id ? 'Editar Tipo de Plano' : 'Novo Tipo de Plano'}</h1>
-        <div class="subtitle">Exemplo: Mensal com 30 dias de duracao</div>
+        <div class="subtitle">Exemplo: Mensal com 30 dias de duração</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/planos/salvar">
@@ -1885,14 +1885,14 @@ function variaveisDisponiveis() {
 
     return `<section class="panel" style="margin-bottom: 24px;">
         <div class="vars">
-            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variaveis disponiveis</strong>
+            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variáveis disponíveis</strong>
             ${variaveis.map(([token, descricao]) => `<span><span class="var-token">${escapar(token)}</span> <span class="helper">- ${escapar(descricao)}</span></span>`).join('')}
         </div>
     </section>`;
 }
 
 function chipPlano(modelo) {
-    const label = modelo.plano === 'padrao' ? 'Padrao (todos os planos)' : modelo.plano;
+    const label = modelo.plano === 'padrao' ? 'Padrão (todos os planos)' : modelo.plano;
     return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
 }
 
@@ -1964,24 +1964,24 @@ function telaModelos({ modelos, config }) {
 function formularioModelo(modelo = {}) {
     return `<section class="page-title">
         <h1>${modelo.id ? 'Editar Modelo' : 'Novo Modelo'}</h1>
-        <div class="subtitle">Use variaveis para personalizar cada mensagem enviada</div>
+        <div class="subtitle">Use variáveis para personalizar cada mensagem enviada</div>
     </section>
     ${variaveisDisponiveis()}
     <section class="panel">
         <form class="fields" method="post" action="/modelos/salvar">
             ${modelo.id ? `<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
-            ${campo({ nome: 'titulo', label: 'Titulo', valor: modelo.titulo })}
+            ${campo({ nome: 'titulo', label: 'Título', valor: modelo.titulo })}
             ${campo({
                 nome: 'plano',
                 label: 'Plano',
                 valor: modelo.plano || 'padrao',
                 opcoes: [
-                    { valor: 'padrao', texto: 'Padrao (todos os planos)' },
+                    { valor: 'padrao', texto: 'Padrão (todos os planos)' },
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
                     { valor: 'anual', texto: 'Anual' },
-                    { valor: 'aniversario', texto: 'Aniversario' }
+                    { valor: 'aniversario', texto: 'Aniversário' }
                 ]
             })}
             ${campo({
@@ -2035,7 +2035,7 @@ function telaApps(apps) {
         <div class="toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Aplicativos</h1>
-                <div class="subtitle">Gerencie os apps disponiveis para cadastro de clientes</div>
+                <div class="subtitle">Gerencie os apps disponíveis para cadastro de clientes</div>
             </div>
             <a class="button" href="/apps/novo">${icon('plus')} Novo App</a>
         </div>
@@ -2063,7 +2063,7 @@ function formularioApp(app = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
-            ${areaTexto({ nome: 'descricao', label: 'Descricao / paineis e dispositivos compativeis', valor: app.descricao })}
+            ${areaTexto({ nome: 'descricao', label: 'Descrição / painéis e dispositivos compatíveis', valor: app.descricao })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar app</button>
                 <a class="button secondary" href="/apps">Cancelar</a>
@@ -2143,8 +2143,8 @@ function telaPaineis(paineis) {
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
-                <h1>Paineis</h1>
-                <div class="subtitle">${paineis.length} paineis cadastrados</div>
+                <h1>Painéis</h1>
+                <div class="subtitle">${paineis.length} painéis cadastrados</div>
             </div>
             <a class="button" href="/paineis/novo">${icon('plus')} Novo Painel</a>
         </div>
@@ -2157,7 +2157,7 @@ function telaPaineis(paineis) {
 function formularioPainel(painel = {}) {
     return `<section class="page-title">
         <h1>${painel.id ? 'Editar Painel' : 'Novo Painel'}</h1>
-        <div class="subtitle">Cadastre os paineis usados no controle dos clientes</div>
+        <div class="subtitle">Cadastre os painéis usados no controle dos clientes</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/paineis/salvar">
@@ -2220,7 +2220,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes?mensagem=Cliente nao encontrado');
+        return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
     const listas = await obterListasCliente();
@@ -2271,7 +2271,7 @@ router.get('/planos/:id/editar', async (req, res) => {
     const plano = await buscarTipoPlanoPorId(req.params.id);
 
     if (!plano) {
-        return res.redirect('/planos?mensagem=Plano nao encontrado');
+        return res.redirect('/planos?mensagem=Plano não encontrado');
     }
 
     await renderizar(res, {
@@ -2297,7 +2297,7 @@ router.post('/planos/salvar', async (req, res) => {
 
 router.post('/planos/:id/excluir', async (req, res) => {
     await removerTipoPlano(req.params.id);
-    res.redirect('/planos?mensagem=Plano excluido');
+    res.redirect('/planos?mensagem=Plano excluído');
 });
 
 router.get('/apps', async (req, res) => {
@@ -2324,7 +2324,7 @@ router.get('/apps/:id/editar', async (req, res) => {
     const app = await buscarAppPorId(req.params.id);
 
     if (!app) {
-        return res.redirect('/apps?mensagem=App nao encontrado');
+        return res.redirect('/apps?mensagem=App não encontrado');
     }
 
     await renderizar(res, {
@@ -2350,7 +2350,7 @@ router.post('/apps/salvar', async (req, res) => {
 
 router.post('/apps/:id/excluir', async (req, res) => {
     await removerApp(req.params.id);
-    res.redirect('/apps?mensagem=App excluido');
+    res.redirect('/apps?mensagem=App excluído');
 });
 
 router.get('/dispositivos', async (req, res) => {
@@ -2377,7 +2377,7 @@ router.get('/dispositivos/:id/editar', async (req, res) => {
     const dispositivo = await buscarDispositivoPorId(req.params.id);
 
     if (!dispositivo) {
-        return res.redirect('/dispositivos?mensagem=Dispositivo nao encontrado');
+        return res.redirect('/dispositivos?mensagem=Dispositivo não encontrado');
     }
 
     await renderizar(res, {
@@ -2403,7 +2403,7 @@ router.post('/dispositivos/salvar', async (req, res) => {
 
 router.post('/dispositivos/:id/excluir', async (req, res) => {
     await removerDispositivo(req.params.id);
-    res.redirect('/dispositivos?mensagem=Dispositivo excluido');
+    res.redirect('/dispositivos?mensagem=Dispositivo excluído');
 });
 
 router.get('/paineis', async (req, res) => {
@@ -2411,7 +2411,7 @@ router.get('/paineis', async (req, res) => {
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
-        titulo: 'Paineis',
+        titulo: 'Painéis',
         conteudo: telaPaineis(paineis),
         mensagem,
         ativo: 'paineis'
@@ -2430,7 +2430,7 @@ router.get('/paineis/:id/editar', async (req, res) => {
     const painel = await buscarPainelPorId(req.params.id);
 
     if (!painel) {
-        return res.redirect('/paineis?mensagem=Painel nao encontrado');
+        return res.redirect('/paineis?mensagem=Painel não encontrado');
     }
 
     await renderizar(res, {
@@ -2456,7 +2456,7 @@ router.post('/paineis/salvar', async (req, res) => {
 
 router.post('/paineis/:id/excluir', async (req, res) => {
     await removerPainel(req.params.id);
-    res.redirect('/paineis?mensagem=Painel excluido');
+    res.redirect('/paineis?mensagem=Painel excluído');
 });
 
 router.get('/modelos', async (req, res) => {
@@ -2479,7 +2479,7 @@ router.get('/modelos/novo', async (req, res) => {
             plano: 'padrao',
             cor: 'blue',
             ativo: 1,
-            texto: 'Ola, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
+            texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
         }),
         ativo: 'modelos'
     });
@@ -2489,7 +2489,7 @@ router.get('/modelos/:id/editar', async (req, res) => {
     const modelo = await buscarModeloPorId(req.params.id);
 
     if (!modelo) {
-        return res.redirect('/modelos?mensagem=Modelo nao encontrado');
+        return res.redirect('/modelos?mensagem=Modelo não encontrado');
     }
 
     await renderizar(res, {
@@ -2515,7 +2515,7 @@ router.post('/modelos/salvar', async (req, res) => {
 
 router.post('/modelos/:id/excluir', async (req, res) => {
     await removerModelo(req.params.id);
-    res.redirect('/modelos?mensagem=Modelo excluido');
+    res.redirect('/modelos?mensagem=Modelo excluído');
 });
 
 router.post('/configuracoes/painel', async (req, res) => {
@@ -2553,7 +2553,7 @@ router.post('/configuracoes/logo', async (req, res) => {
 
 router.post('/clientes/:id/excluir', async (req, res) => {
     await removerCliente(req.params.id);
-    res.redirect('/clientes/todos?mensagem=Cliente excluido');
+    res.redirect('/clientes/todos?mensagem=Cliente excluído');
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {
@@ -2564,7 +2564,7 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         return res.redirect(`/clientes?mensagem=${encodeURIComponent(resultado.erro)}`);
     }
 
-    res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) de renovacao e ${resultado.aniversarios || 0} aniversario(s) enviado(s).`)}`);
+    res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) de renovação e ${resultado.aniversarios || 0} aniversário(s) enviado(s).`)}`);
 });
 
 module.exports = router;

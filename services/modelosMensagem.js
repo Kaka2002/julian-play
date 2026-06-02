@@ -4,53 +4,84 @@ const modelosPadrao = [
     {
         chave: 'padrao_vencimento',
         plano: 'padrao',
-        titulo: 'Aviso de Vencimento Proximo',
+        titulo: 'Aviso de Vencimento Próximo',
         cor: 'blue',
-        texto: 'Ola, *{{nome}}!*\n\nPassando para avisar que seu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nPara renovar e continuar com acesso, entre em contato comigo.'
+        texto: 'Olá, *{{nome}}!*\n\nPassando para avisar que seu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nPara renovar e continuar com acesso, entre em contato comigo.'
     },
     {
         chave: 'padrao_expirado',
         plano: 'padrao',
         titulo: 'Aviso de Plano Expirado',
         cor: 'red',
-        texto: 'Ola, *{{nome}}!*\n\nSeu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara reativar seu acesso, entre em contato o quanto antes.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara reativar seu acesso, entre em contato o quanto antes.'
     },
     {
         chave: 'mensal_vencimento',
         plano: 'mensal',
-        titulo: 'Renovacao Mensal - Vencimento Proximo',
+        titulo: 'Renovação Mensal - Vencimento Próximo',
         cor: 'blue',
-        texto: 'Ola, *{{nome}}!*\n\nSeu plano *mensal* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e continue com acesso sem interrupcoes.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *mensal* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e continue com acesso sem interrupções.'
     },
     {
         chave: 'trimestral_vencimento',
         plano: 'trimestral',
-        titulo: 'Renovacao Trimestral - Vencimento Proximo',
+        titulo: 'Renovação Trimestral - Vencimento Próximo',
         cor: 'purple',
-        texto: 'Ola, *{{nome}}!*\n\nSeu plano *trimestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 3 meses de acesso.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *trimestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 3 meses de acesso.'
     },
     {
         chave: 'semestral_vencimento',
         plano: 'semestral',
-        titulo: 'Renovacao Semestral - Vencimento Proximo',
+        titulo: 'Renovação Semestral - Vencimento Próximo',
         cor: 'orange',
-        texto: 'Ola, *{{nome}}!*\n\nSeu plano *semestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 6 meses de acesso.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *semestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 6 meses de acesso.'
     },
     {
         chave: 'anual_vencimento',
         plano: 'anual',
-        titulo: 'Renovacao Anual - Vencimento Proximo',
+        titulo: 'Renovação Anual - Vencimento Próximo',
         cor: 'green',
-        texto: 'Ola, *{{nome}}!*\n\nSeu plano *anual* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 1 ano de acesso.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *anual* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 1 ano de acesso.'
     },
     {
         chave: 'aniversario_bonus',
         plano: 'aniversario',
-        titulo: 'Aniversario - Bonus de 1 Mes',
+        titulo: 'Aniversário - Bônus de 1 Mês',
         cor: 'green',
-        texto: 'Ola, *{{nome}}!*\n\nFeliz aniversario! Para comemorar com voce, preparamos um *bonus de 1 mes de acesso*.\n\nEntre em contato para ativar seu presente.'
+        texto: 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, preparamos um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
     }
 ];
+
+const modelosLegadosSemAcento = {
+    padrao_vencimento: {
+        titulo: 'Aviso de Vencimento Proximo',
+        texto: 'Ola, *{{nome}}!*\n\nPassando para avisar que seu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nPara renovar e continuar com acesso, entre em contato comigo.'
+    },
+    padrao_expirado: {
+        titulo: 'Aviso de Plano Expirado',
+        texto: 'Ola, *{{nome}}!*\n\nSeu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara reativar seu acesso, entre em contato o quanto antes.'
+    },
+    mensal_vencimento: {
+        titulo: 'Renovacao Mensal - Vencimento Proximo',
+        texto: 'Ola, *{{nome}}!*\n\nSeu plano *mensal* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e continue com acesso sem interrupcoes.'
+    },
+    trimestral_vencimento: {
+        titulo: 'Renovacao Trimestral - Vencimento Proximo',
+        texto: 'Ola, *{{nome}}!*\n\nSeu plano *trimestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 3 meses de acesso.'
+    },
+    semestral_vencimento: {
+        titulo: 'Renovacao Semestral - Vencimento Proximo',
+        texto: 'Ola, *{{nome}}!*\n\nSeu plano *semestral* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 6 meses de acesso.'
+    },
+    anual_vencimento: {
+        titulo: 'Renovacao Anual - Vencimento Proximo',
+        texto: 'Ola, *{{nome}}!*\n\nSeu plano *anual* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nRenove agora e garanta mais 1 ano de acesso.'
+    },
+    aniversario_bonus: {
+        titulo: 'Aniversario - Bonus de 1 Mes',
+        texto: 'Ola, *{{nome}}!*\n\nFeliz aniversario! Para comemorar com voce, preparamos um *bonus de 1 mes de acesso*.\n\nEntre em contato para ativar seu presente.'
+    }
+};
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -101,6 +132,27 @@ async function garantirModelosPadrao() {
             VALUES (?, ?, ?, ?, ?)`,
             [modelo.chave, modelo.plano, modelo.titulo, modelo.texto, modelo.cor]
         );
+
+        const legado = modelosLegadosSemAcento[modelo.chave];
+        if (legado) {
+            await executar(
+                `UPDATE modelos_mensagem
+                SET
+                    titulo = CASE WHEN titulo = ? THEN ? ELSE titulo END,
+                    texto = CASE WHEN texto = ? THEN ? ELSE texto END
+                WHERE chave = ?
+                    AND (titulo = ? OR texto = ?)`,
+                [
+                    legado.titulo,
+                    modelo.titulo,
+                    legado.texto,
+                    modelo.texto,
+                    modelo.chave,
+                    legado.titulo,
+                    legado.texto
+                ]
+            );
+        }
     }
 }
 

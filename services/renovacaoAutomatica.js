@@ -52,7 +52,7 @@ function montarDestinoWhatsApp(telefone) {
 
 async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } = {}) {
     if (executando) {
-        return { enviados: 0, ignorados: 0, erro: 'Verificacao ja esta em andamento.' };
+        return { enviados: 0, ignorados: 0, erro: 'Verificação já está em andamento.' };
     }
 
     executando = true;
@@ -62,7 +62,7 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
         const client = getClient ? getClient() : null;
 
         if (!client || !status.conectado) {
-            return { enviados: 0, ignorados: 0, erro: 'WhatsApp nao esta conectado.' };
+            return { enviados: 0, ignorados: 0, erro: 'WhatsApp não está conectado.' };
         }
 
         const limite = adicionarDiasISO(Number.isFinite(diasAviso) ? diasAviso : 3);
@@ -115,14 +115,14 @@ function iniciarAgendadorRenovacao(options) {
         verificarRenovacoes({ ...options, diasAviso })
             .then((resultado) => {
                 if (resultado.erro) {
-                    console.log('Renovacao automatica:', resultado.erro);
+                    console.log('Renovação automática:', resultado.erro);
                     return;
                 }
 
-                console.log(`Renovacao automatica: ${resultado.enviados} aviso(s) de renovacao, ${resultado.aniversarios || 0} aniversario(s), ${resultado.ignorados} ignorado(s).`);
+                console.log(`Renovação automática: ${resultado.enviados} aviso(s) de renovação, ${resultado.aniversarios || 0} aniversário(s), ${resultado.ignorados} ignorado(s).`);
             })
             .catch((err) => {
-                console.log('Erro na renovacao automatica:', err.message);
+                console.log('Erro na renovação automática:', err.message);
             });
     };
 

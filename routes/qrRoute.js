@@ -53,7 +53,7 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
             <h2>${titulo}</h2>
             ${qrImage ? `<img src="${qrImage}" alt="QR Code WhatsApp">` : ''}
             <p>${mensagem}</p>
-            <small>Esta pagina atualiza automaticamente.</small>
+            <small>Esta página atualiza automaticamente.</small>
         </main>
     </body>
     </html>`;
@@ -73,7 +73,7 @@ router.get('/qr', async (req, res) => {
     if (status.conectado) {
         return res.send(pagina({
             titulo: 'WhatsApp conectado',
-            mensagem: 'O robo esta conectado e pronto para responder.',
+            mensagem: 'O robô está conectado e pronto para responder.',
             refresh: 10
         }));
     }
@@ -81,7 +81,7 @@ router.get('/qr', async (req, res) => {
     if (status.status === 'autenticado' || status.status === 'conectando') {
         return res.send(pagina({
             titulo: 'QR Code escaneado',
-            mensagem: 'O WhatsApp esta autenticando. Aguarde nesta tela ate aparecer conectado.'
+            mensagem: 'O WhatsApp está autenticando. Aguarde nesta tela até aparecer conectado.'
         }));
     }
 
@@ -90,7 +90,7 @@ router.get('/qr', async (req, res) => {
     if (!qr) {
         return res.send(pagina({
             titulo: 'Aguardando QR Code',
-            mensagem: 'O WhatsApp ainda esta iniciando. Aguarde alguns segundos nesta tela.'
+            mensagem: 'O WhatsApp ainda está iniciando. Aguarde alguns segundos nesta tela.'
         }));
     }
 
