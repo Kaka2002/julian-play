@@ -351,6 +351,69 @@ Agora escolha o aparelho que voce vai usar:
 Digite apenas o numero do aparelho.`;
 }
 
+function mensagemBoasVindas(nome) {
+    return `*BEM-VINDO A JULIAN PLAY*
+--------------------
+Ola, *${primeiroNome(nome)}*!
+
+Sou o assistente virtual da *JULIAN PLAY* e vou iniciar seu atendimento.
+
+Voce ja e cliente ou deseja realizar um teste gratis?
+
+*1* - Ja sou cliente
+*2* - Quero teste gratis
+*3* - Ainda nao sou cliente
+
+Digite *sair* para encerrar o atendimento.`;
+}
+
+function mensagemClienteOpcoes(nome) {
+    return `*CLIENTE JULIAN PLAY*
+--------------------
+Perfeito, *${primeiroNome(nome)}*!
+
+Como posso te ajudar?
+
+*1* - Renovar assinatura
+*2* - Falar com um atendente
+*0* - Abrir menu principal
+
+Digite *sair* para encerrar o atendimento.`;
+}
+
+function mensagemTransferirAtendente(nome) {
+    return `*ATENDIMENTO COM ATENDENTE*
+--------------------
+Tudo certo, *${primeiroNome(nome)}*!
+
+Seu atendimento sera transferido para um atendente.
+Aguarde alguns minutos, por favor.`;
+}
+
+async function iniciarTesteGratis(message, telefone) {
+    const nomeContato = await obterNomeContato(message);
+    const nome = nomeContato || 'Cliente';
+
+    definirConversa(telefone, {
+        etapa: 'teste_aparelho',
+        nome
+    });
+
+    await responderComDigitacao(message, mensagemEscolhaAparelhoTeste(nome), imagensRespostas.teste);
+}
+
+async function iniciarBoasVindas(message, telefone) {
+    const nomeContato = await obterNomeContato(message);
+    const nome = nomeContato || 'Cliente';
+
+    definirConversa(telefone, {
+        etapa: 'boas_vindas_opcao',
+        nome
+    });
+
+    await responderComDigitacao(message, mensagemBoasVindas(nome), imagensRespostas.menu);
+}
+
 async function responderMensagem(message) {
     const telefone = obterDestinoMensagem(message);
     const textoOriginal = message.body || '';
@@ -376,6 +439,72 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     if (texto === 'menu') {
         apagarConversa(telefone);
         await enviarMenuPrincipal(message, imagensRespostas.menu);
+        return;
+    }
+
+    if (conversa?.etapa === 'boas_vindas_opcao') {
+        if (texto === '1' || texto.includes('cliente')) {
+            definirConversa(telefone, {
+                etapa: 'cliente_opcoes',
+                nome: conversa.nome
+            });
+
+            await responderComDigitacao(message, mensagemClienteOpcoes(conversa.nome), imagensRespostas.menu);
+            return;
+        }
+
+        if (texto === '2' || texto.includes('teste') || texto.includes('gratis')) {
+            await iniciarTesteGratis(message, telefone);
+            return;
+        }
+
+        if (texto === '3' || texto.includes('nao')) {
+            apagarConversa(telefone);
+            await enviarMenuPrincipal(message, imagensRespostas.menu);
+            return;
+        }
+
+        await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha uma das opcoes:
+
+*1* - Ja sou cliente
+*2* - Quero teste gratis
+*3* - Ainda nao sou cliente`, imagensRespostas.erro);
+        return;
+    }
+
+    if (conversa?.etapa === 'cliente_opcoes') {
+        if (texto === '1' || texto.includes('renovar') || texto.includes('renovacao')) {
+            definirConversa(telefone, { etapa: 'renovacao_nome' });
+
+            await responderComDigitacao(message, `🔄 *RENOVACAO*
+━━━━━━━━━━━━━━━━━━━━
+Vamos iniciar sua renovacao.
+
+Envie o *nome completo do cliente* para o atendente localizar o cadastro.`, imagensRespostas.renovacao);
+            return;
+        }
+
+        if (texto === '2' || texto.includes('atendente')) {
+            apagarConversa(telefone);
+            await responderComDigitacao(message, mensagemTransferirAtendente(conversa.nome), imagensRespostas.ativacao);
+            return;
+        }
+
+        if (texto === '0' || texto === 'voltar') {
+            apagarConversa(telefone);
+            await enviarMenuPrincipal(message, imagensRespostas.menu);
+            return;
+        }
+
+        await responderComDigitacao(message, `⚠️ *OPCAO INVALIDA*
+━━━━━━━━━━━━━━━━━━━━
+Escolha uma das opcoes:
+
+*1* - Renovar assinatura
+*2* - Falar com um atendente
+*0* - Abrir menu principal`, imagensRespostas.erro);
         return;
     }
 
@@ -567,20 +696,12 @@ Escolha um aparelho da lista:
     }
 
     if (texto === '2' || isPedidoTeste(texto)) {
-        const nomeContato = await obterNomeContato(message);
-        const nome = nomeContato || 'Cliente';
-
-        definirConversa(telefone, {
-            etapa: 'teste_aparelho',
-            nome
-        });
-
-        await responderComDigitacao(message, mensagemEscolhaAparelhoTeste(nome), imagensRespostas.teste);
+        await iniciarTesteGratis(message, telefone);
         return;
     }
 
     if (isPalavraChave(texto)) {
-        await enviarMenuPrincipal(message, imagensRespostas.menu);
+        await iniciarBoasVindas(message, telefone);
         return;
     }
 
