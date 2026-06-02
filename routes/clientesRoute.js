@@ -303,6 +303,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 800;
         }
 
+        .brand form {
+            margin: 0;
+        }
+
+        .brand-text {
+            font-weight: 800;
+        }
+
         .brand-icon {
             display: grid;
             place-items: center;
@@ -757,6 +765,36 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             display: none;
         }
 
+        .logo-click {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        .logo-click input {
+            display: none;
+        }
+
+        .logo-click button {
+            border: 0;
+            background: transparent;
+            padding: 0;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .logo-click .brand-logo,
+        .logo-click .brand-icon {
+            transition: transform .15s ease, box-shadow .15s ease;
+        }
+
+        .logo-click:hover .brand-logo,
+        .logo-click:hover .brand-icon {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .12);
+        }
+
         .logo-preview {
             display: flex;
             gap: 12px;
@@ -1160,10 +1198,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 <body>
     <div class="top-shell">
         <div class="topbar">
-            <a class="brand" href="/clientes">
-                ${logoUrl ? `<img class="brand-logo" src="${escapar(logoUrl)}" alt="Logo">` : `<span class="brand-icon">${icon('logo')}</span>`}
-                <span>${escapar(nomeSistema)}</span>
-            </a>
+            <div class="brand">
+                <form method="post" action="/configuracoes/logo" enctype="multipart/form-data">
+                    <label class="logo-click" title="Clique para trocar a logo">
+                        ${logoUrl ? `<img class="brand-logo" src="${escapar(logoUrl)}" alt="Logo">` : `<span class="brand-icon">${icon('logo')}</span>`}
+                        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
+                    </label>
+                </form>
+                <a class="brand-text" href="/clientes">${escapar(nomeSistema)}</a>
+            </div>
             <nav>
                 <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
@@ -1809,7 +1852,17 @@ function telaModelos({ modelos, config }) {
                 <div class="subtitle">Nome exibido no topo e logo opcional</div>
             </div>
         </div>
-        ${config.logoUrl ? `<div class="logo-preview"><img class="brand-logo" src="${escapar(config.logoUrl)}" alt="Logo atual"><span class="helper">Logo atual</span></div>` : ''}
+        <form method="post" action="/configuracoes/logo" enctype="multipart/form-data">
+            <div class="logo-preview">
+                <label class="logo-click" title="Clique para trocar a logo">
+                    <button type="button" onclick="this.parentElement.querySelector('input[type=file]').click()">
+                        ${config.logoUrl ? `<img class="brand-logo" src="${escapar(config.logoUrl)}" alt="Logo atual">` : `<span class="brand-icon">${icon('image')}</span>`}
+                    </button>
+                    <span class="helper">Clique na logo para substituir</span>
+                    <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
+                </label>
+            </div>
+        </form>
         <form class="logo-config" method="post" action="/configuracoes/painel">
             ${campo({ nome: 'nomeSistema', label: 'Nome do sistema', valor: config.nomeSistema || 'Controle de Cliente IPTV e P2P' })}
             ${campo({ nome: 'logoUrl', label: 'URL ou caminho do logo', valor: config.logoUrl || '', tipo: 'text' })}
