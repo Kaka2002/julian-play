@@ -158,23 +158,41 @@ function parseValidadeTeste(valor) {
 
 async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = 'Teste gratis' }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
-    const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
+    const clienteAtual = await buscarClienteTestePorTelefone(telefoneNormalizado);
     const credenciais = clienteAtual || gerarCredenciais();
     const vencimento = clienteAtual?.vencimento || calcularVencimentoTeste();
 
-    await executar(
+    if (clienteAtual) {
+        await executar(
+            `UPDATE clientes SET
+                nome = ?,
+                usuario = COALESCE(usuario, ?),
+                senha = COALESCE(senha, ?),
+                plano = ?,
+                aparelho = ?,
+                vencimento = COALESCE(vencimento, ?),
+                status = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+            [
+                nome,
+                credenciais.usuario,
+                credenciais.senha,
+                plano,
+                aparelho,
+                vencimento,
+                'teste',
+                clienteAtual.id
+            ]
+        );
+
+        return buscarClientePorId(clienteAtual.id);
+    }
+
+    const resultado = await executar(
         `INSERT INTO clientes (
             nome, telefone, usuario, senha, plano, aparelho, vencimento, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(telefone) DO UPDATE SET
-            nome = excluded.nome,
-            usuario = COALESCE(clientes.usuario, excluded.usuario),
-            senha = COALESCE(clientes.senha, excluded.senha),
-            plano = excluded.plano,
-            aparelho = excluded.aparelho,
-            vencimento = COALESCE(clientes.vencimento, excluded.vencimento),
-            status = excluded.status,
-            atualizadoEm = CURRENT_TIMESTAMP`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             nome,
             telefoneNormalizado,
@@ -187,12 +205,12 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
         ]
     );
 
-    return buscarClientePorTelefone(telefoneNormalizado);
+    return buscarClientePorId(resultado.id);
 }
 
 async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
-    const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
+    const clienteAtual = await buscarClienteTestePorTelefone(telefoneNormalizado);
     const nomeCliente = limparTexto(nome) || 'Cliente';
     const dispositivo = limparTexto(aparelho);
     const dispositivosSelecionados = dispositivo ? JSON.stringify([dispositivo]) : JSON.stringify([]);
@@ -203,17 +221,10 @@ async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
         return clienteAtual;
     }
 
-    await executar(
+    const resultado = await executar(
         `INSERT INTO clientes (
             nome, telefone, plano, aparelho, dispositivosSelecionados, status
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(telefone) DO UPDATE SET
-            nome = excluded.nome,
-            plano = excluded.plano,
-            aparelho = excluded.aparelho,
-            dispositivosSelecionados = excluded.dispositivosSelecionados,
-            status = excluded.status,
-            atualizadoEm = CURRENT_TIMESTAMP`,
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
         [
             nomeCliente,
             telefoneNormalizado,
@@ -224,7 +235,7 @@ async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
         ]
     );
 
-    return buscarClientePorTelefone(telefoneNormalizado);
+    return buscarClientePorId(resultado.id);
 }
 
 async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
@@ -243,7 +254,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
         return null;
     }
 
-    const clienteAtual = await buscarClientePorTelefone(telefone);
+    const clienteAtual = await buscarClienteTestePorTelefone(telefone);
     if (clienteAtual && !clienteEstaEmTeste(clienteAtual)) {
         console.log(`Teste grátis liberado não sobrescreveu cliente existente: ${clienteAtual.nome} (${clienteAtual.telefone})`);
         return null;
@@ -322,7 +333,27 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
 }
 
 function buscarClientePorTelefone(telefone) {
-    return buscarUm('SELECT * FROM clientes WHERE telefone = ?', [normalizarTelefone(telefone)]);
+    return buscarUm(
+        `SELECT * FROM clientes
+        WHERE telefone = ?
+        ORDER BY
+            CASE WHEN status = 'teste' OR plano LIKE '%Teste%' THEN 1 ELSE 0 END ASC,
+            datetime(atualizadoEm) DESC,
+            id DESC
+        LIMIT 1`,
+        [normalizarTelefone(telefone)]
+    );
+}
+
+function buscarClienteTestePorTelefone(telefone) {
+    return buscarUm(
+        `SELECT * FROM clientes
+        WHERE telefone = ?
+            AND (status = 'teste' OR plano LIKE '%Teste%')
+        ORDER BY datetime(atualizadoEm) DESC, id DESC
+        LIMIT 1`,
+        [normalizarTelefone(telefone)]
+    );
 }
 
 function buscarClientePorNomeOuTelefone(valor) {

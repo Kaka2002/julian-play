@@ -15,7 +15,7 @@ db.serialize(() => {
         CREATE TABLE IF NOT EXISTS clientes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
-            telefone TEXT NOT NULL UNIQUE,
+            telefone TEXT NOT NULL,
             usuario TEXT,
             senha TEXT,
             plano TEXT,
@@ -163,16 +163,73 @@ db.serialize(() => {
             }
         });
 
-        db.run('CREATE UNIQUE INDEX IF NOT EXISTS idx_clientes_telefone ON clientes(telefone)', (indexErr) => {
-            if (indexErr) {
-                console.error('Erro ao criar indice de telefone:', indexErr);
-            }
-
-            resolve();
-        });
+        migrarTelefoneDuplicado(() => resolve());
     });
 });
 });
+
+function migrarTelefoneDuplicado(done) {
+    db.get("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'clientes'", (err, tabela) => {
+        if (err) {
+            console.error('Erro ao verificar tabela clientes:', err);
+            done();
+            return;
+        }
+
+        const temTelefoneUnico = String(tabela?.sql || '').toUpperCase().includes('TELEFONE TEXT NOT NULL UNIQUE');
+
+        if (!temTelefoneUnico) {
+            db.run('DROP INDEX IF EXISTS idx_clientes_telefone', () => {
+                db.run('CREATE INDEX IF NOT EXISTS idx_clientes_telefone ON clientes(telefone)', () => done());
+            });
+            return;
+        }
+
+        db.serialize(() => {
+            db.run('ALTER TABLE clientes RENAME TO clientes_backup_unico');
+            db.run(`
+                CREATE TABLE clientes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    nome TEXT NOT NULL,
+                    telefone TEXT NOT NULL,
+                    usuario TEXT,
+                    senha TEXT,
+                    plano TEXT,
+                    aparelho TEXT,
+                    vencimento TEXT,
+                    nascimento TEXT,
+                    tipoPlanoId INTEGER,
+                    diasContrato INTEGER,
+                    valorPlano TEXT,
+                    assinaturaApp TEXT,
+                    validadeApp TEXT,
+                    horasTeste TEXT,
+                    dataInicio TEXT,
+                    dataVencimento TEXT,
+                    appsInstalados TEXT,
+                    dispositivosSelecionados TEXT,
+                    paineisSelecionados TEXT,
+                    appInstalado INTEGER DEFAULT 0,
+                    usuarioApp TEXT,
+                    senhaApp TEXT,
+                    observacoes TEXT,
+                    status TEXT DEFAULT 'teste',
+                    ultimoAvisoRenovacao TEXT,
+                    ultimoAvisoAniversario TEXT,
+                    dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            db.run(`
+                INSERT INTO clientes
+                SELECT * FROM clientes_backup_unico
+            `);
+            db.run('DROP TABLE clientes_backup_unico');
+            db.run('DROP INDEX IF EXISTS idx_clientes_telefone');
+            db.run('CREATE INDEX IF NOT EXISTS idx_clientes_telefone ON clientes(telefone)', () => done());
+        });
+    });
+}
 
 db.ready = ready;
 
