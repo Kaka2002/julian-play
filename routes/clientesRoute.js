@@ -21,6 +21,7 @@ const {
     obterConfiguracoes,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
+const { agendarEncerramentoTeste } = require('../services/encerramentoTesteService');
 const {
     listarTiposPlanos,
     buscarTipoPlanoPorId,
@@ -1591,6 +1592,7 @@ async function enviarTesteLiberadoCliente(cliente) {
     }
 
     console.log(`[clientes] Teste liberado enviado ao salvar cliente ${cliente.id} para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+    agendarEncerramentoTeste(client, destino);
     return { enviado: true, mensagem: 'Cliente salvo e teste gratis enviado ao WhatsApp.' };
 }
 
@@ -2895,6 +2897,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
 
         await cadastrarTesteLiberadoPorAtendente(dados);
         console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+        agendarEncerramentoTeste(client, destino);
         return res.redirect(montarUrlClienteMensagem(cliente.id, 'Teste gratis liberado enviado e cadastro atualizado'));
     } catch (err) {
         console.error(`[clientes] Falha ao enviar teste liberado para cliente ${cliente.id}: ${err.message}`);
