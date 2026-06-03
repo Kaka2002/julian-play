@@ -504,6 +504,7 @@ Como posso te ajudar?
 
 *1* - Renovar assinatura
 *2* - Falar com um atendente
+*3* - Quero teste grátis
 *0* - Abrir menu principal
 
 Digite *sair* para encerrar o atendimento.`;
@@ -591,7 +592,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
             return;
         }
 
-        if (texto === '2') {
+        if (texto === '2' || (textoCurto(textoOriginal) && isPedidoTeste(texto))) {
             await iniciarTesteGratis(message, telefone);
             return;
         }
@@ -630,6 +631,11 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagensRes
             return;
         }
 
+        if (texto === '3' || (textoCurto(textoOriginal) && isPedidoTeste(texto))) {
+            await iniciarTesteGratis(message, telefone);
+            return;
+        }
+
         if (texto === '0' || texto === 'voltar') {
             apagarConversa(telefone);
             await enviarMenuPrincipal(message, imagensRespostas.menu);
@@ -642,6 +648,7 @@ Escolha uma das opções:
 
 *1* - Renovar assinatura
 *2* - Falar com um atendente
+*3* - Quero teste grátis
 *0* - Abrir menu principal`, imagensRespostas.erro);
         return;
     }
