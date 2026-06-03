@@ -8,7 +8,6 @@ const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
 const { enviarImagemComLegenda } = require('./assetService');
 const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
-    cadastrarOuAtualizarCliente,
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV
 } = require('./clientes');
@@ -603,14 +602,12 @@ Escolha um aparelho da lista:
             return;
         }
 
-        const cliente = await cadastrarOuAtualizarCliente({
-            telefone,
-            nome: conversa.nome,
-            aparelho
-        });
-
         apagarConversa(telefone);
-        await responderComDigitacao(message, mensagemTesteLiberado(cliente), imagensRespostas.testeLiberado);
+        await responderComDigitacao(
+            message,
+            mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
+            imagensRespostas.testeLiberado
+        );
         return;
     }
 
