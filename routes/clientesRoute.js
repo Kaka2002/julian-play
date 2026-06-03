@@ -5,7 +5,9 @@ const {
     listarClientes,
     salvarCliente,
     buscarClientePorId,
-    removerCliente
+    removerCliente,
+    normalizarTelefone,
+    cadastrarTesteLiberadoPorAtendente
 } = require('../services/clientes');
 const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
@@ -1427,6 +1429,99 @@ function agoraLocalDateTime() {
     return data.toISOString().slice(0, 16);
 }
 
+function valorPrimeiroItem(valor) {
+    return lerListaSalva(valor)[0] || '';
+}
+
+function formatarDataHoraMensagem(valor) {
+    if (!valor) return '';
+
+    const data = new Date(String(valor).length <= 10 ? `${valor}T00:00:00` : valor);
+    if (Number.isNaN(data.getTime())) return valor;
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = String(data.getFullYear());
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
+
+    return `${dia}/${mes}/${ano} às ${hora}:${minuto}`;
+}
+
+function montarMensagemTesteLiberado(dados = {}) {
+    return `*TESTE GRÁTIS LIBERADO*
+--------------------
+Seu acesso de teste foi preparado com sucesso.
+
+*Nome:* ${dados.nome}
+*Dispositivo:* ${dados.aparelho}
+*Aplicativo:* ${dados.aplicativo}
+*Painel:* ${dados.painel}
+*Usuário:* ${dados.usuario}
+*Senha:* ${dados.senha}
+*Data/Início:* ${formatarDataHoraMensagem(dados.dataInicio)}
+*Válido até:* ${formatarDataHoraMensagem(dados.validade)}
+
+Aguarde o atendente informar os procedimentos corretos para ativar seu teste grátis.`;
+}
+
+function secaoTesteLiberado(cliente = {}, listas = {}) {
+    if (!cliente.id) return '';
+
+    const apps = listas.apps || [];
+    const dispositivos = listas.dispositivos || [];
+    const paineis = listas.paineis || [];
+    const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
+    const validade = inputDateTime(cliente.dataVencimento || cliente.vencimento);
+
+    return `<section class="panel" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Teste grátis liberado</h2>
+                <div class="subtitle">Preencha os dados e envie a resposta para o cliente pelo WhatsApp</div>
+            </div>
+        </div>
+        <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/enviar-teste-liberado">
+            ${campo({ nome: 'nome', label: 'Nome', valor: cliente.nome, attrs: 'required' })}
+            ${campo({
+                nome: 'aparelho',
+                label: 'Dispositivo',
+                valor: valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho,
+                attrs: 'required',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...dispositivos.map(item => ({ valor: item.nome, texto: item.nome }))
+                ]
+            })}
+            ${campo({
+                nome: 'aplicativo',
+                label: 'Aplicativo',
+                valor: valorPrimeiroItem(cliente.appsInstalados),
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...apps.map(item => ({ valor: item.nome, texto: item.nome }))
+                ]
+            })}
+            ${campo({
+                nome: 'painel',
+                label: 'Painel',
+                valor: valorPrimeiroItem(cliente.paineisSelecionados),
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...paineis.map(item => ({ valor: item.nome, texto: item.nome }))
+                ]
+            })}
+            ${campo({ nome: 'usuario', label: 'Usuário', valor: cliente.usuario, attrs: 'required' })}
+            ${campo({ nome: 'senha', label: 'Senha', valor: cliente.senha, attrs: 'required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Início', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'validade', label: 'Válido até', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
+            <div class="actions full">
+                <button class="button green" type="submit">${icon('whats')} Enviar teste liberado</button>
+            </div>
+        </form>
+    </section>`;
+}
+
 function formularioCliente(cliente = {}, listas = {}) {
     const planos = listas.planos || [];
     const apps = listas.apps || [];
@@ -1538,6 +1633,7 @@ function formularioCliente(cliente = {}, listas = {}) {
             </div>
         </form>
     </section>
+    ${secaoTesteLiberado(cliente, listas)}
     <script>
         const planos = ${JSON.stringify(planos.map(plano => ({
             id: String(plano.id),
@@ -2228,6 +2324,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
     await renderizar(res, {
         titulo: 'Editar cliente',
         conteudo: formularioCliente(cliente, listas),
+        mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
 });
@@ -2548,6 +2645,44 @@ router.post('/configuracoes/logo', async (req, res) => {
         res.redirect('/modelos?mensagem=Logo atualizada com sucesso');
     } catch (err) {
         res.redirect(`/modelos?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp não está conectado`);
+    }
+
+    const dados = {
+        telefone: cliente.telefone,
+        nome: req.body.nome || cliente.nome,
+        aparelho: req.body.aparelho || cliente.aparelho,
+        aplicativo: req.body.aplicativo || '',
+        painel: req.body.painel || '',
+        usuario: req.body.usuario || cliente.usuario,
+        senha: req.body.senha || cliente.senha,
+        dataInicio: req.body.dataInicio || cliente.dataInicio,
+        validade: req.body.validade || cliente.dataVencimento || cliente.vencimento
+    };
+
+    const mensagem = montarMensagemTesteLiberado(dados);
+    const destino = `${normalizarTelefone(cliente.telefone)}@c.us`;
+
+    try {
+        await client.sendMessage(destino, mensagem);
+        await cadastrarTesteLiberadoPorAtendente(dados);
+        res.redirect(`/clientes/${cliente.id}/editar?mensagem=Teste grátis liberado enviado e cadastro atualizado`);
+    } catch (err) {
+        res.redirect(`/clientes/${cliente.id}/editar?mensagem=${encodeURIComponent(`Erro ao enviar teste: ${err.message}`)}`);
     }
 });
 

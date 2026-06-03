@@ -108,6 +108,18 @@ function calcularVencimentoTeste() {
 
 function parseValidadeTeste(valor) {
     const texto = limparTexto(valor).replace(/\s+às\s+/i, ' ').replace(/\s+as\s+/i, ' ');
+    const isoMatch = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|\s)?(\d{2})?:?(\d{2})?/);
+
+    if (isoMatch) {
+        const [, ano, mes, dia, horaBruta = '23', minutoBruto = '59'] = isoMatch;
+        const vencimento = `${ano}-${mes}-${dia}`;
+
+        return {
+            vencimento,
+            dataVencimento: `${vencimento}T${horaBruta || '23'}:${minutoBruto || '59'}`
+        };
+    }
+
     const match = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
 
     if (!match) return {};
@@ -164,9 +176,13 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const telefone = normalizarTelefone(dados.telefone);
     const nome = limparTexto(dados.nome);
     const aparelho = limparTexto(dados.aparelho);
+    const aplicativo = limparTexto(dados.aplicativo);
+    const painel = limparTexto(dados.painel);
     const usuario = limparTexto(dados.usuario);
     const senha = limparTexto(dados.senha);
     const validade = parseValidadeTeste(dados.validade);
+    const inicio = parseValidadeTeste(dados.dataInicio);
+    const dataInicio = inicio.dataVencimento || limparTexto(dados.dataInicio);
 
     if (!telefone || !nome || !aparelho || !usuario || !senha) {
         return null;
@@ -176,6 +192,8 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const vencimento = validade.vencimento || clienteAtual?.vencimento || calcularVencimentoTeste();
     const dataVencimento = validade.dataVencimento || clienteAtual?.dataVencimento || `${vencimento}T23:59`;
     const dispositivosSelecionados = JSON.stringify([aparelho]);
+    const appsInstalados = aplicativo ? JSON.stringify([aplicativo]) : clienteAtual?.appsInstalados || JSON.stringify([]);
+    const paineisSelecionados = painel ? JSON.stringify([painel]) : clienteAtual?.paineisSelecionados || JSON.stringify([]);
 
     if (clienteAtual) {
         await executar(
@@ -186,8 +204,12 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 plano = ?,
                 aparelho = ?,
                 vencimento = ?,
+                dataInicio = COALESCE(NULLIF(?, ''), dataInicio),
                 dataVencimento = ?,
+                appsInstalados = ?,
                 dispositivosSelecionados = ?,
+                paineisSelecionados = ?,
+                appInstalado = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
@@ -198,8 +220,12 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 'Teste grátis',
                 aparelho,
                 vencimento,
+                dataInicio,
                 dataVencimento,
+                appsInstalados,
                 dispositivosSelecionados,
+                paineisSelecionados,
+                aplicativo ? 1 : clienteAtual.appInstalado || 0,
                 'teste',
                 clienteAtual.id
             ]
@@ -211,8 +237,9 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const resultado = await executar(
         `INSERT INTO clientes (
             nome, telefone, usuario, senha, plano, aparelho, vencimento,
-            dataInicio, dataVencimento, dispositivosSelecionados, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`,
+            dataInicio, dataVencimento, appsInstalados, dispositivosSelecionados,
+            paineisSelecionados, appInstalado, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
         [
             nome,
             telefone,
@@ -221,8 +248,12 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             'Teste grátis',
             aparelho,
             vencimento,
+            dataInicio,
             dataVencimento,
+            appsInstalados,
             dispositivosSelecionados,
+            paineisSelecionados,
+            aplicativo ? 1 : 0,
             'teste'
         ]
     );

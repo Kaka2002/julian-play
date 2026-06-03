@@ -373,9 +373,12 @@ async function registrarTesteLiberadoPorMensagem(message) {
     const dados = {
         telefone,
         nome: extrairCampoTeste(texto, ['Nome']),
-        aparelho: extrairCampoTeste(texto, ['Aparelho']),
+        aparelho: extrairCampoTeste(texto, ['Aparelho', 'Dispositivo']),
+        aplicativo: extrairCampoTeste(texto, ['Aplicativo']),
+        painel: extrairCampoTeste(texto, ['Painel']),
         usuario: extrairCampoTeste(texto, ['Usuário', 'Usuario']),
         senha: extrairCampoTeste(texto, ['Senha']),
+        dataInicio: extrairCampoTeste(texto, ['Data/Início', 'Data Inicio', 'Início', 'Inicio']),
         validade: extrairCampoTeste(texto, ['Válido até', 'Valido ate', 'Validade'])
     };
 
