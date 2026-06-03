@@ -57,11 +57,12 @@ function serializarLista(valor) {
     return JSON.stringify(normalizarLista(valor));
 }
 
-function gerarCredenciais(telefone) {
-    const numeros = telefone.replace(/\D/g, '').slice(-6) || Date.now().toString().slice(-6);
+function gerarCredenciais() {
+    const baseTempo = Date.now().toString(36).slice(-5);
+    const aleatorio = Math.random().toString(36).slice(2, 5);
 
     return {
-        usuario: `jp${numeros}`,
+        usuario: `jp${baseTempo}${aleatorio}`.toLowerCase(),
         senha: Math.random().toString(36).slice(2, 8).toUpperCase()
     };
 }
@@ -153,7 +154,7 @@ function parseValidadeTeste(valor) {
 async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = 'Teste gratis' }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
     const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
-    const credenciais = clienteAtual || gerarCredenciais(telefone);
+    const credenciais = clienteAtual || gerarCredenciais();
     const vencimento = clienteAtual?.vencimento || calcularVencimentoTeste();
 
     await executar(
@@ -451,7 +452,7 @@ async function salvarCliente(dados) {
         return buscarClientePorId(dados.id);
     }
 
-    const credenciais = gerarCredenciais(cliente.telefone);
+    const credenciais = gerarCredenciais();
 
     const resultado = await executar(
         `INSERT INTO clientes (
