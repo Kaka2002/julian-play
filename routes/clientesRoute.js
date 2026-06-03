@@ -1320,8 +1320,15 @@ function areaTexto({ nome, label, valor = '' }) {
 
 function campoWhatsApp(valor = '') {
     const numeros = String(valor || '').replace(/\D/g, '');
-    const ddi = numeros.length > 11 ? numeros.slice(0, numeros.length - 11) : '55';
-    const telefone = numeros.length > 11 ? numeros.slice(-11) : numeros.replace(/^55/, '');
+    let ddi = '55';
+    let telefone = numeros;
+
+    if (numeros.startsWith('55') && numeros.length > 11) {
+        telefone = numeros.slice(2);
+    } else if (numeros.length > 11) {
+        ddi = numeros.slice(0, numeros.length - 11) || '55';
+        telefone = numeros.slice(-11);
+    }
 
     return `<label>WhatsApp *
         <div class="phone-field">
@@ -1563,7 +1570,7 @@ function formularioCliente(cliente = {}, listas = {}) {
                     }))
                 ]
             })}
-            ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="1"' })}
+            ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" placeholder="99.90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'placeholder="0.00"' })}
             ${campo({
@@ -2360,7 +2367,14 @@ router.get('/clientes/:id/editar', async (req, res) => {
 
 router.post('/clientes/salvar', async (req, res) => {
     try {
-        await salvarCliente(req.body);
+        const clienteSalvo = await salvarCliente(req.body);
+        const ehTeste = String(req.body.status || '').toLowerCase() === 'teste'
+            || String(req.body.plano || '').toLowerCase().includes('teste');
+
+        if (ehTeste && clienteSalvo?.id) {
+            return res.redirect(`/clientes/${clienteSalvo.id}/editar?mensagem=Cliente salvo. Agora você pode enviar o teste liberado.`);
+        }
+
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
     } catch (err) {
         res.status(400);
