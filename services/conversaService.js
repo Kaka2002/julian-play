@@ -89,6 +89,10 @@ function atendimentoHumanoExpirou(conversa = {}) {
     return Date.now() - inicio > ATENDIMENTO_HUMANO_TIMEOUT_MS;
 }
 
+function textoCurto(texto) {
+    return String(texto || '').length <= 80 && String(texto || '').split(/\s+/).length <= 8;
+}
+
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -577,7 +581,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     }
 
     if (conversa?.etapa === 'boas_vindas_opcao') {
-        if (texto === '1' || texto.includes('cliente')) {
+        if (texto === '1') {
             definirConversa(telefone, {
                 etapa: 'cliente_opcoes',
                 nome: conversa.nome
@@ -587,12 +591,12 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
             return;
         }
 
-        if (texto === '2' || texto.includes('teste') || texto.includes('gratis')) {
+        if (texto === '2') {
             await iniciarTesteGratis(message, telefone);
             return;
         }
 
-        if (texto === '3' || texto.includes('nao')) {
+        if (texto === '3') {
             apagarConversa(telefone);
             await enviarMenuPrincipal(message, imagensRespostas.menu);
             return;
@@ -609,7 +613,7 @@ Escolha uma das opções:
     }
 
     if (conversa?.etapa === 'cliente_opcoes') {
-        if (texto === '1' || texto.includes('renovar') || texto.includes('renovacao')) {
+        if (texto === '1') {
             definirConversa(telefone, { etapa: 'renovacao_nome' });
 
             await responderComDigitacao(message, `🔄 *RENOVAÇÃO*
@@ -620,7 +624,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagensRes
             return;
         }
 
-        if (texto === '2' || texto.includes('atendente')) {
+        if (texto === '2') {
             pausarParaAtendente(telefone, conversa.nome);
             await responderComDigitacao(message, mensagemTransferirAtendente(conversa.nome), imagensRespostas.ativacao);
             return;
@@ -863,23 +867,23 @@ Escolha um dispositivo da lista:
         return;
     }
 
-    if (texto === '1' || texto.includes('plano')) {
+    if (texto === '1' || (textoCurto(textoOriginal) && texto.includes('plano'))) {
         definirConversa(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(), imagensRespostas.planos);
         return;
     }
 
-    if (texto === '2' || isPedidoTeste(texto)) {
+    if (texto === '2' || (textoCurto(textoOriginal) && isPedidoTeste(texto))) {
         await iniciarTesteGratis(message, telefone);
         return;
     }
 
-    if (isPalavraChave(texto)) {
+    if (textoCurto(textoOriginal) && isPalavraChave(texto)) {
         await iniciarBoasVindas(message, telefone);
         return;
     }
 
-    if (texto === '3' || texto.includes('renovar') || texto.includes('renovacao')) {
+    if (texto === '3' || (textoCurto(textoOriginal) && (texto.includes('renovar') || texto.includes('renovacao')))) {
         definirConversa(telefone, { etapa: 'renovacao_nome' });
 
         await responderComDigitacao(message, `🔄 *RENOVAÇÃO*
@@ -890,7 +894,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagensRes
         return;
     }
 
-    if (texto === '4' || texto.includes('ativar') || texto.includes('aplicativo')) {
+    if (texto === '4' || (textoCurto(textoOriginal) && (texto.includes('ativar') || texto.includes('aplicativo')))) {
         definirConversa(telefone, { etapa: 'ativacao_dispositivo' });
 
         await responderComDigitacao(message, menuDispositivos(), imagensRespostas.ativacao);
