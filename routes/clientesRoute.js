@@ -1524,8 +1524,7 @@ Aguarde o atendente informar os procedimentos corretos para configurar seu teste
 }
 
 function clienteEhTeste(cliente = {}) {
-    return String(cliente.status || '').toLowerCase() === 'teste'
-        || String(cliente.plano || '').toLowerCase().includes('teste');
+    return String(cliente.status || '').toLowerCase() === 'teste';
 }
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
@@ -1809,7 +1808,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         function calcularVencimento() {
             const dias = Number(diasContrato.value || 0);
             const plano = planos.find(item => item.id === tipoPlano.value);
-            const ehTeste = statusCliente?.value === 'teste' || (plano?.nome || '').toLowerCase().includes('teste');
+            const ehTeste = statusCliente?.value === 'teste';
 
             if (!dataInicio.value) return;
             const data = new Date(dataInicio.value);
