@@ -32,9 +32,13 @@ function limparTexto(valor) {
 }
 
 function normalizarTelefone(telefone) {
-    let numeros = limparTexto(telefone).replace(/\D/g, '');
+    const textoOriginal = limparTexto(telefone);
+    let numeros = textoOriginal.replace(/\D/g, '');
 
     if (!numeros) return '';
+    if (textoOriginal.includes('@lid') || (numeros.length > 13 && !numeros.startsWith('55'))) {
+        return '';
+    }
     if (numeros.startsWith('55') && numeros.length > 13) {
         numeros = `55${numeros.slice(-11)}`;
     }

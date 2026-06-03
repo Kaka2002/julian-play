@@ -1523,6 +1523,78 @@ Seu acesso de teste foi preparado com sucesso.
 Aguarde o atendente informar os procedimentos corretos para ativar seu teste grátis.`;
 }
 
+function clienteEhTeste(cliente = {}) {
+    return String(cliente.status || '').toLowerCase() === 'teste'
+        || String(cliente.plano || '').toLowerCase().includes('teste');
+}
+
+function dadosTesteLiberadoDoCliente(cliente = {}) {
+    const dispositivo = valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho || '';
+
+    return {
+        telefone: cliente.telefone,
+        nome: cliente.nome,
+        aparelho: dispositivo,
+        aplicativo: valorPrimeiroItem(cliente.appsInstalados),
+        painel: valorPrimeiroItem(cliente.paineisSelecionados),
+        usuario: cliente.usuario,
+        senha: cliente.senha,
+        dataInicio: cliente.dataInicio,
+        validade: cliente.dataVencimento || cliente.vencimento
+    };
+}
+
+function camposFaltandoTesteLiberado(dados = {}) {
+    const campos = [
+        ['nome', 'nome'],
+        ['aparelho', 'dispositivo'],
+        ['aplicativo', 'aplicativo'],
+        ['painel', 'painel'],
+        ['usuario', 'usuario'],
+        ['senha', 'senha'],
+        ['dataInicio', 'data de inicio'],
+        ['validade', 'validade']
+    ];
+
+    return campos
+        .filter(([campo]) => !String(dados[campo] || '').trim())
+        .map(([, label]) => label);
+}
+
+async function enviarTesteLiberadoCliente(cliente) {
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return { enviado: false, mensagem: 'Cliente salvo, mas o WhatsApp nao esta conectado para enviar o teste.' };
+    }
+
+    const dados = dadosTesteLiberadoDoCliente(cliente);
+    const faltando = camposFaltandoTesteLiberado(dados);
+
+    if (faltando.length) {
+        return {
+            enviado: false,
+            mensagem: `Cliente salvo, mas o teste nao foi enviado. Preencha: ${faltando.join(', ')}.`
+        };
+    }
+
+    const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+    const mensagem = montarMensagemTesteLiberado(dados);
+    const envio = await aguardarComTimeout(
+        client.sendMessage(destino, mensagem),
+        90000,
+        'Envio do teste liberado'
+    );
+
+    if (!envio) {
+        return { enviado: false, mensagem: 'Cliente salvo, mas o WhatsApp nao confirmou o envio do teste.' };
+    }
+
+    console.log(`[clientes] Teste liberado enviado ao salvar cliente ${cliente.id} para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+    return { enviado: true, mensagem: 'Cliente salvo e teste gratis enviado ao WhatsApp.' };
+}
+
 function secaoTesteLiberado(cliente = {}, listas = {}) {
     if (!cliente.id) return '';
 
@@ -1693,7 +1765,6 @@ function formularioCliente(cliente = {}, listas = {}) {
             </div>
         </form>
     </section>
-    ${secaoTesteLiberado(cliente, listas)}
     <script>
         const planos = ${JSON.stringify(planos.map(plano => ({
             id: String(plano.id),
@@ -2457,11 +2528,15 @@ router.get('/clientes/:id/editar', async (req, res) => {
 router.post('/clientes/salvar', async (req, res) => {
     try {
         const clienteSalvo = await salvarCliente(req.body);
-        const ehTeste = String(req.body.status || '').toLowerCase() === 'teste'
-            || String(req.body.plano || '').toLowerCase().includes('teste');
 
-        if (ehTeste && clienteSalvo?.id) {
-            return res.redirect(`/clientes/${clienteSalvo.id}/editar?mensagem=Cliente salvo. Agora você pode enviar o teste liberado.`);
+        if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
+            try {
+                const resultadoEnvio = await enviarTesteLiberadoCliente(clienteSalvo);
+                return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, resultadoEnvio.mensagem));
+            } catch (err) {
+                console.error(`[clientes] Falha ao enviar teste ao salvar cliente ${clienteSalvo.id}: ${err.message}`);
+                return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, `Cliente salvo, mas nao foi possivel enviar o teste: ${err.message}`));
+            }
         }
 
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');

@@ -228,17 +228,23 @@ async function obterTelefoneClienteMensagem(message) {
     if (!String(destino).endsWith('@lid')) return '';
 
     try {
-        const contato = await comTimeout(
-            message.client.getContactById(destino),
-            5000,
-            'Busca do telefone do contato LID'
+        const telefoneReal = await comTimeout(
+            message.client.pupPage.evaluate(async (id) => {
+                const resultado = await window.WWebJS.enforceLidAndPnRetrieval(id);
+                return resultado?.phone?._serialized || '';
+            }, destino),
+            7000,
+            'Busca do telefone real do contato LID'
         );
 
-        if (contato?.number) return `${contato.number}@c.us`;
+        if (telefoneReal && String(telefoneReal).endsWith('@c.us')) {
+            return telefoneReal;
+        }
     } catch (err) {
         console.log('Nao foi possivel obter telefone real do contato LID:', err.message);
     }
 
+    console.log('Telefone real do contato LID nao encontrado:', destino);
     return '';
 }
 
@@ -755,7 +761,7 @@ Escolha um dispositivo da lista:
 
     if (conversa?.etapa === 'teste_marca_smarttv') {
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
-        const aparelho = `Smart TV - ${marca}`;
+        const aparelho = marca;
         const telefoneCliente = await obterTelefoneClienteMensagem(message);
 
         if (!telefoneCliente) {
