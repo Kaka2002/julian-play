@@ -113,10 +113,6 @@ function obterTelefoneMensagem(message) {
     return message?.fromMe && message?.to ? message.to : message.from;
 }
 
-function ehMensagemPropriaProcessavel(texto) {
-    return ehComandoControle(texto) || texto.length <= 80;
-}
-
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
@@ -127,20 +123,9 @@ function processarMensagemEmFila(message, options = {}) {
         return;
     }
 
-    if (message.fromMe && !ehComandoControle(texto) && !(options.permitirFromMe && ehMensagemPropriaProcessavel(texto))) {
+    if (message.fromMe) {
         console.log('Mensagem propria ignorada:', message.body);
         return;
-    }
-
-    if (message.fromMe) {
-        console.log(
-            'Mensagem propria manual processada:',
-            message.body,
-            'from:',
-            message.from,
-            'to:',
-            message.to
-        );
     }
 
     if (jaProcessouMensagem(message)) return;
@@ -265,7 +250,7 @@ async function iniciarWhatsApp() {
 
         client.on('message_create', async (message) => {
             console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}:`, message.body);
-            processarMensagemEmFila(message, { permitirFromMe: true });
+            processarMensagemEmFila(message);
         });
 
         await client.initialize();
