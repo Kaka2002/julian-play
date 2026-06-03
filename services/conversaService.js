@@ -414,7 +414,7 @@ Aguarde alguns minutos, por favor.
 
 O atendente vai preparar seu teste e enviar os dados de acesso assim que estiver pronto.
 
-Aguarde o atendente informar os procedimentos corretos para ativar seu teste grátis.
+Aguarde o atendente informar os procedimentos corretos para configurar seu teste grátis no aplicativo.
 
 Se aparecer alguma dúvida na tela, envie uma foto aqui.`;
 }
