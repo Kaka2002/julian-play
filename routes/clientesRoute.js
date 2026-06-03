@@ -629,6 +629,39 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             outline-color: var(--blue);
         }
 
+        .message-editor {
+            position: relative;
+        }
+
+        .emoji-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 8px 0 10px;
+        }
+
+        .emoji-picker {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            padding: 8px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .emoji-picker button {
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
         .search input {
             width: min(380px, 100%);
         }
@@ -1328,6 +1361,45 @@ function areaTexto({ nome, label, valor = '' }) {
     return `<label class="full">${label}
         <textarea name="${nome}">${escapar(valor)}</textarea>
     </label>`;
+}
+
+function editorMensagemModelo(valor = '') {
+    const emojis = ['😀', '😊', '😉', '🙌', '🙏', '🎁', '📺', '📱', '💻', '✅', '⚠️', '⏰', '📅', '💳', '💰', '🚀', '🔐', '🔑', '📲', '🎉'];
+
+    return `<label class="full message-editor">Mensagem
+        <div class="emoji-toolbar">
+            <button class="button secondary" type="button" id="toggleEmojiPicker">Adicionar emoji</button>
+            <div class="emoji-picker" id="emojiPicker" hidden>
+                ${emojis.map(emoji => `<button type="button" data-emoji="${escapar(emoji)}">${escapar(emoji)}</button>`).join('')}
+            </div>
+        </div>
+        <textarea name="texto" id="modeloTexto">${escapar(valor)}</textarea>
+    </label>
+    <script>
+        (() => {
+            const textarea = document.getElementById('modeloTexto');
+            const toggle = document.getElementById('toggleEmojiPicker');
+            const picker = document.getElementById('emojiPicker');
+
+            if (!textarea || !toggle || !picker) return;
+
+            toggle.addEventListener('click', () => {
+                picker.hidden = !picker.hidden;
+            });
+
+            picker.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-emoji]');
+                if (!button) return;
+
+                const emoji = button.dataset.emoji;
+                const inicio = textarea.selectionStart ?? textarea.value.length;
+                const fim = textarea.selectionEnd ?? textarea.value.length;
+                textarea.value = textarea.value.slice(0, inicio) + emoji + textarea.value.slice(fim);
+                textarea.focus();
+                textarea.selectionStart = textarea.selectionEnd = inicio + emoji.length;
+            });
+        })();
+    </script>`;
 }
 
 function campoWhatsApp(valor = '') {
@@ -2296,7 +2368,7 @@ function formularioModelo(modelo = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
-            ${areaTexto({ nome: 'texto', label: 'Mensagem', valor: modelo.texto })}
+            ${editorMensagemModelo(modelo.texto)}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar modelo</button>
                 <a class="button secondary" href="/modelos">Cancelar</a>
