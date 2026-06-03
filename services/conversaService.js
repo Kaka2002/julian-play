@@ -93,6 +93,15 @@ function textoCurto(texto) {
     return String(texto || '').length <= 80 && String(texto || '').split(/\s+/).length <= 8;
 }
 
+function deveReiniciarAtendimentoHumano(texto, textoOriginal) {
+    if (!textoCurto(textoOriginal)) return false;
+
+    return (
+        ['oi', 'ola', 'olá', 'menu', 'inicio', 'iniciar', 'bom dia', 'boa tarde', 'boa noite'].includes(texto) ||
+        isPedidoTeste(texto)
+    );
+}
+
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -578,7 +587,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     }
 
     if (conversa?.etapa === 'atendimento_humano') {
-        if (atendimentoHumanoExpirou(conversa)) {
+        if (atendimentoHumanoExpirou(conversa) || deveReiniciarAtendimentoHumano(texto, textoOriginal)) {
             apagarConversa(telefone);
             conversa = null;
         } else {
