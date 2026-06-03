@@ -45,6 +45,8 @@ const {
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
+const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 60000);
+const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 120000);
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -137,6 +139,7 @@ function calcularResumo(clientes) {
 
     return {
         total: clientes.length,
+        testes: clientes.filter(cliente => cliente.status === 'teste').length,
         ativos: clientes.filter(cliente => cliente.status === 'ativo').length,
         vencidos: clientes.filter(cliente => cliente.vencimento && cliente.vencimento < hoje).length,
         vencendo: clientes.filter(cliente => cliente.vencimento && cliente.vencimento >= hoje && cliente.vencimento <= limiteISO).length
@@ -395,7 +398,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .metrics {
             display: grid;
-            grid-template-columns: repeat(4, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 16px;
             margin-bottom: 36px;
         }
@@ -448,6 +451,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .metric-icon.blue { background: var(--blue-soft); color: var(--blue); }
+        .metric-icon.info { background: var(--blue-soft); color: var(--blue); }
         .metric-icon.green { background: var(--green-soft); color: var(--green); }
         .metric-icon.red { background: var(--red-soft); color: var(--red); }
         .metric-icon.orange { background: var(--orange-soft); color: var(--orange); }
@@ -1279,7 +1283,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         ${conteudo}
     </main>
 </body>
-</html>`;
+    </html>`;
+}
+
+function desativarCache(res) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    res.set('Surrogate-Control', 'no-store');
 }
 
 async function renderizar(res, opcoes) {
@@ -1870,6 +1881,7 @@ function dashboard(clientes) {
     </section>
     <section class="metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
+        ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grátis', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
         ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
@@ -1888,7 +1900,8 @@ function dashboard(clientes) {
             </div>
         </div>
         ${proximos.length ? proximos.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
-    </section>`;
+    </section>
+    ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
 function tabelaClientes(clientes) {
@@ -1952,6 +1965,39 @@ function tabelaClientes(clientes) {
     </table>`;
 }
 
+function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
+    return `<script>
+        (() => {
+            const intervalo = ${Number(intervaloMs)};
+            if (!intervalo || intervalo < 15000) return;
+
+            let ultimaInteracao = Date.now();
+            const eventos = ['input', 'change', 'keydown', 'pointerdown', 'focusin'];
+
+            eventos.forEach((evento) => {
+                document.addEventListener(evento, () => {
+                    ultimaInteracao = Date.now();
+                }, { passive: true });
+            });
+
+            function estaEditando() {
+                const ativo = document.activeElement;
+                return ativo && ['INPUT', 'SELECT', 'TEXTAREA'].includes(ativo.tagName);
+            }
+
+            setInterval(() => {
+                if (document.hidden) return;
+                if (estaEditando()) return;
+                if (Date.now() - ultimaInteracao < 15000) return;
+
+                const url = new URL(window.location.href);
+                url.searchParams.set('_atualizado', Date.now().toString());
+                window.location.replace(url.toString());
+            }, intervalo);
+        })();
+    </script>`;
+}
+
 function listaClientes({ clientes, busca, status }) {
     return `<section class="page-title">
         <h1>Clientes</h1>
@@ -1984,7 +2030,8 @@ function listaClientes({ clientes, busca, status }) {
     </div>
     <section class="clients-panel">
         ${tabelaClientes(clientes)}
-    </section>`;
+    </section>
+    ${autoAtualizarPaginaScript(CLIENTES_AUTO_REFRESH_MS)}`;
 }
 
 function planoCard(plano) {
@@ -2353,6 +2400,7 @@ function formularioPainel(painel = {}) {
 }
 
 router.get('/clientes', async (req, res) => {
+    desativarCache(res);
     const clientes = await listarClientes();
     const mensagem = req.query.mensagem || '';
 
@@ -2365,6 +2413,7 @@ router.get('/clientes', async (req, res) => {
 });
 
 router.get('/clientes/todos', async (req, res) => {
+    desativarCache(res);
     const busca = req.query.busca || '';
     const status = req.query.status || '';
     const clientes = await listarClientes({ busca, status, limite: 10 });
