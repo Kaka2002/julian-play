@@ -32,9 +32,12 @@ function limparTexto(valor) {
 }
 
 function normalizarTelefone(telefone) {
-    const numeros = limparTexto(telefone).replace(/\D/g, '');
+    let numeros = limparTexto(telefone).replace(/\D/g, '');
 
     if (!numeros) return '';
+    if (numeros.startsWith('55') && numeros.length > 13) {
+        numeros = `55${numeros.slice(-11)}`;
+    }
     if (numeros.startsWith('55')) return numeros;
 
     return `55${numeros}`;
@@ -61,7 +64,12 @@ function gerarCredenciais(telefone) {
 
 function montarCliente(dados = {}) {
     const ddi = limparTexto(dados.ddiTelefone).replace(/\D/g, '');
-    const numero = limparTexto(dados.telefone).replace(/\D/g, '');
+    let numero = limparTexto(dados.telefone).replace(/\D/g, '');
+
+    if (ddi && numero.startsWith(ddi) && numero.length > 11) {
+        numero = numero.slice(ddi.length);
+    }
+
     const telefone = normalizarTelefone(ddi ? `${ddi}${numero}` : dados.telefone);
 
     if (!limparTexto(dados.nome)) {

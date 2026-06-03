@@ -1325,6 +1325,9 @@ function campoWhatsApp(valor = '') {
 
     if (numeros.startsWith('55') && numeros.length > 11) {
         telefone = numeros.slice(2);
+        while (telefone.startsWith('55') && telefone.length > 11) {
+            telefone = telefone.slice(2);
+        }
     } else if (numeros.length > 11) {
         ddi = numeros.slice(0, numeros.length - 11) || '55';
         telefone = numeros.slice(-11);
@@ -1438,6 +1441,43 @@ function agoraLocalDateTime() {
 
 function valorPrimeiroItem(valor) {
     return lerListaSalva(valor)[0] || '';
+}
+
+function montarUrlClienteMensagem(id, mensagem) {
+    return `/clientes/${id}/editar?mensagem=${encodeURIComponent(mensagem)}`;
+}
+
+function aguardarComTimeout(promessa, ms, descricao) {
+    return Promise.race([
+        promessa,
+        new Promise((_, reject) => {
+            setTimeout(() => reject(new Error(`${descricao} demorou demais para responder.`)), ms);
+        })
+    ]);
+}
+
+async function resolverDestinoWhatsApp(client, telefone) {
+    const numero = normalizarTelefone(telefone);
+
+    if (!numero || numero.length < 12) {
+        throw new Error('Telefone do cliente invalido. Confira o DDD e o numero.');
+    }
+
+    if (typeof client.getNumberId === 'function') {
+        const contato = await aguardarComTimeout(
+            client.getNumberId(numero),
+            15000,
+            'Validacao do numero no WhatsApp'
+        );
+
+        if (!contato || !contato._serialized) {
+            throw new Error(`O numero ${numero} nao foi localizado no WhatsApp.`);
+        }
+
+        return contato._serialized;
+    }
+
+    return `${numero}@c.us`;
 }
 
 function formatarDataHoraMensagem(valor) {
@@ -2717,15 +2757,25 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
         validade: req.body.validade || cliente.dataVencimento || cliente.vencimento
     };
 
-    const mensagem = montarMensagemTesteLiberado(dados);
-    const destino = `${normalizarTelefone(cliente.telefone)}@c.us`;
-
     try {
-        await client.sendMessage(destino, mensagem);
+        const mensagem = montarMensagemTesteLiberado(dados);
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+        const envio = await aguardarComTimeout(
+            client.sendMessage(destino, mensagem),
+            90000,
+            'Envio do teste liberado'
+        );
+
+        if (!envio) {
+            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+        }
+
         await cadastrarTesteLiberadoPorAtendente(dados);
-        res.redirect(`/clientes/${cliente.id}/editar?mensagem=Teste grátis liberado enviado e cadastro atualizado`);
+        console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Teste gratis liberado enviado e cadastro atualizado'));
     } catch (err) {
-        res.redirect(`/clientes/${cliente.id}/editar?mensagem=${encodeURIComponent(`Erro ao enviar teste: ${err.message}`)}`);
+        console.error(`[clientes] Falha ao enviar teste liberado para cliente ${cliente.id}: ${err.message}`);
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Erro ao enviar teste: ${err.message}`));
     }
 });
 

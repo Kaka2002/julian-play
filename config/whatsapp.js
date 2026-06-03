@@ -114,6 +114,11 @@ function obterTelefoneMensagem(message) {
     return message?.fromMe && message?.to ? message.to : message.from;
 }
 
+function ehConversaCliente(message) {
+    const telefone = obterTelefoneMensagem(message);
+    return Boolean(telefone && String(telefone).endsWith('@c.us'));
+}
+
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
@@ -121,6 +126,11 @@ function processarMensagemEmFila(message, options = {}) {
 
     if (!texto) {
         console.log('Mensagem vazia ignorada');
+        return;
+    }
+
+    if (!ehConversaCliente(message)) {
+        console.log('Mensagem ignorada: conversa nao individual.');
         return;
     }
 

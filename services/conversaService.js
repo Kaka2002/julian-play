@@ -68,6 +68,14 @@ function apagarConversa(telefone) {
     salvarConversas();
 }
 
+function pausarParaAtendente(telefone, nome = '') {
+    definirConversa(telefone, {
+        etapa: 'atendimento_humano',
+        nome,
+        iniciadoEm: new Date().toISOString()
+    });
+}
+
 carregarConversas();
 
 function esperar(ms) {
@@ -179,6 +187,14 @@ function normalizar(texto) {
 
 function obterDestinoMensagem(message) {
     return message?.fromMe && message?.to ? message.to : message.from;
+}
+
+function obterTelefoneClienteMensagem(message) {
+    const destino = obterDestinoMensagem(message);
+
+    if (!destino || !String(destino).endsWith('@c.us')) return '';
+
+    return destino;
 }
 
 function primeiroNome(nome) {
@@ -503,6 +519,11 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
         return;
     }
 
+    if (conversa?.etapa === 'atendimento_humano') {
+        console.log('Mensagem ignorada: atendimento humano em andamento para:', telefone);
+        return;
+    }
+
     if (conversa?.etapa === 'boas_vindas_opcao') {
         if (texto === '1' || texto.includes('cliente')) {
             definirConversa(telefone, {
@@ -548,7 +569,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagensRes
         }
 
         if (texto === '2' || texto.includes('atendente')) {
-            apagarConversa(telefone);
+            pausarParaAtendente(telefone, conversa.nome);
             await responderComDigitacao(message, mensagemTransferirAtendente(conversa.nome), imagensRespostas.ativacao);
             return;
         }
@@ -647,13 +668,20 @@ Escolha um dispositivo da lista:
             return;
         }
 
+        const telefoneCliente = obterTelefoneClienteMensagem(message);
+
+        if (!telefoneCliente) {
+            console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
+            return;
+        }
+
         await cadastrarClienteTesteParcial({
-            telefone,
+            telefone: telefoneCliente,
             nome: conversa.nome,
             aparelho
         });
 
-        apagarConversa(telefone);
+        pausarParaAtendente(telefoneCliente, conversa.nome);
         await responderComDigitacao(
             message,
             mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
@@ -665,14 +693,20 @@ Escolha um dispositivo da lista:
     if (conversa?.etapa === 'teste_marca_smarttv') {
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = `Smart TV - ${marca}`;
+        const telefoneCliente = obterTelefoneClienteMensagem(message);
+
+        if (!telefoneCliente) {
+            console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
+            return;
+        }
 
         await cadastrarClienteTesteParcial({
-            telefone,
+            telefone: telefoneCliente,
             nome: conversa.nome,
             aparelho
         });
 
-        apagarConversa(telefone);
+        pausarParaAtendente(telefoneCliente, conversa.nome);
         await responderComDigitacao(
             message,
             mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
