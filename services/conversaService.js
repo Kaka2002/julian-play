@@ -10,6 +10,7 @@ const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV,
+    cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente
 } = require('./clientes');
 
@@ -313,12 +314,12 @@ function mensagemTesteLiberado(cliente) {
 Seu acesso de teste foi preparado com sucesso.
 
 👤 *Nome:* ${cliente.nome}
-📲 *Aparelho:* ${cliente.aparelho}
+📲 *Dispositivo:* ${cliente.aparelho}
 🔐 *Usuário:* ${cliente.usuario}
 🔑 *Senha:* ${cliente.senha}
 📅 *Válido até:* ${formatarData(cliente.vencimento)}
 
-Abra o aplicativo no aparelho informado e use os dados acima.
+Abra o aplicativo no dispositivo informado e use os dados acima.
 
 Se aparecer alguma dúvida na tela, envie uma foto aqui.`;
 }
@@ -333,7 +334,7 @@ Aguarde alguns minutos, por favor.
 
 *Dados informados:*
 *Nome:* ${nome}
-*Aparelho:* ${aparelho}
+*Dispositivo:* ${aparelho}
 
 O atendente vai preparar seu teste e enviar os dados de acesso assim que estiver pronto.
 
@@ -398,7 +399,7 @@ function mensagemEscolhaAparelhoTeste(nome) {
 ━━━━━━━━━━━━━━━━━━━━
 Perfeito, *${primeiroNome(nome)}*!
 
-Agora escolha o aparelho que você vai usar:
+Agora escolha o dispositivo que você vai usar:
 
 *1* - Smart TV
 *2* - TV Box
@@ -406,7 +407,7 @@ Agora escolha o aparelho que você vai usar:
 *4* - iPhone
 *5* - Computador
 
-Digite apenas o número do aparelho.`;
+Digite apenas o número do dispositivo.`;
 }
 
 function mensagemBoasVindas(nome) {
@@ -592,7 +593,7 @@ Para liberar seu plano após o pagamento, envie aqui:
 *Nome completo*
 *WhatsApp*
 *Data de nascimento*
-*Aparelho que vai usar*
+*Dispositivo que vai usar*
 
 Agora vou te enviar o PIX do plano escolhido.`, imagensRespostas.planos);
         await simularDigitacao(message, 1500);
@@ -608,7 +609,7 @@ Agora vou te enviar o PIX do plano escolhido.`, imagensRespostas.planos);
 
         await responderComDigitacao(message, `✅ Perfeito, *${primeiroNome(textoOriginal)}*!
 ━━━━━━━━━━━━━━━━━━━━
-Agora escolha o aparelho que você vai usar:
+Agora escolha o dispositivo que você vai usar:
 
 *1* - Smart TV
 *2* - TV Box
@@ -616,7 +617,7 @@ Agora escolha o aparelho que você vai usar:
 *4* - iPhone
 *5* - Computador
 
-Digite apenas o número do aparelho.`, imagensRespostas.teste);
+Digite apenas o número do dispositivo.`, imagensRespostas.teste);
         return;
     }
 
@@ -626,7 +627,7 @@ Digite apenas o número do aparelho.`, imagensRespostas.teste);
         if (!aparelho) {
             await responderComDigitacao(message, `⚠️ *OPÇÃO INVÁLIDA*
 ━━━━━━━━━━━━━━━━━━━━
-Escolha um aparelho da lista:
+Escolha um dispositivo da lista:
 
 *1* - Smart TV
 *2* - TV Box
@@ -646,6 +647,12 @@ Escolha um aparelho da lista:
             return;
         }
 
+        await cadastrarClienteTesteParcial({
+            telefone,
+            nome: conversa.nome,
+            aparelho
+        });
+
         apagarConversa(telefone);
         await responderComDigitacao(
             message,
@@ -658,6 +665,12 @@ Escolha um aparelho da lista:
     if (conversa?.etapa === 'teste_marca_smarttv') {
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = `Smart TV - ${marca}`;
+
+        await cadastrarClienteTesteParcial({
+            telefone,
+            nome: conversa.nome,
+            aparelho
+        });
 
         apagarConversa(telefone);
         await responderComDigitacao(
@@ -748,7 +761,7 @@ Depois do pagamento, envie o comprovante aqui.`, imagensRespostas.renovacao);
         if (!tutorial) {
             await responderComDigitacao(message, `⚠️ *OPÇÃO INVÁLIDA*
 ━━━━━━━━━━━━━━━━━━━━
-Escolha um aparelho da lista:
+Escolha um dispositivo da lista:
 
 *1* - Smart TV
 *2* - TV Box

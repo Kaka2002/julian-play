@@ -1,6 +1,7 @@
 const db = require('../database/sqlite');
 
 const planosPadrao = [
+    ['Teste Grátis', 0, '0,00'],
     ['Mensal', 30, '35,00'],
     ['Trimestral', 90, '96,00'],
     ['Semestral', 180, '180,00'],
@@ -64,7 +65,7 @@ async function salvarTipoPlano(dados = {}) {
     const valor = limparTexto(dados.valor);
 
     if (!nome) throw new Error('Informe o nome do tipo de plano.');
-    if (!Number.isFinite(dias) || dias <= 0) throw new Error('Informe a quantidade de dias.');
+    if (!Number.isFinite(dias) || dias < 0) throw new Error('Informe a quantidade de dias.');
 
     if (id) {
         await executar(

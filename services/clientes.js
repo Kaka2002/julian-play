@@ -172,6 +172,38 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
     return buscarClientePorTelefone(telefoneNormalizado);
 }
 
+async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
+    const telefoneNormalizado = normalizarTelefone(telefone);
+    const nomeCliente = limparTexto(nome) || 'Cliente';
+    const dispositivo = limparTexto(aparelho);
+    const dispositivosSelecionados = dispositivo ? JSON.stringify([dispositivo]) : JSON.stringify([]);
+
+    if (!telefoneNormalizado || !dispositivo) return null;
+
+    await executar(
+        `INSERT INTO clientes (
+            nome, telefone, plano, aparelho, dispositivosSelecionados, status
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        ON CONFLICT(telefone) DO UPDATE SET
+            nome = excluded.nome,
+            plano = excluded.plano,
+            aparelho = excluded.aparelho,
+            dispositivosSelecionados = excluded.dispositivosSelecionados,
+            status = excluded.status,
+            atualizadoEm = CURRENT_TIMESTAMP`,
+        [
+            nomeCliente,
+            telefoneNormalizado,
+            'Teste grátis',
+            dispositivo,
+            dispositivosSelecionados,
+            'teste'
+        ]
+    );
+
+    return buscarClientePorTelefone(telefoneNormalizado);
+}
+
 async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const telefone = normalizarTelefone(dados.telefone);
     const nome = limparTexto(dados.nome);
@@ -580,6 +612,7 @@ module.exports = {
     buscarClientePorTelefone,
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV,
+    cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente,
     listarClientes,
     salvarCliente,

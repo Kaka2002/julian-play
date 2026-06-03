@@ -1532,7 +1532,9 @@ function formularioCliente(cliente = {}, listas = {}) {
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
     const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
     const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
-    const planoAtual = cliente.tipoPlanoId || '';
+    const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
+        return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
+    })?.id || '';
 
     return `<section class="page-title">
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
@@ -1557,7 +1559,7 @@ function formularioCliente(cliente = {}, listas = {}) {
                     { valor: '', texto: 'Selecione...' },
                     ...planos.map(plano => ({
                         valor: plano.id,
-                        texto: `${plano.nome} (${plano.dias} dias)`
+                        texto: plano.dias > 0 ? `${plano.nome} (${plano.dias} dias)` : plano.nome
                     }))
                 ]
             })}
@@ -1658,14 +1660,40 @@ function formularioCliente(cliente = {}, listas = {}) {
             diasContrato.value = plano.dias || '';
             valorPlano.value = plano.valor || valorPlano.value || '';
             planoLegado.value = plano.nome || '';
+            if ((plano.nome || '').toLowerCase().includes('teste')) {
+                statusCliente.value = 'teste';
+                if (!horasTeste.value) horasTeste.value = '24 horas';
+                atualizarHorasTeste();
+            }
             calcularVencimento();
+        }
+
+        function horasTesteEmMinutos(valor) {
+            const texto = String(valor || '').toLowerCase();
+            const numero = Number((texto.match(/\\d+/) || [0])[0]);
+
+            if (!numero) return 0;
+            if (texto.includes('minuto')) return numero;
+            return numero * 60;
         }
 
         function calcularVencimento() {
             const dias = Number(diasContrato.value || 0);
-            if (!dataInicio.value || !dias) return;
+            const plano = planos.find(item => item.id === tipoPlano.value);
+            const ehTeste = statusCliente?.value === 'teste' || (plano?.nome || '').toLowerCase().includes('teste');
+
+            if (!dataInicio.value) return;
             const data = new Date(dataInicio.value);
-            data.setDate(data.getDate() + dias);
+
+            if (ehTeste) {
+                const minutos = horasTesteEmMinutos(horasTeste.value);
+                if (!minutos) return;
+                data.setMinutes(data.getMinutes() + minutos);
+            } else {
+                if (!dias) return;
+                data.setDate(data.getDate() + dias);
+            }
+
             dataVencimento.value = new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
         }
 
@@ -1687,6 +1715,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         }
 
         statusCliente?.addEventListener('change', atualizarHorasTeste);
+        horasTeste?.addEventListener('change', calcularVencimento);
         atualizarHorasTeste();
 
         function capitalizarNome(valor) {
