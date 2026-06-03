@@ -116,7 +116,7 @@ function obterTelefoneMensagem(message) {
 
 function ehConversaCliente(message) {
     const telefone = obterTelefoneMensagem(message);
-    return Boolean(telefone && String(telefone).endsWith('@c.us'));
+    return Boolean(telefone && /@(c\.us|lid)$/.test(String(telefone)));
 }
 
 function processarMensagemEmFila(message, options = {}) {

@@ -189,12 +189,26 @@ function obterDestinoMensagem(message) {
     return message?.fromMe && message?.to ? message.to : message.from;
 }
 
-function obterTelefoneClienteMensagem(message) {
+async function obterTelefoneClienteMensagem(message) {
     const destino = obterDestinoMensagem(message);
 
-    if (!destino || !String(destino).endsWith('@c.us')) return '';
+    if (!destino) return '';
+    if (String(destino).endsWith('@c.us')) return destino;
+    if (!String(destino).endsWith('@lid')) return '';
 
-    return destino;
+    try {
+        const contato = await comTimeout(
+            message.client.getContactById(destino),
+            5000,
+            'Busca do telefone do contato LID'
+        );
+
+        if (contato?.number) return `${contato.number}@c.us`;
+    } catch (err) {
+        console.log('Nao foi possivel obter telefone real do contato LID:', err.message);
+    }
+
+    return '';
 }
 
 function primeiroNome(nome) {
@@ -386,7 +400,13 @@ async function registrarTesteLiberadoPorMensagem(message) {
 
     if (!textoNormalizado.includes('teste gratis liberado')) return false;
 
-    const telefone = message?.to || '';
+    const telefone = await obterTelefoneClienteMensagem(message);
+
+    if (!telefone) {
+        console.log('Teste grátis liberado não cadastrado: telefone do cliente não identificado.');
+        return false;
+    }
+
     const dados = {
         telefone,
         nome: extrairCampoTeste(texto, ['Nome']),
@@ -668,7 +688,7 @@ Escolha um dispositivo da lista:
             return;
         }
 
-        const telefoneCliente = obterTelefoneClienteMensagem(message);
+        const telefoneCliente = await obterTelefoneClienteMensagem(message);
 
         if (!telefoneCliente) {
             console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
@@ -681,7 +701,7 @@ Escolha um dispositivo da lista:
             aparelho
         });
 
-        pausarParaAtendente(telefoneCliente, conversa.nome);
+        pausarParaAtendente(telefone, conversa.nome);
         await responderComDigitacao(
             message,
             mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
@@ -693,7 +713,7 @@ Escolha um dispositivo da lista:
     if (conversa?.etapa === 'teste_marca_smarttv') {
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = `Smart TV - ${marca}`;
-        const telefoneCliente = obterTelefoneClienteMensagem(message);
+        const telefoneCliente = await obterTelefoneClienteMensagem(message);
 
         if (!telefoneCliente) {
             console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
@@ -706,7 +726,7 @@ Escolha um dispositivo da lista:
             aparelho
         });
 
-        pausarParaAtendente(telefoneCliente, conversa.nome);
+        pausarParaAtendente(telefone, conversa.nome);
         await responderComDigitacao(
             message,
             mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
