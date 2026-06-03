@@ -57,6 +57,11 @@ function serializarLista(valor) {
     return JSON.stringify(normalizarLista(valor));
 }
 
+function clienteEstaEmTeste(cliente = {}) {
+    return String(cliente.status || '').toLowerCase() === 'teste'
+        || String(cliente.plano || '').toLowerCase().includes('teste');
+}
+
 function gerarCredenciais() {
     const baseTempo = Date.now().toString(36).slice(-5);
     const aleatorio = Math.random().toString(36).slice(2, 5);
@@ -187,11 +192,16 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
 
 async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
+    const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
     const nomeCliente = limparTexto(nome) || 'Cliente';
     const dispositivo = limparTexto(aparelho);
     const dispositivosSelecionados = dispositivo ? JSON.stringify([dispositivo]) : JSON.stringify([]);
 
     if (!telefoneNormalizado || !dispositivo) return null;
+    if (clienteAtual) {
+        console.log(`Teste grátis parcial não sobrescreveu cliente existente: ${clienteAtual.nome} (${clienteAtual.telefone})`);
+        return clienteAtual;
+    }
 
     await executar(
         `INSERT INTO clientes (
@@ -234,6 +244,11 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     }
 
     const clienteAtual = await buscarClientePorTelefone(telefone);
+    if (clienteAtual && !clienteEstaEmTeste(clienteAtual)) {
+        console.log(`Teste grátis liberado não sobrescreveu cliente existente: ${clienteAtual.nome} (${clienteAtual.telefone})`);
+        return null;
+    }
+
     const vencimento = validade.vencimento || clienteAtual?.vencimento || calcularVencimentoTeste();
     const dataVencimento = validade.dataVencimento || clienteAtual?.dataVencimento || `${vencimento}T23:59`;
     const dispositivosSelecionados = JSON.stringify([aparelho]);
