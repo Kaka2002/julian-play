@@ -38,3 +38,4 @@ Digite apenas o numero da opcao desejada.`;
 }
 
 module.exports = menuPrincipal;
+module.exports.getSaudacao = getSaudacao;

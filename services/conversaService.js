@@ -367,9 +367,11 @@ Digite apenas o numero do aparelho.`;
 }
 
 function mensagemBoasVindas(nome) {
+    const saudacao = menuPrincipal.getSaudacao ? menuPrincipal.getSaudacao() : 'Olá';
+
     return `*BEM-VINDO A JULIAN PLAY*
 --------------------
-Ola, *${primeiroNome(nome)}*!
+${saudacao}, *${primeiroNome(nome)}*!
 
 Sou o assistente virtual da *JULIAN PLAY* e vou iniciar seu atendimento.
 
