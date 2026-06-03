@@ -24,17 +24,17 @@ function menuPrincipal(nome = '') {
 
 📺 *JULIAN PLAY*
 ━━━━━━━━━━━━━━━━━━━━
-Sua melhor experiencia em TV online.
+Sua melhor experiência em TV online.
 
-Escolha uma opcao:
+Escolha uma opção:
 
 *1* - 💎 Planos e valores
-*2* - 🎁 Teste gratis
+*2* - 🎁 Teste grátis
 *3* - 🔄 Renovar assinatura
 *4* - 📲 Ativar aplicativos
 *0* - ↩️ Voltar ao menu
 
-Digite apenas o numero da opcao desejada.`;
+Digite apenas o número da opção desejada.`;
 }
 
 module.exports = menuPrincipal;

@@ -120,14 +120,14 @@ Confira os dados antes de pagar:
 4 - Escaneie a imagem acima
 5 - Confirme o pagamento
 
-✅ Depois do pagamento, envie o comprovante aqui para ativacao.
+✅ Depois do pagamento, envie o comprovante aqui para ativação.
 
 *0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`;
 }
 
 function legendaPixRenovacao(plano, nomeCliente) {
-    return `💳 *PIX - RENOVACAO ${plano.nome}*
+    return `💳 *PIX - RENOVAÇÃO ${plano.nome}*
 ━━━━━━━━━━━━━━━━━━━━
 Confira os dados antes de pagar:
 
@@ -150,7 +150,7 @@ ${RODAPE_ATENDIMENTO}`;
 
 function legendaPixPorContexto(plano, options = {}) {
     if (options.tipo === 'renovacao') {
-        return legendaPixRenovacao(plano, options.nomeCliente || 'nao informado');
+        return legendaPixRenovacao(plano, options.nomeCliente || 'não informado');
     }
 
     return legendaPix(plano);
@@ -203,7 +203,7 @@ async function enviarQRCodePIX(message, plano, options = {}) {
             await comTimeout(
                 message.client.sendMessage(destino, `⚠️ *ERRO AO GERAR QR CODE*
 ━━━━━━━━━━━━━━━━━━━━
-Nao foi possivel gerar o QR Code neste momento.
+Não foi possível gerar o QR Code neste momento.
 
 Tente novamente ou escolha outro plano.
 

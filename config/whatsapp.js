@@ -5,6 +5,7 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const {
     responderMensagem,
     responderEncerramentoRapido,
+    registrarTesteLiberadoPorMensagem,
     normalizar
 } = require('../services/conversaService');
 
@@ -124,6 +125,9 @@ function processarMensagemEmFila(message, options = {}) {
     }
 
     if (message.fromMe) {
+        registrarTesteLiberadoPorMensagem(message).catch((err) => {
+            console.log('Erro ao registrar teste liberado:', err.message);
+        });
         console.log('Mensagem propria ignorada:', message.body);
         return;
     }

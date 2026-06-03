@@ -1,5 +1,5 @@
 function menuRenovacao() {
-    return `🔄 *RENOVACAO DE ASSINATURA*
+    return `🔄 *RENOVAÇÃO DE ASSINATURA*
 ━━━━━━━━━━━━━━━━━━━━
 Escolha o plano para renovar:
 

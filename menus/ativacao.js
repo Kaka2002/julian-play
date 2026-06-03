@@ -1,5 +1,5 @@
 function menuAtivacao() {
-    return `📱 *ATIVACAO*
+    return `📱 *ATIVAÇÃO*
 
 Escolha seu aparelho para receber o passo a passo.
 

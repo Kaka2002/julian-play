@@ -1,7 +1,7 @@
 function menuDispositivos() {
-    return `📲 *ATIVACAO DE APLICATIVOS*
+    return `📲 *ATIVAÇÃO DE APLICATIVOS*
 ━━━━━━━━━━━━━━━━━━━━
-Informe o aparelho que voce deseja configurar:
+Informe o aparelho que você deseja configurar:
 
 *1* - Smart TV
 *2* - TV Box
@@ -9,7 +9,7 @@ Informe o aparelho que voce deseja configurar:
 *4* - iPhone
 *0* - ↩️ Voltar
 
-Digite apenas o numero do aparelho.`;
+Digite apenas o número do aparelho.`;
 }
 
 module.exports = menuDispositivos;

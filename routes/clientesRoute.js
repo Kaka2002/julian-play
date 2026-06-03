@@ -84,7 +84,7 @@ function lerUploadMultipart(req) {
             const fimArquivo = buffer.indexOf(fimMarcador, inicioArquivo);
 
             if (fimArquivo < 0) {
-                reject(new Error('Nao foi possivel ler o arquivo enviado.'));
+                reject(new Error('Não foi possível ler o arquivo enviado.'));
                 return;
             }
 

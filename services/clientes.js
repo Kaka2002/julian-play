@@ -106,6 +106,26 @@ function calcularVencimentoTeste() {
     return vencimento.toISOString().slice(0, 10);
 }
 
+function parseValidadeTeste(valor) {
+    const texto = limparTexto(valor).replace(/\s+às\s+/i, ' ').replace(/\s+as\s+/i, ' ');
+    const match = texto.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+
+    if (!match) return {};
+
+    const [, diaBruto, mesBruto, anoBruto, horaBruta = '23', minutoBruto = '59'] = match;
+    const ano = anoBruto.length === 2 ? `20${anoBruto}` : anoBruto;
+    const mes = mesBruto.padStart(2, '0');
+    const dia = diaBruto.padStart(2, '0');
+    const hora = horaBruta.padStart(2, '0');
+    const minuto = minutoBruto.padStart(2, '0');
+    const vencimento = `${ano}-${mes}-${dia}`;
+
+    return {
+        vencimento,
+        dataVencimento: `${vencimento}T${hora}:${minuto}`
+    };
+}
+
 async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = 'Teste gratis' }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
     const clienteAtual = await buscarClientePorTelefone(telefoneNormalizado);
@@ -138,6 +158,76 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
     );
 
     return buscarClientePorTelefone(telefoneNormalizado);
+}
+
+async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
+    const telefone = normalizarTelefone(dados.telefone);
+    const nome = limparTexto(dados.nome);
+    const aparelho = limparTexto(dados.aparelho);
+    const usuario = limparTexto(dados.usuario);
+    const senha = limparTexto(dados.senha);
+    const validade = parseValidadeTeste(dados.validade);
+
+    if (!telefone || !nome || !aparelho || !usuario || !senha) {
+        return null;
+    }
+
+    const clienteAtual = await buscarClientePorTelefone(telefone);
+    const vencimento = validade.vencimento || clienteAtual?.vencimento || calcularVencimentoTeste();
+    const dataVencimento = validade.dataVencimento || clienteAtual?.dataVencimento || `${vencimento}T23:59`;
+    const dispositivosSelecionados = JSON.stringify([aparelho]);
+
+    if (clienteAtual) {
+        await executar(
+            `UPDATE clientes SET
+                nome = ?,
+                usuario = ?,
+                senha = ?,
+                plano = ?,
+                aparelho = ?,
+                vencimento = ?,
+                dataVencimento = ?,
+                dispositivosSelecionados = ?,
+                status = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+            [
+                nome,
+                usuario,
+                senha,
+                'Teste grátis',
+                aparelho,
+                vencimento,
+                dataVencimento,
+                dispositivosSelecionados,
+                'teste',
+                clienteAtual.id
+            ]
+        );
+
+        return buscarClientePorId(clienteAtual.id);
+    }
+
+    const resultado = await executar(
+        `INSERT INTO clientes (
+            nome, telefone, usuario, senha, plano, aparelho, vencimento,
+            dataInicio, dataVencimento, dispositivosSelecionados, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`,
+        [
+            nome,
+            telefone,
+            usuario,
+            senha,
+            'Teste grátis',
+            aparelho,
+            vencimento,
+            dataVencimento,
+            dispositivosSelecionados,
+            'teste'
+        ]
+    );
+
+    return buscarClientePorId(resultado.id);
 }
 
 function buscarClientePorTelefone(telefone) {
@@ -459,6 +549,7 @@ module.exports = {
     buscarClientePorTelefone,
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV,
+    cadastrarTesteLiberadoPorAtendente,
     listarClientes,
     salvarCliente,
     buscarClientePorId,
