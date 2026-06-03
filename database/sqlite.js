@@ -110,6 +110,17 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS avisos_renovacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER NOT NULL,
+            vencimento TEXT NOT NULL,
+            diasAntes INTEGER NOT NULL,
+            enviadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(clienteId, vencimento, diasAntes)
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',

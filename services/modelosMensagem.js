@@ -16,6 +16,27 @@ const modelosPadrao = [
         texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara reativar seu acesso, entre em contato o quanto antes.'
     },
     {
+        chave: 'aviso_vencimento_2_dias',
+        plano: 'padrao',
+        titulo: 'Aviso de Vencimento - 2 Dias Antes',
+        cor: 'orange',
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *2 dias*, no dia *{{vencimento}}*.\n\nPara evitar interrupção no acesso, entre em contato para renovar.'
+    },
+    {
+        chave: 'aviso_vencimento_1_dia',
+        plano: 'padrao',
+        titulo: 'Aviso de Vencimento - 1 Dia Antes',
+        cor: 'orange',
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence amanhã, dia *{{vencimento}}*.\n\nRenove sua assinatura para continuar com acesso sem interrupções.'
+    },
+    {
+        chave: 'aviso_vencimento_hoje',
+        plano: 'padrao',
+        titulo: 'Aviso de Vencimento - Hoje',
+        cor: 'red',
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence *hoje*, dia *{{vencimento}}*.\n\nEntre em contato para renovar e manter seu acesso ativo.'
+    },
+    {
         chave: 'mensal_vencimento',
         plano: 'mensal',
         titulo: 'Renovação Mensal - Vencimento Próximo',
@@ -272,6 +293,19 @@ async function obterModeloParaCliente(cliente, dias) {
     );
 }
 
+async function obterModeloAvisoProgramado(diasAntes) {
+    const chaves = {
+        2: 'aviso_vencimento_2_dias',
+        1: 'aviso_vencimento_1_dia',
+        0: 'aviso_vencimento_hoje'
+    };
+
+    const chave = chaves[Number(diasAntes)];
+    if (!chave) return null;
+
+    return obterModeloPorChave(chave);
+}
+
 async function montarMensagemPorModelo(cliente, dias) {
     const modelo = await obterModeloParaCliente(cliente, dias);
     const variaveis = {
@@ -280,6 +314,19 @@ async function montarMensagemPorModelo(cliente, dias) {
         vencimento: formatarData(cliente.vencimento),
         dias: Math.abs(dias),
         valor: cliente.valor || ''
+    };
+
+    return aplicarVariaveis(modelo?.texto || modelosPadrao[0].texto, variaveis);
+}
+
+async function montarMensagemAvisoProgramado(cliente, diasAntes) {
+    const modelo = await obterModeloAvisoProgramado(diasAntes);
+    const variaveis = {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano || 'assinatura',
+        vencimento: formatarData(cliente.vencimento),
+        dias: Math.abs(Number(diasAntes)),
+        valor: cliente.valorPlano || cliente.valor || ''
     };
 
     return aplicarVariaveis(modelo?.texto || modelosPadrao[0].texto, variaveis);
@@ -304,6 +351,7 @@ module.exports = {
     salvarModelo,
     removerModelo,
     montarMensagemPorModelo,
+    montarMensagemAvisoProgramado,
     montarMensagemAniversario,
     normalizarPlano,
     aplicarVariaveis,

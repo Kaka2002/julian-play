@@ -351,6 +351,44 @@ function listarClientesParaAviso(dataLimite) {
     ));
 }
 
+function hojeSaoPauloISO() {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+
+    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+}
+
+function listarClientesParaAvisosProgramados() {
+    const hoje = hojeSaoPauloISO();
+
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                CAST(julianday(date(vencimento)) - julianday(date(?)) AS INTEGER) AS diasAntes
+            FROM clientes
+            WHERE status IN ('ativo', 'teste', 'pendente')
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE diasAntes IN (0, 1, 2)
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimento
+                    AND avisos_renovacao.diasAntes = candidatos.diasAntes
+            )
+        ORDER BY diasAntes DESC, nome ASC`,
+        [hoje]
+    ));
+}
+
 function listarClientesParaAvisoAntigo(dataLimite) {
     return buscarTodos(
         `SELECT * FROM clientes
@@ -396,6 +434,16 @@ function registrarAvisoRenovacao(id, vencimento) {
     );
 }
 
+async function registrarAvisoRenovacaoProgramado(id, vencimento, diasAntes) {
+    await executar(
+        `INSERT OR IGNORE INTO avisos_renovacao (clienteId, vencimento, diasAntes)
+        VALUES (?, ?, ?)`,
+        [id, vencimento, Number(diasAntes)]
+    );
+
+    return registrarAvisoRenovacao(id, `${vencimento}:${diasAntes}`);
+}
+
 function registrarAvisoAniversario(id, ano) {
     return executar(
         `UPDATE clientes SET
@@ -416,8 +464,10 @@ module.exports = {
     buscarClientePorId,
     removerCliente,
     listarClientesParaAviso,
+    listarClientesParaAvisosProgramados,
     listarClientesAniversarioHoje,
     registrarAvisoRenovacao,
+    registrarAvisoRenovacaoProgramado,
     registrarAvisoAniversario,
     atualizarStatusAutomaticoClientes,
     normalizarTelefone

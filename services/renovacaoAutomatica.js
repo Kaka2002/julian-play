@@ -1,19 +1,20 @@
 const { enviarMensagem } = require('./mensagemService');
 const {
-    listarClientesParaAviso,
+    listarClientesParaAvisosProgramados,
     listarClientesAniversarioHoje,
-    registrarAvisoRenovacao,
+    registrarAvisoRenovacaoProgramado,
     registrarAvisoAniversario,
     normalizarTelefone
 } = require('./clientes');
 const {
-    montarMensagemPorModelo,
+    montarMensagemAvisoProgramado,
     montarMensagemAniversario
 } = require('./modelosMensagem');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 let agendador = null;
 let executando = false;
+let ultimoEnvioAutomatico = '';
 
 function hojeISO() {
     return new Date().toISOString().slice(0, 10);
@@ -43,7 +44,7 @@ function calcularDiasRestantes(vencimento) {
 
 async function montarMensagemRenovacao(cliente) {
     const dias = calcularDiasRestantes(cliente.vencimento);
-    return montarMensagemPorModelo(cliente, dias);
+    return montarMensagemAvisoProgramado(cliente, dias);
 }
 
 function montarDestinoWhatsApp(telefone) {
@@ -65,8 +66,7 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
             return { enviados: 0, ignorados: 0, erro: 'WhatsApp não está conectado.' };
         }
 
-        const limite = adicionarDiasISO(Number.isFinite(diasAviso) ? diasAviso : 3);
-        const clientes = await listarClientesParaAviso(limite);
+        const clientes = await listarClientesParaAvisosProgramados();
         const aniversariantes = await listarClientesAniversarioHoje(new Date().getFullYear());
         let enviados = 0;
         let ignorados = 0;
@@ -74,12 +74,13 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
 
         for (const cliente of clientes) {
             const destino = montarDestinoWhatsApp(cliente.telefone);
-            const mensagem = await montarMensagemRenovacao(cliente);
+            const diasAntes = Number(cliente.diasAntes);
+            const mensagem = await montarMensagemAvisoProgramado(cliente, diasAntes);
             const enviado = await enviarMensagem(client, destino, mensagem);
 
             if (enviado) {
                 enviados += 1;
-                await registrarAvisoRenovacao(cliente.id, cliente.vencimento);
+                await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimento, diasAntes);
             } else {
                 ignorados += 1;
             }
@@ -104,19 +105,42 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
     }
 }
 
+function obterAgoraSaoPaulo() {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).formatToParts(new Date());
+
+    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+
+    return {
+        data: `${mapa.year}-${mapa.month}-${mapa.day}`,
+        hora: Number(mapa.hour),
+        minuto: Number(mapa.minute)
+    };
+}
+
 function iniciarAgendadorRenovacao(options) {
     if (agendador) return;
 
-    const intervaloMinutos = Number(process.env.RENOVACAO_INTERVALO_MINUTOS || 60);
-    const intervaloMs = Math.max(intervaloMinutos, 5) * 60 * 1000;
-    const diasAviso = Number(process.env.RENOVACAO_DIAS_AVISO || 3);
+    const horaEnvio = Number(process.env.RENOVACAO_HORA_ENVIO || 9);
+    const minutoEnvio = Number(process.env.RENOVACAO_MINUTO_ENVIO || 0);
 
-    const rodar = () => {
-        verificarRenovacoes({ ...options, diasAviso })
+    const rodar = (dataExecucao = '') => {
+        verificarRenovacoes(options)
             .then((resultado) => {
                 if (resultado.erro) {
                     console.log('Renovação automática:', resultado.erro);
                     return;
+                }
+
+                if (dataExecucao) {
+                    ultimoEnvioAutomatico = dataExecucao;
                 }
 
                 console.log(`Renovação automática: ${resultado.enviados} aviso(s) de renovação, ${resultado.aniversarios || 0} aniversário(s), ${resultado.ignorados} ignorado(s).`);
@@ -126,8 +150,19 @@ function iniciarAgendadorRenovacao(options) {
             });
     };
 
-    agendador = setInterval(rodar, intervaloMs);
-    setTimeout(rodar, 30000);
+    const verificarHorario = () => {
+        const agora = obterAgoraSaoPaulo();
+        const jaPassouHorario = agora.hora > horaEnvio || (agora.hora === horaEnvio && agora.minuto >= minutoEnvio);
+
+        if (!jaPassouHorario) return;
+        if (ultimoEnvioAutomatico === agora.data) return;
+
+        rodar(agora.data);
+    };
+
+    console.log(`Renovação automática agendada para ${String(horaEnvio).padStart(2, '0')}:${String(minutoEnvio).padStart(2, '0')} todos os dias.`);
+    agendador = setInterval(verificarHorario, 30000);
+    verificarHorario();
 }
 
 module.exports = {
