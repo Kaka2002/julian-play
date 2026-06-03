@@ -635,21 +635,46 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .emoji-toolbar {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 10px;
             flex-wrap: wrap;
             margin: 8px 0 10px;
         }
 
         .emoji-picker {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
+            width: min(560px, 100%);
+            max-height: 280px;
+            overflow: auto;
             padding: 8px;
             border: 1px solid var(--line);
             border-radius: 10px;
             background: #fff;
             box-shadow: var(--shadow);
+        }
+
+        .emoji-picker[hidden] {
+            display: none;
+        }
+
+        .emoji-search {
+            width: 100%;
+            min-height: 36px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+        }
+
+        .emoji-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+            gap: 5px;
+        }
+
+        .emoji-title {
+            margin: 8px 0 6px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
         }
 
         .emoji-picker button {
@@ -1364,13 +1389,20 @@ function areaTexto({ nome, label, valor = '' }) {
 }
 
 function editorMensagemModelo(valor = '') {
-    const emojis = ['😀', '😊', '😉', '🙌', '🙏', '🎁', '📺', '📱', '💻', '✅', '⚠️', '⏰', '📅', '💳', '💰', '🚀', '🔐', '🔑', '📲', '🎉'];
+    const grupos = [
+        ['Mais usados', ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😉', '😎', '🤝', '🙌', '🙏', '👏', '👍', '👌', '💪', '❤️', '💙', '💚', '💛']],
+        ['Atendimento', ['✅', '☑️', '⚠️', '❗', '❌', '🔔', '📢', '📌', '📍', '📝', '📄', '📷', '🖼️', '💬', '📞', '☎️', '📲', '📩', '📤', '📥']],
+        ['IPTV e apps', ['📺', '📱', '💻', '🖥️', '⌨️', '🖱️', '🎬', '🎥', '📡', '📶', '🌐', '🔌', '🔧', '⚙️', '🛠️', '📦', '🚀', '⭐', '🔥', '💎']],
+        ['Datas e pagamento', ['⏰', '⏳', '⌛', '📅', '🗓️', '🎁', '🎉', '🎊', '💳', '💰', '💵', '🧾', '🏦', '🔐', '🔑', '🔒', '🔓', '🟢', '🟡', '🔴']],
+        ['Mãos e sinais', ['👋', '🤚', '✋', '🖐️', '👍', '👎', '👌', '🤌', '🤙', '👈', '👉', '👆', '👇', '☝️', '✍️', '🙏', '👏', '🙌', '🤲', '💪']]
+    ];
 
     return `<label class="full message-editor">Mensagem
         <div class="emoji-toolbar">
-            <button class="button secondary" type="button" id="toggleEmojiPicker">Adicionar emoji</button>
+            <button class="button secondary" type="button" id="toggleEmojiPicker">😊 Adicionar emoji</button>
             <div class="emoji-picker" id="emojiPicker" hidden>
-                ${emojis.map(emoji => `<button type="button" data-emoji="${escapar(emoji)}">${escapar(emoji)}</button>`).join('')}
+                <input class="emoji-search" id="emojiSearch" type="search" placeholder="Buscar emoji...">
+                ${grupos.map(([titulo, emojis]) => `<div class="emoji-title">${escapar(titulo)}</div><div class="emoji-group">${emojis.map(emoji => `<button type="button" data-emoji="${escapar(emoji)}" title="${escapar(emoji)}">${escapar(emoji)}</button>`).join('')}</div>`).join('')}
             </div>
         </div>
         <textarea name="texto" id="modeloTexto">${escapar(valor)}</textarea>
@@ -1380,11 +1412,13 @@ function editorMensagemModelo(valor = '') {
             const textarea = document.getElementById('modeloTexto');
             const toggle = document.getElementById('toggleEmojiPicker');
             const picker = document.getElementById('emojiPicker');
+            const search = document.getElementById('emojiSearch');
 
             if (!textarea || !toggle || !picker) return;
 
             toggle.addEventListener('click', () => {
                 picker.hidden = !picker.hidden;
+                if (!picker.hidden) search?.focus();
             });
 
             picker.addEventListener('click', (event) => {
@@ -1397,6 +1431,13 @@ function editorMensagemModelo(valor = '') {
                 textarea.value = textarea.value.slice(0, inicio) + emoji + textarea.value.slice(fim);
                 textarea.focus();
                 textarea.selectionStart = textarea.selectionEnd = inicio + emoji.length;
+            });
+
+            search?.addEventListener('input', () => {
+                const termo = search.value.trim().toLowerCase();
+                picker.querySelectorAll('[data-emoji]').forEach((button) => {
+                    button.hidden = termo && !button.dataset.emoji.includes(termo);
+                });
             });
         })();
     </script>`;
