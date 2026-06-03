@@ -128,7 +128,7 @@ function processarMensagemEmFila(message, options = {}) {
         registrarTesteLiberadoPorMensagem(message).catch((err) => {
             console.log('Erro ao registrar teste liberado:', err.message);
         });
-        console.log('Mensagem propria ignorada:', message.body);
+        console.log('Mensagem própria ignorada sem registrar conteúdo.');
         return;
     }
 
@@ -138,7 +138,7 @@ function processarMensagemEmFila(message, options = {}) {
 
     if (texto === 'sair' || texto === 'encerrar') {
         filasMensagens.delete(telefone);
-        console.log('Encerramento solicitado:', message.body, 'telefone:', telefone);
+        console.log('Encerramento solicitado para:', telefone);
     }
 
     const filaAtual = filasMensagens.get(telefone) || Promise.resolve();
@@ -248,12 +248,12 @@ async function iniciarWhatsApp() {
         });
 
         client.on('message', async (message) => {
-            console.log('Mensagem recebida:', message.body);
+            console.log('Mensagem recebida de:', message.from);
             processarMensagemEmFila(message);
         });
 
         client.on('message_create', async (message) => {
-            console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}:`, message.body);
+            console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}.`);
             processarMensagemEmFila(message);
         });
 
