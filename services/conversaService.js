@@ -474,6 +474,7 @@ async function registrarTesteLiberadoPorMensagem(message) {
     }
 
     console.log('Teste grátis cadastrado pelo atendimento:', cliente.nome, cliente.telefone);
+    agendarEncerramentoTeste(message.client, telefone);
     return true;
 }
 
