@@ -49,8 +49,9 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         const destino = message?.fromMe && message?.to ? message.to : message.from;
         console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
 
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, media, { caption: legenda }),
+            chat.sendMessage(media, { caption: legenda }),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );

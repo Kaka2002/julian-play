@@ -20,6 +20,7 @@ const ARQUIVO_CONVERSAS = path.join(DATA_DIR, 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
+const ATENDIMENTO_HUMANO_TIMEOUT_MS = Number(process.env.ATENDIMENTO_HUMANO_TIMEOUT_MS || 30 * 60 * 1000);
 const imagensRespostas = {
     menu: 'Logo 1_7.png',
     planos: 'Plano.png',
@@ -78,6 +79,16 @@ function pausarParaAtendente(telefone, nome = '') {
 
 carregarConversas();
 
+function atendimentoHumanoExpirou(conversa = {}) {
+    if (conversa.etapa !== 'atendimento_humano') return false;
+    if (!conversa.iniciadoEm) return true;
+
+    const inicio = new Date(conversa.iniciadoEm).getTime();
+    if (!inicio) return true;
+
+    return Date.now() - inicio > ATENDIMENTO_HUMANO_TIMEOUT_MS;
+}
+
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -120,8 +131,9 @@ async function responderComDigitacao(message, texto, imagem = null) {
     console.log('Enviando resposta para:', destino);
 
     try {
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, resposta),
+            chat.sendMessage(resposta),
             ENVIO_TIMEOUT_MS,
             'Envio de mensagem'
         );
@@ -133,7 +145,14 @@ async function responderComDigitacao(message, texto, imagem = null) {
             return;
         }
 
-        throw err;
+        console.log('Falha ao responder pelo chat. Tentando envio direto:', err.message);
+        const enviada = await comTimeout(
+            message.client.sendMessage(destino, resposta),
+            ENVIO_TIMEOUT_MS,
+            'Envio de mensagem reserva'
+        );
+
+        console.log('Resposta enviada por reserva:', enviada?.id?._serialized || 'sem id');
     }
 }
 
@@ -150,8 +169,9 @@ Caso queira retornar ao atendimento, digite *menu*.`;
     console.log('Enviando encerramento para:', destino);
 
     try {
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para encerramento');
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, texto),
+            chat.sendMessage(texto),
             ENVIO_TIMEOUT_MS,
             'Envio de encerramento'
         );
@@ -163,7 +183,14 @@ Caso queira retornar ao atendimento, digite *menu*.`;
             return;
         }
 
-        throw err;
+        console.log('Falha ao encerrar pelo chat. Tentando envio direto:', err.message);
+        const enviada = await comTimeout(
+            message.client.sendMessage(destino, texto),
+            ENVIO_TIMEOUT_MS,
+            'Envio de encerramento reserva'
+        );
+
+        console.log('Atendimento encerrado por reserva:', enviada?.id?._serialized || 'sem id');
     }
 }
 
@@ -515,7 +542,7 @@ async function responderMensagem(message) {
     const telefone = obterDestinoMensagem(message);
     const textoOriginal = message.body || '';
     const texto = normalizar(textoOriginal);
-    const conversa = conversas.get(telefone);
+    let conversa = conversas.get(telefone);
 
     if (texto === '0' || texto === 'voltar') {
         apagarConversa(telefone);
@@ -540,8 +567,13 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     }
 
     if (conversa?.etapa === 'atendimento_humano') {
-        console.log('Mensagem ignorada: atendimento humano em andamento para:', telefone);
-        return;
+        if (atendimentoHumanoExpirou(conversa)) {
+            apagarConversa(telefone);
+            conversa = null;
+        } else {
+            console.log('Mensagem ignorada: atendimento humano em andamento para:', telefone);
+            return;
+        }
     }
 
     if (conversa?.etapa === 'boas_vindas_opcao') {
