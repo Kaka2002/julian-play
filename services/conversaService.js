@@ -6,6 +6,7 @@ const menuDispositivos = require('../menus/dispositivos');
 const menuRenovacao = require('../menus/renovacao');
 const { isPalavraChave, isPedidoTeste } = require('../utils/helpers');
 const { enviarImagemComLegenda } = require('./assetService');
+const { agendarEncerramentoTeste } = require('./encerramentoTesteService');
 const { buscarPlano, enviarQRCodePIX } = require('./pixService');
 const {
     buscarClientePorNomeOuTelefone,
