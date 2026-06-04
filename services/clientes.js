@@ -57,6 +57,23 @@ function serializarLista(valor) {
     return JSON.stringify(normalizarLista(valor));
 }
 
+function normalizarTags(valor) {
+    const itens = Array.isArray(valor)
+        ? valor
+        : String(valor || '').split(',');
+
+    return itens
+        .map(limparTexto)
+        .filter(Boolean)
+        .join(', ');
+}
+
+function telefoneSemDdi(telefone) {
+    const numeros = String(telefone || '').replace(/\D/g, '');
+    if (numeros.startsWith('55') && numeros.length > 11) return numeros.slice(2);
+    return numeros;
+}
+
 function clienteEstaEmTeste(cliente = {}) {
     return String(cliente.status || '').toLowerCase() === 'teste'
         || String(cliente.plano || '').toLowerCase().includes('teste');
@@ -114,6 +131,8 @@ function montarCliente(dados = {}) {
         usuarioApp: limparTexto(dados.usuarioApp),
         senhaApp: limparTexto(dados.senhaApp),
         observacoes: limparTexto(dados.observacoes),
+        origem: limparTexto(dados.origem),
+        tags: normalizarTags(dados.tags),
         status: limparTexto(dados.status) || 'ativo'
     };
 }
@@ -332,14 +351,24 @@ async function listarClientes(filtros = {}) {
     const where = [];
 
     if (busca) {
-        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ?)');
+        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ? OR origem LIKE ? OR tags LIKE ?)');
         const termo = `%${busca}%`;
-        params.push(termo, termo, termo, termo, termo);
+        params.push(termo, termo, termo, termo, termo, termo, termo);
     }
 
     if (status) {
         where.push('status = ?');
         params.push(status);
+    }
+
+    if (limparTexto(filtros.origem)) {
+        where.push('origem LIKE ?');
+        params.push(`%${limparTexto(filtros.origem)}%`);
+    }
+
+    if (limparTexto(filtros.tag)) {
+        where.push('tags LIKE ?');
+        params.push(`%${limparTexto(filtros.tag)}%`);
     }
 
     const limite = Number(filtros.limite || 0);
@@ -384,6 +413,8 @@ async function salvarCliente(dados) {
                 usuarioApp = ?,
                 senhaApp = ?,
                 observacoes = ?,
+                origem = ?,
+                tags = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
@@ -411,6 +442,8 @@ async function salvarCliente(dados) {
                 cliente.usuarioApp,
                 cliente.senhaApp,
                 cliente.observacoes,
+                cliente.origem,
+                cliente.tags,
                 cliente.status,
                 dados.id
             ]
@@ -427,8 +460,8 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, appInstalado,
-            usuarioApp, senhaApp, observacoes, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            usuarioApp, senhaApp, observacoes, origem, tags, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -453,6 +486,8 @@ async function salvarCliente(dados) {
             cliente.usuarioApp,
             cliente.senhaApp,
             cliente.observacoes,
+            cliente.origem,
+            cliente.tags,
             cliente.status
         ]
     );
@@ -466,6 +501,79 @@ function buscarClientePorId(id) {
 
 function removerCliente(id) {
     return executar('DELETE FROM clientes WHERE id = ?', [id]);
+}
+
+function listarNotasCliente(clienteId) {
+    return buscarTodos(
+        `SELECT * FROM cliente_notas
+        WHERE clienteId = ?
+        ORDER BY datetime(criadoEm) DESC, id DESC`,
+        [clienteId]
+    );
+}
+
+async function adicionarNotaCliente(clienteId, texto) {
+    const conteudo = limparTexto(texto);
+    if (!conteudo) {
+        throw new Error('Informe a nota do atendimento.');
+    }
+
+    await executar(
+        `INSERT INTO cliente_notas (clienteId, texto)
+        VALUES (?, ?)`,
+        [clienteId, conteudo]
+    );
+
+    await executar(
+        `UPDATE clientes SET atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
+        [clienteId]
+    );
+}
+
+function buscarAlertasCadastroCliente(dados = {}) {
+    const idAtual = limparTexto(dados.id);
+    const nome = limparTexto(dados.nome);
+    const telefone = normalizarTelefone(dados.ddiTelefone ? `${dados.ddiTelefone}${dados.telefone}` : dados.telefone);
+    const telefoneCurto = telefoneSemDdi(telefone);
+    const params = [];
+    const condicoes = [];
+
+    if (telefoneCurto) {
+        condicoes.push("replace(replace(replace(replace(telefone, '+', ''), '-', ''), ' ', ''), '(', '') LIKE ?");
+        params.push(`%${telefoneCurto}`);
+    }
+
+    if (nome) {
+        condicoes.push('nome LIKE ?');
+        params.push(`%${nome}%`);
+    }
+
+    if (!condicoes.length) return Promise.resolve([]);
+
+    const filtroId = idAtual ? 'AND id != ?' : '';
+    if (idAtual) params.push(idAtual);
+
+    return buscarTodos(
+        `SELECT
+            clientes.*,
+            (
+                SELECT texto FROM cliente_notas
+                WHERE cliente_notas.clienteId = clientes.id
+                ORDER BY datetime(criadoEm) DESC, id DESC
+                LIMIT 1
+            ) AS ultimaNota
+        FROM clientes
+        WHERE (${condicoes.join(' OR ')})
+            ${filtroId}
+            AND (
+                tags LIKE '%Problematico%'
+                OR tags LIKE '%Problemático%'
+                OR status IN ('suspenso', 'cancelado')
+            )
+        ORDER BY datetime(atualizadoEm) DESC, id DESC
+        LIMIT 5`,
+        params
+    );
 }
 
 function listarClientesParaAviso(dataLimite) {
@@ -663,6 +771,9 @@ module.exports = {
     salvarCliente,
     buscarClientePorId,
     removerCliente,
+    listarNotasCliente,
+    adicionarNotaCliente,
+    buscarAlertasCadastroCliente,
     listarClientesParaAviso,
     listarClientesParaAvisosProgramados,
     listarTestesGratisParaAvisoPorHorario,

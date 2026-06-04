@@ -37,6 +37,8 @@ db.serialize(() => {
             usuarioApp TEXT,
             senhaApp TEXT,
             observacoes TEXT,
+            origem TEXT,
+            tags TEXT,
             status TEXT DEFAULT 'teste',
             ultimoAvisoRenovacao TEXT,
             ultimoAvisoAniversario TEXT,
@@ -121,6 +123,16 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS cliente_notas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER NOT NULL,
+            texto TEXT NOT NULL,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',
@@ -143,6 +155,8 @@ db.serialize(() => {
         usuarioApp: 'TEXT',
         senhaApp: 'TEXT',
         observacoes: 'TEXT',
+        origem: 'TEXT',
+        tags: 'TEXT',
         status: "TEXT DEFAULT 'teste'",
         ultimoAvisoRenovacao: 'TEXT',
         ultimoAvisoAniversario: 'TEXT',
@@ -213,6 +227,8 @@ function migrarTelefoneDuplicado(done) {
                     usuarioApp TEXT,
                     senhaApp TEXT,
                     observacoes TEXT,
+                    origem TEXT,
+                    tags TEXT,
                     status TEXT DEFAULT 'teste',
                     ultimoAvisoRenovacao TEXT,
                     ultimoAvisoAniversario TEXT,
@@ -221,8 +237,22 @@ function migrarTelefoneDuplicado(done) {
                 )
             `);
             db.run(`
-                INSERT INTO clientes
-                SELECT * FROM clientes_backup_unico
+                INSERT INTO clientes (
+                    id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
+                    nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
+                    validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
+                    dispositivosSelecionados, paineisSelecionados, appInstalado,
+                    usuarioApp, senhaApp, observacoes, status, ultimoAvisoRenovacao,
+                    ultimoAvisoAniversario, dataCadastro, atualizadoEm
+                )
+                SELECT
+                    id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
+                    nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
+                    validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
+                    dispositivosSelecionados, paineisSelecionados, appInstalado,
+                    usuarioApp, senhaApp, observacoes, status, ultimoAvisoRenovacao,
+                    ultimoAvisoAniversario, dataCadastro, atualizadoEm
+                FROM clientes_backup_unico
             `);
             db.run('DROP TABLE clientes_backup_unico');
             db.run('DROP INDEX IF EXISTS idx_clientes_telefone');

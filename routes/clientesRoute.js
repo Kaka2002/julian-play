@@ -6,7 +6,10 @@ const {
     salvarCliente,
     buscarClientePorId,
     removerCliente,
-    normalizarTelefone
+    normalizarTelefone,
+    listarNotasCliente,
+    adicionarNotaCliente,
+    buscarAlertasCadastroCliente
 } = require('../services/clientes');
 const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
@@ -574,6 +577,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             background: #ecfbf4;
             color: #12623f;
             font-weight: 700;
+        }
+
+        .notice.warn {
+            border-color: #ffd99d;
+            background: #fff7e8;
+            color: #8a4b00;
         }
 
         .metrics {
@@ -1193,6 +1202,49 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             grid-template-columns: repeat(2, minmax(240px, 1fr));
         }
 
+        .client-alert-list {
+            display: grid;
+            gap: 10px;
+            margin: 0 0 18px;
+        }
+
+        .client-alert-item {
+            padding: 12px 14px;
+            border: 1px solid #ffd99d;
+            border-radius: 10px;
+            background: #fffaf0;
+            color: #713f12;
+            font-weight: 700;
+        }
+
+        .client-alert-item small {
+            display: block;
+            margin-top: 4px;
+            color: #8a4b00;
+            font-weight: 600;
+        }
+
+        .notes-list {
+            display: grid;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .note-item {
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+
+        .note-date {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
         .form-section {
             margin-top: 10px;
             padding-top: 22px;
@@ -1309,7 +1361,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .clients-toolbar {
             display: grid;
-            grid-template-columns: minmax(260px, 1fr) 260px;
+            grid-template-columns: minmax(260px, 1fr) 170px 170px 180px;
             gap: 14px;
             margin-bottom: 22px;
         }
@@ -1328,6 +1380,30 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .clients-search input {
             padding-left: 46px;
+        }
+
+        .client-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .tag-chip {
+            display: inline-flex;
+            align-items: center;
+            min-height: 22px;
+            padding: 0 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3158cf;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .tag-chip.warn {
+            background: #fff0d5;
+            color: #a76100;
         }
 
         .clients-table {
@@ -1740,6 +1816,67 @@ function areaTexto({ nome, label, valor = '' }) {
     </label>`;
 }
 
+function normalizarTagsTela(valor) {
+    if (Array.isArray(valor)) return valor.map(String).map(item => item.trim()).filter(Boolean);
+    return String(valor || '').split(',').map(item => item.trim()).filter(Boolean);
+}
+
+function renderTagsCliente(tags) {
+    const itens = normalizarTagsTela(tags);
+    if (!itens.length) return '';
+
+    return `<div class="client-tags">${itens.map((tag) => {
+        const aviso = tag.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('problematico');
+        return `<span class="tag-chip ${aviso ? 'warn' : ''}">${escapar(tag)}</span>`;
+    }).join('')}</div>`;
+}
+
+function formatarDataNota(valor) {
+    if (!valor) return '';
+    const data = new Date(String(valor).replace(' ', 'T'));
+    if (Number.isNaN(data.getTime())) return String(valor);
+
+    return new Intl.DateTimeFormat('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+    }).format(data);
+}
+
+function alertaClienteHtml(alertas = []) {
+    if (!alertas.length) return '';
+
+    const itens = alertas.map(alerta => `<div class="client-alert-item">
+        Atenção: existe cadastro anterior para ${escapar(alerta.nome || 'cliente')} (${escapar(alerta.telefone || '-')})
+        <small>Status: ${escapar(rotuloStatus(alerta.status))}${alerta.tags ? ` | Tags: ${escapar(alerta.tags)}` : ''}${alerta.origem ? ` | Origem: ${escapar(alerta.origem)}` : ''}</small>
+        ${alerta.ultimaNota ? `<small>Última nota: ${escapar(alerta.ultimaNota)}</small>` : ''}
+    </div>`).join('');
+
+    return `<div class="notice warn">Cliente com histórico que merece avaliação antes de continuar.</div>
+    <div class="client-alert-list">${itens}</div>`;
+}
+
+function secaoNotasCliente(cliente = {}, notas = []) {
+    if (!cliente.id) return '';
+
+    const listaNotas = notas.length
+        ? `<div class="notes-list">${notas.map(nota => `<div class="note-item">
+            <span class="note-date">${escapar(formatarDataNota(nota.criadoEm))}</span>
+            <div>${escapar(nota.texto)}</div>
+        </div>`).join('')}</div>`
+        : '<div class="empty">Nenhuma nota registrada para este cliente.</div>';
+
+    return `<section class="panel" style="margin-top:24px;">
+        <form class="fields" method="post" action="/clientes/${escapar(cliente.id)}/notas">
+            <div class="form-section full">Histórico de atendimento</div>
+            ${areaTexto({ nome: 'texto', label: 'Nota rápida com data', valor: '' })}
+            <div class="actions full">
+                <button class="button secondary" type="submit">${icon('plus')} Adicionar nota</button>
+            </div>
+            <div class="full">${listaNotas}</div>
+        </form>
+    </section>`;
+}
+
 function editorMensagemModelo(valor = '') {
     const grupos = [
         ['Mais usados', ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😉', '😎', '🤝', '🙌', '🙏', '👏', '👍', '👌', '💪', '❤️', '💙', '💚', '💛']],
@@ -2142,11 +2279,13 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     </section>`;
 }
 
-function formularioCliente(cliente = {}, listas = {}) {
+function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const planos = listas.planos || [];
     const apps = listas.apps || [];
     const dispositivos = listas.dispositivos || [];
     const paineis = listas.paineis || [];
+    const notas = opcoesFormulario.notas || [];
+    const alertas = opcoesFormulario.alertas || [];
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
@@ -2160,6 +2299,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
         <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
+    ${alertaClienteHtml(alertas)}
     <section class="panel">
         <form class="fields client-form" method="post" action="/clientes/salvar">
             ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
@@ -2167,6 +2307,8 @@ function formularioCliente(cliente = {}, listas = {}) {
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsApp(cliente.telefone)}
             ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
+            ${campo({ nome: 'origem', label: 'Origem do Cliente', valor: cliente.origem || '', attrs: 'placeholder="Indicacao, Instagram, WhatsApp..."' })}
+            ${campo({ nome: 'tags', label: 'Tags/Categorias', valor: cliente.tags || '', attrs: 'placeholder="VIP, Problematico, Indicado"' })}
             <div></div>
 
             <div class="form-section full">Plano</div>
@@ -2401,9 +2543,12 @@ function formularioCliente(cliente = {}, listas = {}) {
         });
     </script>`;
 
-    return cliente.id && clienteEhTeste(cliente)
-        ? `${formulario}${secaoTesteLiberado(cliente, listas)}`
-        : formulario;
+    const extras = [
+        cliente.id && clienteEhTeste(cliente) ? secaoTesteLiberado(cliente, listas) : '',
+        secaoNotasCliente(cliente, notas)
+    ].filter(Boolean).join('');
+
+    return `${formulario}${extras}`;
 }
 
 function metricCard({ label, valor, nota = '', tipo, icone }) {
@@ -2544,7 +2689,9 @@ function tabelaClientes(clientes) {
         <td data-label="Cliente">
             <div class="cell-title">${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
+            ${cliente.origem ? `<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
             ${cliente.nascimento ? `<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+            ${renderTagsCliente(cliente.tags)}
         </td>
         <td data-label="Plano">
             <div class="cell-title">${escapar(cliente.plano || '-')}</div>
@@ -2700,7 +2847,7 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
     </script>`;
 }
 
-function listaClientes({ clientes, busca, status, paginacaoClientes }) {
+function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes }) {
     const totalClientes = paginacaoClientes?.total ?? clientes.length;
 
     return `<section class="page-title">
@@ -2723,6 +2870,8 @@ function listaClientes({ clientes, busca, status, paginacaoClientes }) {
                 ['cancelado', 'Cancelado']
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ? 'selected' : ''}>${texto}</option>`).join('')}
         </select>
+        <input name="origem" value="${escapar(origem || '')}" placeholder="Origem">
+        <input name="tag" value="${escapar(tag || '')}" placeholder="Tag">
     </form>
     <div class="toolbar">
         <span></span>
@@ -2737,7 +2886,7 @@ function listaClientes({ clientes, busca, status, paginacaoClientes }) {
         ${tabelaClientes(clientes)}
         ${paginacaoClientes ? paginacao({
             base: '/clientes/todos',
-            params: { busca, status },
+            params: { busca, status, origem, tag },
             pagina: paginacaoClientes.pagina,
             totalPaginas: paginacaoClientes.totalPaginas,
             total: paginacaoClientes.total,
@@ -3130,8 +3279,10 @@ router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
     const busca = req.query.busca || '';
     const status = req.query.status || '';
+    const origem = req.query.origem || '';
+    const tag = req.query.tag || '';
     const pagina = paginaAtual(req.query.pagina);
-    const todosClientes = await listarClientes({ busca, status });
+    const todosClientes = await listarClientes({ busca, status, origem, tag });
     const paginacaoClientes = paginarItens(todosClientes, pagina, CLIENTES_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
@@ -3141,6 +3292,8 @@ router.get('/clientes/todos', async (req, res) => {
             clientes: paginacaoClientes.itens,
             busca,
             status,
+            origem,
+            tag,
             paginacaoClientes
         }),
         mensagem,
@@ -3165,11 +3318,15 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const listas = await obterListasCliente();
+    const [listas, notas, alertas] = await Promise.all([
+        obterListasCliente(),
+        listarNotasCliente(cliente.id),
+        buscarAlertasCadastroCliente(cliente)
+    ]);
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas),
+        conteudo: formularioCliente(cliente, listas, { notas, alertas }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
@@ -3177,13 +3334,23 @@ router.get('/clientes/:id/editar', async (req, res) => {
 
 router.post('/clientes/salvar', async (req, res) => {
     try {
+        const alertas = await buscarAlertasCadastroCliente(req.body);
         const clienteSalvo = await salvarCliente(req.body);
+        const mensagemAlerta = alertas.length
+            ? 'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
+            : 'Cliente salvo com sucesso';
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
-            return res.redirect(montarUrlListaClientesMensagem('Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
+            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, alertas.length
+                ? mensagemAlerta
+                : 'Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
         }
 
-        res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
+        if (alertas.length && clienteSalvo?.id) {
+            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, mensagemAlerta));
+        }
+
+        res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(mensagemAlerta)}`);
     } catch (err) {
         res.status(400);
         const listas = await obterListasCliente();
@@ -3192,6 +3359,15 @@ router.post('/clientes/salvar', async (req, res) => {
             conteudo: `${formularioCliente(req.body, listas)}<div class="notice">${escapar(err.message)}</div>`,
             ativo: 'clientes'
         });
+    }
+});
+
+router.post('/clientes/:id/notas', async (req, res) => {
+    try {
+        await adicionarNotaCliente(req.params.id, req.body.texto);
+        res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histórico do cliente'));
+    } catch (err) {
+        res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
     }
 });
 
