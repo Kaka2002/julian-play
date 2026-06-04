@@ -1574,6 +1574,10 @@ function montarUrlClienteMensagem(id, mensagem) {
     return `/clientes/${id}/editar?mensagem=${encodeURIComponent(mensagem)}`;
 }
 
+function montarUrlListaClientesMensagem(mensagem) {
+    return `/clientes/todos?mensagem=${encodeURIComponent(mensagem)}`;
+}
+
 function aguardarComTimeout(promessa, ms, descricao) {
     return Promise.race([
         promessa,
@@ -2650,10 +2654,10 @@ router.post('/clientes/salvar', async (req, res) => {
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
             try {
                 const resultadoEnvio = await enviarTesteLiberadoCliente(clienteSalvo);
-                return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, resultadoEnvio.mensagem));
+                return res.redirect(montarUrlListaClientesMensagem(resultadoEnvio.mensagem));
             } catch (err) {
                 console.error(`[clientes] Falha ao enviar teste ao salvar cliente ${clienteSalvo.id}: ${err.message}`);
-                return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, `Cliente salvo, mas nao foi possivel enviar o teste: ${err.message}`));
+                return res.redirect(montarUrlListaClientesMensagem(`Cliente salvo, mas nao foi possivel enviar o teste: ${err.message}`));
             }
         }
 

@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
@@ -147,7 +147,7 @@ function processarMensagemEmFila(message, options = {}) {
         registrarTesteLiberadoPorMensagem(message).catch((err) => {
             console.log('Erro ao registrar teste liberado:', err.message);
         });
-        console.log('Mensagem própria ignorada sem registrar conteúdo.');
+        console.log('Mensagem prÃ³pria ignorada sem registrar conteÃºdo.');
         return;
     }
 
