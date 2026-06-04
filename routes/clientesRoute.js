@@ -2113,7 +2113,7 @@ function cardVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
     const classeVencimento = dias < 0 || vencimentoExpirou(vencimento) ? 'expired' : '';
-    const marcadorTeste = clienteEhTeste(cliente) ? '<span class="badge info">Teste grÃ¡tis</span>' : '';
+    const marcadorTeste = clienteEhTeste(cliente) ? '<span class="badge info">Teste gr&aacute;tis</span>' : '';
 
     return `<div class="client-row">
         <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
