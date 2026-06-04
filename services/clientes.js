@@ -158,48 +158,22 @@ function parseValidadeTeste(valor) {
 
 async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = 'Teste gratis' }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
-    const clienteAtual = await buscarClienteTestePorTelefone(telefoneNormalizado);
-    const credenciais = clienteAtual || gerarCredenciais();
-    const vencimento = clienteAtual?.vencimento || calcularVencimentoTeste();
+    const credenciais = gerarCredenciais();
+    const vencimento = calcularVencimentoTeste();
 
-    if (clienteAtual) {
-        await executar(
-            `UPDATE clientes SET
-                nome = ?,
-                usuario = COALESCE(usuario, ?),
-                senha = COALESCE(senha, ?),
-                plano = ?,
-                aparelho = ?,
-                vencimento = COALESCE(vencimento, ?),
-                status = ?,
-                atualizadoEm = CURRENT_TIMESTAMP
-            WHERE id = ?`,
-            [
-                nome,
-                credenciais.usuario,
-                credenciais.senha,
-                plano,
-                aparelho,
-                vencimento,
-                'teste',
-                clienteAtual.id
-            ]
-        );
-
-        return buscarClientePorId(clienteAtual.id);
-    }
+    if (!telefoneNormalizado) return null;
 
     const resultado = await executar(
         `INSERT INTO clientes (
             nome, telefone, usuario, senha, plano, aparelho, vencimento, status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-            nome,
+            limparTexto(nome) || 'Cliente',
             telefoneNormalizado,
             credenciais.usuario,
             credenciais.senha,
             plano,
-            aparelho,
+            limparTexto(aparelho),
             vencimento,
             'teste'
         ]
@@ -207,19 +181,13 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
 
     return buscarClientePorId(resultado.id);
 }
-
 async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
     const telefoneNormalizado = normalizarTelefone(telefone);
-    const clienteAtual = await buscarClienteTestePorTelefone(telefoneNormalizado);
     const nomeCliente = limparTexto(nome) || 'Cliente';
     const dispositivo = limparTexto(aparelho);
     const dispositivosSelecionados = dispositivo ? JSON.stringify([dispositivo]) : JSON.stringify([]);
 
     if (!telefoneNormalizado || !dispositivo) return null;
-    if (clienteAtual) {
-        console.log(`Teste grátis parcial não sobrescreveu cliente existente: ${clienteAtual.nome} (${clienteAtual.telefone})`);
-        return clienteAtual;
-    }
 
     const resultado = await executar(
         `INSERT INTO clientes (
@@ -237,7 +205,6 @@ async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
 
     return buscarClientePorId(resultado.id);
 }
-
 async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const telefone = normalizarTelefone(dados.telefone);
     const nome = limparTexto(dados.nome);
@@ -254,56 +221,11 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
         return null;
     }
 
-    const clienteAtual = await buscarClienteTestePorTelefone(telefone);
-    if (clienteAtual && !clienteEstaEmTeste(clienteAtual)) {
-        console.log(`Teste grátis liberado não sobrescreveu cliente existente: ${clienteAtual.nome} (${clienteAtual.telefone})`);
-        return null;
-    }
-
-    const vencimento = validade.vencimento || clienteAtual?.vencimento || calcularVencimentoTeste();
-    const dataVencimento = validade.dataVencimento || clienteAtual?.dataVencimento || `${vencimento}T23:59`;
+    const vencimento = validade.vencimento || calcularVencimentoTeste();
+    const dataVencimento = validade.dataVencimento || `${vencimento}T23:59`;
     const dispositivosSelecionados = JSON.stringify([aparelho]);
-    const appsInstalados = aplicativo ? JSON.stringify([aplicativo]) : clienteAtual?.appsInstalados || JSON.stringify([]);
-    const paineisSelecionados = painel ? JSON.stringify([painel]) : clienteAtual?.paineisSelecionados || JSON.stringify([]);
-
-    if (clienteAtual) {
-        await executar(
-            `UPDATE clientes SET
-                nome = ?,
-                usuario = ?,
-                senha = ?,
-                plano = ?,
-                aparelho = ?,
-                vencimento = ?,
-                dataInicio = COALESCE(NULLIF(?, ''), dataInicio),
-                dataVencimento = ?,
-                appsInstalados = ?,
-                dispositivosSelecionados = ?,
-                paineisSelecionados = ?,
-                appInstalado = ?,
-                status = ?,
-                atualizadoEm = CURRENT_TIMESTAMP
-            WHERE id = ?`,
-            [
-                nome,
-                usuario,
-                senha,
-                'Teste grátis',
-                aparelho,
-                vencimento,
-                dataInicio,
-                dataVencimento,
-                appsInstalados,
-                dispositivosSelecionados,
-                paineisSelecionados,
-                aplicativo ? 1 : clienteAtual.appInstalado || 0,
-                'teste',
-                clienteAtual.id
-            ]
-        );
-
-        return buscarClientePorId(clienteAtual.id);
-    }
+    const appsInstalados = aplicativo ? JSON.stringify([aplicativo]) : JSON.stringify([]);
+    const paineisSelecionados = painel ? JSON.stringify([painel]) : JSON.stringify([]);
 
     const resultado = await executar(
         `INSERT INTO clientes (
@@ -331,7 +253,6 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
 
     return buscarClientePorId(resultado.id);
 }
-
 function buscarClientePorTelefone(telefone) {
     return buscarUm(
         `SELECT * FROM clientes
