@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 const { MessageMedia } = require('whatsapp-web.js');
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '61319147704';
 const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY';
@@ -184,17 +185,20 @@ async function enviarQRCodePIX(message, plano, options = {}) {
 
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
+        const caption = legendaPixPorContexto(plano, options);
         console.log(`Enviando QR Code PIX ${plano.nome} para:`, destino);
+        registrarEnvioDoRobo(destino, caption);
 
         const enviada = await comTimeout(
             message.client.sendMessage(destino, media, {
-                caption: legendaPixPorContexto(plano, options)
+                caption
             }),
             ENVIO_TIMEOUT_MS,
             'Envio do QR Code PIX'
         );
 
         console.log(`QR Code PIX ${plano.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
         return true;
     } catch (error) {
         console.error(`Erro ao gerar QR Code PIX: ${error.message}`);

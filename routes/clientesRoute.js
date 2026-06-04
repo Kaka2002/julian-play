@@ -42,6 +42,7 @@ const {
     salvarPainel,
     removerPainel
 } = require('../services/appsDispositivos');
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -1695,6 +1696,7 @@ async function enviarTesteLiberadoCliente(cliente) {
 
     const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
     const mensagem = montarMensagemTesteLiberado(dados);
+    registrarEnvioDoRobo(destino, mensagem);
     const envio = await aguardarComTimeout(
         client.sendMessage(destino, mensagem),
         90000,
@@ -1705,6 +1707,7 @@ async function enviarTesteLiberadoCliente(cliente) {
         return { enviado: false, mensagem: 'Cliente salvo, mas o WhatsApp nao confirmou o envio do teste.' };
     }
 
+    registrarMensagemDoRobo(envio);
     console.log(`[clientes] Teste liberado enviado ao salvar cliente ${cliente.id} para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
     agendarEncerramentoTeste(client, destino);
     return { enviado: true, mensagem: 'Cliente salvo e teste gratis enviado ao WhatsApp.' };
@@ -2999,6 +3002,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     try {
         const mensagem = montarMensagemTesteLiberado(dados);
         const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+        registrarEnvioDoRobo(destino, mensagem);
         const envio = await aguardarComTimeout(
             client.sendMessage(destino, mensagem),
             90000,
@@ -3009,6 +3013,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
         }
 
+        registrarMensagemDoRobo(envio);
         await cadastrarTesteLiberadoPorAtendente(dados);
         console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
         agendarEncerramentoTeste(client, destino);

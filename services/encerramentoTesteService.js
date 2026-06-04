@@ -1,5 +1,6 @@
 const TEMPO_ENCERRAMENTO_TESTE_MS = Number(process.env.TESTE_ENCERRAMENTO_MS || 10 * 60 * 1000);
 const encerramentos = new Map();
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
 function mensagemEncerramentoTeste() {
     return `✅ *ATENDIMENTO ENCERRADO*
@@ -19,7 +20,10 @@ function agendarEncerramentoTeste(client, destino) {
         encerramentos.delete(destino);
 
         try {
-            const enviada = await client.sendMessage(destino, mensagemEncerramentoTeste());
+            const mensagem = mensagemEncerramentoTeste();
+            registrarEnvioDoRobo(destino, mensagem);
+            const enviada = await client.sendMessage(destino, mensagem);
+            registrarMensagemDoRobo(enviada);
             console.log(`[teste] Atendimento encerrado automaticamente para ${destino}. id=${enviada?.id?._serialized || 'sem-id'}`);
         } catch (err) {
             console.log(`[teste] Falha ao encerrar atendimento automaticamente para ${destino}: ${err.message}`);

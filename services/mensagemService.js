@@ -1,4 +1,5 @@
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
 function erroEsperadoWhatsApp(err) {
     const mensagem = err && err.message ? err.message : String(err || '');
@@ -14,7 +15,9 @@ function erroEsperadoWhatsApp(err) {
 async function enviarMensagem(client, to, texto) {
     try {
         await delay(1000);
-        await client.sendMessage(to, texto);
+        registrarEnvioDoRobo(to, texto);
+        const enviada = await client.sendMessage(to, texto);
+        registrarMensagemDoRobo(enviada);
         return true;
     } catch (err) {
         if (erroEsperadoWhatsApp(err)) {

@@ -3,11 +3,13 @@ const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const {
+    pausarParaAtendente,
     responderMensagem,
     responderEncerramentoRapido,
     registrarTesteLiberadoPorMensagem,
     normalizar
 } = require('../services/conversaService');
+const { foiMensagemDoRobo } = require('../services/mensagensPropriasService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -135,6 +137,13 @@ function processarMensagemEmFila(message, options = {}) {
     }
 
     if (message.fromMe) {
+        if (foiMensagemDoRobo(message)) {
+            console.log('Mensagem do robo ignorada sem registrar conteudo.');
+            return;
+        }
+
+        const telefone = obterTelefoneMensagem(message);
+        pausarParaAtendente(telefone, 'Atendimento manual', 'manual');
         registrarTesteLiberadoPorMensagem(message).catch((err) => {
             console.log('Erro ao registrar teste liberado:', err.message);
         });

@@ -14,6 +14,7 @@ const {
     cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente
 } = require('./clientes');
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
 const conversas = new Map();
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
@@ -70,10 +71,11 @@ function apagarConversa(telefone) {
     salvarConversas();
 }
 
-function pausarParaAtendente(telefone, nome = '') {
+function pausarParaAtendente(telefone, nome = '', origem = 'bot') {
     definirConversa(telefone, {
         etapa: 'atendimento_humano',
         nome,
+        origem,
         iniciadoEm: new Date().toISOString()
     });
 }
@@ -94,8 +96,11 @@ function textoCurto(texto) {
     return String(texto || '').length <= 80 && String(texto || '').split(/\s+/).length <= 8;
 }
 
-function deveReiniciarAtendimentoHumano(texto, textoOriginal) {
+function deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa = {}) {
     if (!textoCurto(textoOriginal)) return false;
+    if (conversa.origem === 'manual') {
+        return ['menu', 'inicio', 'iniciar'].includes(texto);
+    }
 
     return (
         ['oi', 'ola', 'olá', 'menu', 'inicio', 'iniciar', 'bom dia', 'boa tarde', 'boa noite'].includes(texto) ||
@@ -143,6 +148,7 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
     const destino = obterDestinoMensagem(message);
     console.log('Enviando resposta para:', destino);
+    registrarEnvioDoRobo(destino, resposta);
 
     try {
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
@@ -153,6 +159,7 @@ async function responderComDigitacao(message, texto, imagem = null) {
         );
 
         console.log('Resposta enviada:', enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
     } catch (err) {
         if (err.isTimeout) {
             console.log('Envio demorou demais. O WhatsApp pode concluir em segundo plano:', err.message);
@@ -167,6 +174,7 @@ async function responderComDigitacao(message, texto, imagem = null) {
         );
 
         console.log('Resposta enviada por reserva:', enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
     }
 }
 
@@ -181,6 +189,7 @@ Obrigado por falar com a *JULIAN PLAY*.
 Caso queira retornar ao atendimento, digite *menu*.`;
 
     console.log('Enviando encerramento para:', destino);
+    registrarEnvioDoRobo(destino, texto);
 
     try {
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para encerramento');
@@ -191,6 +200,7 @@ Caso queira retornar ao atendimento, digite *menu*.`;
         );
 
         console.log('Atendimento encerrado:', enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
     } catch (err) {
         if (err.isTimeout) {
             console.log('Encerramento demorou demais. Atendimento ja foi encerrado internamente:', err.message);
@@ -205,6 +215,7 @@ Caso queira retornar ao atendimento, digite *menu*.`;
         );
 
         console.log('Atendimento encerrado por reserva:', enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
     }
 }
 
@@ -589,7 +600,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
     }
 
     if (conversa?.etapa === 'atendimento_humano') {
-        if (atendimentoHumanoExpirou(conversa) || deveReiniciarAtendimentoHumano(texto, textoOriginal)) {
+        if (atendimentoHumanoExpirou(conversa) || deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa)) {
             apagarConversa(telefone);
             conversa = null;
         } else {
@@ -936,6 +947,7 @@ Digite uma das opções do menu principal:
 }
 
 module.exports = {
+    pausarParaAtendente,
     responderMensagem,
     responderEncerramentoRapido,
     registrarTesteLiberadoPorMensagem,

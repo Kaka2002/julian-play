@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
+const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
 const assetsDir = path.join(__dirname, '..', 'assets');
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_IMAGEM_TIMEOUT_MS || 10000);
@@ -48,6 +49,7 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         const media = MessageMedia.fromFilePath(arquivo);
         const destino = message?.fromMe && message?.to ? message.to : message.from;
         console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
+        registrarEnvioDoRobo(destino, legenda);
 
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
         const enviada = await comTimeout(
@@ -57,6 +59,7 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         );
 
         console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
         return true;
     } catch (err) {
         console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);
