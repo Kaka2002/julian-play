@@ -1898,6 +1898,7 @@ function aguardarComTimeout(promessa, ms, descricao) {
 
 async function resolverDestinoWhatsApp(client, telefone) {
     const numero = normalizarTelefone(telefone);
+    const destinoNumero = `${numero}@c.us`;
 
     if (!numero || numero.length < 12) {
         throw new Error('Telefone do cliente invalido. Confira o DDD e o numero.');
@@ -1914,10 +1915,15 @@ async function resolverDestinoWhatsApp(client, telefone) {
             throw new Error(`O numero ${numero} nao foi localizado no WhatsApp.`);
         }
 
+        if (String(contato._serialized).endsWith('@lid')) {
+            console.log(`[clientes] WhatsApp retornou LID ${contato._serialized}; usando telefone cadastrado ${destinoNumero}.`);
+            return destinoNumero;
+        }
+
         return contato._serialized;
     }
 
-    return `${numero}@c.us`;
+    return destinoNumero;
 }
 
 function formatarDataHoraMensagem(valor) {
