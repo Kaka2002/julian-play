@@ -116,23 +116,41 @@ function formatarData(dataISO) {
 }
 
 function hojeISO() {
-    return new Date().toISOString().slice(0, 10);
+    return hojeSaoPauloISO();
 }
 
 function adicionarDiasISO(dias) {
-    const data = new Date();
+    const data = new Date(`${hojeSaoPauloISO()}T12:00:00`);
     data.setDate(data.getDate() + dias);
     return data.toISOString().slice(0, 10);
+}
+
+function hojeSaoPauloISO() {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(new Date());
+
+    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}`;
+}
+
+function vencimentoCliente(cliente = {}) {
+    return cliente.dataVencimento || cliente.vencimento || '';
 }
 
 function calcularDiasRestantes(vencimento) {
     if (!vencimento) return null;
 
-    const hoje = new Date(`${hojeISO()}T00:00:00`);
-    const dataVencimento = new Date(`${vencimento}T00:00:00`);
+    const hoje = new Date(`${hojeSaoPauloISO()}T00:00:00`);
+    const dataVencimento = new Date(`${String(vencimento).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(dataVencimento.getTime())) return null;
+
     const umDia = 24 * 60 * 60 * 1000;
 
-    return Math.ceil((dataVencimento - hoje) / umDia);
+    return Math.round((dataVencimento - hoje) / umDia);
 }
 
 function calcularResumo(clientes) {
@@ -143,8 +161,14 @@ function calcularResumo(clientes) {
         total: clientes.length,
         testes: clientes.filter(cliente => cliente.status === 'teste').length,
         ativos: clientes.filter(cliente => cliente.status === 'ativo').length,
-        vencidos: clientes.filter(cliente => cliente.vencimento && cliente.vencimento < hoje).length,
-        vencendo: clientes.filter(cliente => cliente.vencimento && cliente.vencimento >= hoje && cliente.vencimento <= limiteISO).length
+        vencidos: clientes.filter(cliente => {
+            const vencimento = vencimentoCliente(cliente).slice(0, 10);
+            return vencimento && vencimento < hoje;
+        }).length,
+        vencendo: clientes.filter(cliente => {
+            const vencimento = vencimentoCliente(cliente).slice(0, 10);
+            return vencimento && vencimento >= hoje && vencimento <= limiteISO;
+        }).length
     };
 }
 
@@ -152,7 +176,10 @@ function clientesComVencimentoProximo(clientes) {
     const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
 
     return clientes
-        .filter(cliente => cliente.vencimento && cliente.vencimento <= limiteISO)
+        .filter(cliente => {
+            const vencimento = vencimentoCliente(cliente).slice(0, 10);
+            return vencimento && vencimento <= limiteISO;
+        })
         .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
 }
 
@@ -166,7 +193,7 @@ function statusClasse(status) {
 }
 
 function textoVencimento(cliente) {
-    const dias = calcularDiasRestantes(cliente.vencimento);
+    const dias = calcularDiasRestantes(vencimentoCliente(cliente));
 
     if (dias === null) return 'Sem vencimento';
     if (dias < 0) return `Vencido ha ${Math.abs(dias)} dia(s)`;
@@ -2046,7 +2073,8 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
 }
 
 function cardVencimento(cliente) {
-    const dias = calcularDiasRestantes(cliente.vencimento);
+    const vencimento = vencimentoCliente(cliente);
+    const dias = calcularDiasRestantes(vencimento);
     const classeVencimento = dias < 0 ? 'expired' : '';
 
     return `<div class="client-row">
@@ -2057,7 +2085,7 @@ function cardVencimento(cliente) {
         </div>
         <div>
             <div class="due ${classeVencimento}">${escapar(textoVencimento(cliente))}</div>
-            <div class="due-date">${escapar(formatarData(cliente.vencimento))} 00:00</div>
+            <div class="due-date">${escapar(formatarDataHoraCurta(vencimento))}</div>
         </div>
         <span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span>
         <a class="button secondary icon-only" href="/clientes/${cliente.id}/editar" title="Editar cliente">${icon('whats')}</a>
