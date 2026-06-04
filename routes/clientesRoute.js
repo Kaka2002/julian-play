@@ -2716,6 +2716,7 @@ function listaClientes({ clientes, busca, status, paginacaoClientes }) {
             ${[
                 ['', 'Todos'],
                 ['ativo', 'Ativo'],
+                ['teste', 'Teste'],
                 ['pendente', 'Pendente'],
                 ['expirado', 'Expirado'],
                 ['suspenso', 'Suspenso'],
