@@ -599,6 +599,11 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagensRespostas.encerrame
         return;
     }
 
+    if (isMensagemConfirmacao(texto)) {
+        console.log('Mensagem de confirmacao ignorada:', telefone);
+        return;
+    }
+
     if (conversa?.etapa === 'atendimento_humano') {
         if (atendimentoHumanoExpirou(conversa) || deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa)) {
             apagarConversa(telefone);
