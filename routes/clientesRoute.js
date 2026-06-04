@@ -1595,6 +1595,14 @@ function rotuloStatus(status) {
     return mapa[status] || status || '-';
 }
 
+function detalhePlanoCliente(cliente = {}) {
+    if (clienteEhTeste(cliente)) {
+        return cliente.horasTeste || 'Teste grátis';
+    }
+
+    return `${cliente.diasContrato || '-'} dias`;
+}
+
 function opcoesMulti(nome, label, itens, selecionados, placeholder) {
     const chips = selecionados.length
         ? selecionados.map(item => `<span class="selected-chip" data-value="${escapar(item)}">${escapar(item)} <button type="button" aria-label="Remover ${escapar(item)}">x</button></span>`).join('')
@@ -2177,7 +2185,7 @@ function tabelaClientes(clientes) {
         </td>
         <td data-label="Plano">
             <div class="cell-title">${escapar(cliente.plano || '-')}</div>
-            <div class="cell-muted">${escapar(cliente.diasContrato || '-')} dias</div>
+            <div class="cell-muted">${escapar(detalhePlanoCliente(cliente))}</div>
             <div class="cell-muted">${cliente.valorPlano ? `R$ ${escapar(cliente.valorPlano)}` : ''}</div>
         </td>
         <td data-label="Início">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
