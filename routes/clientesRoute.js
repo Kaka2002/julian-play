@@ -6,8 +6,7 @@ const {
     salvarCliente,
     buscarClientePorId,
     removerCliente,
-    normalizarTelefone,
-    cadastrarTesteLiberadoPorAtendente
+    normalizarTelefone
 } = require('../services/clientes');
 const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
@@ -2086,43 +2085,6 @@ function camposFaltandoTesteLiberado(dados = {}) {
         .map(([, label]) => label);
 }
 
-async function enviarTesteLiberadoCliente(cliente) {
-    const status = getStatusWhatsApp();
-    const client = getClient();
-
-    if (!client || !status.conectado) {
-        return { enviado: false, mensagem: 'Cliente salvo, mas o WhatsApp nao esta conectado para enviar o teste.' };
-    }
-
-    const dados = dadosTesteLiberadoDoCliente(cliente);
-    const faltando = camposFaltandoTesteLiberado(dados);
-
-    if (faltando.length) {
-        return {
-            enviado: false,
-            mensagem: `Cliente salvo, mas o teste nao foi enviado. Preencha: ${faltando.join(', ')}.`
-        };
-    }
-
-    const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
-    const mensagem = montarMensagemTesteLiberado(dados);
-    registrarEnvioDoRobo(destino, mensagem);
-    const envio = await aguardarComTimeout(
-        client.sendMessage(destino, mensagem),
-        90000,
-        'Envio do teste liberado'
-    );
-
-    if (!envio) {
-        return { enviado: false, mensagem: 'Cliente salvo, mas o WhatsApp nao confirmou o envio do teste.' };
-    }
-
-    registrarMensagemDoRobo(envio);
-    console.log(`[clientes] Teste liberado enviado ao salvar cliente ${cliente.id} para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
-    agendarEncerramentoTeste(client, destino);
-    return { enviado: true, mensagem: 'Cliente salvo e teste gratis enviado ao WhatsApp.' };
-}
-
 function secaoTesteLiberado(cliente = {}, listas = {}) {
     if (!cliente.id) return '';
 
@@ -2194,7 +2156,7 @@ function formularioCliente(cliente = {}, listas = {}) {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
 
-    return `<section class="page-title">
+    const formulario = `<section class="page-title">
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
         <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
@@ -2438,6 +2400,10 @@ function formularioCliente(cliente = {}, listas = {}) {
             chip.remove();
         });
     </script>`;
+
+    return cliente.id && clienteEhTeste(cliente)
+        ? `${formulario}${secaoTesteLiberado(cliente, listas)}`
+        : formulario;
 }
 
 function metricCard({ label, valor, nota = '', tipo, icone }) {
@@ -3213,13 +3179,7 @@ router.post('/clientes/salvar', async (req, res) => {
         const clienteSalvo = await salvarCliente(req.body);
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
-            try {
-                const resultadoEnvio = await enviarTesteLiberadoCliente(clienteSalvo);
-                return res.redirect(montarUrlListaClientesMensagem(resultadoEnvio.mensagem));
-            } catch (err) {
-                console.error(`[clientes] Falha ao enviar teste ao salvar cliente ${clienteSalvo.id}: ${err.message}`);
-                return res.redirect(montarUrlListaClientesMensagem(`Cliente salvo, mas nao foi possivel enviar o teste: ${err.message}`));
-            }
+            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, 'Cliente teste salvo. Use o botao Enviar teste liberado somente se quiser enviar ou reenviar a mensagem.'));
         }
 
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
@@ -3563,10 +3523,33 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
         dataInicio: req.body.dataInicio || cliente.dataInicio,
         validade: req.body.validade || cliente.dataVencimento || cliente.vencimento
     };
+    const faltando = camposFaltandoTesteLiberado(dados);
+
+    if (faltando.length) {
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Preencha antes de enviar: ${faltando.join(', ')}.`));
+    }
 
     try {
-        const mensagem = montarMensagemTesteLiberado(dados);
-        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+        const clienteAtualizado = await salvarCliente({
+            ...cliente,
+            id: cliente.id,
+            nome: dados.nome,
+            telefone: cliente.telefone,
+            usuario: dados.usuario,
+            senha: dados.senha,
+            aparelho: dados.aparelho,
+            dataInicio: dados.dataInicio,
+            dataVencimento: dados.validade,
+            vencimento: dados.validade,
+            appsInstalados: dados.aplicativo ? [dados.aplicativo] : lerListaSalva(cliente.appsInstalados),
+            dispositivosSelecionados: dados.aparelho ? [dados.aparelho] : lerListaSalva(cliente.dispositivosSelecionados),
+            paineisSelecionados: dados.painel ? [dados.painel] : lerListaSalva(cliente.paineisSelecionados),
+            appInstalado: cliente.appInstalado || Boolean(dados.aplicativo),
+            status: 'teste'
+        });
+        const dadosAtualizados = dadosTesteLiberadoDoCliente(clienteAtualizado);
+        const mensagem = montarMensagemTesteLiberado(dadosAtualizados);
+        const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
         registrarEnvioDoRobo(destino, mensagem);
         const envio = await aguardarComTimeout(
             client.sendMessage(destino, mensagem),
@@ -3579,7 +3562,6 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
         }
 
         registrarMensagemDoRobo(envio);
-        await cadastrarTesteLiberadoPorAtendente(dados);
         console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
         agendarEncerramentoTeste(client, destino);
         return res.redirect(montarUrlClienteMensagem(cliente.id, 'Teste gratis liberado enviado e cadastro atualizado'));
