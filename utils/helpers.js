@@ -29,9 +29,16 @@ function isPedidoTeste(texto) {
     return /\b(gratis|teste)\b/.test(textoNormalizado);
 }
 
+function isMensagemConfirmacao(texto) {
+    const textoNormalizado = normalizarTexto(texto);
+
+    return /^(ok|okay|blz|beleza|certo|certinho|sim|ta|tá|obrigado|obrigada|vlw|valeu|show|legal|perfeito)$/i.test(textoNormalizado);
+}
+
 module.exports = {
     delay,
     getSaudacao,
+    isMensagemConfirmacao,
     isPalavraChave,
     isPedidoTeste,
     normalizarTexto
