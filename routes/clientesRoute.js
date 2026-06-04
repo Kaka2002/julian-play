@@ -47,8 +47,8 @@ const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/m
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
-const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 60000);
-const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 120000);
+const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
+const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -224,6 +224,7 @@ function statusClasse(status) {
 function textoVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
+    const tempo = textoTempoRestante(vencimento);
 
     if (dias === null) return 'Sem vencimento';
     if (vencimentoExpirou(vencimento)) {
@@ -231,7 +232,9 @@ function textoVencimento(cliente) {
         return `Vencido ha ${Math.abs(dias)} dia(s)`;
     }
     if (dias < 0) return `Vencido ha ${Math.abs(dias)} dia(s)`;
-    if (dias === 0) return 'Vence hoje';
+    if (tempo && tempo !== '-') {
+        return `Vence em ${tempo.replace(/ restantes?$/, '')}`;
+    }
 
     return `Vence em ${dias} dia(s)`;
 }
@@ -1563,16 +1566,53 @@ function formatarDataHoraCurta(valor) {
 }
 
 function textoDiasRestantes(valor) {
+    return textoTempoRestante(valor);
+}
+
+function plural(valor, singular, pluralTexto) {
+    return Number(valor) === 1 ? singular : pluralTexto;
+}
+
+function textoTempoRestante(valor) {
     if (!valor) return '-';
 
     const hoje = new Date();
     const data = new Date(String(valor).length <= 10 ? `${valor}T23:59:59` : valor);
     if (Number.isNaN(data.getTime())) return '-';
 
-    const dias = Math.ceil((data - hoje) / (24 * 60 * 60 * 1000));
-    if (dias < 0) return `${Math.abs(dias)}d vencido`;
-    if (dias === 0) return 'vence hoje';
-    return `${dias}d restantes`;
+    const minuto = 60 * 1000;
+    const hora = 60 * minuto;
+    const dia = 24 * hora;
+    const diff = data - hoje;
+    const vencido = diff < 0;
+    const totalMinutos = Math.ceil(Math.abs(diff) / minuto);
+
+    if (totalMinutos <= 0) return vencido ? 'vencido agora' : 'vence agora';
+
+    if (totalMinutos < 60) {
+        const unidade = plural(totalMinutos, 'minuto', 'minutos');
+        const sufixo = plural(totalMinutos, 'restante', 'restantes');
+        return vencido ? `${totalMinutos} ${unidade} vencido` : `${totalMinutos} ${unidade} ${sufixo}`;
+    }
+
+    if (totalMinutos < 24 * 60) {
+        const horas = Math.floor(totalMinutos / 60);
+        const minutos = totalMinutos % 60;
+        const textoHoras = `${horas} ${plural(horas, 'hora', 'horas')}`;
+
+        if (!minutos) {
+            const sufixo = plural(horas, 'restante', 'restantes');
+            return vencido ? `${textoHoras} vencido` : `${textoHoras} ${sufixo}`;
+        }
+
+        const textoMinutos = `${minutos} ${plural(minutos, 'minuto', 'minutos')}`;
+        return vencido ? `${textoHoras} e ${textoMinutos} vencido` : `${textoHoras} e ${textoMinutos} restantes`;
+    }
+
+    const dias = Math.ceil(Math.abs(diff) / dia);
+    const textoDias = `${dias} ${plural(dias, 'dia', 'dias')}`;
+    const sufixo = plural(dias, 'restante', 'restantes');
+    return vencido ? `${textoDias} vencido` : `${textoDias} ${sufixo}`;
 }
 
 function renderChips(valor, classe) {
@@ -2130,7 +2170,7 @@ function cardVencimento(cliente) {
             <div class="helper">${escapar(cliente.telefone || '')}</div>
         </div>
         <div>
-            <div class="due ${classeVencimento}">${escapar(textoVencimento(cliente))}</div>
+            <div class="due ${classeVencimento}" data-vencimento-restante="${escapar(vencimento)}" data-prefixo="dashboard">${escapar(textoVencimento(cliente))}</div>
             <div class="due-date">${escapar(formatarDataHoraCurta(vencimento))}</div>
         </div>
         <span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span>
@@ -2191,7 +2231,7 @@ function tabelaClientes(clientes) {
         <td data-label="Início">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
         <td data-label="Vencimento">
             <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
-            <div class="cell-muted">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
+            <div class="cell-muted" data-vencimento-restante="${escapar(cliente.dataVencimento || cliente.vencimento)}">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
         </td>
         <td data-label="Aplicativos">
             ${renderChips(cliente.appsInstalados, 'app-chip')}
@@ -2252,6 +2292,77 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                 const ativo = document.activeElement;
                 return ativo && ['INPUT', 'SELECT', 'TEXTAREA'].includes(ativo.tagName);
             }
+
+            function plural(valor, singular, pluralTexto) {
+                return Number(valor) === 1 ? singular : pluralTexto;
+            }
+
+            function textoTempoRestante(valor, prefixo) {
+                if (!valor) return '-';
+
+                const data = new Date(String(valor).length <= 10 ? String(valor) + 'T23:59:59' : valor);
+                if (Number.isNaN(data.getTime())) return '-';
+
+                const minuto = 60 * 1000;
+                const hora = 60 * minuto;
+                const dia = 24 * hora;
+                const diff = data - new Date();
+                const vencido = diff < 0;
+                const totalMinutos = Math.ceil(Math.abs(diff) / minuto);
+
+                if (totalMinutos <= 0) return vencido ? 'vencido agora' : 'vence agora';
+
+                let texto = '';
+
+                if (totalMinutos < 60) {
+                    const unidade = plural(totalMinutos, 'minuto', 'minutos');
+                    const sufixo = plural(totalMinutos, 'restante', 'restantes');
+                    texto = vencido ? totalMinutos + ' ' + unidade + ' vencido' : totalMinutos + ' ' + unidade + ' ' + sufixo;
+                } else if (totalMinutos < 24 * 60) {
+                    const horas = Math.floor(totalMinutos / 60);
+                    const minutos = totalMinutos % 60;
+                    const textoHoras = horas + ' ' + plural(horas, 'hora', 'horas');
+
+                    if (!minutos) {
+                        const sufixo = plural(horas, 'restante', 'restantes');
+                        texto = vencido ? textoHoras + ' vencido' : textoHoras + ' ' + sufixo;
+                    } else {
+                        const textoMinutos = minutos + ' ' + plural(minutos, 'minuto', 'minutos');
+                        texto = vencido ? textoHoras + ' e ' + textoMinutos + ' vencido' : textoHoras + ' e ' + textoMinutos + ' restantes';
+                    }
+                } else {
+                    const dias = Math.ceil(Math.abs(diff) / dia);
+                    const textoDias = dias + ' ' + plural(dias, 'dia', 'dias');
+                    const sufixo = plural(dias, 'restante', 'restantes');
+                    texto = vencido ? textoDias + ' vencido' : textoDias + ' ' + sufixo;
+                }
+
+                if (prefixo === 'dashboard' && !vencido && texto !== '-') {
+                    return 'Vence em ' + texto.replace(/ restantes?$/, '');
+                }
+
+                if (prefixo === 'dashboard' && vencido) {
+                    return texto.includes('vencido agora') ? 'Vencido agora' : texto.replace(' vencido', ' vencido');
+                }
+
+                return texto;
+            }
+
+            function atualizarVencimentos() {
+                document.querySelectorAll('[data-vencimento-restante]').forEach((elemento) => {
+                    const texto = textoTempoRestante(elemento.dataset.vencimentoRestante, elemento.dataset.prefixo || '');
+                    if (texto && texto !== '-') elemento.textContent = texto;
+                    const data = new Date(String(elemento.dataset.vencimentoRestante || '').length <= 10
+                        ? String(elemento.dataset.vencimentoRestante || '') + 'T23:59:59'
+                        : elemento.dataset.vencimentoRestante);
+                    if (!Number.isNaN(data.getTime()) && elemento.classList.contains('due')) {
+                        elemento.classList.toggle('expired', data < new Date());
+                    }
+                });
+            }
+
+            atualizarVencimentos();
+            setInterval(atualizarVencimentos, 60000);
 
             setInterval(() => {
                 if (document.hidden) return;

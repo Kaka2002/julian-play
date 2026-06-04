@@ -72,7 +72,7 @@ Para continuar usando sem interrupção, escolha um plano fixo:
 
 ${menuRenovacao()}
 
-Digite apenas o número do plano que deseja ativar.`;
+Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
 }
 
 function montarMensagemTesteExpirado(cliente) {
