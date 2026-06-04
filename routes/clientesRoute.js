@@ -186,7 +186,7 @@ function calcularResumo(clientes) {
         ativos: clientes.filter(cliente => cliente.status === 'ativo').length,
         vencidos: clientes.filter(cliente => {
             const vencimento = vencimentoCliente(cliente);
-            return vencimento && (vencimento.slice(0, 10) < hoje || vencimentoExpirou(vencimento));
+            return !clienteEhTeste(cliente) && vencimento && (vencimento.slice(0, 10) < hoje || vencimentoExpirou(vencimento));
         }).length,
         vencendo: clientes.filter(cliente => {
             const vencimento = vencimentoCliente(cliente);
@@ -1705,7 +1705,10 @@ Aguarde o atendente informar os procedimentos corretos para configurar seu teste
 }
 
 function clienteEhTeste(cliente = {}) {
-    return String(cliente.status || '').toLowerCase() === 'teste';
+    const status = String(cliente.status || '').toLowerCase();
+    const plano = String(cliente.plano || '').toLowerCase();
+
+    return status === 'teste' || plano.includes('teste');
 }
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
@@ -2110,11 +2113,12 @@ function cardVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
     const classeVencimento = dias < 0 || vencimentoExpirou(vencimento) ? 'expired' : '';
+    const marcadorTeste = clienteEhTeste(cliente) ? '<span class="badge info">Teste grÃ¡tis</span>' : '';
 
     return `<div class="client-row">
         <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
         <div>
-            <div class="client-name">${escapar(cliente.nome)}</div>
+            <div class="client-name">${escapar(cliente.nome)} ${marcadorTeste}</div>
             <div class="helper">${escapar(cliente.telefone || '')}</div>
         </div>
         <div>
