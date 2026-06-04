@@ -3179,7 +3179,7 @@ router.post('/clientes/salvar', async (req, res) => {
         const clienteSalvo = await salvarCliente(req.body);
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
-            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, 'Cliente teste salvo. Use o botao Enviar teste liberado somente se quiser enviar ou reenviar a mensagem.'));
+            return res.redirect(montarUrlListaClientesMensagem('Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
         }
 
         res.redirect('/clientes/todos?mensagem=Cliente salvo com sucesso');
