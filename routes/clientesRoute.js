@@ -1749,7 +1749,7 @@ Seu acesso de teste foi preparado com sucesso.
 *Data/Início:* ${formatarDataHoraMensagem(dados.dataInicio)}
 *Válido até:* ${formatarDataHoraMensagem(dados.validade)}
 
-Aguarde o atendente informar os procedimentos corretos para configurar seu teste grátis no aplicativo.`;
+Teste configurado. Para encerrar o atendimento, digite *sair*.`;
 }
 
 function clienteEhTeste(cliente = {}) {

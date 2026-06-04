@@ -419,7 +419,7 @@ Seu acesso de teste foi preparado com sucesso.
 
 Abra o aplicativo no dispositivo informado e use os dados acima.
 
-Se aparecer alguma dúvida na tela, envie uma foto aqui.`;
+Para encerrar o atendimento, digite *sair*.`;
 }
 
 function mensagemTransferenciaTesteSmartTV(nome, aparelho) {
