@@ -49,6 +49,8 @@ const DIAS_DASHBOARD = 7;
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
+const CLIENTES_POR_PAGINA = 10;
+const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -57,6 +59,39 @@ function escapar(valor) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function paginaAtual(valor) {
+    const pagina = Number.parseInt(valor, 10);
+    return Number.isFinite(pagina) && pagina > 0 ? pagina : 1;
+}
+
+function paginarItens(itens = [], pagina = 1, porPagina = 10) {
+    const total = itens.length;
+    const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+    const paginaSegura = Math.min(Math.max(1, pagina), totalPaginas);
+    const inicio = (paginaSegura - 1) * porPagina;
+
+    return {
+        itens: itens.slice(inicio, inicio + porPagina),
+        pagina: paginaSegura,
+        total,
+        totalPaginas,
+        porPagina
+    };
+}
+
+function montarUrlPaginacao(base, params = {}, pagina = 1) {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([chave, valor]) => {
+        if (valor !== undefined && valor !== null && String(valor) !== '') {
+            query.set(chave, String(valor));
+        }
+    });
+
+    query.set('pagina', String(pagina));
+    return `${base}?${query.toString()}`;
 }
 
 function lerUploadMultipart(req) {
@@ -754,6 +789,48 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             width: 38px;
             padding: 0;
             border-radius: 999px;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 16px 18px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .pagination-info {
+            margin-right: auto;
+            font-size: 14px;
+        }
+
+        .page-link {
+            min-width: 36px;
+            min-height: 34px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 10px;
+            border-radius: 9px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font-size: 14px;
+            box-shadow: 0 1px 6px rgba(15, 23, 42, .04);
+        }
+
+        .page-link.active {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .page-link.disabled {
+            pointer-events: none;
+            opacity: .45;
         }
 
         .client-row {
@@ -1558,6 +1635,17 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
             .row-actions {
                 justify-content: flex-start;
+            }
+
+            .pagination {
+                align-items: stretch;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+
+            .pagination-info {
+                width: 100%;
+                margin-right: 0;
             }
 
             .clients-toolbar {
@@ -2367,6 +2455,27 @@ function pluralCliente(total) {
     return Number(total) === 1 ? 'cliente' : 'clientes';
 }
 
+function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }) {
+    if (totalPaginas <= 1) return '';
+
+    const inicio = total ? ((pagina - 1) * porPagina) + 1 : 0;
+    const fim = Math.min(total, pagina * porPagina);
+    const paginas = [];
+    const primeira = Math.max(1, pagina - 2);
+    const ultima = Math.min(totalPaginas, pagina + 2);
+
+    for (let numero = primeira; numero <= ultima; numero += 1) {
+        paginas.push(`<a class="page-link ${numero === pagina ? 'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
+    }
+
+    return `<nav class="pagination" aria-label="Paginação">
+        <span class="pagination-info">${escapar(inicio)}-${escapar(fim)} de ${escapar(total)}</span>
+        <a class="page-link ${pagina <= 1 ? 'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
+        ${paginas.join('')}
+        <a class="page-link ${pagina >= totalPaginas ? 'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
+    </nav>`;
+}
+
 function receitaMensalCard(receita) {
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
@@ -2416,10 +2525,11 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes) {
+function dashboard(clientes, pagina = 1) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(clientes);
     const proximos = clientesComVencimentoProximo(clientes);
+    const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
 
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
@@ -2447,7 +2557,14 @@ function dashboard(clientes) {
                 <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
-        ${proximos.length ? proximos.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
+        ${proximosPaginados.itens.length ? proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
+        ${paginacao({
+            base: '/clientes',
+            pagina: proximosPaginados.pagina,
+            totalPaginas: proximosPaginados.totalPaginas,
+            total: proximosPaginados.total,
+            porPagina: proximosPaginados.porPagina
+        })}
     </section>
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
@@ -2617,10 +2734,12 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
     </script>`;
 }
 
-function listaClientes({ clientes, busca, status }) {
+function listaClientes({ clientes, busca, status, paginacaoClientes }) {
+    const totalClientes = paginacaoClientes?.total ?? clientes.length;
+
     return `<section class="page-title">
         <h1>Clientes</h1>
-        <div class="subtitle">${clientes.length} clientes cadastrados</div>
+        <div class="subtitle">${totalClientes} clientes cadastrados</div>
     </section>
     <form class="clients-toolbar" method="get" action="/clientes/todos">
         <div class="clients-search">
@@ -2649,6 +2768,14 @@ function listaClientes({ clientes, busca, status }) {
     </div>
     <section class="clients-panel">
         ${tabelaClientes(clientes)}
+        ${paginacaoClientes ? paginacao({
+            base: '/clientes/todos',
+            params: { busca, status },
+            pagina: paginacaoClientes.pagina,
+            totalPaginas: paginacaoClientes.totalPaginas,
+            total: paginacaoClientes.total,
+            porPagina: paginacaoClientes.porPagina
+        }) : ''}
     </section>
     ${autoAtualizarPaginaScript(CLIENTES_AUTO_REFRESH_MS)}`;
 }
@@ -3022,10 +3149,11 @@ router.get('/clientes', async (req, res) => {
     desativarCache(res);
     const clientes = await listarClientes();
     const mensagem = req.query.mensagem || '';
+    const pagina = paginaAtual(req.query.pagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes),
+        conteudo: dashboard(clientes, pagina),
         mensagem,
         ativo: 'painel'
     });
@@ -3035,12 +3163,19 @@ router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
     const busca = req.query.busca || '';
     const status = req.query.status || '';
-    const clientes = await listarClientes({ busca, status, limite: 10 });
+    const pagina = paginaAtual(req.query.pagina);
+    const todosClientes = await listarClientes({ busca, status });
+    const paginacaoClientes = paginarItens(todosClientes, pagina, CLIENTES_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
         titulo: 'Clientes',
-        conteudo: listaClientes({ clientes, busca, status }),
+        conteudo: listaClientes({
+            clientes: paginacaoClientes.itens,
+            busca,
+            status,
+            paginacaoClientes
+        }),
         mensagem,
         ativo: 'clientes'
     });
