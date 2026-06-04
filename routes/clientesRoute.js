@@ -163,6 +163,85 @@ function vencimentoExpirou(valor) {
     return Boolean(data && data < new Date());
 }
 
+function numeroMoeda(valor) {
+    if (valor === null || valor === undefined || valor === '') return 0;
+
+    let texto = String(valor)
+        .replace(/[^\d,.-]/g, '')
+        .trim();
+
+    if (texto.includes(',')) {
+        texto = texto.replace(/\./g, '').replace(',', '.');
+    }
+
+    const numero = Number(texto);
+
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function formatarMoeda(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+    });
+}
+
+function diasPlanoCliente(cliente = {}) {
+    const dias = Number(cliente.diasContrato || 0);
+    const plano = String(cliente.plano || '').toLowerCase();
+
+    if (dias > 0) return dias;
+    if (plano.includes('trimestral')) return 90;
+    if (plano.includes('semestral')) return 180;
+    if (plano.includes('anual')) return 365;
+
+    return 30;
+}
+
+function grupoPlanoReceita(cliente = {}) {
+    const plano = String(cliente.plano || 'Mensal').trim();
+    const normalizado = plano.toLowerCase();
+
+    if (normalizado.includes('trimestral')) return 'Trimestral';
+    if (normalizado.includes('semestral')) return 'Semestral';
+    if (normalizado.includes('anual')) return 'Anual';
+    if (normalizado.includes('mensal')) return 'Mensal';
+
+    return plano || 'Outros';
+}
+
+function calcularReceitaMensal(clientes) {
+    const grupos = new Map();
+
+    clientes
+        .filter(cliente => cliente.status === 'ativo' && !clienteEhTeste(cliente))
+        .forEach((cliente) => {
+            const grupo = grupoPlanoReceita(cliente);
+            const dias = diasPlanoCliente(cliente);
+            const valorPlano = numeroMoeda(cliente.valorPlano);
+            const assinaturaApp = numeroMoeda(cliente.assinaturaApp);
+            const mensalPlano = dias > 0 ? (valorPlano / dias) * 30 : valorPlano;
+            const mensal = mensalPlano + assinaturaApp;
+            const atual = grupos.get(grupo) || { plano: grupo, clientes: 0, total: 0 };
+
+            atual.clientes += 1;
+            atual.total += mensal;
+            grupos.set(grupo, atual);
+        });
+
+    const ordem = ['Mensal', 'Trimestral', 'Semestral', 'Anual'];
+    const itens = Array.from(grupos.values())
+        .sort((a, b) => {
+            const posA = ordem.indexOf(a.plano);
+            const posB = ordem.indexOf(b.plano);
+            if (posA !== -1 || posB !== -1) return (posA === -1 ? 99 : posA) - (posB === -1 ? 99 : posB);
+            return a.plano.localeCompare(b.plano, 'pt-BR');
+        });
+    const total = itens.reduce((soma, item) => soma + item.total, 0);
+
+    return { total, itens };
+}
+
 function calcularDiasRestantes(vencimento) {
     if (!vencimento) return null;
 
@@ -270,6 +349,7 @@ function icon(nome) {
         image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
         ,
         planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>',
+        trend: '<svg viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
         refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 8h5V3"/></svg>'
     };
 
@@ -521,6 +601,97 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .metric-icon.green { background: var(--green-soft); color: var(--green); }
         .metric-icon.red { background: var(--red-soft); color: var(--red); }
         .metric-icon.orange { background: var(--orange-soft); color: var(--orange); }
+
+        .revenue-card {
+            padding: 30px 34px;
+            margin-bottom: 36px;
+        }
+
+        .revenue-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 18px;
+            align-items: flex-start;
+            margin-bottom: 26px;
+        }
+
+        .revenue-title {
+            color: var(--muted);
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .revenue-total {
+            display: block;
+            margin-top: 10px;
+            font-size: 38px;
+            line-height: 1;
+            font-weight: 800;
+        }
+
+        .revenue-note {
+            display: block;
+            margin-top: 12px;
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .revenue-icon {
+            display: grid;
+            place-items: center;
+            width: 54px;
+            height: 54px;
+            border-radius: 14px;
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
+        .revenue-list {
+            display: grid;
+            gap: 14px;
+            padding-top: 24px;
+            border-top: 1px solid var(--line);
+        }
+
+        .revenue-row {
+            display: grid;
+            grid-template-columns: minmax(110px, 1fr) minmax(90px, .8fr) minmax(90px, 140px) minmax(90px, auto);
+            gap: 14px;
+            align-items: center;
+        }
+
+        .revenue-plan {
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .revenue-count {
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .revenue-bar {
+            height: 7px;
+            border-radius: 999px;
+            background: #eef0f4;
+            overflow: hidden;
+        }
+
+        .revenue-bar span {
+            display: block;
+            width: var(--bar-width);
+            height: 100%;
+            border-radius: inherit;
+            background: var(--blue);
+        }
+
+        .revenue-value {
+            text-align: right;
+            font-size: 17px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
 
         .panel {
             overflow: hidden;
@@ -1279,6 +1450,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 grid-template-columns: repeat(2, minmax(150px, 1fr));
             }
 
+            .revenue-row {
+                grid-template-columns: minmax(100px, 1fr) minmax(82px, auto) minmax(90px, auto);
+            }
+
+            .revenue-bar {
+                display: none;
+            }
+
             .model-grid {
                 grid-template-columns: 1fr;
             }
@@ -1321,6 +1500,27 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
             .metric {
                 min-height: 120px;
+            }
+
+            .revenue-card {
+                padding: 24px 20px;
+            }
+
+            .revenue-head {
+                align-items: flex-start;
+            }
+
+            .revenue-total {
+                font-size: 30px;
+            }
+
+            .revenue-row {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+
+            .revenue-value {
+                text-align: left;
             }
 
             .panel-head {
@@ -2157,6 +2357,38 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
     </div>`;
 }
 
+function pluralCliente(total) {
+    return Number(total) === 1 ? 'cliente' : 'clientes';
+}
+
+function receitaMensalCard(receita) {
+    const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
+    const linhas = receita.itens.length
+        ? receita.itens.map((item) => {
+            const largura = Math.max(8, Math.round((item.total / maiorValor) * 100));
+
+            return `<div class="revenue-row">
+                <div class="revenue-plan">${escapar(item.plano)}</div>
+                <div class="revenue-count">(${escapar(item.clientes)} ${pluralCliente(item.clientes)})</div>
+                <div class="revenue-bar" aria-hidden="true"><span style="--bar-width:${largura}%"></span></div>
+                <div class="revenue-value">${escapar(formatarMoeda(item.total))}</div>
+            </div>`;
+        }).join('')
+        : '<div class="empty">Nenhuma receita mensal recorrente encontrada.</div>';
+
+    return `<section class="panel revenue-card">
+        <div class="revenue-head">
+            <div>
+                <div class="revenue-title">Receita Mensal Recorrente</div>
+                <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
+                <span class="revenue-note">Baseada no valor dos planos e assinatura app dos clientes ativos</span>
+            </div>
+            <span class="revenue-icon">${icon('trend')}</span>
+        </div>
+        <div class="revenue-list">${linhas}</div>
+    </section>`;
+}
+
 function cardVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
@@ -2180,6 +2412,7 @@ function cardVencimento(cliente) {
 
 function dashboard(clientes) {
     const resumo = calcularResumo(clientes);
+    const receita = calcularReceitaMensal(clientes);
     const proximos = clientesComVencimentoProximo(clientes);
 
     return `<section class="page-title">
@@ -2194,6 +2427,7 @@ function dashboard(clientes) {
         ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
     </section>
+    ${receitaMensalCard(receita)}
     <section class="panel">
         <div class="panel-head">
             <div>
