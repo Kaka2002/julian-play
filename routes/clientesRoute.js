@@ -125,6 +125,15 @@ function adicionarDiasISO(dias) {
     return data.toISOString().slice(0, 10);
 }
 
+function fimMesSaoPauloISO() {
+    const hoje = hojeSaoPauloISO();
+    const [ano, mes] = hoje.split('-').map(Number);
+    const data = new Date(ano, mes, 0);
+    const dia = String(data.getDate()).padStart(2, '0');
+
+    return `${ano}-${String(mes).padStart(2, '0')}-${dia}`;
+}
+
 function hojeSaoPauloISO() {
     const partes = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
@@ -139,6 +148,19 @@ function hojeSaoPauloISO() {
 
 function vencimentoCliente(cliente = {}) {
     return cliente.dataVencimento || cliente.vencimento || '';
+}
+
+function dataHoraVencimento(valor) {
+    if (!valor) return null;
+
+    const texto = String(valor);
+    const data = new Date(texto.length <= 10 ? `${texto}T23:59:59` : texto);
+    return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function vencimentoExpirou(valor) {
+    const data = dataHoraVencimento(valor);
+    return Boolean(data && data < new Date());
 }
 
 function calcularDiasRestantes(vencimento) {
@@ -156,18 +178,25 @@ function calcularDiasRestantes(vencimento) {
 function calcularResumo(clientes) {
     const hoje = hojeISO();
     const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
+    const fimMesISO = fimMesSaoPauloISO();
 
     return {
         total: clientes.length,
         testes: clientes.filter(cliente => cliente.status === 'teste').length,
         ativos: clientes.filter(cliente => cliente.status === 'ativo').length,
         vencidos: clientes.filter(cliente => {
-            const vencimento = vencimentoCliente(cliente).slice(0, 10);
-            return vencimento && vencimento < hoje;
+            const vencimento = vencimentoCliente(cliente);
+            return vencimento && (vencimento.slice(0, 10) < hoje || vencimentoExpirou(vencimento));
         }).length,
         vencendo: clientes.filter(cliente => {
-            const vencimento = vencimentoCliente(cliente).slice(0, 10);
-            return vencimento && vencimento >= hoje && vencimento <= limiteISO;
+            const vencimento = vencimentoCliente(cliente);
+            const data = vencimento.slice(0, 10);
+            return vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= limiteISO;
+        }).length,
+        vencemMes: clientes.filter(cliente => {
+            const vencimento = vencimentoCliente(cliente);
+            const data = vencimento.slice(0, 10);
+            return vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= fimMesISO;
         }).length
     };
 }
@@ -193,9 +222,14 @@ function statusClasse(status) {
 }
 
 function textoVencimento(cliente) {
-    const dias = calcularDiasRestantes(vencimentoCliente(cliente));
+    const vencimento = vencimentoCliente(cliente);
+    const dias = calcularDiasRestantes(vencimento);
 
     if (dias === null) return 'Sem vencimento';
+    if (vencimentoExpirou(vencimento)) {
+        if (dias === 0) return 'Vencido hoje';
+        return `Vencido ha ${Math.abs(dias)} dia(s)`;
+    }
     if (dias < 0) return `Vencido ha ${Math.abs(dias)} dia(s)`;
     if (dias === 0) return 'Vence hoje';
 
@@ -2075,7 +2109,7 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
 function cardVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
-    const classeVencimento = dias < 0 ? 'expired' : '';
+    const classeVencimento = dias < 0 || vencimentoExpirou(vencimento) ? 'expired' : '';
 
     return `<div class="client-row">
         <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
@@ -2106,6 +2140,7 @@ function dashboard(clientes) {
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
         ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
     </section>
     <section class="panel">
         <div class="panel-head">

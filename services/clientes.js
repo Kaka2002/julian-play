@@ -298,7 +298,7 @@ function buscarClientePorUsuarioIPTV(usuario) {
 }
 
 async function atualizarStatusAutomaticoClientes() {
-    const hoje = new Date().toISOString().slice(0, 10);
+    const agora = agoraSaoPauloISO();
 
     await executar(
         `UPDATE clientes SET
@@ -307,8 +307,8 @@ async function atualizarStatusAutomaticoClientes() {
         WHERE status IN ('ativo', 'pendente', 'teste')
             AND vencimento IS NOT NULL
             AND vencimento != ''
-            AND date(vencimento) < date(?)`,
-        [hoje]
+            AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) < datetime(replace(?, 'T', ' '))`,
+        [agora]
     );
 
     await executar(
@@ -318,8 +318,8 @@ async function atualizarStatusAutomaticoClientes() {
         WHERE status = 'expirado'
             AND vencimento IS NOT NULL
             AND vencimento != ''
-            AND date(vencimento) >= date(?)`,
-        [hoje]
+            AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) >= datetime(replace(?, 'T', ' '))`,
+        [agora]
     );
 }
 
@@ -494,6 +494,22 @@ function hojeSaoPauloISO() {
 
     const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
     return `${mapa.year}-${mapa.month}-${mapa.day}`;
+}
+
+function agoraSaoPauloISO() {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).formatToParts(new Date());
+
+    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}T${mapa.hour}:${mapa.minute}:${mapa.second}`;
 }
 
 function listarClientesParaAvisosProgramados() {
