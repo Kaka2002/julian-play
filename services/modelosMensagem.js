@@ -27,7 +27,7 @@ const modelosPadrao = [
         plano: 'padrao',
         titulo: 'Aviso de Vencimento - 1 Dia Antes',
         cor: 'orange',
-        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence amanhã, dia *{{vencimento}}*.\n\nRenove sua assinatura para continuar com acesso sem interrupções.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano {{plano}} vence amanhã, dia {{vencimento}}.\n\nRenove sua assinatura para continuar com acesso sem interrupções.'
     },
     {
         chave: 'aviso_vencimento_hoje',
@@ -253,6 +253,29 @@ function formatarData(dataISO) {
     return `${dia}/${mes}/${ano}`;
 }
 
+function formatarDataHora(valor) {
+    if (!valor) return '';
+
+    const texto = String(valor);
+    const data = new Date(texto.length <= 10 ? `${texto}T00:00:00` : texto);
+    if (Number.isNaN(data.getTime())) return formatarData(texto);
+
+    const dia = String(data.getDate()).padStart(2, '0');
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const ano = String(data.getFullYear());
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
+
+    if (texto.length <= 10) return `${dia}/${mes}/${ano}`;
+    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+}
+
+function ajustarModeloAvisoAmanha(texto) {
+    return String(texto || '')
+        .replace('Seu plano *{{plano}}* vence amanhã, dia *{{vencimento}}*.', 'Seu plano {{plano}} vence amanhã, dia {{vencimento}}.')
+        .replace('Seu plano *{{plano}}* vence amanha, dia *{{vencimento}}*.', 'Seu plano {{plano}} vence amanhã, dia {{vencimento}}.');
+}
+
 function aplicarVariaveis(texto, variaveis) {
     return String(texto || '').replace(/\{\{(nome|plano|vencimento|dias|valor)\}\}/g, (_, chave) => {
         return variaveis[chave] ?? '';
@@ -311,7 +334,7 @@ async function montarMensagemPorModelo(cliente, dias) {
     const variaveis = {
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',
-        vencimento: formatarData(cliente.vencimento),
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: Math.abs(dias),
         valor: cliente.valor || ''
     };
@@ -324,12 +347,16 @@ async function montarMensagemAvisoProgramado(cliente, diasAntes) {
     const variaveis = {
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',
-        vencimento: formatarData(cliente.vencimento),
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: Math.abs(Number(diasAntes)),
         valor: cliente.valorPlano || cliente.valor || ''
     };
 
-    return aplicarVariaveis(modelo?.texto || modelosPadrao[0].texto, variaveis);
+    const texto = Number(diasAntes) === 1
+        ? ajustarModeloAvisoAmanha(modelo?.texto || modelosPadrao[0].texto)
+        : (modelo?.texto || modelosPadrao[0].texto);
+
+    return aplicarVariaveis(texto, variaveis);
 }
 
 async function montarMensagemAniversario(cliente) {
@@ -337,7 +364,7 @@ async function montarMensagemAniversario(cliente) {
     const variaveis = {
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',
-        vencimento: formatarData(cliente.vencimento),
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: '',
         valor: cliente.valorPlano || cliente.valor || ''
     };
