@@ -538,6 +538,55 @@ function listarClientesParaAvisosProgramados() {
     ));
 }
 
+function listarTestesGratisParaAvisoPorHorario(agoraIso, limiteIso, codigoAviso) {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
+            FROM clientes
+            WHERE (status = 'teste' OR plano LIKE '%Teste%')
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE datetime(replace(vencimentoEfetivo, 'T', ' ')) > datetime(replace(?, 'T', ' '))
+            AND datetime(replace(vencimentoEfetivo, 'T', ' ')) <= datetime(replace(?, 'T', ' '))
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimentoEfetivo
+                    AND avisos_renovacao.diasAntes = ?
+            )
+        ORDER BY vencimentoEfetivo ASC, nome ASC`,
+        [agoraIso, limiteIso, Number(codigoAviso)]
+    ));
+}
+
+function listarTestesGratisExpiradosParaAviso(agoraIso, codigoAviso) {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
+            FROM clientes
+            WHERE (status = 'teste' OR plano LIKE '%Teste%')
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE datetime(replace(vencimentoEfetivo, 'T', ' ')) <= datetime(replace(?, 'T', ' '))
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimentoEfetivo
+                    AND avisos_renovacao.diasAntes = ?
+            )
+        ORDER BY vencimentoEfetivo ASC, nome ASC`,
+        [agoraIso, Number(codigoAviso)]
+    ));
+}
+
 function listarClientesParaAvisoAntigo(dataLimite) {
     return buscarTodos(
         `SELECT * FROM clientes
@@ -616,6 +665,8 @@ module.exports = {
     removerCliente,
     listarClientesParaAviso,
     listarClientesParaAvisosProgramados,
+    listarTestesGratisParaAvisoPorHorario,
+    listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,
     registrarAvisoRenovacao,
     registrarAvisoRenovacaoProgramado,

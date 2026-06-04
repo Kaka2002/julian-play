@@ -80,6 +80,16 @@ function pausarParaAtendente(telefone, nome = '', origem = 'bot') {
     });
 }
 
+function prepararRenovacaoTesteGratis(telefone, cliente = {}) {
+    definirConversa(telefone, {
+        etapa: 'renovacao_plano',
+        usuarioPainel: cliente.usuario || cliente.usuarioApp || cliente.nome || 'Teste grátis',
+        painel: primeiraOpcaoJson(cliente.paineisSelecionados),
+        clienteId: cliente.id || null,
+        origem: 'teste_gratis_vencendo'
+    });
+}
+
 carregarConversas();
 
 function atendimentoHumanoExpirou(conversa = {}) {
@@ -572,10 +582,20 @@ async function iniciarBoasVindas(message, telefone) {
 }
 
 async function responderMensagem(message) {
-    const telefone = obterDestinoMensagem(message);
+    let telefone = obterDestinoMensagem(message);
     const textoOriginal = message.body || '';
     const texto = normalizar(textoOriginal);
     let conversa = conversas.get(telefone);
+
+    if (!conversa && String(telefone || '').endsWith('@lid')) {
+        const telefoneReal = await obterTelefoneClienteMensagem(message);
+        const conversaTelefoneReal = telefoneReal ? conversas.get(telefoneReal) : null;
+
+        if (conversaTelefoneReal) {
+            telefone = telefoneReal;
+            conversa = conversaTelefoneReal;
+        }
+    }
 
     if (texto === '0' || texto === 'voltar') {
         apagarConversa(telefone);
@@ -945,6 +965,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagensRes
 
 module.exports = {
     pausarParaAtendente,
+    prepararRenovacaoTesteGratis,
     responderMensagem,
     responderEncerramentoRapido,
     registrarTesteLiberadoPorMensagem,

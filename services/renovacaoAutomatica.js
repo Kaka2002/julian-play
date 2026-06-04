@@ -1,6 +1,8 @@
 const { enviarMensagem } = require('./mensagemService');
 const {
     listarClientesParaAvisosProgramados,
+    listarTestesGratisParaAvisoPorHorario,
+    listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,
     registrarAvisoRenovacaoProgramado,
     registrarAvisoAniversario,
@@ -10,10 +12,16 @@ const {
     montarMensagemAvisoProgramado,
     montarMensagemAniversario
 } = require('./modelosMensagem');
+const menuRenovacao = require('../menus/renovacao');
+const { prepararRenovacaoTesteGratis } = require('./conversaService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
+const TESTE_AVISO_MINUTOS = 30;
+const TESTE_AVISO_PLANO = -30;
+const TESTE_AVISO_EXPIRADO_FORA_HORARIO = -31;
 let agendador = null;
 let executando = false;
+let executandoTestes = false;
 let ultimoEnvioAutomatico = '';
 
 function hojeISO() {
@@ -49,6 +57,30 @@ async function montarMensagemRenovacao(cliente) {
 
 function montarDestinoWhatsApp(telefone) {
     return `${normalizarTelefone(telefone)}@c.us`;
+}
+
+function nomeCliente(cliente = {}) {
+    return String(cliente.nome || 'cliente').trim() || 'cliente';
+}
+
+function montarMensagemTesteVencendo(cliente) {
+    return `⚠️ *TESTE GRÁTIS VENCENDO*
+━━━━━━━━━━━━━━━━━━━━
+Olá, *${nomeCliente(cliente)}*! Seu teste grátis vence em aproximadamente 30 minutos.
+
+Para continuar usando sem interrupção, escolha um plano fixo:
+
+${menuRenovacao()}
+
+Digite apenas o número do plano que deseja ativar.`;
+}
+
+function montarMensagemTesteExpirado(cliente) {
+    return `⚠️ *TESTE GRÁTIS EXPIRADO*
+━━━━━━━━━━━━━━━━━━━━
+Olá, *${nomeCliente(cliente)}*! Seu teste grátis expirou.
+
+Para ativar um plano, digite *menu* e escolha uma das opções disponíveis.`;
 }
 
 async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } = {}) {
@@ -125,6 +157,86 @@ function obterAgoraSaoPaulo() {
     };
 }
 
+function formatarDataHoraSaoPaulo(data = new Date()) {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    }).formatToParts(data);
+
+    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    return `${mapa.year}-${mapa.month}-${mapa.day}T${mapa.hour}:${mapa.minute}:${mapa.second}`;
+}
+
+function estaNoHorarioDeTeste(agora = obterAgoraSaoPaulo()) {
+    return agora.hora >= 8 && agora.hora < 23;
+}
+
+async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = {}) {
+    if (executandoTestes) {
+        return { enviados: 0, ignorados: 0, erro: null };
+    }
+
+    executandoTestes = true;
+
+    try {
+        const status = getStatusWhatsApp ? getStatusWhatsApp() : {};
+        const client = getClient ? getClient() : null;
+
+        if (!client || !status.conectado) {
+            return { enviados: 0, ignorados: 0, erro: 'WhatsApp não está conectado.' };
+        }
+
+        const agoraRelogio = obterAgoraSaoPaulo();
+        const dentroHorario = estaNoHorarioDeTeste(agoraRelogio);
+        const agoraIso = formatarDataHoraSaoPaulo();
+        const codigoAviso = dentroHorario ? TESTE_AVISO_PLANO : TESTE_AVISO_EXPIRADO_FORA_HORARIO;
+        const clientes = dentroHorario
+            ? await listarTestesGratisParaAvisoPorHorario(
+                agoraIso,
+                formatarDataHoraSaoPaulo(new Date(Date.now() + TESTE_AVISO_MINUTOS * 60 * 1000)),
+                codigoAviso
+            )
+            : await listarTestesGratisExpiradosParaAviso(agoraIso, codigoAviso);
+        let enviados = 0;
+        let ignorados = 0;
+
+        for (const cliente of clientes) {
+            const destino = montarDestinoWhatsApp(cliente.telefone);
+
+            if (!normalizarTelefone(cliente.telefone)) {
+                ignorados += 1;
+                continue;
+            }
+
+            const mensagem = dentroHorario
+                ? montarMensagemTesteVencendo(cliente)
+                : montarMensagemTesteExpirado(cliente);
+            const enviado = await enviarMensagem(client, destino, mensagem);
+
+            if (enviado) {
+                enviados += 1;
+                await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, codigoAviso);
+
+                if (dentroHorario) {
+                    prepararRenovacaoTesteGratis(destino, cliente);
+                }
+            } else {
+                ignorados += 1;
+            }
+        }
+
+        return { enviados, ignorados, erro: null };
+    } finally {
+        executandoTestes = false;
+    }
+}
+
 function iniciarAgendadorRenovacao(options) {
     if (agendador) return;
 
@@ -154,6 +266,17 @@ function iniciarAgendadorRenovacao(options) {
         const agora = obterAgoraSaoPaulo();
         const jaPassouHorario = agora.hora > horaEnvio || (agora.hora === horaEnvio && agora.minuto >= minutoEnvio);
 
+        verificarTestesGratisVencendo(options)
+            .then((resultado) => {
+                if (resultado.erro) return;
+                if (resultado.enviados || resultado.ignorados) {
+                    console.log(`Teste grátis: ${resultado.enviados} aviso(s), ${resultado.ignorados} ignorado(s).`);
+                }
+            })
+            .catch((err) => {
+                console.log('Erro no aviso de teste grátis:', err.message);
+            });
+
         if (!jaPassouHorario) return;
         if (ultimoEnvioAutomatico === agora.data) return;
 
@@ -168,5 +291,6 @@ function iniciarAgendadorRenovacao(options) {
 module.exports = {
     iniciarAgendadorRenovacao,
     verificarRenovacoes,
+    verificarTestesGratisVencendo,
     montarMensagemRenovacao
 };
