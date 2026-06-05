@@ -86,6 +86,7 @@ const NOTAS_ATENDIMENTO_PADRAO = [
     'Cliente pediu troca de dispositivo.',
     'Cliente pediu suporte para configurar TV.',
     'Cliente pediu suporte para configurar celular.',
+    'O Cliente informou que o aplicativo não está carregando os canais e/ou app não está funcionando.',
     'Cliente indicado por outro cliente.',
     'Cliente deve receber atendimento com prioridade.',
     'Cliente demonstrou comportamento problemático.',
@@ -1383,6 +1384,65 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             line-height: 1;
         }
 
+        .app-access-list {
+            display: grid;
+            gap: 12px;
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .app-access-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .app-access-header strong,
+        .app-access-header span {
+            display: block;
+        }
+
+        .app-access-header strong {
+            color: var(--ink);
+            font-size: 15px;
+        }
+
+        .app-access-header span {
+            margin-top: 3px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        #listaAcessosApp {
+            display: grid;
+            gap: 10px;
+        }
+
+        .app-access-row {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(130px, 1fr)) 42px;
+            gap: 10px;
+            align-items: end;
+            padding: 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+        }
+
+        .app-access-row label {
+            font-size: 12px;
+        }
+
+        .app-access-row input,
+        .app-access-row select {
+            min-height: 38px;
+            font-size: 13px;
+        }
+
         .toggle-line {
             min-height: 42px;
             display: flex;
@@ -1678,6 +1738,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             }
 
             form.fields {
+                grid-template-columns: 1fr;
+            }
+
+            .app-access-header,
+            .app-access-row {
+                display: grid;
                 grid-template-columns: 1fr;
             }
         }
@@ -2178,6 +2244,89 @@ function opcoesMulti(nome, label, itens, selecionados, placeholder) {
     </label>`;
 }
 
+function lerAcessosApp(cliente = {}) {
+    try {
+        const acessos = JSON.parse(cliente.acessosApp || '[]');
+        if (Array.isArray(acessos)) {
+            return acessos
+                .map(acesso => ({
+                    app: String(acesso.app || ''),
+                    dispositivo: String(acesso.dispositivo || ''),
+                    painel: String(acesso.painel || ''),
+                    enderecoMac: String(acesso.enderecoMac || ''),
+                    idAplicativo: String(acesso.idAplicativo || '')
+                }))
+                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.enderecoMac || acesso.idAplicativo);
+        }
+    } catch (err) {
+        // Mantem compatibilidade com cadastros antigos.
+    }
+
+    if (cliente.enderecoMac || cliente.idAplicativo) {
+        return [{
+            app: lerListaSalva(cliente.appsInstalados)[0] || '',
+            dispositivo: lerListaSalva(cliente.dispositivosSelecionados)[0] || '',
+            painel: lerListaSalva(cliente.paineisSelecionados)[0] || '',
+            enderecoMac: cliente.enderecoMac || '',
+            idAplicativo: cliente.idAplicativo || ''
+        }];
+    }
+
+    return [];
+}
+
+function opcoesSelectLista(itens = [], selecionado = '', placeholder = 'Selecione...') {
+    return `<option value="">${escapar(placeholder)}</option>${itens.map(item => {
+        const nome = item.nome || item;
+        return `<option value="${escapar(nome)}" ${nome === selecionado ? 'selected' : ''}>${escapar(nome)}</option>`;
+    }).join('')}`;
+}
+
+function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = []) {
+    return `<div class="app-access-row">
+        <label>App
+            <select name="acessoAppNome">
+                ${opcoesSelectLista(apps, acesso.app, 'Selecione o app...')}
+            </select>
+        </label>
+        <label>Dispositivo
+            <select name="acessoDispositivo">
+                ${opcoesSelectLista(dispositivos, acesso.dispositivo, 'Selecione o dispositivo...')}
+            </select>
+        </label>
+        <label>Painel
+            <select name="acessoPainel">
+                ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
+            </select>
+        </label>
+        <label>Endereço MAC
+            <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
+        </label>
+        <label>ID do Aplicativo
+            <input type="text" name="acessoIdAplicativo" value="${escapar(acesso.idAplicativo || '')}" placeholder="ID gerado no app">
+        </label>
+        <button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>
+    </div>`;
+}
+
+function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = []) {
+    const acessos = lerAcessosApp(cliente);
+    const linhas = acessos.length
+        ? acessos.map(acesso => linhaAcessoApp(acesso, apps, dispositivos, paineis)).join('')
+        : linhaAcessoApp({}, apps, dispositivos, paineis);
+
+    return `<div class="app-access-list full">
+        <div class="app-access-header">
+            <div>
+                <strong>Dados por app instalado</strong>
+                <span>Relacione app, dispositivo, painel, MAC e ID quando o aplicativo exigir.</span>
+            </div>
+            <button class="button secondary" type="button" id="adicionarAcessoApp">${icon('plus')} Adicionar acesso</button>
+        </div>
+        <div id="listaAcessosApp">${linhas}</div>
+    </div>`;
+}
+
 function inputDateTime(valor) {
     return valor ? String(valor).slice(0, 16) : '';
 }
@@ -2496,8 +2645,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             </label>
             ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
-            ${campo({ nome: 'enderecoMac', label: 'Endereço MAC', valor: cliente.enderecoMac, attrs: 'id="enderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off"' })}
-            ${campo({ nome: 'idAplicativo', label: 'ID do Aplicativo', valor: cliente.idAplicativo, attrs: 'placeholder="ID do aplicativo"' })}
+            ${listaAcessosApp(cliente, apps, dispositivos, paineis)}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
             ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
             ${cliente.id ? camposNovaNotaAtendimento() : ''}
@@ -2524,8 +2672,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const statusCliente = document.getElementById('statusCliente');
         const horasTeste = document.getElementById('horasTeste');
         const nomeCliente = document.getElementById('nomeCliente');
-        const enderecoMac = document.getElementById('enderecoMac');
         const camposMoeda = document.querySelectorAll('.money-field');
+        const listaAcessosApp = document.getElementById('listaAcessosApp');
+        const adicionarAcessoApp = document.getElementById('adicionarAcessoApp');
+        const opcoesApps = ${JSON.stringify(apps.map(item => item.nome))};
+        const opcoesDispositivos = ${JSON.stringify(dispositivos.map(item => item.nome))};
+        const opcoesPaineis = ${JSON.stringify(paineis.map(item => item.nome))};
 
         function formatarMoedaCampo(valor) {
             const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
@@ -2623,9 +2775,78 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             nomeCliente.value = capitalizarNome(nomeCliente.value);
         });
 
-        enderecoMac?.addEventListener('input', () => {
-            enderecoMac.value = formatarMac(enderecoMac.value);
+        function opcoesHtml(lista, placeholder) {
+            function escaparHtml(valor) {
+                return String(valor || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            return '<option value="">' + placeholder + '</option>' + lista
+                .map(item => '<option value="' + escaparHtml(item) + '">' + escaparHtml(item) + '</option>')
+                .join('');
+        }
+
+        function novaLinhaAcessoApp() {
+            const linha = document.createElement('div');
+            linha.className = 'app-access-row';
+            linha.innerHTML = ''
+                + '<label>App'
+                + '<select name="acessoAppNome">' + opcoesHtml(opcoesApps, 'Selecione o app...') + '</select>'
+                + '</label>'
+                + '<label>Dispositivo'
+                + '<select name="acessoDispositivo">' + opcoesHtml(opcoesDispositivos, 'Selecione o dispositivo...') + '</select>'
+                + '</label>'
+                + '<label>Painel'
+                + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
+                + '</label>'
+                + '<label>Endereço MAC'
+                + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
+                + '</label>'
+                + '<label>ID do Aplicativo'
+                + '<input type="text" name="acessoIdAplicativo" placeholder="ID gerado no app">'
+                + '</label>'
+                + '<button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>';
+            return linha;
+        }
+
+        function formatarMacsDaTela() {
+            document.querySelectorAll('.mac-field').forEach((campoMac) => {
+                campoMac.value = formatarMac(campoMac.value);
+            });
+        }
+
+        document.addEventListener('input', (event) => {
+            if (!event.target.matches('.mac-field')) return;
+            event.target.value = formatarMac(event.target.value);
         });
+
+        adicionarAcessoApp?.addEventListener('click', () => {
+            listaAcessosApp?.appendChild(novaLinhaAcessoApp());
+        });
+
+        document.addEventListener('click', (event) => {
+            const remover = event.target.closest('.remove-app-access');
+            if (!remover) return;
+
+            const linha = remover.closest('.app-access-row');
+            if (!linha) return;
+
+            const total = listaAcessosApp?.querySelectorAll('.app-access-row').length || 0;
+            if (total <= 1) {
+                linha.querySelectorAll('input, select').forEach(campo => {
+                    campo.value = '';
+                });
+                return;
+            }
+
+            linha.remove();
+        });
+
+        formatarMacsDaTela();
 
         camposMoeda.forEach((campoMoeda) => {
             campoMoeda.value = formatarMoedaCampo(campoMoeda.value);

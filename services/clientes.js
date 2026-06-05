@@ -53,6 +53,12 @@ function normalizarLista(valor) {
     return [limparTexto(valor)].filter(Boolean);
 }
 
+function normalizarListaComVazios(valor) {
+    if (Array.isArray(valor)) return valor.map(limparTexto);
+    if (valor === undefined || valor === null) return [];
+    return [limparTexto(valor)];
+}
+
 function serializarLista(valor) {
     return JSON.stringify(normalizarLista(valor));
 }
@@ -97,6 +103,42 @@ function normalizarMoeda(valor) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     });
+}
+
+function normalizarAcessosApp(dados = {}) {
+    const apps = normalizarListaComVazios(dados.acessoAppNome);
+    const dispositivos = normalizarListaComVazios(dados.acessoDispositivo);
+    const paineis = normalizarListaComVazios(dados.acessoPainel);
+    const macs = normalizarListaComVazios(dados.acessoEnderecoMac);
+    const ids = normalizarListaComVazios(dados.acessoIdAplicativo);
+    const total = Math.max(apps.length, dispositivos.length, paineis.length, macs.length, ids.length);
+    const acessos = [];
+
+    for (let index = 0; index < total; index += 1) {
+        const acesso = {
+            app: limparTexto(apps[index]),
+            dispositivo: limparTexto(dispositivos[index]),
+            painel: limparTexto(paineis[index]),
+            enderecoMac: normalizarMac(macs[index]),
+            idAplicativo: limparTexto(ids[index])
+        };
+
+        if (acesso.app || acesso.dispositivo || acesso.painel || acesso.enderecoMac || acesso.idAplicativo) {
+            acessos.push(acesso);
+        }
+    }
+
+    if (!acessos.length && (limparTexto(dados.enderecoMac) || limparTexto(dados.idAplicativo))) {
+        acessos.push({
+            app: normalizarLista(dados.appsInstalados)[0] || '',
+            dispositivo: normalizarLista(dados.dispositivosSelecionados)[0] || '',
+            painel: normalizarLista(dados.paineisSelecionados)[0] || '',
+            enderecoMac: normalizarMac(dados.enderecoMac),
+            idAplicativo: limparTexto(dados.idAplicativo)
+        });
+    }
+
+    return JSON.stringify(acessos);
 }
 
 function clienteEstaEmTeste(cliente = {}) {
@@ -157,6 +199,7 @@ function montarCliente(dados = {}) {
         senhaApp: limparTexto(dados.senhaApp),
         enderecoMac: normalizarMac(dados.enderecoMac),
         idAplicativo: limparTexto(dados.idAplicativo),
+        acessosApp: normalizarAcessosApp(dados),
         observacoes: limparTexto(dados.observacoes),
         origem: limparTexto(dados.origem),
         tags: normalizarTags(dados.tags),
@@ -484,6 +527,7 @@ async function salvarCliente(dados) {
                 senhaApp = ?,
                 enderecoMac = ?,
                 idAplicativo = ?,
+                acessosApp = ?,
                 observacoes = ?,
                 origem = ?,
                 tags = ?,
@@ -515,6 +559,7 @@ async function salvarCliente(dados) {
                 cliente.senhaApp,
                 cliente.enderecoMac,
                 cliente.idAplicativo,
+                cliente.acessosApp,
                 cliente.observacoes,
                 cliente.origem,
                 cliente.tags,
@@ -538,8 +583,8 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, observacoes, origem, tags, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -565,6 +610,7 @@ async function salvarCliente(dados) {
             cliente.senhaApp,
             cliente.enderecoMac,
             cliente.idAplicativo,
+            cliente.acessosApp,
             cliente.observacoes,
             cliente.origem,
             cliente.tags,
