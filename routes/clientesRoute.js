@@ -1958,6 +1958,51 @@ function secaoNotasCliente(cliente = {}, notas = []) {
     </section>`;
 }
 
+function camposNovaNotaAtendimento() {
+    return `<div class="form-section full">Nova nota de atendimento</div>
+        ${campo({
+            nome: 'novaNotaPadrao',
+            label: 'Nota padrão',
+            attrs: 'id="novaNotaPadraoAtendimento"',
+            opcoes: [
+                { valor: '', texto: 'Selecione uma nota pronta...' },
+                ...NOTAS_ATENDIMENTO_PADRAO.map(nota => ({ valor: nota, texto: nota }))
+            ]
+        })}
+        ${areaTexto({ nome: 'novaNotaTexto', label: 'Nota livre', valor: '' })}
+        <script>
+            (() => {
+                const select = document.getElementById('novaNotaPadraoAtendimento');
+                const textarea = document.querySelector('textarea[name="novaNotaTexto"]');
+
+                if (!select || !textarea) return;
+
+                function dataHoraAtual() {
+                    const agora = new Date();
+                    const partes = new Intl.DateTimeFormat('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }).formatToParts(agora);
+                    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+
+                    return mapa.day + '/' + mapa.month + '/' + mapa.year + ' ' + mapa.hour + ':' + mapa.minute;
+                }
+
+                select.addEventListener('change', () => {
+                    if (!select.value) return;
+                    const nota = dataHoraAtual() + ' - ' + select.value;
+                    textarea.value = textarea.value
+                        ? textarea.value.trim() + '\\n' + nota
+                        : nota;
+                    textarea.focus();
+                });
+            })();
+        </script>`;
+}
+
 function editorMensagemModelo(valor = '') {
     const grupos = [
         ['Mais usados', ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😉', '😎', '🤝', '🙌', '🙏', '👏', '👍', '👌', '💪', '❤️', '💙', '💚', '💛']],
@@ -2480,6 +2525,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
+            ${cliente.id ? camposNovaNotaAtendimento() : ''}
             ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
@@ -3436,6 +3482,12 @@ router.post('/clientes/salvar', async (req, res) => {
     try {
         const alertas = await buscarAlertasCadastroCliente(req.body);
         const clienteSalvo = await salvarCliente(req.body);
+        const novaNota = String(req.body.novaNotaTexto || req.body.novaNotaPadrao || '').trim();
+
+        if (clienteSalvo?.id && novaNota) {
+            await adicionarNotaCliente(clienteSalvo.id, novaNota);
+        }
+
         const mensagemAlerta = alertas.length
             ? 'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
             : 'Cliente salvo com sucesso';
