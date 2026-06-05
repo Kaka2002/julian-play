@@ -46,8 +46,20 @@ app.use('/', qrRoute);
 
 const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);
+    iniciarWhatsApp();
+    iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
+});
+
+server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        console.error(`Porta ${PORT} ja esta em uso. Encerre o outro processo antes de iniciar o julian-play.`);
+        process.exit(1);
+    }
+
+    console.error('Erro ao iniciar servidor:', err);
+    process.exit(1);
 });
 
 async function desligar(signal) {
@@ -58,6 +70,3 @@ async function desligar(signal) {
 
 process.on('SIGTERM', () => desligar('SIGTERM'));
 process.on('SIGINT', () => desligar('SIGINT'));
-
-iniciarWhatsApp();
-iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
