@@ -3902,7 +3902,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             destino
         });
         agendarEncerramentoTeste(client, destino);
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Teste gratis liberado enviado e cadastro atualizado'));
+        return res.redirect(montarUrlListaClientesMensagem('Teste gratis liberado enviado e cadastro atualizado'));
     } catch (err) {
         console.error(`[clientes] Falha ao enviar teste liberado para cliente ${cliente.id}: ${err.message}`);
         return res.redirect(montarUrlClienteMensagem(cliente.id, `Erro ao enviar teste: ${err.message}`));
