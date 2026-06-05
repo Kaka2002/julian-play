@@ -386,9 +386,10 @@ async function listarClientes(filtros = {}) {
 
 async function salvarCliente(dados) {
     const cliente = montarCliente(dados);
+    const idCliente = Number.parseInt(dados.id, 10);
 
-    if (dados.id) {
-        await executar(
+    if (Number.isFinite(idCliente) && idCliente > 0) {
+        const resultado = await executar(
             `UPDATE clientes SET
                 nome = ?,
                 telefone = ?,
@@ -445,11 +446,15 @@ async function salvarCliente(dados) {
                 cliente.origem,
                 cliente.tags,
                 cliente.status,
-                dados.id
+                idCliente
             ]
         );
 
-        return buscarClientePorId(dados.id);
+        if (!resultado.changes) {
+            throw new Error(`Cliente ${idCliente} nao foi encontrado para atualizacao.`);
+        }
+
+        return buscarClientePorId(idCliente);
     }
 
     const credenciais = gerarCredenciais();

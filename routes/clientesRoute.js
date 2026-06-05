@@ -3861,7 +3861,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     try {
         const clienteAtualizado = await salvarCliente({
             ...cliente,
-            id: cliente.id,
+            id: Number(cliente.id),
             nome: dados.nome,
             telefone: cliente.telefone,
             usuario: dados.usuario,
@@ -3875,6 +3875,11 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             paineisSelecionados: dados.painel ? [dados.painel] : lerListaSalva(cliente.paineisSelecionados),
             appInstalado: cliente.appInstalado || Boolean(dados.aplicativo),
             status: 'teste'
+        });
+        logControleClientes('Teste liberado atualizou cliente existente', {
+            id: clienteAtualizado?.id,
+            nome: clienteAtualizado?.nome,
+            telefone: clienteAtualizado?.telefone
         });
         const dadosAtualizados = dadosTesteLiberadoDoCliente(clienteAtualizado);
         const mensagem = montarMensagemTesteLiberado(dadosAtualizados);
@@ -3892,6 +3897,10 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
 
         registrarMensagemDoRobo(envio);
         console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+        logControleClientes('Teste liberado enviado', {
+            clienteId: clienteAtualizado.id,
+            destino
+        });
         agendarEncerramentoTeste(client, destino);
         return res.redirect(montarUrlClienteMensagem(cliente.id, 'Teste gratis liberado enviado e cadastro atualizado'));
     } catch (err) {
