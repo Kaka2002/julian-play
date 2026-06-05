@@ -991,6 +991,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             outline-color: var(--blue);
         }
 
+        textarea[name="observacoes"] {
+            min-height: 72px;
+        }
+
         .message-editor {
             position: relative;
         }
@@ -1907,54 +1911,10 @@ function secaoNotasCliente(cliente = {}, notas = []) {
         : '<div class="empty">Nenhuma nota registrada para este cliente.</div>';
 
     return `<section class="panel" style="margin-top:24px;">
-        <form class="fields" method="post" action="/clientes/${escapar(cliente.id)}/notas">
+        <div class="fields">
             <div class="form-section full">Histórico de atendimento</div>
-            ${campo({
-                nome: 'notaPadrao',
-                label: 'Nota padrão',
-                attrs: 'id="notaPadraoAtendimento"',
-                opcoes: [
-                    { valor: '', texto: 'Selecione uma nota pronta...' },
-                    ...NOTAS_ATENDIMENTO_PADRAO.map(nota => ({ valor: nota, texto: nota }))
-                ]
-            })}
-            ${areaTexto({ nome: 'texto', label: 'Nota rápida com data', valor: '' })}
-            <div class="actions full">
-                <button class="button secondary" type="submit">${icon('plus')} Adicionar nota</button>
-            </div>
             <div class="full">${listaNotas}</div>
-        </form>
-        <script>
-            (() => {
-                const select = document.getElementById('notaPadraoAtendimento');
-                const textarea = document.querySelector('textarea[name="texto"]');
-
-                if (!select || !textarea) return;
-
-                function dataHoraAtual() {
-                    const agora = new Date();
-                    const partes = new Intl.DateTimeFormat('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    }).formatToParts(agora);
-                    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
-
-                    return mapa.day + '/' + mapa.month + '/' + mapa.year + ' ' + mapa.hour + ':' + mapa.minute;
-                }
-
-                select.addEventListener('change', () => {
-                    if (!select.value) return;
-                    const nota = dataHoraAtual() + ' - ' + select.value;
-                    textarea.value = textarea.value
-                        ? textarea.value.trim() + '\\n' + nota
-                        : nota;
-                    textarea.focus();
-                });
-            })();
-        </script>
+        </div>
     </section>`;
 }
 
@@ -1970,6 +1930,9 @@ function camposNovaNotaAtendimento() {
             ]
         })}
         ${areaTexto({ nome: 'novaNotaTexto', label: 'Nota livre', valor: '' })}
+        <div class="actions full">
+            <button class="button secondary" type="submit" name="acao" value="adicionarNota">${icon('plus')} Adicionar nota</button>
+        </div>
         <script>
             (() => {
                 const select = document.getElementById('novaNotaPadraoAtendimento');
@@ -2525,8 +2488,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
-            ${cliente.id ? camposNovaNotaAtendimento() : ''}
             ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
+            ${cliente.id ? camposNovaNotaAtendimento() : ''}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
                 <a class="button secondary" href="/clientes/todos">Cancelar</a>
@@ -3483,6 +3446,7 @@ router.post('/clientes/salvar', async (req, res) => {
         const alertas = await buscarAlertasCadastroCliente(req.body);
         const clienteSalvo = await salvarCliente(req.body);
         const novaNota = String(req.body.novaNotaTexto || req.body.novaNotaPadrao || '').trim();
+        const adicionandoNota = req.body.acao === 'adicionarNota';
 
         if (clienteSalvo?.id && novaNota) {
             await adicionarNotaCliente(clienteSalvo.id, novaNota);
@@ -3491,6 +3455,12 @@ router.post('/clientes/salvar', async (req, res) => {
         const mensagemAlerta = alertas.length
             ? 'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
             : 'Cliente salvo com sucesso';
+
+        if (adicionandoNota && clienteSalvo?.id) {
+            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, novaNota
+                ? 'Nota adicionada ao histórico e cliente salvo'
+                : 'Cliente salvo. Nenhuma nota foi informada.'));
+        }
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
             return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, alertas.length
