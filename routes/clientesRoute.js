@@ -53,6 +53,26 @@ const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 const CLIENTES_POR_PAGINA = 10;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
+const ORIGENS_CLIENTE = [
+    'Indicação pessoal',
+    'Instagram',
+    'WhatsApp',
+    'Facebook',
+    'Google',
+    'Cliente antigo',
+    'Fornecedor',
+    'Outro'
+];
+const TAGS_CLIENTE = [
+    'VIP',
+    'Problemático',
+    'Indicado',
+    'Retorno',
+    'Fornecedor',
+    'Acompanhar',
+    'Bom pagador',
+    'Atrasou pagamento'
+];
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -2291,6 +2311,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
     const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
     const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
+    const tagsSelecionadas = normalizarTagsTela(cliente.tags);
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
@@ -2307,8 +2328,16 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsApp(cliente.telefone)}
             ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
-            ${campo({ nome: 'origem', label: 'Origem do Cliente', valor: cliente.origem || '', attrs: 'placeholder="Indicacao, Instagram, WhatsApp..."' })}
-            ${campo({ nome: 'tags', label: 'Tags/Categorias', valor: cliente.tags || '', attrs: 'placeholder="VIP, Problematico, Indicado"' })}
+            ${campo({
+                nome: 'origem',
+                label: 'Origem do Cliente',
+                valor: cliente.origem || '',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...ORIGENS_CLIENTE.map(origem => ({ valor: origem, texto: origem }))
+                ]
+            })}
+            ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             <div></div>
 
             <div class="form-section full">Plano</div>
@@ -2870,8 +2899,18 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
                 ['cancelado', 'Cancelado']
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ? 'selected' : ''}>${texto}</option>`).join('')}
         </select>
-        <input name="origem" value="${escapar(origem || '')}" placeholder="Origem">
-        <input name="tag" value="${escapar(tag || '')}" placeholder="Tag">
+        <select name="origem" onchange="this.form.submit()">
+            ${[
+                ['', 'Todas as origens'],
+                ...ORIGENS_CLIENTE.map(item => [item, item])
+            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === origem ? 'selected' : ''}>${escapar(texto)}</option>`).join('')}
+        </select>
+        <select name="tag" onchange="this.form.submit()">
+            ${[
+                ['', 'Todas as tags'],
+                ...TAGS_CLIENTE.map(item => [item, item])
+            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === tag ? 'selected' : ''}>${escapar(texto)}</option>`).join('')}
+        </select>
     </form>
     <div class="toolbar">
         <span></span>
