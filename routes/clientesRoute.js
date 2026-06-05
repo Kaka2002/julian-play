@@ -73,6 +73,27 @@ const TAGS_CLIENTE = [
     'Bom pagador',
     'Atrasou pagamento'
 ];
+const NOTAS_ATENDIMENTO_PADRAO = [
+    'Cliente pediu teste grátis.',
+    'Cliente teve dificuldade para instalar o aplicativo.',
+    'Cliente recebeu orientação passo a passo pelo WhatsApp.',
+    'Cliente reclamou de travamentos.',
+    'Orientado a testar a internet e reiniciar o roteador.',
+    'Cliente solicitou renovação de assinatura.',
+    'Cliente informou pagamento realizado.',
+    'Pagamento atrasou, mas foi regularizado.',
+    'Cliente pediu troca de aplicativo.',
+    'Cliente pediu troca de dispositivo.',
+    'Cliente pediu suporte para configurar TV.',
+    'Cliente pediu suporte para configurar celular.',
+    'Cliente indicado por outro cliente.',
+    'Cliente deve receber atendimento com prioridade.',
+    'Cliente demonstrou comportamento problemático.',
+    'Cliente não seguiu as orientações enviadas.',
+    'Cliente pediu cancelamento.',
+    'Cliente retornou após período sem usar o serviço.',
+    'Cliente precisa de acompanhamento no próximo atendimento.'
+];
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -1888,12 +1909,52 @@ function secaoNotasCliente(cliente = {}, notas = []) {
     return `<section class="panel" style="margin-top:24px;">
         <form class="fields" method="post" action="/clientes/${escapar(cliente.id)}/notas">
             <div class="form-section full">Histórico de atendimento</div>
+            ${campo({
+                nome: 'notaPadrao',
+                label: 'Nota padrão',
+                attrs: 'id="notaPadraoAtendimento"',
+                opcoes: [
+                    { valor: '', texto: 'Selecione uma nota pronta...' },
+                    ...NOTAS_ATENDIMENTO_PADRAO.map(nota => ({ valor: nota, texto: nota }))
+                ]
+            })}
             ${areaTexto({ nome: 'texto', label: 'Nota rápida com data', valor: '' })}
             <div class="actions full">
                 <button class="button secondary" type="submit">${icon('plus')} Adicionar nota</button>
             </div>
             <div class="full">${listaNotas}</div>
         </form>
+        <script>
+            (() => {
+                const select = document.getElementById('notaPadraoAtendimento');
+                const textarea = document.querySelector('textarea[name="texto"]');
+
+                if (!select || !textarea) return;
+
+                function dataHoraAtual() {
+                    const agora = new Date();
+                    const partes = new Intl.DateTimeFormat('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }).formatToParts(agora);
+                    const mapa = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+
+                    return mapa.day + '/' + mapa.month + '/' + mapa.year + ' ' + mapa.hour + ':' + mapa.minute;
+                }
+
+                select.addEventListener('change', () => {
+                    if (!select.value) return;
+                    const nota = dataHoraAtual() + ' - ' + select.value;
+                    textarea.value = textarea.value
+                        ? textarea.value.trim() + '\\n' + nota
+                        : nota;
+                    textarea.focus();
+                });
+            })();
+        </script>
     </section>`;
 }
 
@@ -3403,7 +3464,7 @@ router.post('/clientes/salvar', async (req, res) => {
 
 router.post('/clientes/:id/notas', async (req, res) => {
     try {
-        await adicionarNotaCliente(req.params.id, req.body.texto);
+        await adicionarNotaCliente(req.params.id, req.body.texto || req.body.notaPadrao);
         res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histórico do cliente'));
     } catch (err) {
         res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
