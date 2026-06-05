@@ -245,6 +245,48 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const dispositivosSelecionados = JSON.stringify([aparelho]);
     const appsInstalados = aplicativo ? JSON.stringify([aplicativo]) : JSON.stringify([]);
     const paineisSelecionados = painel ? JSON.stringify([painel]) : JSON.stringify([]);
+    const clienteExistente = await buscarClienteTestePorTelefone(telefone);
+
+    if (clienteExistente?.id) {
+        await executar(
+            `UPDATE clientes SET
+                nome = ?,
+                telefone = ?,
+                usuario = ?,
+                senha = ?,
+                plano = ?,
+                aparelho = ?,
+                vencimento = ?,
+                dataInicio = COALESCE(NULLIF(?, ''), dataInicio, CURRENT_TIMESTAMP),
+                dataVencimento = ?,
+                appsInstalados = ?,
+                dispositivosSelecionados = ?,
+                paineisSelecionados = ?,
+                appInstalado = ?,
+                status = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+            [
+                nome,
+                telefone,
+                usuario,
+                senha,
+                'Teste grátis',
+                aparelho,
+                vencimento,
+                dataInicio,
+                dataVencimento,
+                appsInstalados,
+                dispositivosSelecionados,
+                paineisSelecionados,
+                aplicativo ? 1 : 0,
+                'teste',
+                clienteExistente.id
+            ]
+        );
+
+        return buscarClientePorId(clienteExistente.id);
+    }
 
     const resultado = await executar(
         `INSERT INTO clientes (

@@ -14,7 +14,11 @@ const {
     cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente
 } = require('./clientes');
-const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
+const {
+    registrarMensagemDoRobo,
+    registrarEnvioDoRobo,
+    foiTextoEnviadoPeloRobo
+} = require('./mensagensPropriasService');
 
 const conversas = new Map();
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
@@ -467,6 +471,11 @@ async function registrarTesteLiberadoPorMensagem(message) {
     const textoNormalizado = normalizar(texto);
 
     if (!textoNormalizado.includes('teste gratis liberado')) return false;
+
+    if (message?.fromMe && foiTextoEnviadoPeloRobo(texto)) {
+        console.log('Teste gratis liberado ignorado: mensagem enviada pelo proprio robo.');
+        return false;
+    }
 
     const telefone = await obterTelefoneClienteMensagem(message);
 

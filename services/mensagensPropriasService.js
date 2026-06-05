@@ -1,5 +1,6 @@
 const mensagensDoRobo = new Set();
 const enviosDoRobo = new Map();
+const textosDoRobo = new Map();
 const LIMITE_IDS = 500;
 const TEMPO_RETENCAO_MS = 10 * 60 * 1000;
 const TEMPO_ENVIO_MS = 60 * 1000;
@@ -10,6 +11,16 @@ function obterId(message) {
 
 function chaveEnvio(destino, texto) {
     return `${destino || ''}|${String(texto || '').trim()}`;
+}
+
+function normalizarTexto(texto) {
+    return String(texto || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[*_~`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
 }
 
 function registrarMensagemDoRobo(message) {
@@ -31,14 +42,24 @@ function registrarEnvioDoRobo(destino, texto) {
     if (!destino || !texto) return;
 
     const chave = chaveEnvio(destino, texto);
+    const textoNormalizado = normalizarTexto(texto);
     enviosDoRobo.set(chave, Date.now() + TEMPO_ENVIO_MS);
+    if (textoNormalizado) textosDoRobo.set(textoNormalizado, Date.now() + TEMPO_ENVIO_MS);
 
     if (enviosDoRobo.size > LIMITE_IDS) {
         const [primeiraChave] = enviosDoRobo;
         enviosDoRobo.delete(primeiraChave);
     }
 
-    const timer = setTimeout(() => enviosDoRobo.delete(chave), TEMPO_ENVIO_MS);
+    if (textosDoRobo.size > LIMITE_IDS) {
+        const [primeiraChave] = textosDoRobo;
+        textosDoRobo.delete(primeiraChave);
+    }
+
+    const timer = setTimeout(() => {
+        enviosDoRobo.delete(chave);
+        if (textoNormalizado) textosDoRobo.delete(textoNormalizado);
+    }, TEMPO_ENVIO_MS);
     if (typeof timer.unref === 'function') timer.unref();
 }
 
@@ -60,8 +81,23 @@ function foiMensagemDoRobo(message) {
     return true;
 }
 
+function foiTextoEnviadoPeloRobo(texto) {
+    const textoNormalizado = normalizarTexto(texto);
+    const expiraEm = textosDoRobo.get(textoNormalizado);
+
+    if (!expiraEm) return false;
+    if (Date.now() > expiraEm) {
+        textosDoRobo.delete(textoNormalizado);
+        return false;
+    }
+
+    textosDoRobo.delete(textoNormalizado);
+    return true;
+}
+
 module.exports = {
     registrarMensagemDoRobo,
     registrarEnvioDoRobo,
-    foiMensagemDoRobo
+    foiMensagemDoRobo,
+    foiTextoEnviadoPeloRobo
 };
