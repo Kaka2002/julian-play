@@ -74,6 +74,31 @@ function telefoneSemDdi(telefone) {
     return numeros;
 }
 
+function normalizarMac(valor) {
+    const limpo = limparTexto(valor)
+        .replace(/[^a-fA-F0-9]/g, '')
+        .toUpperCase()
+        .slice(0, 12);
+
+    return limpo.match(/.{1,2}/g)?.join(':') || '';
+}
+
+function normalizarMoeda(valor) {
+    const texto = limparTexto(valor).replace(/[^\d,.-]/g, '');
+    if (!texto) return '';
+
+    const numero = texto.includes(',')
+        ? Number(texto.replace(/\./g, '').replace(',', '.'))
+        : Number(texto);
+
+    if (!Number.isFinite(numero)) return '';
+
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
 function clienteEstaEmTeste(cliente = {}) {
     return String(cliente.status || '').toLowerCase() === 'teste'
         || String(cliente.plano || '').toLowerCase().includes('teste');
@@ -118,8 +143,8 @@ function montarCliente(dados = {}) {
         nascimento: limparTexto(dados.nascimento),
         tipoPlanoId: limparTexto(dados.tipoPlanoId),
         diasContrato: Number(dados.diasContrato || 0),
-        valorPlano: limparTexto(dados.valorPlano),
-        assinaturaApp: limparTexto(dados.assinaturaApp),
+        valorPlano: normalizarMoeda(dados.valorPlano),
+        assinaturaApp: normalizarMoeda(dados.assinaturaApp),
         validadeApp: limparTexto(dados.validadeApp),
         horasTeste: limparTexto(dados.horasTeste),
         dataInicio: limparTexto(dados.dataInicio),
@@ -130,6 +155,8 @@ function montarCliente(dados = {}) {
         appInstalado: dados.appInstalado ? 1 : 0,
         usuarioApp: limparTexto(dados.usuarioApp),
         senhaApp: limparTexto(dados.senhaApp),
+        enderecoMac: normalizarMac(dados.enderecoMac),
+        idAplicativo: limparTexto(dados.idAplicativo),
         observacoes: limparTexto(dados.observacoes),
         origem: limparTexto(dados.origem),
         tags: normalizarTags(dados.tags),
@@ -455,6 +482,8 @@ async function salvarCliente(dados) {
                 appInstalado = ?,
                 usuarioApp = ?,
                 senhaApp = ?,
+                enderecoMac = ?,
+                idAplicativo = ?,
                 observacoes = ?,
                 origem = ?,
                 tags = ?,
@@ -484,6 +513,8 @@ async function salvarCliente(dados) {
                 cliente.appInstalado,
                 cliente.usuarioApp,
                 cliente.senhaApp,
+                cliente.enderecoMac,
+                cliente.idAplicativo,
                 cliente.observacoes,
                 cliente.origem,
                 cliente.tags,
@@ -507,8 +538,8 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, appInstalado,
-            usuarioApp, senhaApp, observacoes, origem, tags, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, observacoes, origem, tags, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -532,6 +563,8 @@ async function salvarCliente(dados) {
             cliente.appInstalado,
             cliente.usuarioApp,
             cliente.senhaApp,
+            cliente.enderecoMac,
+            cliente.idAplicativo,
             cliente.observacoes,
             cliente.origem,
             cliente.tags,

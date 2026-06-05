@@ -2433,8 +2433,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
-            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" placeholder="99.90"' })}
-            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'placeholder="0.00"' })}
+            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
+            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
             ${campo({
                 nome: 'validadeApp',
                 label: 'Validade App',
@@ -2496,6 +2496,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             </label>
             ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
+            ${campo({ nome: 'enderecoMac', label: 'Endereço MAC', valor: cliente.enderecoMac, attrs: 'id="enderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off"' })}
+            ${campo({ nome: 'idAplicativo', label: 'ID do Aplicativo', valor: cliente.idAplicativo, attrs: 'placeholder="ID do aplicativo"' })}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
             ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
             ${cliente.id ? camposNovaNotaAtendimento() : ''}
@@ -2522,12 +2524,36 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const statusCliente = document.getElementById('statusCliente');
         const horasTeste = document.getElementById('horasTeste');
         const nomeCliente = document.getElementById('nomeCliente');
+        const enderecoMac = document.getElementById('enderecoMac');
+        const camposMoeda = document.querySelectorAll('.money-field');
+
+        function formatarMoedaCampo(valor) {
+            const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
+            if (!texto) return '';
+            const numero = texto.includes(',')
+                ? Number(texto.replace(/\\./g, '').replace(',', '.'))
+                : Number(texto);
+
+            if (!Number.isFinite(numero)) return '';
+            return numero.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function formatarMac(valor) {
+            const limpo = String(valor || '')
+                .replace(/[^a-fA-F0-9]/g, '')
+                .toUpperCase()
+                .slice(0, 12);
+            return (limpo.match(/.{1,2}/g) || []).join(':');
+        }
 
         function atualizarPlano() {
             const plano = planos.find(item => item.id === tipoPlano.value);
             if (!plano) return;
             diasContrato.value = plano.dias || '';
-            valorPlano.value = plano.valor || valorPlano.value || '';
+            valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 statusCliente.value = 'teste';
@@ -2595,6 +2621,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         nomeCliente?.addEventListener('blur', () => {
             nomeCliente.value = capitalizarNome(nomeCliente.value);
+        });
+
+        enderecoMac?.addEventListener('input', () => {
+            enderecoMac.value = formatarMac(enderecoMac.value);
+        });
+
+        camposMoeda.forEach((campoMoeda) => {
+            campoMoeda.value = formatarMoedaCampo(campoMoeda.value);
+            campoMoeda.addEventListener('blur', () => {
+                campoMoeda.value = formatarMoedaCampo(campoMoeda.value);
+            });
         });
 
         document.querySelectorAll('.multi-select').forEach((select) => {
