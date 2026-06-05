@@ -2200,6 +2200,15 @@ function montarUrlListaClientesMensagem(mensagem) {
     return `/clientes/todos?mensagem=${encodeURIComponent(mensagem)}`;
 }
 
+function logControleClientes(evento, dados = {}) {
+    const resumo = Object.entries(dados)
+        .filter(([, valor]) => valor !== undefined && valor !== null && valor !== '')
+        .map(([chave, valor]) => `${chave}=${valor}`)
+        .join(' ');
+
+    console.log(`[controle-clientes] ${evento}${resumo ? ` | ${resumo}` : ''}`);
+}
+
 function aguardarComTimeout(promessa, ms, descricao) {
     return Promise.race([
         promessa,
@@ -3450,7 +3459,19 @@ router.post('/clientes/salvar', async (req, res) => {
 
         if (clienteSalvo?.id && novaNota) {
             await adicionarNotaCliente(clienteSalvo.id, novaNota);
+            logControleClientes('Nota adicionada no salvamento', {
+                clienteId: clienteSalvo.id,
+                nome: clienteSalvo.nome
+            });
         }
+
+        logControleClientes(req.body.id ? 'Cliente editado' : 'Cliente cadastrado', {
+            id: clienteSalvo?.id,
+            nome: clienteSalvo?.nome,
+            telefone: clienteSalvo?.telefone,
+            plano: clienteSalvo?.plano,
+            status: clienteSalvo?.status
+        });
 
         const mensagemAlerta = alertas.length
             ? 'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
@@ -3463,7 +3484,7 @@ router.post('/clientes/salvar', async (req, res) => {
         }
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
-            return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, alertas.length
+            return res.redirect(montarUrlListaClientesMensagem(alertas.length
                 ? mensagemAlerta
                 : 'Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
         }
@@ -3474,6 +3495,10 @@ router.post('/clientes/salvar', async (req, res) => {
 
         res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(mensagemAlerta)}`);
     } catch (err) {
+        logControleClientes('Erro ao salvar cliente', {
+            erro: err.message,
+            nome: req.body?.nome
+        });
         res.status(400);
         const listas = await obterListasCliente();
         await renderizar(res, {
@@ -3487,8 +3512,13 @@ router.post('/clientes/salvar', async (req, res) => {
 router.post('/clientes/:id/notas', async (req, res) => {
     try {
         await adicionarNotaCliente(req.params.id, req.body.texto || req.body.notaPadrao);
+        logControleClientes('Nota adicionada', { clienteId: req.params.id });
         res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histórico do cliente'));
     } catch (err) {
+        logControleClientes('Erro ao adicionar nota', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
         res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
     }
 });
