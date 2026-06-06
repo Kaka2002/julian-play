@@ -95,6 +95,19 @@ const NOTAS_ATENDIMENTO_PADRAO = [
     'Cliente retornou após período sem usar o serviço.',
     'Cliente precisa de acompanhamento no próximo atendimento.'
 ];
+const LOCAIS_INSTALACAO_APP = [
+    'TV da sala',
+    'TV do quarto',
+    'TV da cozinha',
+    'TV principal',
+    'TV secundária',
+    'TV box',
+    'Celular do cliente',
+    'Celular do filho',
+    'Tablet',
+    'Roku',
+    'BTV'
+];
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -1424,13 +1437,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .app-access-row {
             display: grid;
-            grid-template-columns: repeat(3, minmax(150px, 1fr)) 42px;
+            grid-template-columns: repeat(3, minmax(150px, 1fr));
             gap: 10px;
             align-items: end;
             padding: 12px;
             border: 1px solid var(--line);
             border-radius: 10px;
             background: #fff;
+        }
+
+        .remove-app-access {
+            width: 42px;
+            justify-self: start;
         }
 
         .app-access-row label {
@@ -2302,7 +2320,7 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
             </select>
         </label>
         <label>Onde foi instalado
-            <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" placeholder="Ex: TV da sala">
+            <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">
         </label>
         <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
@@ -2321,6 +2339,9 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
         : linhaAcessoApp({}, apps, dispositivos, paineis);
 
     return `<div class="app-access-list full">
+        <datalist id="locaisInstalacaoApp">
+            ${LOCAIS_INSTALACAO_APP.map(local => `<option value="${escapar(local)}"></option>`).join('')}
+        </datalist>
         <div class="app-access-header">
             <div>
                 <strong>Dados por app instalado</strong>
@@ -2809,7 +2830,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
                 + '</label>'
                 + '<label>Onde foi instalado'
-                + '<input type="text" name="acessoLocalInstalacao" placeholder="Ex: TV da sala">'
+                + '<input type="text" name="acessoLocalInstalacao" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">'
                 + '</label>'
                 + '<label>Endereço MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
