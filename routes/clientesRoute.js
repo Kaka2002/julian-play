@@ -1424,7 +1424,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .app-access-row {
             display: grid;
-            grid-template-columns: repeat(5, minmax(130px, 1fr)) 42px;
+            grid-template-columns: repeat(3, minmax(150px, 1fr)) 42px;
             gap: 10px;
             align-items: end;
             padding: 12px;
@@ -2253,10 +2253,11 @@ function lerAcessosApp(cliente = {}) {
                     app: String(acesso.app || ''),
                     dispositivo: String(acesso.dispositivo || ''),
                     painel: String(acesso.painel || ''),
+                    localInstalacao: String(acesso.localInstalacao || ''),
                     enderecoMac: String(acesso.enderecoMac || ''),
                     idAplicativo: String(acesso.idAplicativo || '')
                 }))
-                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.enderecoMac || acesso.idAplicativo);
+                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.enderecoMac || acesso.idAplicativo);
         }
     } catch (err) {
         // Mantem compatibilidade com cadastros antigos.
@@ -2267,6 +2268,7 @@ function lerAcessosApp(cliente = {}) {
             app: lerListaSalva(cliente.appsInstalados)[0] || '',
             dispositivo: lerListaSalva(cliente.dispositivosSelecionados)[0] || '',
             painel: lerListaSalva(cliente.paineisSelecionados)[0] || '',
+            localInstalacao: '',
             enderecoMac: cliente.enderecoMac || '',
             idAplicativo: cliente.idAplicativo || ''
         }];
@@ -2298,6 +2300,9 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
             <select name="acessoPainel">
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
+        </label>
+        <label>Onde foi instalado
+            <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" placeholder="Ex: TV da sala">
         </label>
         <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
@@ -2802,6 +2807,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '</label>'
                 + '<label>Painel'
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
+                + '</label>'
+                + '<label>Onde foi instalado'
+                + '<input type="text" name="acessoLocalInstalacao" placeholder="Ex: TV da sala">'
                 + '</label>'
                 + '<label>Endereço MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'

@@ -109,9 +109,10 @@ function normalizarAcessosApp(dados = {}) {
     const apps = normalizarListaComVazios(dados.acessoAppNome);
     const dispositivos = normalizarListaComVazios(dados.acessoDispositivo);
     const paineis = normalizarListaComVazios(dados.acessoPainel);
+    const locais = normalizarListaComVazios(dados.acessoLocalInstalacao);
     const macs = normalizarListaComVazios(dados.acessoEnderecoMac);
     const ids = normalizarListaComVazios(dados.acessoIdAplicativo);
-    const total = Math.max(apps.length, dispositivos.length, paineis.length, macs.length, ids.length);
+    const total = Math.max(apps.length, dispositivos.length, paineis.length, locais.length, macs.length, ids.length);
     const acessos = [];
 
     for (let index = 0; index < total; index += 1) {
@@ -119,11 +120,12 @@ function normalizarAcessosApp(dados = {}) {
             app: limparTexto(apps[index]),
             dispositivo: limparTexto(dispositivos[index]),
             painel: limparTexto(paineis[index]),
+            localInstalacao: limparTexto(locais[index]),
             enderecoMac: normalizarMac(macs[index]),
             idAplicativo: limparTexto(ids[index])
         };
 
-        if (acesso.app || acesso.dispositivo || acesso.painel || acesso.enderecoMac || acesso.idAplicativo) {
+        if (acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.enderecoMac || acesso.idAplicativo) {
             acessos.push(acesso);
         }
     }
@@ -133,6 +135,7 @@ function normalizarAcessosApp(dados = {}) {
             app: normalizarLista(dados.appsInstalados)[0] || '',
             dispositivo: normalizarLista(dados.dispositivosSelecionados)[0] || '',
             painel: normalizarLista(dados.paineisSelecionados)[0] || '',
+            localInstalacao: '',
             enderecoMac: normalizarMac(dados.enderecoMac),
             idAplicativo: limparTexto(dados.idAplicativo)
         });
