@@ -2435,6 +2435,17 @@ function descreverAcessosAppCsv(cliente = {}) {
     }).filter(Boolean).join(' || ');
 }
 
+function valoresAcessosAppCsv(cliente = {}, campo) {
+    const valores = [
+        cliente[campo],
+        ...lerAcessosApp(cliente).map(acesso => acesso[campo])
+    ]
+        .map(valor => String(valor || '').trim())
+        .filter(Boolean);
+
+    return [...new Set(valores)].join(', ');
+}
+
 function gerarCsvClientes(clientes = []) {
     const cabecalhos = [
         'ID',
@@ -2482,8 +2493,8 @@ function gerarCsvClientes(clientes = []) {
         cliente.appInstalado ? 'Sim' : 'Não',
         cliente.usuario,
         cliente.senha,
-        cliente.enderecoMac,
-        cliente.idAplicativo,
+        valoresAcessosAppCsv(cliente, 'enderecoMac'),
+        valoresAcessosAppCsv(cliente, 'idAplicativo'),
         descreverAcessosAppCsv(cliente),
         cliente.origem,
         juntarListaCsv(cliente.tags || ''),
