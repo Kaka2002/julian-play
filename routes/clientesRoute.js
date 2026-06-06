@@ -2372,6 +2372,10 @@ function valorPrimeiroItem(valor) {
     return lerListaSalva(valor)[0] || '';
 }
 
+function primeiroAcessoApp(cliente = {}) {
+    return lerAcessosApp(cliente)[0] || {};
+}
+
 function montarUrlClienteMensagem(id, mensagem) {
     return `/clientes/${id}/editar?mensagem=${encodeURIComponent(mensagem)}`;
 }
@@ -2468,14 +2472,15 @@ function clienteEhTeste(cliente = {}) {
 }
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
-    const dispositivo = valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho || '';
+    const acesso = primeiroAcessoApp(cliente);
+    const dispositivo = valorPrimeiroItem(cliente.dispositivosSelecionados) || acesso.dispositivo || cliente.aparelho || '';
 
     return {
         telefone: cliente.telefone,
         nome: cliente.nome,
         aparelho: dispositivo,
-        aplicativo: valorPrimeiroItem(cliente.appsInstalados),
-        painel: valorPrimeiroItem(cliente.paineisSelecionados),
+        aplicativo: valorPrimeiroItem(cliente.appsInstalados) || acesso.app || '',
+        painel: valorPrimeiroItem(cliente.paineisSelecionados) || acesso.painel || '',
         usuario: cliente.usuario,
         senha: cliente.senha,
         dataInicio: cliente.dataInicio,
@@ -2506,6 +2511,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     const apps = listas.apps || [];
     const dispositivos = listas.dispositivos || [];
     const paineis = listas.paineis || [];
+    const acesso = primeiroAcessoApp(cliente);
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const validade = inputDateTime(cliente.dataVencimento || cliente.vencimento);
 
@@ -2521,7 +2527,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'aparelho',
                 label: 'Dispositivo',
-                valor: valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho,
+                valor: valorPrimeiroItem(cliente.dispositivosSelecionados) || acesso.dispositivo || cliente.aparelho,
                 attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
@@ -2531,7 +2537,8 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'aplicativo',
                 label: 'Aplicativo',
-                valor: valorPrimeiroItem(cliente.appsInstalados),
+                valor: valorPrimeiroItem(cliente.appsInstalados) || acesso.app || '',
+                attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     ...apps.map(item => ({ valor: item.nome, texto: item.nome }))
@@ -2540,7 +2547,8 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'painel',
                 label: 'Painel',
-                valor: valorPrimeiroItem(cliente.paineisSelecionados),
+                valor: valorPrimeiroItem(cliente.paineisSelecionados) || acesso.painel || '',
+                attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     ...paineis.map(item => ({ valor: item.nome, texto: item.nome }))
@@ -4133,15 +4141,20 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     const client = getClient();
 
     if (!client || !status.conectado) {
+        logControleClientes('Teste liberado nao enviado', {
+            clienteId: cliente.id,
+            motivo: 'WhatsApp desconectado'
+        });
         return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp não está conectado`);
     }
 
+    const acesso = primeiroAcessoApp(cliente);
     const dados = {
         telefone: cliente.telefone,
         nome: req.body.nome || cliente.nome,
-        aparelho: req.body.aparelho || cliente.aparelho,
-        aplicativo: req.body.aplicativo || '',
-        painel: req.body.painel || '',
+        aparelho: req.body.aparelho || acesso.dispositivo || cliente.aparelho,
+        aplicativo: req.body.aplicativo || acesso.app || valorPrimeiroItem(cliente.appsInstalados) || '',
+        painel: req.body.painel || acesso.painel || valorPrimeiroItem(cliente.paineisSelecionados) || '',
         usuario: req.body.usuario || cliente.usuario,
         senha: req.body.senha || cliente.senha,
         dataInicio: req.body.dataInicio || cliente.dataInicio,
@@ -4150,6 +4163,11 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     const faltando = camposFaltandoTesteLiberado(dados);
 
     if (faltando.length) {
+        logControleClientes('Teste liberado nao enviado', {
+            clienteId: cliente.id,
+            nome: cliente.nome,
+            faltando: faltando.join(', ')
+        });
         return res.redirect(montarUrlClienteMensagem(cliente.id, `Preencha antes de enviar: ${faltando.join(', ')}.`));
     }
 
