@@ -157,6 +157,28 @@ function montarUrlPaginacao(base, params = {}, pagina = 1) {
     return `${base}?${query.toString()}`;
 }
 
+function montarUrlComFiltros(base, params = {}) {
+    const query = new URLSearchParams();
+
+    Object.entries(params).forEach(([chave, valor]) => {
+        if (valor !== undefined && valor !== null && String(valor) !== '') {
+            query.set(chave, String(valor));
+        }
+    });
+
+    const textoQuery = query.toString();
+    return textoQuery ? `${base}?${textoQuery}` : base;
+}
+
+function filtrosClientesQuery(query = {}) {
+    return {
+        busca: query.busca || '',
+        status: query.status || '',
+        origem: query.origem || '',
+        tag: query.tag || ''
+    };
+}
+
 function lerUploadMultipart(req) {
     return new Promise((resolve, reject) => {
         const tipo = req.headers['content-type'] || '';
@@ -2384,6 +2406,95 @@ function primeiroAcessoApp(cliente = {}) {
     return lerAcessosApp(cliente)[0] || {};
 }
 
+function escaparCsv(valor) {
+    const texto = String(valor ?? '')
+        .replace(/\r?\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    return `"${texto.replace(/"/g, '""')}"`;
+}
+
+function juntarListaCsv(valor) {
+    return lerListaSalva(valor).join(', ');
+}
+
+function descreverAcessosAppCsv(cliente = {}) {
+    return lerAcessosApp(cliente).map((acesso, index) => {
+        const partes = [
+            acesso.app ? `App: ${acesso.app}` : '',
+            acesso.dispositivo ? `Dispositivo: ${acesso.dispositivo}` : '',
+            acesso.painel ? `Painel: ${acesso.painel}` : '',
+            acesso.localInstalacao ? `Onde: ${acesso.localInstalacao}` : '',
+            acesso.enderecoMac ? `MAC: ${acesso.enderecoMac}` : '',
+            acesso.idAplicativo ? `ID: ${acesso.idAplicativo}` : '',
+            acesso.urlAtivarAplicativo ? `URL: ${acesso.urlAtivarAplicativo}` : ''
+        ].filter(Boolean);
+
+        return partes.length ? `${index + 1}. ${partes.join(' | ')}` : '';
+    }).filter(Boolean).join(' || ');
+}
+
+function gerarCsvClientes(clientes = []) {
+    const cabecalhos = [
+        'ID',
+        'Nome',
+        'WhatsApp',
+        'Nascimento',
+        'Plano',
+        'Detalhe do plano',
+        'Valor do plano',
+        'Assinatura app',
+        'Status',
+        'Data/Hora de início',
+        'Data/Hora de vencimento',
+        'Validade app',
+        'Apps instalados',
+        'Dispositivos',
+        'Painéis',
+        'App instalado',
+        'Usuário IPTV',
+        'Senha IPTV',
+        'Endereço MAC',
+        'ID do aplicativo',
+        'Dados por app instalado',
+        'Origem',
+        'Tags',
+        'Observações'
+    ];
+
+    const linhas = clientes.map(cliente => [
+        cliente.id,
+        cliente.nome,
+        cliente.telefone,
+        cliente.nascimento ? formatarAniversario(cliente.nascimento) : '',
+        cliente.plano,
+        detalhePlanoCliente(cliente),
+        cliente.valorPlano,
+        cliente.assinaturaApp,
+        rotuloStatus(cliente.status),
+        formatarDataHoraCurta(cliente.dataInicio),
+        formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento),
+        cliente.validadeApp,
+        juntarListaCsv(cliente.appsInstalados),
+        juntarListaCsv(cliente.dispositivosSelecionados),
+        juntarListaCsv(cliente.paineisSelecionados),
+        cliente.appInstalado ? 'Sim' : 'Não',
+        cliente.usuario,
+        cliente.senha,
+        cliente.enderecoMac,
+        cliente.idAplicativo,
+        descreverAcessosAppCsv(cliente),
+        cliente.origem,
+        juntarListaCsv(cliente.tags || ''),
+        cliente.observacoes
+    ]);
+
+    return [cabecalhos, ...linhas]
+        .map(linha => linha.map(escaparCsv).join(';'))
+        .join('\r\n');
+}
+
 function montarUrlClienteMensagem(id, mensagem) {
     return `/clientes/${id}/editar?mensagem=${encodeURIComponent(mensagem)}`;
 }
@@ -3268,6 +3379,7 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
 
 function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes }) {
     const totalClientes = paginacaoClientes?.total ?? clientes.length;
+    const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag });
 
     return `<section class="page-title">
         <h1>Clientes</h1>
@@ -3305,6 +3417,7 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
     <div class="toolbar">
         <span></span>
         <div class="actions">
+            <a class="button secondary" href="${escapar(urlExportar)}">${icon('planos')} Exportar CSV</a>
             <form method="post" action="/clientes/verificar-renovacoes">
                 <button class="button green" type="submit">${icon('whats')} Enviar vencimentos</button>
             </form>
@@ -3818,10 +3931,7 @@ router.get('/clientes', async (req, res) => {
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
-    const busca = req.query.busca || '';
-    const status = req.query.status || '';
-    const origem = req.query.origem || '';
-    const tag = req.query.tag || '';
+    const { busca, status, origem, tag } = filtrosClientesQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
     const todosClientes = await listarClientes({ busca, status, origem, tag });
     const paginacaoClientes = paginarItens(todosClientes, pagina, CLIENTES_POR_PAGINA);
@@ -3840,6 +3950,26 @@ router.get('/clientes/todos', async (req, res) => {
         mensagem,
         ativo: 'clientes'
     });
+});
+
+router.get('/clientes/exportar.csv', async (req, res) => {
+    desativarCache(res);
+    const filtros = filtrosClientesQuery(req.query);
+    const clientes = await listarClientes(filtros);
+    const agora = new Date();
+    const carimbo = [
+        agora.getFullYear(),
+        String(agora.getMonth() + 1).padStart(2, '0'),
+        String(agora.getDate()).padStart(2, '0'),
+        '-',
+        String(agora.getHours()).padStart(2, '0'),
+        String(agora.getMinutes()).padStart(2, '0')
+    ].join('');
+    const csv = gerarCsvClientes(clientes);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="clientes-${carimbo}.csv"`);
+    res.send(`\uFEFF${csv}`);
 });
 
 router.get('/clientes/novo', async (req, res) => {
