@@ -2319,14 +2319,14 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
         </label>
-        <label>Onde foi instalado
-            <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">
-        </label>
         <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
         </label>
         <label>ID do Aplicativo
             <input type="text" name="acessoIdAplicativo" value="${escapar(acesso.idAplicativo || '')}" placeholder="ID gerado no app">
+        </label>
+        <label>Onde foi instalado
+            <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">
         </label>
         <button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>
     </div>`;
@@ -2829,14 +2829,14 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '<label>Painel'
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
                 + '</label>'
-                + '<label>Onde foi instalado'
-                + '<input type="text" name="acessoLocalInstalacao" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">'
-                + '</label>'
                 + '<label>Endereço MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
                 + '</label>'
                 + '<label>ID do Aplicativo'
                 + '<input type="text" name="acessoIdAplicativo" placeholder="ID gerado no app">'
+                + '</label>'
+                + '<label>Onde foi instalado'
+                + '<input type="text" name="acessoLocalInstalacao" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">'
                 + '</label>'
                 + '<button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>';
             return linha;
