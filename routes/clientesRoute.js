@@ -5,6 +5,7 @@ const {
     listarClientes,
     salvarCliente,
     buscarClientePorId,
+    buscarClientePorTelefone,
     removerCliente,
     normalizarTelefone,
     listarNotasCliente,
@@ -59,6 +60,7 @@ const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 const CLIENTES_POR_PAGINA = 10;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
+const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
     'Indicação pessoal',
     'Instagram',
@@ -2506,6 +2508,359 @@ function gerarCsvClientes(clientes = []) {
         .join('\r\n');
 }
 
+function normalizarCabecalhoCsv(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+}
+
+function dividirLinhaCsv(linha = '', separador = ';') {
+    const colunas = [];
+    let atual = '';
+    let entreAspas = false;
+
+    for (let i = 0; i < linha.length; i += 1) {
+        const char = linha[i];
+        const proximo = linha[i + 1];
+
+        if (char === '"' && entreAspas && proximo === '"') {
+            atual += '"';
+            i += 1;
+        } else if (char === '"') {
+            entreAspas = !entreAspas;
+        } else if (char === separador && !entreAspas) {
+            colunas.push(atual);
+            atual = '';
+        } else {
+            atual += char;
+        }
+    }
+
+    colunas.push(atual);
+    return colunas.map(valor => valor.trim());
+}
+
+function linhasCsv(texto = '') {
+    const linhas = [];
+    let atual = '';
+    let entreAspas = false;
+    const conteudo = String(texto || '').replace(/^\uFEFF/, '');
+
+    for (let i = 0; i < conteudo.length; i += 1) {
+        const char = conteudo[i];
+        const proximo = conteudo[i + 1];
+
+        if (char === '"' && entreAspas && proximo === '"') {
+            atual += '""';
+            i += 1;
+        } else if (char === '"') {
+            entreAspas = !entreAspas;
+            atual += char;
+        } else if ((char === '\n' || char === '\r') && !entreAspas) {
+            if (char === '\r' && proximo === '\n') i += 1;
+            linhas.push(atual);
+            atual = '';
+        } else {
+            atual += char;
+        }
+    }
+
+    if (atual || conteudo.endsWith('\n') === false) linhas.push(atual);
+    return linhas.filter(linha => linha.trim());
+}
+
+function detectarSeparadorCsv(linha = '') {
+    const pontoVirgula = dividirLinhaCsv(linha, ';').length;
+    const virgula = dividirLinhaCsv(linha, ',').length;
+    return pontoVirgula >= virgula ? ';' : ',';
+}
+
+function parseCsv(texto = '') {
+    const todasLinhas = linhasCsv(texto);
+    if (!todasLinhas.length) return { cabecalhos: [], registros: [] };
+
+    const separador = detectarSeparadorCsv(todasLinhas[0]);
+    const cabecalhos = dividirLinhaCsv(todasLinhas[0], separador).map(normalizarCabecalhoCsv);
+    const registros = todasLinhas.slice(1).map((linha, index) => {
+        const valores = dividirLinhaCsv(linha, separador);
+        const registro = { __linha: index + 2 };
+
+        cabecalhos.forEach((cabecalho, coluna) => {
+            registro[cabecalho] = valores[coluna] || '';
+        });
+
+        return registro;
+    });
+
+    return { cabecalhos, registros };
+}
+
+function valorCsv(registro, nomes = []) {
+    for (const nome of nomes) {
+        const chave = normalizarCabecalhoCsv(nome);
+        if (registro[chave] !== undefined && String(registro[chave]).trim() !== '') {
+            return String(registro[chave]).trim();
+        }
+    }
+
+    return '';
+}
+
+function listaCsvParaArray(valor = '') {
+    return String(valor || '')
+        .split(/\s*(?:,|\||;)\s*/)
+        .map(item => item.trim())
+        .filter(Boolean);
+}
+
+function dataCsvParaIso(valor = '', comHora = false) {
+    const texto = String(valor || '').trim();
+    if (!texto) return '';
+
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
+    if (iso) {
+        const [, ano, mes, dia, hora = '00', minuto = '00'] = iso;
+        return comHora ? `${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
+    }
+
+    const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+    if (br) {
+        const [, diaBruto, mesBruto, anoBruto, horaBruta = '00', minutoBruto = '00'] = br;
+        const ano = anoBruto.length === 2 ? `20${anoBruto}` : anoBruto;
+        const mes = mesBruto.padStart(2, '0');
+        const dia = diaBruto.padStart(2, '0');
+        const hora = horaBruta.padStart(2, '0');
+        const minuto = minutoBruto.padStart(2, '0');
+        return comHora ? `${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
+    }
+
+    return '';
+}
+
+function statusCsv(valor = '') {
+    const texto = normalizarCabecalhoCsv(valor);
+    const mapa = {
+        ativo: 'ativo',
+        teste: 'teste',
+        pendente: 'pendente',
+        expirado: 'expirado',
+        vencido: 'expirado',
+        suspenso: 'suspenso',
+        cancelado: 'cancelado'
+    };
+
+    return mapa[texto] || '';
+}
+
+function booleanoCsv(valor = '') {
+    const texto = normalizarCabecalhoCsv(valor);
+    return ['sim', 's', '1', 'true', 'instalado', 'ativo'].includes(texto);
+}
+
+function montarDadosClienteImportado(registro, planos = []) {
+    const nome = valorCsv(registro, ['Nome', 'Cliente', 'Nome completo']);
+    const telefone = valorCsv(registro, ['WhatsApp', 'Telefone', 'Celular']);
+    const plano = valorCsv(registro, ['Plano', 'Tipo do plano']) || 'Mensal';
+    const status = statusCsv(valorCsv(registro, ['Status', 'Situação'])) || 'ativo';
+    const planoEncontrado = planos.find(item => normalizarCabecalhoCsv(item.nome) === normalizarCabecalhoCsv(plano));
+    const isTeste = normalizarCabecalhoCsv(plano).includes('teste') || status === 'teste';
+    const diasContrato = valorCsv(registro, ['Dias de contrato', 'Dias contrato', 'Dias']) || planoEncontrado?.dias || (isTeste ? 0 : 30);
+    const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']), true);
+    const dataVencimento = dataCsvParaIso(valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']), true);
+    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']), false);
+    const apps = listaCsvParaArray(valorCsv(registro, ['Apps instalados', 'Aplicativos', 'App']));
+    const dispositivos = listaCsvParaArray(valorCsv(registro, ['Dispositivos', 'Dispositivo', 'Aparelho']));
+    const paineis = listaCsvParaArray(valorCsv(registro, ['Painéis', 'Paineis', 'Painel']));
+    const enderecoMac = valorCsv(registro, ['Endereço MAC', 'Endereco MAC', 'MAC']);
+    const idAplicativo = valorCsv(registro, ['ID do aplicativo', 'ID aplicativo', 'ID']);
+
+    return {
+        nome,
+        ddiTelefone: '',
+        telefone,
+        nascimento,
+        plano,
+        tipoPlanoId: planoEncontrado?.id || '',
+        diasContrato,
+        valorPlano: valorCsv(registro, ['Valor do plano', 'Valor plano', 'Valor']),
+        assinaturaApp: valorCsv(registro, ['Assinatura app', 'Assinatura App']),
+        validadeApp: valorCsv(registro, ['Validade app', 'Validade App']),
+        horasTeste: valorCsv(registro, ['Horas de teste', 'Horas teste']),
+        status,
+        dataInicio,
+        dataVencimento,
+        appsInstalados: apps,
+        dispositivosSelecionados: dispositivos,
+        paineisSelecionados: paineis,
+        appInstalado: booleanoCsv(valorCsv(registro, ['App instalado', 'Instalado'])),
+        usuario: valorCsv(registro, ['Usuário IPTV', 'Usuario IPTV', 'Usuário', 'Usuario']),
+        senha: valorCsv(registro, ['Senha IPTV', 'Senha']),
+        enderecoMac,
+        idAplicativo,
+        acessoAppNome: apps[0] || '',
+        acessoDispositivo: dispositivos[0] || '',
+        acessoPainel: paineis[0] || '',
+        acessoEnderecoMac: enderecoMac,
+        acessoIdAplicativo: idAplicativo,
+        acessoLocalInstalacao: valorCsv(registro, ['Onde foi instalado', 'Local de instalação', 'Local instalacao']),
+        acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativação', 'URL ativacao']),
+        origem: valorCsv(registro, ['Origem']),
+        tags: listaCsvParaArray(valorCsv(registro, ['Tags', 'Categoria', 'Categorias'])),
+        observacoes: valorCsv(registro, ['Observações', 'Observacoes', 'Notas'])
+    };
+}
+
+function validarClienteImportado(dados = {}, registro = {}, planos = []) {
+    const erros = [];
+    const avisos = [];
+    const planoNormalizado = normalizarCabecalhoCsv(dados.plano);
+    const planoExiste = planos.some(item => normalizarCabecalhoCsv(item.nome) === planoNormalizado);
+    const isTeste = planoNormalizado.includes('teste') || dados.status === 'teste';
+
+    if (!dados.nome) erros.push('Nome obrigatório.');
+    if (!normalizarTelefone(dados.telefone)) erros.push('WhatsApp inválido ou vazio.');
+    if (!dados.plano) erros.push('Plano obrigatório.');
+    if (dados.plano && !planoExiste && !isTeste) erros.push(`Plano não cadastrado: ${dados.plano}.`);
+    if (valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']) && !dados.dataInicio) erros.push('Data/Hora de início inválida.');
+    if (valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']) && !dados.dataVencimento) erros.push('Data/Hora de vencimento inválida.');
+    if (valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']) && !dados.nascimento) avisos.push('Nascimento não reconhecido; será importado vazio.');
+    if (!dados.dataInicio) avisos.push('Data/Hora de início vazia.');
+    if (!dados.dataVencimento) avisos.push('Data/Hora de vencimento vazia.');
+
+    return { erros, avisos };
+}
+
+async function prepararImportacaoClientesCsv(textoCsv = '') {
+    const planos = await listarTiposPlanos();
+    const { registros } = parseCsv(textoCsv);
+    const itens = [];
+    const telefonesNoCsv = new Set();
+
+    for (const registro of registros) {
+        const vazio = Object.entries(registro)
+            .filter(([chave]) => chave !== '__linha')
+            .every(([, valor]) => !String(valor || '').trim());
+        if (vazio) continue;
+
+        const dados = montarDadosClienteImportado(registro, planos);
+        const telefoneNormalizado = normalizarTelefone(dados.telefone);
+        const existente = telefoneNormalizado ? await buscarClientePorTelefone(telefoneNormalizado) : null;
+        const validacao = validarClienteImportado(dados, registro, planos);
+
+        if (telefoneNormalizado && telefonesNoCsv.has(telefoneNormalizado)) {
+            validacao.erros.push('WhatsApp repetido dentro do CSV.');
+        }
+
+        if (telefoneNormalizado) telefonesNoCsv.add(telefoneNormalizado);
+
+        itens.push({
+            linha: registro.__linha,
+            acao: validacao.erros.length ? 'ignorar' : existente ? 'atualizar' : 'criar',
+            existenteId: existente?.id || null,
+            dados: {
+                ...dados,
+                telefone: telefoneNormalizado || dados.telefone
+            },
+            erros: validacao.erros,
+            avisos: validacao.avisos
+        });
+    }
+
+    return {
+        criadoEm: new Date().toISOString(),
+        total: itens.length,
+        criar: itens.filter(item => item.acao === 'criar').length,
+        atualizar: itens.filter(item => item.acao === 'atualizar').length,
+        ignorar: itens.filter(item => item.acao === 'ignorar').length,
+        itens
+    };
+}
+
+function salvarPreviaImportacao(preview) {
+    fs.mkdirSync(IMPORTACOES_DIR, { recursive: true });
+    const token = `clientes-import-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`;
+    fs.writeFileSync(path.join(IMPORTACOES_DIR, token), JSON.stringify(preview, null, 2), 'utf8');
+    return token;
+}
+
+function lerPreviaImportacao(token) {
+    const nomeSeguro = path.basename(String(token || ''));
+    const caminho = path.join(IMPORTACOES_DIR, nomeSeguro);
+    if (!nomeSeguro || !fs.existsSync(caminho)) {
+        throw new Error('Pré-visualização da importação não encontrada. Envie o CSV novamente.');
+    }
+
+    return JSON.parse(fs.readFileSync(caminho, 'utf8'));
+}
+
+function removerPreviaImportacao(token) {
+    const nomeSeguro = path.basename(String(token || ''));
+    const caminho = path.join(IMPORTACOES_DIR, nomeSeguro);
+    if (nomeSeguro && fs.existsSync(caminho)) fs.unlinkSync(caminho);
+}
+
+function csvModeloClientes() {
+    const linhas = [
+        [
+            'Nome',
+            'WhatsApp',
+            'Nascimento',
+            'Plano',
+            'Dias de contrato',
+            'Valor do plano',
+            'Assinatura app',
+            'Status',
+            'Data/Hora de início',
+            'Data/Hora de vencimento',
+            'Validade app',
+            'Apps instalados',
+            'Dispositivos',
+            'Painéis',
+            'App instalado',
+            'Usuário IPTV',
+            'Senha IPTV',
+            'Endereço MAC',
+            'ID do aplicativo',
+            'Onde foi instalado',
+            'URL Ativar Aplicativo',
+            'Origem',
+            'Tags',
+            'Observações'
+        ],
+        [
+            'Cliente Exemplo',
+            '5511999999999',
+            '01/03/1990',
+            'Mensal',
+            '30',
+            '35,00',
+            '0,00',
+            'Ativo',
+            '06/06/2026 09:00',
+            '06/07/2026 09:00',
+            '1 Ano',
+            '4K IPTV, WPLAY',
+            'TV LG',
+            'Painel Wplay',
+            'Sim',
+            'usuarioiptv',
+            'senhaiptv',
+            'AA:BB:CC:DD:EE:FF',
+            '123456',
+            'TV da sala',
+            'https://exemplo.com/ativar',
+            'WhatsApp',
+            'VIP, Bom pagador',
+            'Cliente importado pelo modelo CSV'
+        ]
+    ];
+
+    return linhas.map(linha => linha.map(escaparCsv).join(';')).join('\r\n');
+}
+
 function montarUrlClienteMensagem(id, mensagem) {
     return `/clientes/${id}/editar?mensagem=${encodeURIComponent(mensagem)}`;
 }
@@ -3799,7 +4154,54 @@ function formatarUptime(segundos = 0) {
     return `${minutos}min`;
 }
 
-function telaManutencao(status = {}) {
+function resumoImportacaoClientes(importacao = {}) {
+    if (!importacao.preview) return '';
+
+    const preview = importacao.preview;
+    const token = importacao.token || '';
+    const itens = preview.itens || [];
+    const amostra = itens.slice(0, 12);
+    const podeConfirmar = preview.ignorar === 0 && itens.length > 0;
+
+    return `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Pré-visualização da importação</h2>
+                <div class="subtitle">${preview.total} linha(s): ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar</div>
+            </div>
+            ${podeConfirmar ? `<form method="post" action="/manutencao/importar-clientes/confirmar" onsubmit="return confirm('Confirmar importação? Um backup automático será criado antes de gravar.');">
+                <input type="hidden" name="token" value="${escapar(token)}">
+                <button class="button green" type="submit">${icon('check')} Confirmar importação</button>
+            </form>` : ''}
+        </div>
+        ${preview.ignorar ? '<div class="notice">Corrija as linhas com erro e envie o CSV novamente antes de confirmar.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
+        <table>
+            <thead>
+                <tr>
+                    <th>Linha</th>
+                    <th>Ação</th>
+                    <th>Cliente</th>
+                    <th>WhatsApp</th>
+                    <th>Plano</th>
+                    <th>Mensagens</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${amostra.map(item => `<tr>
+                    <td>${escapar(item.linha)}</td>
+                    <td><span class="badge ${item.acao === 'ignorar' ? 'red' : item.acao === 'atualizar' ? 'orange' : 'green'}">${escapar(item.acao)}</span></td>
+                    <td>${escapar(item.dados.nome || '-')}</td>
+                    <td>${escapar(item.dados.telefone || '-')}</td>
+                    <td>${escapar(item.dados.plano || '-')}</td>
+                    <td>${escapar([...(item.erros || []), ...(item.avisos || [])].join(' | ') || '-')}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+        ${itens.length > amostra.length ? `<div class="subtitle" style="padding:12px 0 0;">Mostrando ${amostra.length} de ${itens.length} linha(s).</div>` : ''}
+    </section>`;
+}
+
+function telaManutencao(status = {}, opcoes = {}) {
     const whatsapp = status.whatsapp || {};
     const backups = status.backups || [];
     const licenca = status.licenca || {};
@@ -3866,6 +4268,27 @@ function telaManutencao(status = {}) {
             </tbody>
         </table>
     </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Importar clientes CSV</h2>
+                <div class="subtitle">Baixe o modelo, envie a planilha para validar e confirme somente depois da pré-visualização</div>
+            </div>
+            <a class="button secondary" href="/manutencao/clientes-modelo.csv">${icon('planos')} Baixar modelo CSV</a>
+        </div>
+        <form class="fields" method="post" action="/manutencao/importar-clientes" enctype="multipart/form-data" style="padding-top:0;">
+            <label class="full">Arquivo CSV
+                <input type="file" name="arquivo" accept=".csv,text/csv" required>
+            </label>
+            <div class="notice full">A importação atualiza clientes com o mesmo WhatsApp e cria os que ainda não existem. Antes de gravar, o sistema mostra uma prévia e cria backup automático.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('search')} Validar CSV</button>
+            </div>
+        </form>
+    </section>
+
+    ${resumoImportacaoClientes(opcoes.importacao)}
 
     <section class="panel">
         <div class="panel-head">
@@ -4322,6 +4745,82 @@ router.post('/manutencao/backup', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
+});
+
+router.get('/manutencao/clientes-modelo.csv', (req, res) => {
+    desativarCache(res);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="modelo-clientes.csv"');
+    res.send(`\uFEFF${csvModeloClientes()}`);
+});
+
+router.post('/manutencao/importar-clientes', async (req, res) => {
+    try {
+        const upload = await lerUploadMultipart(req);
+        const preview = await prepararImportacaoClientesCsv(upload.buffer.toString('utf8'));
+        const token = salvarPreviaImportacao(preview);
+        const status = await obterStatusSistema(getStatusWhatsApp());
+
+        await renderizar(res, {
+            titulo: 'ManutenÃ§Ã£o',
+            conteudo: telaManutencao(status, { importacao: { preview, token } }),
+            mensagem: `CSV validado: ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar`,
+            ativo: 'manutencao'
+        });
+    } catch (err) {
+        const status = await obterStatusSistema(getStatusWhatsApp());
+
+        await renderizar(res, {
+            titulo: 'ManutenÃ§Ã£o',
+            conteudo: telaManutencao(status),
+            mensagem: err.message || 'NÃ£o foi possÃ­vel validar o CSV.',
+            ativo: 'manutencao'
+        });
+    }
+});
+
+router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
+    try {
+        const preview = lerPreviaImportacao(req.body.token);
+        const itens = preview.itens || [];
+        const itensValidos = itens.filter(item => item.acao !== 'ignorar');
+
+        if (!itensValidos.length) {
+            throw new Error('NÃ£o hÃ¡ clientes vÃ¡lidos para importar.');
+        }
+
+        if (itens.some(item => item.acao === 'ignorar')) {
+            throw new Error('A importaÃ§Ã£o possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
+        }
+
+        const backup = await criarBackupManual();
+        let criados = 0;
+        let atualizados = 0;
+
+        for (const item of itensValidos) {
+            const dados = item.acao === 'atualizar' && item.existenteId
+                ? { ...item.dados, id: item.existenteId }
+                : item.dados;
+
+            await salvarCliente(dados);
+            if (item.acao === 'atualizar') atualizados += 1;
+            if (item.acao === 'criar') criados += 1;
+        }
+
+        removerPreviaImportacao(req.body.token);
+        logControleClientes('Clientes importados via CSV', {
+            criados,
+            atualizados,
+            backup: backup.nome
+        });
+
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`ImportaÃ§Ã£o concluÃ­da: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
+    } catch (err) {
+        logControleClientes('Erro ao importar clientes via CSV', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'NÃ£o foi possÃ­vel importar os clientes.')}`);
     }
 });
 
