@@ -111,6 +111,37 @@ async function criarBackupManual() {
     };
 }
 
+async function restaurarBackup(nomeBackup) {
+    await db.ready;
+
+    const nomeSeguro = path.basename(String(nomeBackup || ''));
+    if (!nomeSeguro || !nomeSeguro.toLowerCase().endsWith('.db')) {
+        throw new Error('Backup invalido para restauracao.');
+    }
+
+    const origem = path.join(BACKUP_DIR, nomeSeguro);
+    if (!fs.existsSync(origem)) {
+        throw new Error('Arquivo de backup nao encontrado.');
+    }
+
+    if (!fs.existsSync(db.dbPath)) {
+        throw new Error('Banco atual nao encontrado para criar copia de seguranca.');
+    }
+
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+    const nomeAntesRestaurar = `antes-restaurar-${timestampArquivo()}.db`;
+    const caminhoAntesRestaurar = path.join(BACKUP_DIR, nomeAntesRestaurar);
+
+    fs.copyFileSync(db.dbPath, caminhoAntesRestaurar);
+    fs.copyFileSync(origem, db.dbPath);
+
+    return {
+        restaurado: nomeSeguro,
+        backupAnterior: nomeAntesRestaurar
+    };
+}
+
 async function obterStatusSistema(statusWhatsApp = {}) {
     await db.ready;
 
@@ -139,6 +170,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
 
 module.exports = {
     criarBackupManual,
+    restaurarBackup,
     obterStatusSistema,
     formatarBytes
 };

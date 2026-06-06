@@ -26,6 +26,7 @@ const {
 } = require('../services/configuracoesPainel');
 const {
     criarBackupManual,
+    restaurarBackup,
     obterStatusSistema
 } = require('../services/manutencao');
 const { agendarEncerramentoTeste } = require('../services/encerramentoTesteService');
@@ -3755,6 +3756,7 @@ function telaManutencao(status = {}) {
                     <th>Arquivo</th>
                     <th>Tamanho</th>
                     <th>Data</th>
+                    <th>Acoes</th>
                 </tr>
             </thead>
             <tbody>
@@ -3762,6 +3764,12 @@ function telaManutencao(status = {}) {
                     <td>${escapar(backup.nome)}</td>
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
+                    <td>
+                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup? O sistema criara uma copia do banco atual antes de restaurar. Depois reinicie o PM2.');">
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}">
+                            <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
+                        </form>
+                    </td>
                 </tr>`).join('')}
             </tbody>
         </table>` : '<div class="empty">Nenhum backup gerado ainda.</div>'}
@@ -4173,6 +4181,23 @@ router.post('/manutencao/backup', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/restaurar', async (req, res) => {
+    try {
+        const resultado = await restaurarBackup(req.body.backup);
+        logControleClientes('Backup restaurado', {
+            backup: resultado.restaurado,
+            backupAnterior: resultado.backupAnterior
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma copia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
+    } catch (err) {
+        logControleClientes('Erro ao restaurar backup', {
+            backup: req.body.backup,
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao restaurar backup: ${err.message}`)}`);
     }
 });
 
