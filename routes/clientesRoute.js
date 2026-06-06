@@ -21,7 +21,8 @@ const {
 } = require('../services/modelosMensagem');
 const {
     obterConfiguracoes,
-    salvarConfiguracoesPainel
+    salvarConfiguracoesPainel,
+    salvarConfiguracoesLicenca
 } = require('../services/configuracoesPainel');
 const {
     criarBackupManual,
@@ -3676,9 +3677,17 @@ function formatarUptime(segundos = 0) {
 function telaManutencao(status = {}) {
     const whatsapp = status.whatsapp || {};
     const backups = status.backups || [];
+    const licenca = status.licenca || {};
     const ultimoBackup = status.ultimoBackup
         ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
+    const notaLicenca = licenca.status === 'ativa'
+        ? `${licenca.diasRestantes} dia(s) restantes`
+        : licenca.status === 'vencendo'
+            ? `Vence em ${licenca.diasRestantes} dia(s)`
+            : licenca.status === 'vencida'
+                ? `Vencida ha ${Math.abs(licenca.diasRestantes)} dia(s)`
+                : 'Informe a licenca';
 
     return `<section class="page-title">
         <h1>Manutencao</h1>
@@ -3690,6 +3699,27 @@ function telaManutencao(status = {}) {
         ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ? 'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ? 'green' : 'red', icone: 'whats' })}
         ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'Nao encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
         ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o ultimo inicio', tipo: 'orange', icone: 'refresh' })}
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Licenca da instalacao</h2>
+                <div class="subtitle">Controle comercial da instalacao individual deste cliente</div>
+            </div>
+            <span class="badge ${licenca.status === 'vencida' ? 'red' : licenca.status === 'vencendo' ? 'orange' : licenca.status === 'ativa' ? 'green' : ''}">${escapar(licenca.rotulo || 'Nao configurada')}</span>
+        </div>
+        <form class="fields" method="post" action="/manutencao/licenca" style="padding-top:0;">
+            ${campo({ nome: 'licencaCliente', label: 'Cliente / Empresa', valor: licenca.cliente || '' })}
+            ${campo({ nome: 'licencaTelefone', label: 'Telefone do responsavel', valor: licenca.telefone || '' })}
+            ${campo({ nome: 'licencaAtivacao', label: 'Data de ativacao', valor: licenca.ativacao || '', tipo: 'date' })}
+            ${campo({ nome: 'licencaVencimento', label: 'Data de vencimento', valor: licenca.vencimento || '', tipo: 'date' })}
+            ${areaTexto({ nome: 'licencaObservacoes', label: 'Observacoes da licenca', valor: licenca.observacoes || '' })}
+            <div class="notice full">${escapar(notaLicenca)}</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar licenca</button>
+            </div>
+        </form>
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
@@ -4143,6 +4173,22 @@ router.post('/manutencao/backup', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/licenca', async (req, res) => {
+    try {
+        await salvarConfiguracoesLicenca(req.body);
+        logControleClientes('Licenca da instalacao atualizada', {
+            cliente: req.body.licencaCliente,
+            vencimento: req.body.licencaVencimento
+        });
+        res.redirect('/manutencao?mensagem=Licenca salva com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar licenca da instalacao', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licenca: ${err.message}`)}`);
     }
 });
 

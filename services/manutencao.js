@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
+const { obterConfiguracoes } = require('./configuracoesPainel');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -47,6 +48,48 @@ function listarBackups() {
         .sort((a, b) => b.criadoEm - a.criadoEm);
 }
 
+function dataISOHoje() {
+    const data = new Date();
+    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
+    return data.toISOString().slice(0, 10);
+}
+
+function calcularLicenca(config = {}) {
+    const vencimento = String(config.licencaVencimento || '').slice(0, 10);
+    const hoje = dataISOHoje();
+    let diasRestantes = null;
+    let status = 'nao_configurada';
+    let rotulo = 'Nao configurada';
+
+    if (vencimento) {
+        const hojeData = new Date(`${hoje}T00:00:00`);
+        const vencimentoData = new Date(`${vencimento}T00:00:00`);
+        diasRestantes = Math.ceil((vencimentoData - hojeData) / 86400000);
+
+        if (diasRestantes < 0) {
+            status = 'vencida';
+            rotulo = 'Vencida';
+        } else if (diasRestantes <= 7) {
+            status = 'vencendo';
+            rotulo = 'Vencendo';
+        } else {
+            status = 'ativa';
+            rotulo = 'Ativa';
+        }
+    }
+
+    return {
+        cliente: config.licencaCliente || '',
+        telefone: config.licencaTelefone || '',
+        ativacao: config.licencaAtivacao || '',
+        vencimento,
+        observacoes: config.licencaObservacoes || '',
+        diasRestantes,
+        status,
+        rotulo
+    };
+}
+
 async function criarBackupManual() {
     await db.ready;
 
@@ -74,6 +117,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const bancoExiste = fs.existsSync(db.dbPath);
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
+    const config = await obterConfiguracoes();
 
     return {
         versao: packageInfo.version || '1.0.0',
@@ -88,6 +132,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
         backups: backups.slice(0, 8),
+        licenca: calcularLicenca(config),
         whatsapp: statusWhatsApp
     };
 }

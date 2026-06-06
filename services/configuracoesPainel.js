@@ -22,7 +22,12 @@ async function obterConfiguracoes() {
     const rows = await buscarTodos('SELECT chave, valor FROM configuracoes');
     const config = {
         nomeSistema: 'Controle de Cliente IPTV e P2P',
-        logoUrl: ''
+        logoUrl: '',
+        licencaCliente: '',
+        licencaTelefone: '',
+        licencaAtivacao: '',
+        licencaVencimento: '',
+        licencaObservacoes: ''
     };
 
     rows.forEach((row) => {
@@ -50,7 +55,18 @@ async function salvarConfiguracoesPainel(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesLicenca(dados = {}) {
+    await salvarConfiguracao('licencaCliente', dados.licencaCliente || '');
+    await salvarConfiguracao('licencaTelefone', dados.licencaTelefone || '');
+    await salvarConfiguracao('licencaAtivacao', dados.licencaAtivacao || '');
+    await salvarConfiguracao('licencaVencimento', dados.licencaVencimento || '');
+    await salvarConfiguracao('licencaObservacoes', dados.licencaObservacoes || '');
+
+    return obterConfiguracoes();
+}
+
 module.exports = {
     obterConfiguracoes,
-    salvarConfiguracoesPainel
+    salvarConfiguracoesPainel,
+    salvarConfiguracoesLicenca
 };
