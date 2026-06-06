@@ -3,3 +3,4 @@
 node_modules/
 clientes.db
 database/conversas.json
+backups/

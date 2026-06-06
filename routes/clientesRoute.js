@@ -23,6 +23,10 @@ const {
     obterConfiguracoes,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
+const {
+    criarBackupManual,
+    obterStatusSistema
+} = require('../services/manutencao');
 const { agendarEncerramentoTeste } = require('../services/encerramentoTesteService');
 const {
     listarTiposPlanos,
@@ -440,6 +444,7 @@ function icon(nome) {
         info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
         image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
         ,
+        manutencao: '<svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>',
         planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>',
         trend: '<svg viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
         refresh: '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M16 8h5V3"/></svg>'
@@ -1890,6 +1895,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
+                <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} Manutencao</a>
                 <a class="navlink" href="/qr" title="WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}">${icon('sair')}</a>
             </nav>
         </div>
@@ -3656,6 +3662,82 @@ function telaPaineis(paineis) {
     </section>`;
 }
 
+function formatarUptime(segundos = 0) {
+    const total = Number(segundos || 0);
+    const dias = Math.floor(total / 86400);
+    const horas = Math.floor((total % 86400) / 3600);
+    const minutos = Math.floor((total % 3600) / 60);
+
+    if (dias) return `${dias}d ${horas}h ${minutos}min`;
+    if (horas) return `${horas}h ${minutos}min`;
+    return `${minutos}min`;
+}
+
+function telaManutencao(status = {}) {
+    const whatsapp = status.whatsapp || {};
+    const backups = status.backups || [];
+    const ultimoBackup = status.ultimoBackup
+        ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
+        : 'Nenhum backup gerado';
+
+    return `<section class="page-title">
+        <h1>Manutencao</h1>
+        <div class="subtitle">Status, backup e preparacao para instalacao comercial individual</div>
+    </section>
+
+    <section class="metrics" style="margin-bottom:24px;">
+        ${metricCard({ label: 'Versao', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
+        ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ? 'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ? 'green' : 'red', icone: 'whats' })}
+        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'Nao encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
+        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o ultimo inicio', tipo: 'orange', icone: 'refresh' })}
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Backup dos dados</h2>
+                <div class="subtitle">Gere uma copia do banco antes de atualizar ou fazer manutencao</div>
+            </div>
+            <form method="post" action="/manutencao/backup">
+                <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
+            </form>
+        </div>
+        <table>
+            <tbody>
+                <tr><th>Pasta dos dados</th><td>${escapar(status.dataDir || '-')}</td></tr>
+                <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
+                <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
+                <tr><th>Ultimo backup</th><td>${escapar(ultimoBackup)}</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Backups recentes</h2>
+                <div class="subtitle">${status.totalBackups || 0} backup(s) encontrado(s)</div>
+            </div>
+        </div>
+        ${backups.length ? `<table>
+            <thead>
+                <tr>
+                    <th>Arquivo</th>
+                    <th>Tamanho</th>
+                    <th>Data</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${backups.map(backup => `<tr>
+                    <td>${escapar(backup.nome)}</td>
+                    <td>${escapar(backup.tamanhoFormatado)}</td>
+                    <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>` : '<div class="empty">Nenhum backup gerado ainda.</div>'}
+    </section>`;
+}
+
 function formularioPainel(painel = {}) {
     return `<section class="page-title">
         <h1>${painel.id ? 'Editar Painel' : 'Novo Painel'}</h1>
@@ -4036,6 +4118,32 @@ router.post('/paineis/salvar', async (req, res) => {
 router.post('/paineis/:id/excluir', async (req, res) => {
     await removerPainel(req.params.id);
     res.redirect('/paineis?mensagem=Painel excluído');
+});
+
+router.get('/manutencao', async (req, res) => {
+    const status = await obterStatusSistema(getStatusWhatsApp());
+
+    await renderizar(res, {
+        titulo: 'Manutencao',
+        conteudo: telaManutencao(status),
+        mensagem: req.query.mensagem || '',
+        ativo: 'manutencao'
+    });
+});
+
+router.post('/manutencao/backup', async (req, res) => {
+    try {
+        const backup = await criarBackupManual();
+        logControleClientes('Backup manual criado', {
+            arquivo: backup.nome
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup criado: ${backup.nome}`)}`);
+    } catch (err) {
+        logControleClientes('Erro ao criar backup manual', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
 });
 
 router.get('/modelos', async (req, res) => {

@@ -271,5 +271,7 @@ function migrarTelefoneDuplicado(done) {
 }
 
 db.ready = ready;
+db.dbPath = dbPath;
+db.dataDir = DATA_DIR;
 
 module.exports = db;
