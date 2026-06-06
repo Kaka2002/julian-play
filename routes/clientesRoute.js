@@ -406,9 +406,9 @@ function textoVencimento(cliente) {
     if (dias === null) return 'Sem vencimento';
     if (vencimentoExpirou(vencimento)) {
         if (dias === 0) return 'Vencido hoje';
-        return `Vencido ha ${Math.abs(dias)} dia(s)`;
+        return `Vencido há ${Math.abs(dias)} dia(s)`;
     }
-    if (dias < 0) return `Vencido ha ${Math.abs(dias)} dia(s)`;
+    if (dias < 0) return `Vencido há ${Math.abs(dias)} dia(s)`;
     if (tempo && tempo !== '-') {
         return `Vence em ${tempo.replace(/ restantes?$/, '')}`;
     }
@@ -1897,7 +1897,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
-                <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} Manutencao</a>
+                <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/qr" title="WhatsApp: ${status.conectado ? 'conectado' : escapar(status.status || 'desconectado')}">${icon('sair')}</a>
             </nav>
         </div>
@@ -3687,38 +3687,38 @@ function telaManutencao(status = {}) {
         : licenca.status === 'vencendo'
             ? `Vence em ${licenca.diasRestantes} dia(s)`
             : licenca.status === 'vencida'
-                ? `Vencida ha ${Math.abs(licenca.diasRestantes)} dia(s)`
-                : 'Informe a licenca';
+                ? `Vencida há ${Math.abs(licenca.diasRestantes)} dia(s)`
+                : 'Informe a licença';
 
     return `<section class="page-title">
-        <h1>Manutencao</h1>
-        <div class="subtitle">Status, backup e preparacao para instalacao comercial individual</div>
+        <h1>Manutenção</h1>
+        <div class="subtitle">Status, backup e preparação para instalação comercial individual</div>
     </section>
 
     <section class="metrics" style="margin-bottom:24px;">
-        ${metricCard({ label: 'Versao', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
+        ${metricCard({ label: 'Versão', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
         ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ? 'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ? 'green' : 'red', icone: 'whats' })}
-        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'Nao encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
-        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o ultimo inicio', tipo: 'orange', icone: 'refresh' })}
+        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'Não encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
+        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Licenca da instalacao</h2>
-                <div class="subtitle">Controle comercial da instalacao individual deste cliente</div>
+                <h2 class="panel-title">Licença da instalação</h2>
+                <div class="subtitle">Controle comercial da instalação individual deste cliente</div>
             </div>
-            <span class="badge ${licenca.status === 'vencida' ? 'red' : licenca.status === 'vencendo' ? 'orange' : licenca.status === 'ativa' ? 'green' : ''}">${escapar(licenca.rotulo || 'Nao configurada')}</span>
+            <span class="badge ${licenca.status === 'vencida' ? 'red' : licenca.status === 'vencendo' ? 'orange' : licenca.status === 'ativa' ? 'green' : ''}">${escapar(licenca.rotulo || 'Não configurada')}</span>
         </div>
         <form class="fields" method="post" action="/manutencao/licenca" style="padding-top:0;">
             ${campo({ nome: 'licencaCliente', label: 'Cliente / Empresa', valor: licenca.cliente || '' })}
-            ${campo({ nome: 'licencaTelefone', label: 'Telefone do responsavel', valor: licenca.telefone || '' })}
-            ${campo({ nome: 'licencaAtivacao', label: 'Data de ativacao', valor: licenca.ativacao || '', tipo: 'date' })}
+            ${campo({ nome: 'licencaTelefone', label: 'Telefone do responsável', valor: licenca.telefone || '' })}
+            ${campo({ nome: 'licencaAtivacao', label: 'Data de ativação', valor: licenca.ativacao || '', tipo: 'date' })}
             ${campo({ nome: 'licencaVencimento', label: 'Data de vencimento', valor: licenca.vencimento || '', tipo: 'date' })}
-            ${areaTexto({ nome: 'licencaObservacoes', label: 'Observacoes da licenca', valor: licenca.observacoes || '' })}
+            ${areaTexto({ nome: 'licencaObservacoes', label: 'Observações da licença', valor: licenca.observacoes || '' })}
             <div class="notice full">${escapar(notaLicenca)}</div>
             <div class="actions full">
-                <button class="button" type="submit">${icon('check')} Salvar licenca</button>
+                <button class="button" type="submit">${icon('check')} Salvar licença</button>
             </div>
         </form>
     </section>
@@ -3727,7 +3727,7 @@ function telaManutencao(status = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backup dos dados</h2>
-                <div class="subtitle">Gere uma copia do banco antes de atualizar ou fazer manutencao</div>
+                <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
             </div>
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
@@ -3738,7 +3738,7 @@ function telaManutencao(status = {}) {
                 <tr><th>Pasta dos dados</th><td>${escapar(status.dataDir || '-')}</td></tr>
                 <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
-                <tr><th>Ultimo backup</th><td>${escapar(ultimoBackup)}</td></tr>
+                <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
             </tbody>
         </table>
     </section>
@@ -3756,7 +3756,7 @@ function telaManutencao(status = {}) {
                     <th>Arquivo</th>
                     <th>Tamanho</th>
                     <th>Data</th>
-                    <th>Acoes</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>
@@ -3765,7 +3765,7 @@ function telaManutencao(status = {}) {
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
                     <td>
-                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup? O sistema criara uma copia do banco atual antes de restaurar. Depois reinicie o PM2.');">
+                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup? O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
@@ -4162,7 +4162,7 @@ router.get('/manutencao', async (req, res) => {
     const status = await obterStatusSistema(getStatusWhatsApp());
 
     await renderizar(res, {
-        titulo: 'Manutencao',
+        titulo: 'Manutenção',
         conteudo: telaManutencao(status),
         mensagem: req.query.mensagem || '',
         ativo: 'manutencao'
@@ -4191,7 +4191,7 @@ router.post('/manutencao/restaurar', async (req, res) => {
             backup: resultado.restaurado,
             backupAnterior: resultado.backupAnterior
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma copia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma cópia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
     } catch (err) {
         logControleClientes('Erro ao restaurar backup', {
             backup: req.body.backup,
@@ -4208,12 +4208,12 @@ router.post('/manutencao/licenca', async (req, res) => {
             cliente: req.body.licencaCliente,
             vencimento: req.body.licencaVencimento
         });
-        res.redirect('/manutencao?mensagem=Licenca salva com sucesso');
+        res.redirect('/manutencao?mensagem=Licença salva com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar licenca da instalacao', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licenca: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
     }
 });
 

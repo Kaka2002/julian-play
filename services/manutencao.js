@@ -59,7 +59,7 @@ function calcularLicenca(config = {}) {
     const hoje = dataISOHoje();
     let diasRestantes = null;
     let status = 'nao_configurada';
-    let rotulo = 'Nao configurada';
+    let rotulo = 'Não configurada';
 
     if (vencimento) {
         const hojeData = new Date(`${hoje}T00:00:00`);
@@ -94,7 +94,7 @@ async function criarBackupManual() {
     await db.ready;
 
     if (!fs.existsSync(db.dbPath)) {
-        throw new Error('Banco de dados nao encontrado para backup.');
+        throw new Error('Banco de dados não encontrado para backup.');
     }
 
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
@@ -125,7 +125,7 @@ async function restaurarBackup(nomeBackup) {
     }
 
     if (!fs.existsSync(db.dbPath)) {
-        throw new Error('Banco atual nao encontrado para criar copia de seguranca.');
+        throw new Error('Banco atual não encontrado para criar cópia de segurança.');
     }
 
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
