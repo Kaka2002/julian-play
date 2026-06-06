@@ -1437,7 +1437,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .app-access-row {
             display: grid;
-            grid-template-columns: repeat(3, minmax(150px, 1fr));
+            grid-template-columns: repeat(4, minmax(150px, 1fr));
             gap: 10px;
             align-items: end;
             padding: 12px;
@@ -2272,10 +2272,11 @@ function lerAcessosApp(cliente = {}) {
                     dispositivo: String(acesso.dispositivo || ''),
                     painel: String(acesso.painel || ''),
                     localInstalacao: String(acesso.localInstalacao || ''),
+                    urlAtivarAplicativo: String(acesso.urlAtivarAplicativo || ''),
                     enderecoMac: String(acesso.enderecoMac || ''),
                     idAplicativo: String(acesso.idAplicativo || '')
                 }))
-                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.enderecoMac || acesso.idAplicativo);
+                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo);
         }
     } catch (err) {
         // Mantem compatibilidade com cadastros antigos.
@@ -2287,6 +2288,7 @@ function lerAcessosApp(cliente = {}) {
             dispositivo: lerListaSalva(cliente.dispositivosSelecionados)[0] || '',
             painel: lerListaSalva(cliente.paineisSelecionados)[0] || '',
             localInstalacao: '',
+            urlAtivarAplicativo: '',
             enderecoMac: cliente.enderecoMac || '',
             idAplicativo: cliente.idAplicativo || ''
         }];
@@ -2327,6 +2329,9 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
         </label>
         <label>Onde foi instalado
             <input type="text" name="acessoLocalInstalacao" value="${escapar(acesso.localInstalacao || '')}" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">
+        </label>
+        <label>URL Ativar Aplicativo
+            <input type="url" name="acessoUrlAtivarAplicativo" value="${escapar(acesso.urlAtivarAplicativo || '')}" placeholder="https://...">
         </label>
         <button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>
     </div>`;
@@ -2837,6 +2842,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '</label>'
                 + '<label>Onde foi instalado'
                 + '<input type="text" name="acessoLocalInstalacao" list="locaisInstalacaoApp" placeholder="Ex: TV da sala">'
+                + '</label>'
+                + '<label>URL Ativar Aplicativo'
+                + '<input type="url" name="acessoUrlAtivarAplicativo" placeholder="https://...">'
                 + '</label>'
                 + '<button class="button secondary icon-only remove-app-access" type="button" title="Remover acesso">${icon('trash')}</button>';
             return linha;
