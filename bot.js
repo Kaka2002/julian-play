@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const {
@@ -9,6 +10,7 @@ const {
     getStatusWhatsApp
 } = require('./config/whatsapp');
 const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
+const { protegerPainel } = require('./services/authService');
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -31,6 +33,7 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/', authRoute);
 
 app.get('/health', (req, res) => {
     res.status(200).json({
@@ -41,6 +44,7 @@ app.get('/health', (req, res) => {
     });
 });
 
+app.use(protegerPainel);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);
 

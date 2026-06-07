@@ -14,6 +14,18 @@ Com o servidor rodando, acesse:
 - `/clientes/novo` para cadastrar um novo cliente.
 - `/qr` para conectar o WhatsApp pelo QR Code.
 
+O painel possui tela de login. Por padrao, quando nenhuma variavel for configurada, o acesso inicial e:
+
+- Usuario: `admin`
+- Senha: `admin123`
+
+Para producao, configure as variaveis:
+
+- `PANEL_USER`: usuario do painel.
+- `PANEL_PASSWORD`: senha do painel.
+- `PANEL_SESSION_HOURS`: duracao da sessao em horas. Padrao: `8`.
+- `PANEL_COOKIE_SECURE`: use `1` quando estiver acessando por HTTPS.
+
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 
 No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.
