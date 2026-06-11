@@ -10,6 +10,7 @@ const {
     listarPagamentosCliente,
     renovarCliente,
     marcarPagamentoMensagem,
+    removerPagamentoCliente,
     removerCliente,
     normalizarTelefone,
     listarNotasCliente,
@@ -3113,8 +3114,13 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             <td>${escapar(pagamento.formaPagamento || '-')}</td>
             <td>${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
             <td>${pagamento.mensagemEnviada ? '<span class="badge green">Enviada</span>' : '<span class="badge orange">Não enviada</span>'}</td>
+            <td>
+                <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico? O vencimento atual do cliente não será alterado.');">
+                    <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
+                </form>
+            </td>
         </tr>`).join('')
-        : '<tr><td colspan="6" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
+        : '<tr><td colspan="7" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
 
     return `<section class="panel" id="renovar" style="margin-top:24px;">
         <div class="panel-head">
@@ -3175,6 +3181,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     <th>Pagamento</th>
                     <th>Novo vencimento</th>
                     <th>Mensagem</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>${linhasHistorico}</tbody>
@@ -4753,6 +4760,26 @@ router.post('/clientes/:id/renovar', async (req, res) => {
     } catch (err) {
         logControleClientes('Erro ao renovar cliente', {
             clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
+    }
+});
+
+router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) => {
+    try {
+        const pagamento = await removerPagamentoCliente(req.params.id, req.params.pagamentoId);
+        logControleClientes('Pagamento removido do historico', {
+            clienteId: req.params.id,
+            pagamentoId: req.params.pagamentoId,
+            valor: pagamento.valorTotal
+        });
+
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histórico financeiro.'));
+    } catch (err) {
+        logControleClientes('Erro ao remover pagamento', {
+            clienteId: req.params.id,
+            pagamentoId: req.params.pagamentoId,
             erro: err.message
         });
         return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));

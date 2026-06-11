@@ -931,6 +931,29 @@ function marcarPagamentoMensagem(pagamentoId, enviado, erro = '') {
     );
 }
 
+async function removerPagamentoCliente(clienteId, pagamentoId) {
+    const pagamento = await buscarUm(
+        'SELECT * FROM cliente_pagamentos WHERE id = ? AND clienteId = ?',
+        [pagamentoId, clienteId]
+    );
+
+    if (!pagamento) {
+        throw new Error('Pagamento nao encontrado no historico deste cliente.');
+    }
+
+    await executar(
+        'DELETE FROM cliente_pagamentos WHERE id = ? AND clienteId = ?',
+        [pagamentoId, clienteId]
+    );
+
+    await adicionarNotaCliente(
+        clienteId,
+        `Pagamento removido do historico: ${pagamento.plano}, R$ ${pagamento.valorTotal || '0,00'}, registrado em ${pagamento.dataPagamento || pagamento.criadoEm}.`
+    );
+
+    return pagamento;
+}
+
 function buscarAlertasCadastroCliente(dados = {}) {
     const idAtual = limparTexto(dados.id);
     const nome = limparTexto(dados.nome);
@@ -1169,6 +1192,7 @@ module.exports = {
     listarPagamentosCliente,
     renovarCliente,
     marcarPagamentoMensagem,
+    removerPagamentoCliente,
     removerCliente,
     listarNotasCliente,
     adicionarNotaCliente,
