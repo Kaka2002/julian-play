@@ -279,6 +279,27 @@ function adicionarDiasData(dataBase, dias) {
     return dataParaCampos(data);
 }
 
+function mesesPorDiasContrato(dias) {
+    const mapa = {
+        30: 1,
+        90: 3,
+        180: 6,
+        365: 12
+    };
+
+    return mapa[Number(dias || 0)] || 0;
+}
+
+function adicionarPeriodoContrato(dataBase, dias) {
+    const meses = mesesPorDiasContrato(dias);
+
+    if (meses) {
+        return adicionarMesesData(dataBase, meses);
+    }
+
+    return adicionarDiasData(dataBase, dias);
+}
+
 function dataBaseRenovacao(cliente = {}) {
     const valor = cliente.dataVencimento || cliente.vencimento || '';
     const data = valor
@@ -849,7 +870,7 @@ async function renovarCliente(dados = {}) {
     const base = dataBaseRenovacao(cliente);
     const inicioRenovacao = dataParaCampos(base).dataVencimento;
     const vencimentoAnterior = cliente.dataVencimento || cliente.vencimento || '';
-    const vencimentoNovo = adicionarDiasData(base, diasContrato);
+    const vencimentoNovo = adicionarPeriodoContrato(base, diasContrato);
     const total = moedaParaNumero(valorPlano) + moedaParaNumero(assinaturaApp);
     const valorTotal = normalizarMoeda(total.toFixed(2));
 

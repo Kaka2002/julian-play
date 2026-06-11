@@ -3459,7 +3459,24 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 data.setMinutes(data.getMinutes() + minutos);
             } else {
                 if (!dias) return;
-                data.setDate(data.getDate() + dias);
+                const mesesPorDias = {
+                    30: 1,
+                    90: 3,
+                    180: 6,
+                    365: 12
+                };
+                const meses = mesesPorDias[dias] || 0;
+
+                if (meses) {
+                    const diaOriginal = data.getDate();
+                    data.setMonth(data.getMonth() + meses);
+
+                    if (data.getDate() !== diaOriginal) {
+                        data.setDate(0);
+                    }
+                } else {
+                    data.setDate(data.getDate() + dias);
+                }
             }
 
             dataVencimento.value = new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
