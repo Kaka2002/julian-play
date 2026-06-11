@@ -42,6 +42,7 @@ db.serialize(() => {
             observacoes TEXT,
             origem TEXT,
             tags TEXT,
+            bonusMeses INTEGER DEFAULT 0,
             status TEXT DEFAULT 'teste',
             ultimoAvisoRenovacao TEXT,
             ultimoAvisoAniversario TEXT,
@@ -163,6 +164,7 @@ db.serialize(() => {
         observacoes: 'TEXT',
         origem: 'TEXT',
         tags: 'TEXT',
+        bonusMeses: 'INTEGER DEFAULT 0',
         status: "TEXT DEFAULT 'teste'",
         ultimoAvisoRenovacao: 'TEXT',
         ultimoAvisoAniversario: 'TEXT',
@@ -238,6 +240,7 @@ function migrarTelefoneDuplicado(done) {
                     observacoes TEXT,
                     origem TEXT,
                     tags TEXT,
+                    bonusMeses INTEGER DEFAULT 0,
                     status TEXT DEFAULT 'teste',
                     ultimoAvisoRenovacao TEXT,
                     ultimoAvisoAniversario TEXT,
@@ -251,7 +254,7 @@ function migrarTelefoneDuplicado(done) {
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, appInstalado,
-                    usuarioApp, senhaApp, observacoes, status, ultimoAvisoRenovacao,
+                    usuarioApp, senhaApp, observacoes, origem, tags, bonusMeses, status, ultimoAvisoRenovacao,
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 )
                 SELECT
@@ -259,7 +262,7 @@ function migrarTelefoneDuplicado(done) {
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, appInstalado,
-                    usuarioApp, senhaApp, observacoes, status, ultimoAvisoRenovacao,
+                    usuarioApp, senhaApp, observacoes, origem, tags, bonusMeses, status, ultimoAvisoRenovacao,
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 FROM clientes_backup_unico
             `);

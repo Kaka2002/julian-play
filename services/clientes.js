@@ -209,7 +209,42 @@ function montarCliente(dados = {}) {
         observacoes: limparTexto(dados.observacoes),
         origem: limparTexto(dados.origem),
         tags: normalizarTags(dados.tags),
+        bonusMeses: Math.max(0, Number.parseInt(dados.bonusMeses || 0, 10) || 0),
         status: limparTexto(dados.status) || 'ativo'
+    };
+}
+
+function dataBaseBonus(cliente = {}) {
+    const valor = cliente.dataVencimento || cliente.vencimento || '';
+    const texto = String(valor || '').trim();
+    const data = texto
+        ? new Date(texto.length <= 10 ? `${texto}T23:59:00` : texto)
+        : new Date();
+
+    const agora = new Date();
+    if (Number.isNaN(data.getTime()) || data < agora) return agora;
+    return data;
+}
+
+function adicionarMesesData(dataBase, meses) {
+    const data = new Date(dataBase.getTime());
+    const diaOriginal = data.getDate();
+
+    data.setMonth(data.getMonth() + Number(meses || 0));
+
+    if (data.getDate() !== diaOriginal) {
+        data.setDate(0);
+    }
+
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
+
+    return {
+        vencimento: `${ano}-${mes}-${dia}`,
+        dataVencimento: `${ano}-${mes}-${dia}T${hora}:${minuto}`
     };
 }
 
@@ -537,6 +572,7 @@ async function salvarCliente(dados) {
                 observacoes = ?,
                 origem = ?,
                 tags = ?,
+                bonusMeses = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
@@ -569,6 +605,7 @@ async function salvarCliente(dados) {
                 cliente.observacoes,
                 cliente.origem,
                 cliente.tags,
+                cliente.bonusMeses,
                 cliente.status,
                 idCliente
             ]
@@ -589,8 +626,8 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -620,6 +657,7 @@ async function salvarCliente(dados) {
             cliente.observacoes,
             cliente.origem,
             cliente.tags,
+            cliente.bonusMeses,
             cliente.status
         ]
     );
@@ -633,6 +671,64 @@ function buscarClientePorId(id) {
 
 function removerCliente(id) {
     return executar('DELETE FROM clientes WHERE id = ?', [id]);
+}
+
+async function aplicarBonusCliente(id, quantidade = 1) {
+    const meses = Number.parseInt(quantidade, 10);
+    if (!Number.isFinite(meses) || meses <= 0) {
+        throw new Error('Informe a quantidade de bonus a aplicar.');
+    }
+
+    const cliente = await buscarClientePorId(id);
+    if (!cliente) {
+        throw new Error('Cliente nao encontrado.');
+    }
+
+    const saldo = Number.parseInt(cliente.bonusMeses || 0, 10) || 0;
+    if (saldo < meses) {
+        throw new Error(`Saldo de bonus insuficiente. Disponivel: ${saldo}.`);
+    }
+
+    const vencimentoAtualizado = adicionarMesesData(dataBaseBonus(cliente), meses);
+    const saldoRestante = saldo - meses;
+
+    await executar(
+        `UPDATE clientes SET
+            bonusMeses = ?,
+            vencimento = ?,
+            dataVencimento = ?,
+            status = CASE WHEN status = 'expirado' THEN 'ativo' ELSE status END,
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [saldoRestante, vencimentoAtualizado.vencimento, vencimentoAtualizado.dataVencimento, id]
+    );
+
+    await adicionarNotaCliente(
+        id,
+        `Bonus aplicado: ${meses} mes(es). Novo vencimento: ${vencimentoAtualizado.dataVencimento}. Saldo restante: ${saldoRestante}.`
+    );
+
+    return {
+        cliente: await buscarClientePorId(id),
+        meses,
+        saldoAnterior: saldo,
+        saldoRestante,
+        ...vencimentoAtualizado
+    };
+}
+
+async function registrarBonusAniversario(id, ano) {
+    await executar(
+        `UPDATE clientes SET
+            bonusMeses = COALESCE(bonusMeses, 0) + 1,
+            ultimoAvisoAniversario = ?,
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [String(ano), id]
+    );
+
+    await adicionarNotaCliente(id, `Bonus de aniversario adicionado automaticamente: 1 mes (${ano}).`);
+    return buscarClientePorId(id);
 }
 
 function listarNotasCliente(clienteId) {
@@ -883,13 +979,7 @@ async function registrarAvisoRenovacaoProgramado(id, vencimento, diasAntes) {
 }
 
 function registrarAvisoAniversario(id, ano) {
-    return executar(
-        `UPDATE clientes SET
-            ultimoAvisoAniversario = ?,
-            atualizadoEm = CURRENT_TIMESTAMP
-        WHERE id = ?`,
-        [String(ano), id]
-    );
+    return registrarBonusAniversario(id, ano);
 }
 
 module.exports = {
@@ -902,6 +992,7 @@ module.exports = {
     listarClientes,
     salvarCliente,
     buscarClientePorId,
+    aplicarBonusCliente,
     removerCliente,
     listarNotasCliente,
     adicionarNotaCliente,
@@ -914,6 +1005,7 @@ module.exports = {
     registrarAvisoRenovacao,
     registrarAvisoRenovacaoProgramado,
     registrarAvisoAniversario,
+    registrarBonusAniversario,
     atualizarStatusAutomaticoClientes,
     normalizarTelefone
 };

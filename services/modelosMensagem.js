@@ -69,7 +69,7 @@ const modelosPadrao = [
         plano: 'aniversario',
         titulo: 'Aniversário - Bônus de 1 Mês',
         cor: 'green',
-        texto: 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, preparamos um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
+        texto: 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, adicionamos ao seu cadastro um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
     }
 ];
 
@@ -171,6 +171,20 @@ async function garantirModelosPadrao() {
                     modelo.chave,
                     legado.titulo,
                     legado.texto
+                ]
+            );
+        }
+
+        if (modelo.chave === 'aniversario_bonus') {
+            await executar(
+                `UPDATE modelos_mensagem
+                SET texto = ?
+                WHERE chave = ?
+                    AND texto = ?`,
+                [
+                    modelo.texto,
+                    modelo.chave,
+                    'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, preparamos um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
                 ]
             );
         }

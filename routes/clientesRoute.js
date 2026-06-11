@@ -6,6 +6,7 @@ const {
     salvarCliente,
     buscarClientePorId,
     buscarClientePorTelefone,
+    aplicarBonusCliente,
     removerCliente,
     normalizarTelefone,
     listarNotasCliente,
@@ -2473,6 +2474,7 @@ function gerarCsvClientes(clientes = []) {
         'Dados por app instalado',
         'Origem',
         'Tags',
+        'Bônus disponíveis',
         'Observações'
     ];
 
@@ -2500,6 +2502,7 @@ function gerarCsvClientes(clientes = []) {
         descreverAcessosAppCsv(cliente),
         cliente.origem,
         juntarListaCsv(cliente.tags || ''),
+        cliente.bonusMeses || 0,
         cliente.observacoes
     ]);
 
@@ -2709,6 +2712,7 @@ function montarDadosClienteImportado(registro, planos = []) {
         acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativação', 'URL ativacao']),
         origem: valorCsv(registro, ['Origem']),
         tags: listaCsvParaArray(valorCsv(registro, ['Tags', 'Categoria', 'Categorias'])),
+        bonusMeses: valorCsv(registro, ['Bônus disponíveis', 'Bonus disponiveis', 'Bônus', 'Bonus']),
         observacoes: valorCsv(registro, ['Observações', 'Observacoes', 'Notas'])
     };
 }
@@ -2828,6 +2832,7 @@ function csvModeloClientes() {
             'URL Ativar Aplicativo',
             'Origem',
             'Tags',
+            'Bônus disponíveis',
             'Observações'
         ],
         [
@@ -2854,6 +2859,7 @@ function csvModeloClientes() {
             'https://exemplo.com/ativar',
             'WhatsApp',
             'VIP, Bom pagador',
+            '0',
             'Cliente importado pelo modelo CSV'
         ]
     ];
@@ -2947,6 +2953,23 @@ Seu acesso de teste foi preparado com sucesso.
 *Válido até:* ${formatarDataHoraMensagem(dados.validade)}
 
 Teste configurado. Para encerrar o atendimento, digite *sair*.`;
+}
+
+function montarMensagemBonusAplicado(cliente = {}, resultado = {}) {
+    const meses = Number(resultado.meses || 1);
+    const textoMeses = meses === 1 ? '1 mês grátis' : `${meses} meses grátis`;
+    const saldo = Number(resultado.saldoRestante || 0);
+
+    return `🎁 *BÔNUS APLICADO*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*!
+
+Foi aplicado em seu cadastro um bônus de *${textoMeses}* no seu plano.
+
+*Novo vencimento:* ${formatarDataHoraMensagem(resultado.dataVencimento)}
+*Saldo de bônus restante:* ${saldo}
+
+Obrigado pela preferência.`;
 }
 
 function clienteEhTeste(cliente = {}) {
@@ -3050,6 +3073,38 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     </section>`;
 }
 
+function secaoBonusCliente(cliente = {}) {
+    if (!cliente.id) return '';
+
+    const saldo = Number.parseInt(cliente.bonusMeses || 0, 10) || 0;
+    const opcoes = Array.from({ length: Math.max(1, Math.min(12, saldo || 1)) }, (_, index) => index + 1)
+        .map(valor => `<option value="${valor}">${valor} ${valor === 1 ? 'mês' : 'meses'}</option>`)
+        .join('');
+
+    return `<section class="panel" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Bônus do cliente</h2>
+                <div class="subtitle">Cada bônus equivale a 1 mês grátis de plano. Ao aplicar, o vencimento é prorrogado e o saldo é descontado.</div>
+            </div>
+            <span class="badge green">${escapar(saldo)} disponível(is)</span>
+        </div>
+        <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/aplicar-bonus">
+            <label>Quantidade de bônus para aplicar
+                <select name="quantidade" ${saldo <= 0 ? 'disabled' : ''}>
+                    ${saldo > 0 ? opcoes : '<option value="">Sem bônus disponível</option>'}
+                </select>
+            </label>
+            <label class="full">Observação da bonificação
+                <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicação, aniversário ou detalhe da bonificação"></textarea>
+            </label>
+            <div class="actions full">
+                <button class="button green" type="submit" ${saldo <= 0 ? 'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
+            </div>
+        </form>
+    </section>`;
+}
+
 function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const planos = listas.planos || [];
     const apps = listas.apps || [];
@@ -3089,7 +3144,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
-            <div></div>
+            ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
 
             <div class="form-section full">Plano</div>
             ${campo({
@@ -3440,6 +3495,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     </script>`;
 
     const extras = [
+        secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ? secaoTesteLiberado(cliente, listas) : '',
         secaoNotasCliente(cliente, notas)
     ].filter(Boolean).join('');
@@ -3587,6 +3643,7 @@ function tabelaClientes(clientes) {
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
             ${cliente.origem ? `<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
             ${cliente.nascimento ? `<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+            ${Number(cliente.bonusMeses || 0) > 0 ? `<div class="cell-muted">🎁 ${escapar(cliente.bonusMeses)} bônus</div>` : ''}
             ${renderTagsCliente(cliente.tags)}
         </td>
         <td data-label="Plano">
@@ -4507,6 +4564,60 @@ router.post('/clientes/:id/notas', async (req, res) => {
             erro: err.message
         });
         res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
+    }
+});
+
+router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado. BÃ´nus nÃ£o aplicado.'));
+    }
+
+    try {
+        const resultado = await aplicarBonusCliente(cliente.id, req.body.quantidade);
+        const clienteAtualizado = resultado.cliente;
+
+        if (String(req.body.observacaoBonus || '').trim()) {
+            await adicionarNotaCliente(cliente.id, `ObservaÃ§Ã£o da bonificaÃ§Ã£o: ${req.body.observacaoBonus}`);
+        }
+
+        const mensagem = montarMensagemBonusAplicado(clienteAtualizado, resultado);
+        const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
+        registrarEnvioDoRobo(destino, mensagem);
+        const envio = await aguardarComTimeout(
+            client.sendMessage(destino, mensagem),
+            90000,
+            'Envio de bonus aplicado'
+        );
+
+        if (!envio) {
+            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+        }
+
+        registrarMensagemDoRobo(envio);
+        logControleClientes('Bonus aplicado e enviado ao cliente', {
+            clienteId: clienteAtualizado.id,
+            nome: clienteAtualizado.nome,
+            meses: resultado.meses,
+            saldoRestante: resultado.saldoRestante,
+            vencimento: resultado.dataVencimento
+        });
+
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `BÃ´nus aplicado: ${resultado.meses} mÃªs(es). Mensagem enviada ao cliente.`));
+    } catch (err) {
+        logControleClientes('Erro ao aplicar bonus', {
+            clienteId: cliente.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(cliente.id, err.message));
     }
 });
 
