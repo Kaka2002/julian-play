@@ -137,6 +137,28 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS cliente_pagamentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER NOT NULL,
+            tipoPlanoId INTEGER,
+            plano TEXT NOT NULL,
+            diasContrato INTEGER DEFAULT 0,
+            valorPlano TEXT,
+            assinaturaApp TEXT,
+            valorTotal TEXT,
+            formaPagamento TEXT,
+            dataPagamento TEXT,
+            vencimentoAnterior TEXT,
+            vencimentoNovo TEXT,
+            observacoes TEXT,
+            mensagemEnviada INTEGER DEFAULT 0,
+            erroMensagem TEXT,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',

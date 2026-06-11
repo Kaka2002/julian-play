@@ -7,6 +7,9 @@ const {
     buscarClientePorId,
     buscarClientePorTelefone,
     aplicarBonusCliente,
+    listarPagamentosCliente,
+    renovarCliente,
+    marcarPagamentoMensagem,
     removerCliente,
     normalizarTelefone,
     listarNotasCliente,
@@ -2972,6 +2975,21 @@ Foi aplicado em seu cadastro um bônus de *${textoMeses}* no seu plano.
 Obrigado pela preferência.`;
 }
 
+function montarMensagemRenovacaoConfirmada(cliente = {}, resultado = {}) {
+    return `*RENOVAÇÃO CONFIRMADA*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*!
+
+Sua renovação foi registrada com sucesso.
+
+*Plano:* ${resultado.plano}
+*Valor:* R$ ${resultado.valorTotal}
+*Forma de pagamento:* ${resultado.formaPagamento}
+*Novo vencimento:* ${formatarDataHoraMensagem(resultado.vencimentoNovo)}
+
+Obrigado pela preferência.`;
+}
+
 function clienteEhTeste(cliente = {}) {
     const status = String(cliente.status || '').toLowerCase();
     const plano = String(cliente.plano || '').toLowerCase();
@@ -3073,6 +3091,122 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     </section>`;
 }
 
+function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
+    if (!cliente.id) return '';
+
+    const planos = (listas.planos || []).filter(plano => {
+        const nome = String(plano.nome || '').toLowerCase();
+        return Number(plano.dias || 0) > 0 && !nome.includes('teste');
+    });
+    const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
+        return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
+    })?.id || planos[0]?.id || '';
+    const planoInicial = planos.find(plano => String(plano.id) === String(planoAtual)) || planos[0] || {};
+    const linhasHistorico = pagamentos.length
+        ? pagamentos.map(pagamento => `<tr>
+            <td>${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
+            <td>
+                <div class="cell-title">${escapar(pagamento.plano)}</div>
+                <div class="cell-muted">${escapar(pagamento.diasContrato)} dias</div>
+            </td>
+            <td>R$ ${escapar(pagamento.valorTotal || '0,00')}</td>
+            <td>${escapar(pagamento.formaPagamento || '-')}</td>
+            <td>${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
+            <td>${pagamento.mensagemEnviada ? '<span class="badge green">Enviada</span>' : '<span class="badge orange">Não enviada</span>'}</td>
+        </tr>`).join('')
+        : '<tr><td colspan="6" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
+
+    return `<section class="panel" id="renovar" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Renovar cliente</h2>
+                <div class="subtitle">Registre o pagamento, atualize o vencimento e envie a confirmação se desejar.</div>
+            </div>
+            <span class="badge green">Vencimento atual: ${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</span>
+        </div>
+        <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/renovar">
+            ${campo({
+                nome: 'tipoPlanoId',
+                label: 'Plano da renovação',
+                valor: planoAtual,
+                attrs: 'id="renovarTipoPlanoId" required',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...planos.map(plano => ({ valor: plano.id, texto: `${plano.nome} (${plano.dias} dias)` }))
+                ]
+            })}
+            <input type="hidden" name="plano" id="renovarPlano" value="${escapar(planoInicial.nome || '')}">
+            ${campo({ nome: 'diasContrato', label: 'Dias de contrato', valor: planoInicial.dias || cliente.diasContrato || '', tipo: 'number', attrs: 'id="renovarDiasContrato" min="1" required' })}
+            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: planoInicial.valor || cliente.valorPlano || '', attrs: 'id="renovarValorPlano" inputmode="decimal" class="money-field" placeholder="0,00" required' })}
+            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp || '0,00', attrs: 'id="renovarAssinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
+            ${campo({
+                nome: 'formaPagamento',
+                label: 'Forma de pagamento',
+                attrs: 'required',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    { valor: 'Pix', texto: 'Pix' },
+                    { valor: 'Dinheiro', texto: 'Dinheiro' },
+                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
+                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
+                    { valor: 'Transferência', texto: 'Transferência' },
+                    { valor: 'Outro', texto: 'Outro' }
+                ]
+            })}
+            ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: agoraLocalDateTime(), tipo: 'datetime-local', attrs: 'required' })}
+            <label class="toggle-line">
+                <input type="checkbox" name="enviarMensagem" value="1" checked>
+                <span>Enviar confirmação da renovação pelo WhatsApp</span>
+            </label>
+            <label class="full">Observações do pagamento
+                <textarea name="observacoes" rows="3" placeholder="Opcional"></textarea>
+            </label>
+            <div class="actions full">
+                <button class="button green" type="submit">${icon('refresh')} Renovar cliente</button>
+            </div>
+        </form>
+        <div class="form-section full" style="margin-top:22px;">Histórico de pagamentos</div>
+        <table class="clients-table compact-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Plano</th>
+                    <th>Valor</th>
+                    <th>Pagamento</th>
+                    <th>Novo vencimento</th>
+                    <th>Mensagem</th>
+                </tr>
+            </thead>
+            <tbody>${linhasHistorico}</tbody>
+        </table>
+        <script>
+            (() => {
+                const planosRenovacao = ${JSON.stringify(planos.map(plano => ({
+                    id: String(plano.id),
+                    nome: plano.nome,
+                    dias: plano.dias,
+                    valor: plano.valor || ''
+                })))};
+                const select = document.getElementById('renovarTipoPlanoId');
+                const planoNome = document.getElementById('renovarPlano');
+                const dias = document.getElementById('renovarDiasContrato');
+                const valor = document.getElementById('renovarValorPlano');
+
+                function atualizarPlanoRenovacao() {
+                    const plano = planosRenovacao.find(item => String(item.id) === String(select?.value));
+                    if (!plano) return;
+                    planoNome.value = plano.nome || '';
+                    dias.value = plano.dias || '';
+                    valor.value = plano.valor || valor.value || '';
+                }
+
+                select?.addEventListener('change', atualizarPlanoRenovacao);
+                atualizarPlanoRenovacao();
+            })();
+        </script>
+    </section>`;
+}
+
 function secaoBonusCliente(cliente = {}) {
     if (!cliente.id) return '';
 
@@ -3111,6 +3245,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const dispositivos = listas.dispositivos || [];
     const paineis = listas.paineis || [];
     const notas = opcoesFormulario.notas || [];
+    const pagamentos = opcoesFormulario.pagamentos || [];
     const alertas = opcoesFormulario.alertas || [];
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
@@ -3495,6 +3630,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     </script>`;
 
     const extras = [
+        secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ? secaoTesteLiberado(cliente, listas) : '',
         secaoNotasCliente(cliente, notas)
@@ -3671,6 +3807,7 @@ function tabelaClientes(clientes) {
                 <form method="post" action="/clientes/verificar-renovacoes">
                     <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
                 </form>
+                <a class="button icon-only icon-action refresh" href="/clientes/${cliente.id}/editar#renovar" title="Renovar cliente">${icon('planos')}</a>
                 <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar" title="Editar">${icon('edit')}</a>
                 <form method="post" action="/clientes/${cliente.id}/excluir" onsubmit="return confirm('Excluir este cliente?');">
                     <button class="button icon-only icon-action" type="submit" title="Excluir">${icon('trash')}</button>
@@ -4480,15 +4617,16 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, alertas] = await Promise.all([
+    const [listas, notas, pagamentos, alertas] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
+        listarPagamentosCliente(cliente.id),
         buscarAlertasCadastroCliente(cliente)
     ]);
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas, { notas, alertas }),
+        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
@@ -4550,6 +4688,74 @@ router.post('/clientes/salvar', async (req, res) => {
             conteudo: `${formularioCliente(req.body, listas)}<div class="notice">${escapar(err.message)}</div>`,
             ativo: 'clientes'
         });
+    }
+});
+
+router.post('/clientes/:id/renovar', async (req, res) => {
+    try {
+        const resultado = await renovarCliente({
+            ...req.body,
+            clienteId: req.params.id
+        });
+        const clienteAtualizado = resultado.cliente;
+        const deveEnviar = Boolean(req.body.enviarMensagem);
+        let mensagemRetorno = 'Renovação registrada com sucesso';
+
+        logControleClientes('Renovacao registrada', {
+            clienteId: clienteAtualizado?.id,
+            nome: clienteAtualizado?.nome,
+            plano: resultado.plano,
+            valor: resultado.valorTotal,
+            vencimento: resultado.vencimentoNovo
+        });
+
+        if (deveEnviar) {
+            const status = getStatusWhatsApp();
+            const client = getClient();
+
+            if (!client || !status.conectado) {
+                await marcarPagamentoMensagem(resultado.pagamentoId, false, 'WhatsApp desconectado');
+                mensagemRetorno = 'Renovação registrada, mas o WhatsApp não está conectado para enviar a confirmação.';
+            } else {
+                try {
+                    const mensagem = montarMensagemRenovacaoConfirmada(clienteAtualizado, resultado);
+                    const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
+                    registrarEnvioDoRobo(destino, mensagem);
+                    const envio = await aguardarComTimeout(
+                        client.sendMessage(destino, mensagem),
+                        90000,
+                        'Envio de renovacao confirmada'
+                    );
+
+                    if (!envio) {
+                        throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+                    }
+
+                    registrarMensagemDoRobo(envio);
+                    await marcarPagamentoMensagem(resultado.pagamentoId, true);
+                    mensagemRetorno = 'Renovação registrada e confirmação enviada ao cliente.';
+                    logControleClientes('Renovacao enviada ao cliente', {
+                        clienteId: clienteAtualizado.id,
+                        destino
+                    });
+                } catch (erroEnvio) {
+                    await marcarPagamentoMensagem(resultado.pagamentoId, false, erroEnvio.message);
+                    mensagemRetorno = `Renovação registrada, mas não foi possível enviar a confirmação: ${erroEnvio.message}`;
+                    logControleClientes('Erro ao enviar renovacao', {
+                        clienteId: clienteAtualizado.id,
+                        erro: erroEnvio.message
+                    });
+                }
+            }
+        }
+
+        return res.redirect(montarUrlClienteMensagem(clienteAtualizado.id, mensagemRetorno));
+    } catch (err) {
+        logControleClientes('Erro ao renovar cliente', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
     }
 });
 

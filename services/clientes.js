@@ -105,6 +105,18 @@ function normalizarMoeda(valor) {
     });
 }
 
+function moedaParaNumero(valor) {
+    const texto = limparTexto(valor).replace(/[^\d,.-]/g, '');
+    if (!texto) return 0;
+
+    const normalizado = texto.includes(',')
+        ? texto.replace(/\./g, '').replace(',', '.')
+        : texto;
+    const numero = Number(normalizado);
+
+    return Number.isFinite(numero) ? numero : 0;
+}
+
 function normalizarAcessosApp(dados = {}) {
     const apps = normalizarListaComVazios(dados.acessoAppNome);
     const dispositivos = normalizarListaComVazios(dados.acessoDispositivo);
@@ -246,6 +258,42 @@ function adicionarMesesData(dataBase, meses) {
         vencimento: `${ano}-${mes}-${dia}`,
         dataVencimento: `${ano}-${mes}-${dia}T${hora}:${minuto}`
     };
+}
+
+function dataParaCampos(data) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, '0');
+    const dia = String(data.getDate()).padStart(2, '0');
+    const hora = String(data.getHours()).padStart(2, '0');
+    const minuto = String(data.getMinutes()).padStart(2, '0');
+
+    return {
+        vencimento: `${ano}-${mes}-${dia}`,
+        dataVencimento: `${ano}-${mes}-${dia}T${hora}:${minuto}`
+    };
+}
+
+function adicionarDiasData(dataBase, dias) {
+    const data = new Date(dataBase.getTime());
+    data.setDate(data.getDate() + Number(dias || 0));
+    return dataParaCampos(data);
+}
+
+function dataBaseRenovacao(cliente = {}) {
+    const valor = cliente.dataVencimento || cliente.vencimento || '';
+    const data = valor
+        ? new Date(String(valor).length <= 10 ? `${valor}T23:59:00` : valor)
+        : new Date();
+    const agora = new Date();
+
+    if (Number.isNaN(data.getTime()) || data < agora) return agora;
+    return data;
+}
+
+function agoraLocalInput() {
+    const data = new Date();
+    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
+    return data.toISOString().slice(0, 16);
 }
 
 function calcularVencimentoTeste() {
@@ -758,6 +806,131 @@ async function adicionarNotaCliente(clienteId, texto) {
     );
 }
 
+function listarPagamentosCliente(clienteId) {
+    return buscarTodos(
+        `SELECT * FROM cliente_pagamentos
+        WHERE clienteId = ?
+        ORDER BY datetime(criadoEm) DESC, id DESC`,
+        [clienteId]
+    );
+}
+
+async function renovarCliente(dados = {}) {
+    const clienteId = Number.parseInt(dados.clienteId || dados.id, 10);
+    if (!clienteId) {
+        throw new Error('Cliente invalido para renovacao.');
+    }
+
+    const cliente = await buscarClientePorId(clienteId);
+    if (!cliente) {
+        throw new Error('Cliente nao encontrado.');
+    }
+
+    const plano = limparTexto(dados.plano);
+    const tipoPlanoId = limparTexto(dados.tipoPlanoId);
+    const diasContrato = Number.parseInt(dados.diasContrato || 0, 10);
+    const valorPlano = normalizarMoeda(dados.valorPlano);
+    const assinaturaApp = normalizarMoeda(dados.assinaturaApp);
+    const formaPagamento = limparTexto(dados.formaPagamento);
+    const dataPagamento = limparTexto(dados.dataPagamento) || agoraLocalInput();
+
+    if (!plano) {
+        throw new Error('Escolha o plano da renovacao.');
+    }
+
+    if (!diasContrato || diasContrato <= 0) {
+        throw new Error('O plano escolhido precisa ter dias de contrato.');
+    }
+
+    if (!formaPagamento) {
+        throw new Error('Informe a forma de pagamento.');
+    }
+
+    const base = dataBaseRenovacao(cliente);
+    const inicioRenovacao = dataParaCampos(base).dataVencimento;
+    const vencimentoAnterior = cliente.dataVencimento || cliente.vencimento || '';
+    const vencimentoNovo = adicionarDiasData(base, diasContrato);
+    const total = moedaParaNumero(valorPlano) + moedaParaNumero(assinaturaApp);
+    const valorTotal = normalizarMoeda(total.toFixed(2));
+
+    await executar(
+        `UPDATE clientes SET
+            plano = ?,
+            tipoPlanoId = ?,
+            diasContrato = ?,
+            valorPlano = ?,
+            assinaturaApp = ?,
+            dataInicio = ?,
+            vencimento = ?,
+            dataVencimento = ?,
+            status = 'ativo',
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [
+            plano,
+            tipoPlanoId,
+            diasContrato,
+            valorPlano,
+            assinaturaApp,
+            inicioRenovacao,
+            vencimentoNovo.vencimento,
+            vencimentoNovo.dataVencimento,
+            clienteId
+        ]
+    );
+
+    const pagamento = await executar(
+        `INSERT INTO cliente_pagamentos (
+            clienteId, tipoPlanoId, plano, diasContrato, valorPlano, assinaturaApp,
+            valorTotal, formaPagamento, dataPagamento, vencimentoAnterior,
+            vencimentoNovo, observacoes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            clienteId,
+            tipoPlanoId,
+            plano,
+            diasContrato,
+            valorPlano,
+            assinaturaApp,
+            valorTotal,
+            formaPagamento,
+            dataPagamento,
+            vencimentoAnterior,
+            vencimentoNovo.dataVencimento,
+            limparTexto(dados.observacoes)
+        ]
+    );
+
+    await adicionarNotaCliente(
+        clienteId,
+        `Renovacao registrada: ${plano}, ${diasContrato} dias, R$ ${valorTotal}, pagamento ${formaPagamento}. Novo vencimento: ${vencimentoNovo.dataVencimento}.`
+    );
+
+    return {
+        cliente: await buscarClientePorId(clienteId),
+        pagamentoId: pagamento.id,
+        plano,
+        diasContrato,
+        valorPlano,
+        assinaturaApp,
+        valorTotal,
+        formaPagamento,
+        dataPagamento,
+        vencimentoAnterior,
+        vencimentoNovo: vencimentoNovo.dataVencimento
+    };
+}
+
+function marcarPagamentoMensagem(pagamentoId, enviado, erro = '') {
+    return executar(
+        `UPDATE cliente_pagamentos SET
+            mensagemEnviada = ?,
+            erroMensagem = ?
+        WHERE id = ?`,
+        [enviado ? 1 : 0, limparTexto(erro), pagamentoId]
+    );
+}
+
 function buscarAlertasCadastroCliente(dados = {}) {
     const idAtual = limparTexto(dados.id);
     const nome = limparTexto(dados.nome);
@@ -993,6 +1166,9 @@ module.exports = {
     salvarCliente,
     buscarClientePorId,
     aplicarBonusCliente,
+    listarPagamentosCliente,
+    renovarCliente,
+    marcarPagamentoMensagem,
     removerCliente,
     listarNotasCliente,
     adicionarNotaCliente,
