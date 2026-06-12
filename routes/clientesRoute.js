@@ -2348,12 +2348,14 @@ function lerAcessosApp(cliente = {}) {
                     app: String(acesso.app || ''),
                     dispositivo: String(acesso.dispositivo || ''),
                     painel: String(acesso.painel || ''),
+                    usuario: String(acesso.usuario || ''),
+                    senha: String(acesso.senha || ''),
                     localInstalacao: String(acesso.localInstalacao || ''),
                     urlAtivarAplicativo: String(acesso.urlAtivarAplicativo || ''),
                     enderecoMac: String(acesso.enderecoMac || ''),
                     idAplicativo: String(acesso.idAplicativo || '')
                 }))
-                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo);
+                .filter(acesso => acesso.app || acesso.dispositivo || acesso.painel || acesso.usuario || acesso.senha || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo);
         }
     } catch (err) {
         // Mantem compatibilidade com cadastros antigos.
@@ -2364,6 +2366,8 @@ function lerAcessosApp(cliente = {}) {
             app: lerListaSalva(cliente.appsInstalados)[0] || '',
             dispositivo: lerListaSalva(cliente.dispositivosSelecionados)[0] || '',
             painel: lerListaSalva(cliente.paineisSelecionados)[0] || '',
+            usuario: cliente.usuario || '',
+            senha: cliente.senha || '',
             localInstalacao: '',
             urlAtivarAplicativo: '',
             enderecoMac: cliente.enderecoMac || '',
@@ -2398,6 +2402,12 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
         </label>
+        <label>UsuÃ¡rio IPTV
+            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="UsuÃ¡rio desta conexÃ£o">
+        </label>
+        <label>Senha IPTV
+            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexÃ£o">
+        </label>
         <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
         </label>
@@ -2427,7 +2437,7 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
         <div class="app-access-header">
             <div>
                 <strong>Dados por app instalado</strong>
-                <span>Relacione app, dispositivo, painel, MAC e ID quando o aplicativo exigir.</span>
+                <span>Cada linha representa uma conexÃ£o: app, dispositivo, painel, usuÃ¡rio, senha, MAC e ID quando exigir.</span>
             </div>
             <button class="button secondary" type="button" id="adicionarAcessoApp">${icon('plus')} Adicionar acesso</button>
         </div>
@@ -2472,6 +2482,8 @@ function descreverAcessosAppCsv(cliente = {}) {
             acesso.app ? `App: ${acesso.app}` : '',
             acesso.dispositivo ? `Dispositivo: ${acesso.dispositivo}` : '',
             acesso.painel ? `Painel: ${acesso.painel}` : '',
+            acesso.usuario ? `UsuÃ¡rio: ${acesso.usuario}` : '',
+            acesso.senha ? `Senha: ${acesso.senha}` : '',
             acesso.localInstalacao ? `Onde: ${acesso.localInstalacao}` : '',
             acesso.enderecoMac ? `MAC: ${acesso.enderecoMac}` : '',
             acesso.idAplicativo ? `ID: ${acesso.idAplicativo}` : '',
@@ -2539,8 +2551,8 @@ function gerarCsvClientes(clientes = []) {
         juntarListaCsv(cliente.dispositivosSelecionados),
         juntarListaCsv(cliente.paineisSelecionados),
         cliente.appInstalado ? 'Sim' : 'Não',
-        cliente.usuario,
-        cliente.senha,
+        valoresAcessosAppCsv(cliente, 'usuario') || cliente.usuario,
+        valoresAcessosAppCsv(cliente, 'senha') || cliente.senha,
         valoresAcessosAppCsv(cliente, 'enderecoMac'),
         valoresAcessosAppCsv(cliente, 'idAplicativo'),
         descreverAcessosAppCsv(cliente),
@@ -3086,16 +3098,16 @@ function clienteEhTeste(cliente = {}) {
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
     const acesso = primeiroAcessoApp(cliente);
-    const dispositivo = valorPrimeiroItem(cliente.dispositivosSelecionados) || acesso.dispositivo || cliente.aparelho || '';
+    const dispositivo = acesso.dispositivo || valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho || '';
 
     return {
         telefone: cliente.telefone,
         nome: cliente.nome,
         aparelho: dispositivo,
-        aplicativo: valorPrimeiroItem(cliente.appsInstalados) || acesso.app || '',
-        painel: valorPrimeiroItem(cliente.paineisSelecionados) || acesso.painel || '',
-        usuario: cliente.usuario,
-        senha: cliente.senha,
+        aplicativo: acesso.app || valorPrimeiroItem(cliente.appsInstalados) || '',
+        painel: acesso.painel || valorPrimeiroItem(cliente.paineisSelecionados) || '',
+        usuario: acesso.usuario || cliente.usuario,
+        senha: acesso.senha || cliente.senha,
         dataInicio: cliente.dataInicio,
         validade: cliente.dataVencimento || cliente.vencimento
     };
@@ -3140,7 +3152,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'aparelho',
                 label: 'Dispositivo',
-                valor: valorPrimeiroItem(cliente.dispositivosSelecionados) || acesso.dispositivo || cliente.aparelho,
+                valor: acesso.dispositivo || valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho,
                 attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
@@ -3150,7 +3162,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'aplicativo',
                 label: 'Aplicativo',
-                valor: valorPrimeiroItem(cliente.appsInstalados) || acesso.app || '',
+                valor: acesso.app || valorPrimeiroItem(cliente.appsInstalados) || '',
                 attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
@@ -3160,15 +3172,15 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
             ${campo({
                 nome: 'painel',
                 label: 'Painel',
-                valor: valorPrimeiroItem(cliente.paineisSelecionados) || acesso.painel || '',
+                valor: acesso.painel || valorPrimeiroItem(cliente.paineisSelecionados) || '',
                 attrs: 'required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     ...paineis.map(item => ({ valor: item.nome, texto: item.nome }))
                 ]
             })}
-            ${campo({ nome: 'usuario', label: 'Usuário', valor: cliente.usuario, attrs: 'required' })}
-            ${campo({ nome: 'senha', label: 'Senha', valor: cliente.senha, attrs: 'required' })}
+            ${campo({ nome: 'usuario', label: 'Usuário', valor: acesso.usuario || cliente.usuario, attrs: 'required' })}
+            ${campo({ nome: 'senha', label: 'Senha', valor: acesso.senha || cliente.senha, attrs: 'required' })}
             ${campo({ nome: 'dataInicio', label: 'Data/Início', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
             ${campo({ nome: 'validade', label: 'Válido até', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
             <div class="actions full">
@@ -3349,6 +3361,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
+    const planoAtualInfo = planos.find(plano => String(plano.id) === String(planoAtual)) || {};
 
     const formulario = `<section class="page-title">
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
@@ -3388,6 +3401,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     }))
                 ]
             })}
+            ${campo({ nome: 'conexoesPlanoVisual', label: 'ConexÃµes do Plano', valor: planoAtualInfo.conexoes || 1, tipo: 'number', attrs: 'id="conexoesPlanoVisual" min="1" max="2" readonly' })}
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
@@ -3467,11 +3481,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             id: String(plano.id),
             nome: plano.nome,
             dias: plano.dias,
-            valor: plano.valor || ''
+            valor: plano.valor || '',
+            conexoes: plano.conexoes || 1
         })))};
         const tipoPlano = document.getElementById('tipoPlanoId');
         const diasContrato = document.getElementById('diasContrato');
         const valorPlano = document.getElementById('valorPlano');
+        const conexoesPlanoVisual = document.getElementById('conexoesPlanoVisual');
         const planoLegado = document.getElementById('planoLegado');
         const dataInicio = document.getElementById('dataInicio');
         const dataVencimento = document.getElementById('dataVencimento');
@@ -3485,6 +3501,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const opcoesApps = ${JSON.stringify(apps.map(item => item.nome))};
         const opcoesDispositivos = ${JSON.stringify(dispositivos.map(item => item.nome))};
         const opcoesPaineis = ${JSON.stringify(paineis.map(item => item.nome))};
+        const conexoesPorPainel = ${JSON.stringify(Object.fromEntries(paineis.map(item => [item.nome, Math.min(2, Math.max(1, Number(item.conexoes || 1)))])))};
 
         function formatarMoedaCampo(valor) {
             const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
@@ -3513,6 +3530,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             if (!plano) return;
             diasContrato.value = plano.dias || '';
             valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
+            conexoesPlanoVisual.value = plano.conexoes || 1;
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 statusCliente.value = 'teste';
@@ -3627,6 +3645,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '<label>Painel'
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
                 + '</label>'
+                + '<label>Usuário IPTV'
+                + '<input type="text" name="acessoUsuario" placeholder="Usuário desta conexão">'
+                + '</label>'
+                + '<label>Senha IPTV'
+                + '<input type="text" name="acessoSenha" placeholder="Senha desta conexão">'
+                + '</label>'
                 + '<label>Endereço MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
                 + '</label>'
@@ -3647,6 +3671,28 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             document.querySelectorAll('.mac-field').forEach((campoMac) => {
                 campoMac.value = formatarMac(campoMac.value);
             });
+        }
+
+        function validarConexoesPorPainel() {
+            const contagem = {};
+
+            document.querySelectorAll('select[name="acessoPainel"]').forEach((selectPainel) => {
+                const painel = selectPainel.value;
+                if (!painel) return;
+                contagem[painel] = (contagem[painel] || 0) + 1;
+            });
+
+            const excesso = Object.entries(contagem).find(([painel, total]) => {
+                const limite = conexoesPorPainel[painel] || 2;
+                return total > limite;
+            });
+
+            if (!excesso) return true;
+
+            const [painel, total] = excesso;
+            const limite = conexoesPorPainel[painel] || 2;
+            alert('O painel "' + painel + '" permite no máximo ' + limite + ' conexão(ões). Você informou ' + total + '.');
+            return false;
         }
 
         document.addEventListener('input', (event) => {
@@ -3736,6 +3782,11 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
             input?.remove();
             chip.remove();
+        });
+
+        document.querySelector('form.client-form[action="/clientes/salvar"]')?.addEventListener('submit', (event) => {
+            if (validarConexoesPorPainel()) return;
+            event.preventDefault();
         });
     </script>`;
 
@@ -4371,7 +4422,7 @@ function planoCard(plano) {
         <span class="device-icon">${icon('planos')}</span>
         <div>
             <div class="device-name">${escapar(plano.nome)}</div>
-            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''}</div>
+            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''} - ${escapar(plano.conexoes || 1)} conexÃ£o(Ãµes)</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/planos/${plano.id}/editar" title="Editar plano">${icon('edit')}</a>
@@ -4408,6 +4459,7 @@ function formularioPlano(plano = {}) {
             ${campo({ nome: 'nome', label: 'Nome do plano', valor: plano.nome })}
             ${campo({ nome: 'dias', label: 'Quantidade de dias', valor: plano.dias, tipo: 'number' })}
             ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
+            ${campo({ nome: 'conexoes', label: 'Quantidade de conexÃµes', valor: plano.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -4680,7 +4732,10 @@ function formularioDispositivo(dispositivo = {}) {
 function panelCard(painel) {
     return `<article class="device-card">
         <span class="device-icon">${icon('paineis')}</span>
-        <div class="device-name">${escapar(painel.nome)}</div>
+        <div>
+            <div class="device-name">${escapar(painel.nome)}</div>
+            <div class="helper">${escapar(painel.conexoes || 1)} conexÃ£o(Ãµes)</div>
+        </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/paineis/${painel.id}/editar" title="Editar painel">${icon('edit')}</a>
             <form method="post" action="/paineis/${painel.id}/excluir" onsubmit="return confirm('Excluir este painel?');">
@@ -4912,6 +4967,7 @@ function formularioPainel(painel = {}) {
         <form class="fields" method="post" action="/paineis/salvar">
             ${painel.id ? `<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
+            ${campo({ nome: 'conexoes', label: 'ConexÃµes permitidas no painel', valor: painel.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -5770,6 +5826,17 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     }
 
     try {
+        const acessosAtuais = lerAcessosApp(cliente);
+        const acessoTeste = {
+            ...(acessosAtuais[0] || {}),
+            app: dados.aplicativo,
+            dispositivo: dados.aparelho,
+            painel: dados.painel,
+            usuario: dados.usuario,
+            senha: dados.senha
+        };
+        const acessosAtualizados = [acessoTeste, ...acessosAtuais.slice(1)];
+
         const clienteAtualizado = await salvarCliente({
             ...cliente,
             id: Number(cliente.id),
@@ -5781,9 +5848,18 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             dataInicio: dados.dataInicio,
             dataVencimento: dados.validade,
             vencimento: dados.validade,
-            appsInstalados: dados.aplicativo ? [dados.aplicativo] : lerListaSalva(cliente.appsInstalados),
-            dispositivosSelecionados: dados.aparelho ? [dados.aparelho] : lerListaSalva(cliente.dispositivosSelecionados),
-            paineisSelecionados: dados.painel ? [dados.painel] : lerListaSalva(cliente.paineisSelecionados),
+            appsInstalados: lerListaSalva(cliente.appsInstalados),
+            dispositivosSelecionados: lerListaSalva(cliente.dispositivosSelecionados),
+            paineisSelecionados: lerListaSalva(cliente.paineisSelecionados),
+            acessoAppNome: acessosAtualizados.map(item => item.app || ''),
+            acessoDispositivo: acessosAtualizados.map(item => item.dispositivo || ''),
+            acessoPainel: acessosAtualizados.map(item => item.painel || ''),
+            acessoUsuario: acessosAtualizados.map(item => item.usuario || ''),
+            acessoSenha: acessosAtualizados.map(item => item.senha || ''),
+            acessoLocalInstalacao: acessosAtualizados.map(item => item.localInstalacao || ''),
+            acessoUrlAtivarAplicativo: acessosAtualizados.map(item => item.urlAtivarAplicativo || ''),
+            acessoEnderecoMac: acessosAtualizados.map(item => item.enderecoMac || ''),
+            acessoIdAplicativo: acessosAtualizados.map(item => item.idAplicativo || ''),
             appInstalado: cliente.appInstalado || Boolean(dados.aplicativo),
             status: 'teste'
         });

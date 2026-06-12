@@ -125,21 +125,35 @@ function normalizarAcessosApp(dados = {}) {
     const urls = normalizarListaComVazios(dados.acessoUrlAtivarAplicativo);
     const macs = normalizarListaComVazios(dados.acessoEnderecoMac);
     const ids = normalizarListaComVazios(dados.acessoIdAplicativo);
-    const total = Math.max(apps.length, dispositivos.length, paineis.length, locais.length, urls.length, macs.length, ids.length);
+    const usuarios = normalizarListaComVazios(dados.acessoUsuario);
+    const senhas = normalizarListaComVazios(dados.acessoSenha);
+    const total = Math.max(apps.length, dispositivos.length, paineis.length, locais.length, urls.length, macs.length, ids.length, usuarios.length, senhas.length);
     const acessos = [];
+    const conexoesPorPainel = new Map();
 
     for (let index = 0; index < total; index += 1) {
         const acesso = {
             app: limparTexto(apps[index]),
             dispositivo: limparTexto(dispositivos[index]),
             painel: limparTexto(paineis[index]),
+            usuario: limparTexto(usuarios[index]),
+            senha: limparTexto(senhas[index]),
             localInstalacao: limparTexto(locais[index]),
             urlAtivarAplicativo: limparTexto(urls[index]),
             enderecoMac: normalizarMac(macs[index]),
             idAplicativo: limparTexto(ids[index])
         };
 
-        if (acesso.app || acesso.dispositivo || acesso.painel || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo) {
+        if (acesso.app || acesso.dispositivo || acesso.painel || acesso.usuario || acesso.senha || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo) {
+            if (acesso.painel) {
+                const chavePainel = acesso.painel.toLowerCase();
+                const totalPainel = (conexoesPorPainel.get(chavePainel) || 0) + 1;
+                if (totalPainel > 2) {
+                    throw new Error(`O painel ${acesso.painel} aceita no mÃ¡ximo 2 conexÃµes neste cadastro.`);
+                }
+                conexoesPorPainel.set(chavePainel, totalPainel);
+            }
+
             acessos.push(acesso);
         }
     }
@@ -149,6 +163,8 @@ function normalizarAcessosApp(dados = {}) {
             app: normalizarLista(dados.appsInstalados)[0] || '',
             dispositivo: normalizarLista(dados.dispositivosSelecionados)[0] || '',
             painel: normalizarLista(dados.paineisSelecionados)[0] || '',
+            usuario: limparTexto(dados.usuario),
+            senha: limparTexto(dados.senha),
             localInstalacao: '',
             urlAtivarAplicativo: '',
             enderecoMac: normalizarMac(dados.enderecoMac),
@@ -157,6 +173,22 @@ function normalizarAcessosApp(dados = {}) {
     }
 
     return JSON.stringify(acessos);
+}
+
+function acessosDoCliente(dados = {}) {
+    const acessos = JSON.parse(normalizarAcessosApp(dados));
+    return Array.isArray(acessos) ? acessos : [];
+}
+
+function listaUnicaComAcessos(lista, acessos, campo) {
+    const valores = [
+        ...normalizarLista(lista),
+        ...acessos.map(acesso => acesso[campo])
+    ]
+        .map(limparTexto)
+        .filter(Boolean);
+
+    return JSON.stringify([...new Set(valores)]);
 }
 
 function clienteEstaEmTeste(cliente = {}) {
@@ -192,6 +224,9 @@ function montarCliente(dados = {}) {
         throw new Error('Informe o telefone do cliente.');
     }
 
+    const acessos = acessosDoCliente(dados);
+    const acessosApp = JSON.stringify(acessos);
+
     return {
         nome: limparTexto(dados.nome),
         telefone,
@@ -209,15 +244,15 @@ function montarCliente(dados = {}) {
         horasTeste: limparTexto(dados.horasTeste),
         dataInicio: limparTexto(dados.dataInicio),
         dataVencimento: limparTexto(dados.dataVencimento),
-        appsInstalados: serializarLista(dados.appsInstalados),
-        dispositivosSelecionados: serializarLista(dados.dispositivosSelecionados),
-        paineisSelecionados: serializarLista(dados.paineisSelecionados),
+        appsInstalados: listaUnicaComAcessos(dados.appsInstalados, acessos, 'app'),
+        dispositivosSelecionados: listaUnicaComAcessos(dados.dispositivosSelecionados, acessos, 'dispositivo'),
+        paineisSelecionados: listaUnicaComAcessos(dados.paineisSelecionados, acessos, 'painel'),
         appInstalado: dados.appInstalado ? 1 : 0,
         usuarioApp: limparTexto(dados.usuarioApp),
         senhaApp: limparTexto(dados.senhaApp),
         enderecoMac: normalizarMac(dados.enderecoMac),
         idAplicativo: limparTexto(dados.idAplicativo),
-        acessosApp: normalizarAcessosApp(dados),
+        acessosApp,
         observacoes: limparTexto(dados.observacoes),
         origem: limparTexto(dados.origem),
         tags: normalizarTags(dados.tags),

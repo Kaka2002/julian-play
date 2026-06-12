@@ -98,6 +98,7 @@ db.serialize(() => {
         CREATE TABLE IF NOT EXISTS paineis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE,
+            conexoes INTEGER DEFAULT 1,
             ativo INTEGER DEFAULT 1,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -110,6 +111,7 @@ db.serialize(() => {
             nome TEXT NOT NULL UNIQUE,
             dias INTEGER NOT NULL,
             valor TEXT,
+            conexoes INTEGER DEFAULT 1,
             ativo INTEGER DEFAULT 1,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -208,10 +210,34 @@ db.serialize(() => {
             }
         });
 
-        migrarTelefoneDuplicado(() => migrarPagamentos(() => resolve()));
+        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCatalogos(() => resolve())));
     });
 });
 });
+
+function adicionarColunaSeNaoExiste(tabela, coluna, definicao, done) {
+    db.all(`PRAGMA table_info(${tabela})`, (err, rows = []) => {
+        if (err) {
+            console.error(`Erro ao verificar tabela ${tabela}:`, err);
+            done();
+            return;
+        }
+
+        const existentes = new Set(rows.map(row => row.name));
+        if (!existentes.has(coluna)) {
+            db.run(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`, () => done());
+            return;
+        }
+
+        done();
+    });
+}
+
+function migrarCatalogos(done) {
+    adicionarColunaSeNaoExiste('tipos_planos', 'conexoes', 'INTEGER DEFAULT 1', () => {
+        adicionarColunaSeNaoExiste('paineis', 'conexoes', 'INTEGER DEFAULT 1', done);
+    });
+}
 
 function migrarPagamentos(done) {
     db.all('PRAGMA table_info(cliente_pagamentos)', (err, rows = []) => {
