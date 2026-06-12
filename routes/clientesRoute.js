@@ -8,6 +8,7 @@ const {
     buscarClientePorTelefone,
     aplicarBonusCliente,
     listarPagamentosCliente,
+    listarReceitaMensalFinanceira,
     renovarCliente,
     marcarPagamentoMensagem,
     removerPagamentoCliente,
@@ -343,13 +344,25 @@ function calcularReceitaMensal(clientes) {
     clientes
         .filter(cliente => cliente.status === 'ativo' && !clienteEhTeste(cliente))
         .forEach((cliente) => {
-            const grupo = grupoPlanoReceita(cliente);
-            const dias = diasPlanoCliente(cliente);
-            const valorPlano = numeroMoeda(cliente.valorPlano);
-            const assinaturaApp = numeroMoeda(cliente.assinaturaApp);
+            const temHistoricoFinanceiro = Number(cliente.totalPagamentos || 0) > 0;
+            const temPagamentoValido = Boolean(cliente.pagamentoPlano);
+            const base = temHistoricoFinanceiro
+                ? {
+                    plano: cliente.pagamentoPlano || cliente.plano,
+                    diasContrato: cliente.pagamentoDiasContrato,
+                    valorPlano: cliente.pagamentoValorPlano,
+                    assinaturaApp: cliente.pagamentoAssinaturaApp
+                }
+                : cliente;
+            const grupo = grupoPlanoReceita(base);
+            const dias = diasPlanoCliente(base);
+            const valorPlano = temHistoricoFinanceiro && !temPagamentoValido ? 0 : numeroMoeda(base.valorPlano);
+            const assinaturaApp = temHistoricoFinanceiro && !temPagamentoValido ? 0 : numeroMoeda(base.assinaturaApp);
             const mensalPlano = dias > 0 ? (valorPlano / dias) * 30 : valorPlano;
             const mensal = mensalPlano + assinaturaApp;
             const atual = grupos.get(grupo) || { plano: grupo, clientes: 0, total: 0 };
+
+            if (mensal <= 0 && temHistoricoFinanceiro) return;
 
             atual.clientes += 1;
             atual.total += mensal;
@@ -3719,7 +3732,7 @@ function receitaMensalCard(receita) {
             <div>
                 <div class="revenue-title">Receita Mensal Recorrente</div>
                 <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
-                <span class="revenue-note">Baseada no valor dos planos e assinatura app dos clientes ativos</span>
+                <span class="revenue-note">Baseada nos pagamentos válidos e nos clientes ativos sem histórico financeiro</span>
             </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
@@ -3748,9 +3761,9 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes, pagina = 1) {
+function dashboard(clientes, pagina = 1, receitaBase = clientes) {
     const resumo = calcularResumo(clientes);
-    const receita = calcularReceitaMensal(clientes);
+    const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
     const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
 
@@ -4569,13 +4582,16 @@ function formularioPainel(painel = {}) {
 
 router.get('/clientes', async (req, res) => {
     desativarCache(res);
-    const clientes = await listarClientes();
+    const [clientes, receitaBase] = await Promise.all([
+        listarClientes(),
+        listarReceitaMensalFinanceira()
+    ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina),
+        conteudo: dashboard(clientes, pagina, receitaBase),
         mensagem,
         ativo: 'painel'
     });

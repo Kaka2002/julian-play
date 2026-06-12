@@ -154,6 +154,7 @@ db.serialize(() => {
             observacoes TEXT,
             mensagemEnviada INTEGER DEFAULT 0,
             erroMensagem TEXT,
+            excluidoEm TEXT,
             criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE
         )
@@ -207,10 +208,28 @@ db.serialize(() => {
             }
         });
 
-        migrarTelefoneDuplicado(() => resolve());
+        migrarTelefoneDuplicado(() => migrarPagamentos(() => resolve()));
     });
 });
 });
+
+function migrarPagamentos(done) {
+    db.all('PRAGMA table_info(cliente_pagamentos)', (err, rows = []) => {
+        if (err) {
+            console.error('Erro ao verificar tabela cliente_pagamentos:', err);
+            done();
+            return;
+        }
+
+        const existentes = new Set(rows.map(row => row.name));
+        if (!existentes.has('excluidoEm')) {
+            db.run('ALTER TABLE cliente_pagamentos ADD COLUMN excluidoEm TEXT', () => done());
+            return;
+        }
+
+        done();
+    });
+}
 
 function migrarTelefoneDuplicado(done) {
     db.get("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'clientes'", (err, tabela) => {

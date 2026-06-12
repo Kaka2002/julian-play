@@ -831,9 +831,39 @@ function listarPagamentosCliente(clienteId) {
     return buscarTodos(
         `SELECT * FROM cliente_pagamentos
         WHERE clienteId = ?
+            AND (excluidoEm IS NULL OR excluidoEm = '')
         ORDER BY datetime(criadoEm) DESC, id DESC`,
         [clienteId]
     );
+}
+
+function listarReceitaMensalFinanceira() {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `SELECT
+            clientes.*,
+            (
+                SELECT COUNT(*)
+                FROM cliente_pagamentos pagamentosTotal
+                WHERE pagamentosTotal.clienteId = clientes.id
+            ) AS totalPagamentos,
+            pagamento.plano AS pagamentoPlano,
+            pagamento.diasContrato AS pagamentoDiasContrato,
+            pagamento.valorPlano AS pagamentoValorPlano,
+            pagamento.assinaturaApp AS pagamentoAssinaturaApp
+        FROM clientes
+        LEFT JOIN cliente_pagamentos pagamento
+            ON pagamento.id = (
+                SELECT pagamentoAtual.id
+                FROM cliente_pagamentos pagamentoAtual
+                WHERE pagamentoAtual.clienteId = clientes.id
+                    AND (pagamentoAtual.excluidoEm IS NULL OR pagamentoAtual.excluidoEm = '')
+                ORDER BY datetime(COALESCE(NULLIF(pagamentoAtual.dataPagamento, ''), pagamentoAtual.criadoEm)) DESC, pagamentoAtual.id DESC
+                LIMIT 1
+            )
+        WHERE clientes.status = 'ativo'
+            AND clientes.plano NOT LIKE '%Teste%'
+        ORDER BY clientes.nome COLLATE NOCASE ASC`
+    ));
 }
 
 async function renovarCliente(dados = {}) {
@@ -963,7 +993,9 @@ async function removerPagamentoCliente(clienteId, pagamentoId) {
     }
 
     await executar(
-        'DELETE FROM cliente_pagamentos WHERE id = ? AND clienteId = ?',
+        `UPDATE cliente_pagamentos SET
+            excluidoEm = CURRENT_TIMESTAMP
+        WHERE id = ? AND clienteId = ?`,
         [pagamentoId, clienteId]
     );
 
@@ -1211,6 +1243,7 @@ module.exports = {
     buscarClientePorId,
     aplicarBonusCliente,
     listarPagamentosCliente,
+    listarReceitaMensalFinanceira,
     renovarCliente,
     marcarPagamentoMensagem,
     removerPagamentoCliente,
