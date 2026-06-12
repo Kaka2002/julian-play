@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { obterConfiguracoes } = require('./configuracoesPainel');
 
 const sessoes = new Map();
 const COOKIE_NAME = 'julian_play_session';
@@ -17,6 +18,22 @@ function senhaHashConfigurada() {
     return process.env.PANEL_PASSWORD_HASH || hashSenha(process.env.PANEL_PASSWORD || 'admin123');
 }
 
+async function obterCredenciaisConfiguradas() {
+    const config = await obterConfiguracoes();
+    const usuario = config.painelUsuario || process.env.PANEL_USER || 'admin';
+    const senhaHash = config.painelSenhaHash
+        || process.env.PANEL_PASSWORD_HASH
+        || (process.env.PANEL_PASSWORD ? hashSenha(process.env.PANEL_PASSWORD) : '')
+        || hashSenha('admin123');
+
+    return { usuario, senhaHash };
+}
+
+async function obterUsuarioConfigurado() {
+    const credenciais = await obterCredenciaisConfiguradas();
+    return credenciais.usuario;
+}
+
 function compararSeguro(a, b) {
     const bufferA = Buffer.from(String(a || ''));
     const bufferB = Buffer.from(String(b || ''));
@@ -25,9 +42,10 @@ function compararSeguro(a, b) {
     return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
-function validarLogin(usuario, senha) {
-    const usuarioOk = compararSeguro(String(usuario || '').trim(), usuarioConfigurado());
-    const senhaOk = compararSeguro(hashSenha(senha), senhaHashConfigurada());
+async function validarLogin(usuario, senha) {
+    const credenciais = await obterCredenciaisConfiguradas();
+    const usuarioOk = compararSeguro(String(usuario || '').trim(), credenciais.usuario);
+    const senhaOk = compararSeguro(hashSenha(senha), credenciais.senhaHash);
 
     return usuarioOk && senhaOk;
 }
@@ -102,19 +120,23 @@ function encerrarSessao(req) {
 }
 
 function protegerPainel(req, res, next) {
-    const sessao = obterSessao(req);
-    if (sessao) {
-        req.usuarioPainel = sessao.usuario;
-        return next();
-    }
+    try {
+        const sessao = obterSessao(req);
+        if (sessao) {
+            req.usuarioPainel = sessao.usuario;
+            return next();
+        }
 
-    const aceitaHtml = String(req.headers.accept || '').includes('text/html');
-    if (aceitaHtml || req.method === 'GET') {
-        const destino = encodeURIComponent(req.originalUrl || '/clientes');
-        return res.redirect(`/login?next=${destino}`);
-    }
+        const aceitaHtml = String(req.headers.accept || '').includes('text/html');
+        if (aceitaHtml || req.method === 'GET') {
+            const destino = encodeURIComponent(req.originalUrl || '/clientes');
+            return res.redirect(`/login?next=${destino}`);
+        }
 
-    return res.status(401).json({ erro: 'Acesso nao autorizado' });
+        return res.status(401).json({ erro: 'Acesso nao autorizado' });
+    } catch (err) {
+        return next(err);
+    }
 }
 
 module.exports = {
@@ -122,6 +144,7 @@ module.exports = {
     SESSION_HOURS,
     hashSenha,
     validarLogin,
+    obterUsuarioConfigurado,
     criarSessao,
     obterSessao,
     cookieSessao,

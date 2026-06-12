@@ -29,7 +29,8 @@ const {
 const {
     obterConfiguracoes,
     salvarConfiguracoesPainel,
-    salvarConfiguracoesLicenca
+    salvarConfiguracoesLicenca,
+    salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
 const {
     criarBackupManual,
@@ -4462,6 +4463,24 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
+                <h2 class="panel-title">Acesso ao painel</h2>
+                <div class="subtitle">Salve o usuário e a senha no banco para não perder ao reiniciar o PM2</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/manutencao/acesso" style="padding-top:0;">
+            ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
+            ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Deixe em branco para manter a atual"' })}
+            ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Repita a nova senha"' })}
+            <div class="notice full">Depois de alterar, faça login novamente com o novo acesso.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar acesso</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
                 <h2 class="panel-title">Licença da instalação</h2>
                 <div class="subtitle">Controle comercial da instalação individual deste cliente</div>
             </div>
@@ -5231,6 +5250,21 @@ router.post('/manutencao/licenca', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/acesso', async (req, res) => {
+    try {
+        await salvarConfiguracoesAcesso(req.body);
+        logControleClientes('Acesso ao painel atualizado', {
+            usuario: req.body.painelUsuario
+        });
+        res.redirect('/logout');
+    } catch (err) {
+        logControleClientes('Erro ao salvar acesso ao painel', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar acesso: ${err.message}`)}`);
     }
 });
 

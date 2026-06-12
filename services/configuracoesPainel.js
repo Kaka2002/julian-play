@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const crypto = require('crypto');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -27,7 +28,9 @@ async function obterConfiguracoes() {
         licencaTelefone: '',
         licencaAtivacao: '',
         licencaVencimento: '',
-        licencaObservacoes: ''
+        licencaObservacoes: '',
+        painelUsuario: '',
+        painelSenhaHash: ''
     };
 
     rows.forEach((row) => {
@@ -46,6 +49,36 @@ function salvarConfiguracao(chave, valor) {
             atualizadoEm = CURRENT_TIMESTAMP`,
         [chave, valor]
     );
+}
+
+function hashSenhaPainel(senha) {
+    return crypto.createHash('sha256').update(String(senha || '')).digest('hex');
+}
+
+async function salvarConfiguracoesAcesso(dados = {}) {
+    const usuario = String(dados.painelUsuario || '').trim();
+    const senha = String(dados.painelSenha || '');
+    const confirmarSenha = String(dados.painelConfirmarSenha || '');
+
+    if (!usuario) {
+        throw new Error('Informe o usuario de acesso ao painel.');
+    }
+
+    await salvarConfiguracao('painelUsuario', usuario);
+
+    if (senha || confirmarSenha) {
+        if (senha.length < 6) {
+            throw new Error('A senha do painel precisa ter pelo menos 6 caracteres.');
+        }
+
+        if (senha !== confirmarSenha) {
+            throw new Error('A confirmacao da senha nao confere.');
+        }
+
+        await salvarConfiguracao('painelSenhaHash', hashSenhaPainel(senha));
+    }
+
+    return obterConfiguracoes();
 }
 
 async function salvarConfiguracoesPainel(dados = {}) {
@@ -67,6 +100,8 @@ async function salvarConfiguracoesLicenca(dados = {}) {
 
 module.exports = {
     obterConfiguracoes,
+    salvarConfiguracao,
     salvarConfiguracoesPainel,
-    salvarConfiguracoesLicenca
+    salvarConfiguracoesLicenca,
+    salvarConfiguracoesAcesso
 };

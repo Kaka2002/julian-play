@@ -6,7 +6,7 @@ const {
     cookieSessao,
     cookieLogout,
     encerrarSessao,
-    usuarioConfigurado
+    obterUsuarioConfigurado
 } = require('../services/authService');
 const { obterConfiguracoes } = require('../services/configuracoesPainel');
 
@@ -35,7 +35,7 @@ function destinoSeguro(valor) {
     return destino;
 }
 
-function telaLogin({ mensagem = '', next = '/clientes', config = {} }) {
+function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = 'admin' }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
 
@@ -187,7 +187,7 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {} }) {
         <form method="post" action="/login">
             <input type="hidden" name="next" value="${escapar(next)}">
             <label>Usuário
-                <input name="usuario" autocomplete="username" required autofocus value="${escapar(usuarioConfigurado())}">
+                <input name="usuario" autocomplete="username" required autofocus value="${escapar(usuarioPainel)}">
             </label>
             <label>Senha
                 <input type="password" name="senha" autocomplete="current-password" required>
@@ -207,11 +207,15 @@ router.get('/login', async (req, res) => {
         return res.redirect(destinoSeguro(req.query.next));
     }
 
-    const config = await obterConfiguracoes();
+    const [config, usuarioPainel] = await Promise.all([
+        obterConfiguracoes(),
+        obterUsuarioConfigurado()
+    ]);
     return res.send(telaLogin({
         mensagem: req.query.erro || '',
         next: destinoSeguro(req.query.next),
-        config
+        config,
+        usuarioPainel
     }));
 });
 
@@ -219,7 +223,7 @@ router.post('/login', async (req, res) => {
     desativarCache(res);
     const next = destinoSeguro(req.body.next);
 
-    if (!validarLogin(req.body.usuario, req.body.senha)) {
+    if (!(await validarLogin(req.body.usuario, req.body.senha))) {
         return res.redirect(`/login?erro=${encodeURIComponent('Usuário ou senha inválidos.')}&next=${encodeURIComponent(next)}`);
     }
 

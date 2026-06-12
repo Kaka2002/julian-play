@@ -163,6 +163,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
         backups: backups.slice(0, 8),
+        config,
         licenca: calcularLicenca(config),
         whatsapp: statusWhatsApp
     };
