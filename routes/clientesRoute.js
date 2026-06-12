@@ -853,6 +853,17 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             white-space: nowrap;
         }
 
+        .finance-breakdown-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 22px;
+            margin-bottom: 28px;
+        }
+
+        .finance-breakdown-grid .revenue-card {
+            margin-bottom: 0;
+        }
+
         .panel {
             overflow: hidden;
         }
@@ -4126,9 +4137,55 @@ function resumoFinanceiro(pagamentos = []) {
     });
 }
 
+function agruparFinanceiro(pagamentos = [], campo, fallback = 'Não informado') {
+    const grupos = pagamentos
+        .filter(pagamento => !pagamento.excluidoEm)
+        .reduce((mapa, pagamento) => {
+            const chave = String(pagamento[campo] || fallback).trim() || fallback;
+            const atual = mapa.get(chave) || { nome: chave, quantidade: 0, total: 0 };
+
+            atual.quantidade += 1;
+            atual.total += numeroMoeda(pagamento.valorTotal);
+            mapa.set(chave, atual);
+
+            return mapa;
+        }, new Map());
+
+    return [...grupos.values()].sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome));
+}
+
+function financeiroBreakdownCard({ titulo, nota, itens = [], icone = 'financeiro' }) {
+    const maiorValor = Math.max(...itens.map(item => item.total), 1);
+    const linhas = itens.length
+        ? itens.map(item => {
+            const largura = Math.max(8, Math.round((item.total / maiorValor) * 100));
+
+            return `<div class="revenue-row">
+                <div class="revenue-plan">${escapar(item.nome)}</div>
+                <div class="revenue-count">(${escapar(item.quantidade)} pagamento(s))</div>
+                <div class="revenue-bar" aria-hidden="true"><span style="--bar-width:${largura}%"></span></div>
+                <div class="revenue-value">${escapar(formatarMoeda(item.total))}</div>
+            </div>`;
+        }).join('')
+        : '<div class="empty">Nenhum pagamento válido encontrado neste filtro.</div>';
+
+    return `<section class="panel revenue-card">
+        <div class="revenue-head">
+            <div>
+                <div class="revenue-title">${escapar(titulo)}</div>
+                <span class="revenue-note">${escapar(nota)}</span>
+            </div>
+            <span class="revenue-icon">${icon(icone)}</span>
+        </div>
+        <div class="revenue-list">${linhas}</div>
+    </section>`;
+}
+
 function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) {
     const resumo = resumoFinanceiro(pagamentos);
     const urlExportar = montarUrlComFiltros('/financeiro/exportar.csv', filtros);
+    const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'Não informado');
+    const porPlano = agruparFinanceiro(pagamentos, 'plano', 'Sem plano');
     const linhas = paginacaoFinanceiro.itens.length
         ? paginacaoFinanceiro.itens.map(pagamento => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
@@ -4165,6 +4222,21 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) 
         ${metricCard({ label: 'Recebido válido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Removido', valor: formatarMoeda(resumo.totalRemovido), nota: `${resumo.removidos} pagamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Registros', valor: resumo.totalRegistros, nota: 'No filtro atual', tipo: 'info', icone: 'info' })}
+    </section>
+
+    <section class="finance-breakdown-grid">
+        ${financeiroBreakdownCard({
+            titulo: 'Por forma de pagamento',
+            nota: 'Somente pagamentos válidos no filtro atual',
+            itens: porPagamento,
+            icone: 'financeiro'
+        })}
+        ${financeiroBreakdownCard({
+            titulo: 'Por plano',
+            nota: 'Somente pagamentos válidos no filtro atual',
+            itens: porPlano,
+            icone: 'planos'
+        })}
     </section>
 
     <form class="clients-toolbar" method="get" action="/financeiro">
