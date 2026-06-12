@@ -869,9 +869,12 @@ function listarReceitaMensalFinanceira() {
 function listarPagamentosFinanceiro(filtros = {}) {
     const status = limparTexto(filtros.status || 'validos');
     const mes = limparTexto(filtros.mes);
+    const dataInicio = limparTexto(filtros.dataInicio);
+    const dataFim = limparTexto(filtros.dataFim);
     const busca = limparTexto(filtros.busca);
     const params = [];
     const where = [];
+    const campoData = "COALESCE(NULLIF(pagamento.dataPagamento, ''), pagamento.criadoEm)";
 
     if (status === 'removidos') {
         where.push("pagamento.excluidoEm IS NOT NULL AND pagamento.excluidoEm != ''");
@@ -881,8 +884,18 @@ function listarPagamentosFinanceiro(filtros = {}) {
         where.push("(pagamento.excluidoEm IS NULL OR pagamento.excluidoEm = '')");
     }
 
-    if (mes) {
-        where.push("substr(COALESCE(NULLIF(pagamento.dataPagamento, ''), pagamento.criadoEm), 1, 7) = ?");
+    if (dataInicio) {
+        where.push(`date(${campoData}) >= date(?)`);
+        params.push(dataInicio.slice(0, 10));
+    }
+
+    if (dataFim) {
+        where.push(`date(${campoData}) <= date(?)`);
+        params.push(dataFim.slice(0, 10));
+    }
+
+    if (!dataInicio && !dataFim && mes) {
+        where.push(`substr(${campoData}, 1, 7) = ?`);
         params.push(mes.slice(0, 7));
     }
 

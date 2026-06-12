@@ -195,6 +195,8 @@ function filtrosFinanceiroQuery(query = {}) {
     return {
         busca: String(query.busca || '').trim(),
         mes: String(query.mes || mesAtualInput()).slice(0, 7),
+        dataInicio: String(query.dataInicio || '').slice(0, 10),
+        dataFim: String(query.dataFim || '').slice(0, 10),
         status: ['validos', 'removidos', 'todos'].includes(status) ? status : 'validos'
     };
 }
@@ -4181,11 +4183,87 @@ function financeiroBreakdownCard({ titulo, nota, itens = [], icone = 'financeiro
     </section>`;
 }
 
-function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) {
+function resumoInadimplentes(clientes = []) {
+    const vencidos = clientes
+        .filter(cliente => !clienteEhTeste(cliente))
+        .filter(cliente => {
+            const vencimento = vencimentoCliente(cliente);
+            return vencimento && (vencimento.slice(0, 10) < hojeISO() || vencimentoExpirou(vencimento));
+        })
+        .sort((a, b) => String(vencimentoCliente(a)).localeCompare(String(vencimentoCliente(b))));
+
+    const valorMensal = vencidos.reduce((total, cliente) => {
+        const dias = diasPlanoCliente(cliente);
+        const valorPlano = numeroMoeda(cliente.valorPlano);
+        const assinaturaApp = numeroMoeda(cliente.assinaturaApp);
+        const mensalPlano = dias > 0 ? (valorPlano / dias) * 30 : valorPlano;
+        return total + mensalPlano + assinaturaApp;
+    }, 0);
+
+    return {
+        clientes: vencidos,
+        quantidade: vencidos.length,
+        valorMensal
+    };
+}
+
+function painelInadimplentesFinanceiro(inadimplentes = {}) {
+    const clientes = inadimplentes.clientes || [];
+    const linhas = clientes.slice(0, 8).map(cliente => {
+        const vencimento = vencimentoCliente(cliente);
+        const telefone = String(cliente.telefone || '').replace(/\D/g, '');
+        const linkWhats = telefone ? `https://wa.me/${telefone}` : '';
+
+        return `<tr>
+            <td data-label="Cliente">
+                <div class="cell-title">${escapar(cliente.nome || '-')}</div>
+                <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
+            </td>
+            <td data-label="Plano">
+                <div class="cell-title">${escapar(cliente.plano || '-')}</div>
+                <div class="cell-muted">R$ ${escapar(cliente.valorPlano || '0,00')} | App: R$ ${escapar(cliente.assinaturaApp || '0,00')}</div>
+            </td>
+            <td data-label="Vencimento">
+                <div class="cell-title">${escapar(formatarDataHoraCurta(vencimento))}</div>
+                <div class="cell-muted">${escapar(textoTempoRestante(vencimento))}</div>
+            </td>
+            <td data-label="Ações">
+                <div class="actions">
+                    ${linkWhats ? `<a class="button secondary icon-only" href="${escapar(linkWhats)}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${icon('whats')}</a>` : ''}
+                    <a class="button secondary icon-only" href="/clientes/${escapar(cliente.id)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+
+    return `<section class="panel" style="margin-bottom:28px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Vencidos e Inadimplentes</h2>
+                <div class="subtitle">${escapar(inadimplentes.quantidade || 0)} cliente(s), estimativa mensal ${escapar(formatarMoeda(inadimplentes.valorMensal || 0))}</div>
+            </div>
+            <a class="button secondary" href="/clientes/todos?status=expirado">Ver todos ${icon('arrow')}</a>
+        </div>
+        <table class="clients-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Plano</th>
+                    <th>Vencimento</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>${linhas || '<tr><td colspan="4" class="empty">Nenhum cliente vencido encontrado.</td></tr>'}</tbody>
+        </table>
+    </section>`;
+}
+
+function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, clientes = [] }) {
     const resumo = resumoFinanceiro(pagamentos);
     const urlExportar = montarUrlComFiltros('/financeiro/exportar.csv', filtros);
     const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'Não informado');
     const porPlano = agruparFinanceiro(pagamentos, 'plano', 'Sem plano');
+    const inadimplentes = resumoInadimplentes(clientes);
     const linhas = paginacaoFinanceiro.itens.length
         ? paginacaoFinanceiro.itens.map(pagamento => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
@@ -4222,6 +4300,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) 
         ${metricCard({ label: 'Recebido válido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Removido', valor: formatarMoeda(resumo.totalRemovido), nota: `${resumo.removidos} pagamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Registros', valor: resumo.totalRegistros, nota: 'No filtro atual', tipo: 'info', icone: 'info' })}
+        ${metricCard({ label: 'Inadimplentes', valor: inadimplentes.quantidade, nota: formatarMoeda(inadimplentes.valorMensal), tipo: 'orange', icone: 'alert' })}
     </section>
 
     <section class="finance-breakdown-grid">
@@ -4245,6 +4324,8 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) 
             <input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar por cliente, telefone, plano ou pagamento...">
         </div>
         <input type="month" name="mes" value="${escapar(filtros.mes || '')}" onchange="this.form.submit()">
+        <input type="date" name="dataInicio" value="${escapar(filtros.dataInicio || '')}" title="Data inicial">
+        <input type="date" name="dataFim" value="${escapar(filtros.dataFim || '')}" title="Data final">
         <select name="status" onchange="this.form.submit()">
             ${[
                 ['validos', 'Válidos'],
@@ -4255,6 +4336,8 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) 
         <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
         <a class="button secondary" href="${escapar(urlExportar)}">${icon('planos')} Exportar CSV</a>
     </form>
+
+    ${painelInadimplentesFinanceiro(inadimplentes)}
 
     <section class="clients-panel">
         <table class="clients-table">
@@ -4890,12 +4973,15 @@ router.get('/financeiro', async (req, res) => {
     desativarCache(res);
     const filtros = filtrosFinanceiroQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
-    const pagamentos = await listarPagamentosFinanceiro(filtros);
+    const [pagamentos, clientes] = await Promise.all([
+        listarPagamentosFinanceiro(filtros),
+        listarClientes()
+    ]);
     const paginacaoFinanceiro = paginarItens(pagamentos, pagina, CLIENTES_POR_PAGINA);
 
     await renderizar(res, {
         titulo: 'Financeiro',
-        conteudo: telaFinanceiro({ pagamentos, filtros, paginacaoFinanceiro }),
+        conteudo: telaFinanceiro({ pagamentos, filtros, paginacaoFinanceiro, clientes }),
         mensagem: req.query.mensagem || '',
         ativo: 'financeiro'
     });
