@@ -149,7 +149,7 @@ function normalizarAcessosApp(dados = {}) {
                 const chavePainel = acesso.painel.toLowerCase();
                 const totalPainel = (conexoesPorPainel.get(chavePainel) || 0) + 1;
                 if (totalPainel > 2) {
-                    throw new Error(`O painel ${acesso.painel} aceita no mÃ¡ximo 2 conexÃµes neste cadastro.`);
+                    throw new Error(`O painel ${acesso.painel} aceita no máximo 2 conexões neste cadastro.`);
                 }
                 conexoesPorPainel.set(chavePainel, totalPainel);
             }

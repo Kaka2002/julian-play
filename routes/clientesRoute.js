@@ -2402,11 +2402,11 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
         </label>
-        <label>UsuÃ¡rio IPTV
-            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="UsuÃ¡rio desta conexÃ£o">
+        <label>Usuário IPTV
+            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="Usuário desta conexão">
         </label>
         <label>Senha IPTV
-            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexÃ£o">
+            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexão">
         </label>
         <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
@@ -2437,7 +2437,7 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
         <div class="app-access-header">
             <div>
                 <strong>Dados por app instalado</strong>
-                <span>Cada linha representa uma conexÃ£o: app, dispositivo, painel, usuÃ¡rio, senha, MAC e ID quando exigir.</span>
+                <span>Cada linha representa uma conexão: app, dispositivo, painel, usuário, senha, MAC e ID quando exigir.</span>
             </div>
             <button class="button secondary" type="button" id="adicionarAcessoApp">${icon('plus')} Adicionar acesso</button>
         </div>
@@ -2482,7 +2482,7 @@ function descreverAcessosAppCsv(cliente = {}) {
             acesso.app ? `App: ${acesso.app}` : '',
             acesso.dispositivo ? `Dispositivo: ${acesso.dispositivo}` : '',
             acesso.painel ? `Painel: ${acesso.painel}` : '',
-            acesso.usuario ? `UsuÃ¡rio: ${acesso.usuario}` : '',
+            acesso.usuario ? `Usuário: ${acesso.usuario}` : '',
             acesso.senha ? `Senha: ${acesso.senha}` : '',
             acesso.localInstalacao ? `Onde: ${acesso.localInstalacao}` : '',
             acesso.enderecoMac ? `MAC: ${acesso.enderecoMac}` : '',
@@ -3401,7 +3401,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     }))
                 ]
             })}
-            ${campo({ nome: 'conexoesPlanoVisual', label: 'ConexÃµes do Plano', valor: planoAtualInfo.conexoes || 1, tipo: 'number', attrs: 'id="conexoesPlanoVisual" min="1" max="2" readonly' })}
+            ${campo({ nome: 'conexoesPlanoVisual', label: 'Conexões do Plano', valor: planoAtualInfo.conexoes || 1, tipo: 'number', attrs: 'id="conexoesPlanoVisual" min="1" max="2" readonly' })}
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
@@ -4422,7 +4422,7 @@ function planoCard(plano) {
         <span class="device-icon">${icon('planos')}</span>
         <div>
             <div class="device-name">${escapar(plano.nome)}</div>
-            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''} - ${escapar(plano.conexoes || 1)} conexÃ£o(Ãµes)</div>
+            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''} - ${escapar(plano.conexoes || 1)} conexão(ões)</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/planos/${plano.id}/editar" title="Editar plano">${icon('edit')}</a>
@@ -4459,7 +4459,7 @@ function formularioPlano(plano = {}) {
             ${campo({ nome: 'nome', label: 'Nome do plano', valor: plano.nome })}
             ${campo({ nome: 'dias', label: 'Quantidade de dias', valor: plano.dias, tipo: 'number' })}
             ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
-            ${campo({ nome: 'conexoes', label: 'Quantidade de conexÃµes', valor: plano.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
+            ${campo({ nome: 'conexoes', label: 'Quantidade de conexões', valor: plano.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -4734,7 +4734,7 @@ function panelCard(painel) {
         <span class="device-icon">${icon('paineis')}</span>
         <div>
             <div class="device-name">${escapar(painel.nome)}</div>
-            <div class="helper">${escapar(painel.conexoes || 1)} conexÃ£o(Ãµes)</div>
+            <div class="helper">${escapar(painel.conexoes || 1)} conexão(ões)</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/paineis/${painel.id}/editar" title="Editar painel">${icon('edit')}</a>
@@ -4967,7 +4967,7 @@ function formularioPainel(painel = {}) {
         <form class="fields" method="post" action="/paineis/salvar">
             ${painel.id ? `<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
-            ${campo({ nome: 'conexoes', label: 'ConexÃµes permitidas no painel', valor: painel.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
+            ${campo({ nome: 'conexoes', label: 'Conexões permitidas no painel', valor: painel.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -5280,14 +5280,14 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
+        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
     }
 
     const status = getStatusWhatsApp();
     const client = getClient();
 
     if (!client || !status.conectado) {
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado. BÃ´nus nÃ£o aplicado.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. Bônus não aplicado.'));
     }
 
     try {
@@ -5295,7 +5295,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         const clienteAtualizado = resultado.cliente;
 
         if (String(req.body.observacaoBonus || '').trim()) {
-            await adicionarNotaCliente(cliente.id, `ObservaÃ§Ã£o da bonificaÃ§Ã£o: ${req.body.observacaoBonus}`);
+            await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
         }
 
         const mensagem = montarMensagemBonusAplicado(clienteAtualizado, resultado);
@@ -5320,7 +5320,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             vencimento: resultado.dataVencimento
         });
 
-        return res.redirect(montarUrlClienteMensagem(cliente.id, `BÃ´nus aplicado: ${resultado.meses} mÃªs(es). Mensagem enviada ao cliente.`));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Bônus aplicado: ${resultado.meses} mês(es). Mensagem enviada ao cliente.`));
     } catch (err) {
         logControleClientes('Erro ao aplicar bonus', {
             clienteId: cliente.id,
@@ -5583,7 +5583,7 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
-            titulo: 'ManutenÃ§Ã£o',
+            titulo: 'Manutenção',
             conteudo: telaManutencao(status, { importacao: { preview, token } }),
             mensagem: `CSV validado: ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar`,
             ativo: 'manutencao'
@@ -5592,9 +5592,9 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
-            titulo: 'ManutenÃ§Ã£o',
+            titulo: 'Manutenção',
             conteudo: telaManutencao(status),
-            mensagem: err.message || 'NÃ£o foi possÃ­vel validar o CSV.',
+            mensagem: err.message || 'Não foi possível validar o CSV.',
             ativo: 'manutencao'
         });
     }
@@ -5607,11 +5607,11 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
         const itensValidos = itens.filter(item => item.acao !== 'ignorar');
 
         if (!itensValidos.length) {
-            throw new Error('NÃ£o hÃ¡ clientes vÃ¡lidos para importar.');
+            throw new Error('Não há clientes válidos para importar.');
         }
 
         if (itens.some(item => item.acao === 'ignorar')) {
-            throw new Error('A importaÃ§Ã£o possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
+            throw new Error('A importação possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
         }
 
         const backup = await criarBackupManual();
@@ -5635,12 +5635,12 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
             backup: backup.nome
         });
 
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`ImportaÃ§Ã£o concluÃ­da: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Importação concluída: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
     } catch (err) {
         logControleClientes('Erro ao importar clientes via CSV', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'NÃ£o foi possÃ­vel importar os clientes.')}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'Não foi possível importar os clientes.')}`);
     }
 });
 
