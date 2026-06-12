@@ -189,6 +189,16 @@ function filtrosClientesQuery(query = {}) {
     };
 }
 
+function filtrosFinanceiroQuery(query = {}) {
+    const status = String(query.status || '');
+
+    return {
+        busca: String(query.busca || '').trim(),
+        mes: String(query.mes || mesAtualInput()).slice(0, 7),
+        status: ['validos', 'removidos', 'todos'].includes(status) ? status : 'validos'
+    };
+}
+
 function lerUploadMultipart(req) {
     return new Promise((resolve, reject) => {
         const tipo = req.headers['content-type'] || '';
@@ -2532,6 +2542,52 @@ function gerarCsvClientes(clientes = []) {
         .join('\r\n');
 }
 
+function gerarCsvFinanceiro(pagamentos = []) {
+    const cabecalhos = [
+        'ID',
+        'Data do pagamento',
+        'Cliente',
+        'WhatsApp',
+        'Plano',
+        'Dias de contrato',
+        'Valor do plano',
+        'Assinatura app',
+        'Valor total',
+        'Forma de pagamento',
+        'Vencimento anterior',
+        'Vencimento novo',
+        'Status',
+        'Removido em',
+        'Mensagem enviada',
+        'Erro da mensagem',
+        'Observações'
+    ];
+
+    const linhas = pagamentos.map(pagamento => [
+        pagamento.id,
+        formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm),
+        pagamento.clienteNome,
+        pagamento.clienteTelefone,
+        pagamento.plano,
+        pagamento.diasContrato || 0,
+        pagamento.valorPlano || '0,00',
+        pagamento.assinaturaApp || '0,00',
+        pagamento.valorTotal || '0,00',
+        pagamento.formaPagamento,
+        formatarDataHoraCurta(pagamento.vencimentoAnterior),
+        formatarDataHoraCurta(pagamento.vencimentoNovo),
+        pagamento.excluidoEm ? 'Removido' : 'Válido',
+        formatarDataHoraCurta(pagamento.excluidoEm),
+        pagamento.mensagemEnviada ? 'Sim' : 'Não',
+        pagamento.erroMensagem,
+        pagamento.observacoes
+    ]);
+
+    return [cabecalhos, ...linhas]
+        .map(linha => linha.map(escaparCsv).join(';'))
+        .join('\r\n');
+}
+
 function normalizarCabecalhoCsv(valor) {
     return String(valor || '')
         .normalize('NFD')
@@ -4072,6 +4128,7 @@ function resumoFinanceiro(pagamentos = []) {
 
 function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) {
     const resumo = resumoFinanceiro(pagamentos);
+    const urlExportar = montarUrlComFiltros('/financeiro/exportar.csv', filtros);
     const linhas = paginacaoFinanceiro.itens.length
         ? paginacaoFinanceiro.itens.map(pagamento => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
@@ -4124,6 +4181,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) 
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtros.status ? 'selected' : ''}>${texto}</option>`).join('')}
         </select>
         <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
+        <a class="button secondary" href="${escapar(urlExportar)}">${icon('planos')} Exportar CSV</a>
     </form>
 
     <section class="clients-panel">
@@ -4758,13 +4816,7 @@ router.get('/clientes/todos', async (req, res) => {
 
 router.get('/financeiro', async (req, res) => {
     desativarCache(res);
-    const filtros = {
-        busca: String(req.query.busca || '').trim(),
-        mes: String(req.query.mes || mesAtualInput()).slice(0, 7),
-        status: ['validos', 'removidos', 'todos'].includes(String(req.query.status || ''))
-            ? String(req.query.status)
-            : 'validos'
-    };
+    const filtros = filtrosFinanceiroQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
     const pagamentos = await listarPagamentosFinanceiro(filtros);
     const paginacaoFinanceiro = paginarItens(pagamentos, pagina, CLIENTES_POR_PAGINA);
@@ -4775,6 +4827,26 @@ router.get('/financeiro', async (req, res) => {
         mensagem: req.query.mensagem || '',
         ativo: 'financeiro'
     });
+});
+
+router.get('/financeiro/exportar.csv', async (req, res) => {
+    desativarCache(res);
+    const filtros = filtrosFinanceiroQuery(req.query);
+    const pagamentos = await listarPagamentosFinanceiro(filtros);
+    const agora = new Date();
+    const carimbo = [
+        agora.getFullYear(),
+        String(agora.getMonth() + 1).padStart(2, '0'),
+        String(agora.getDate()).padStart(2, '0'),
+        '-',
+        String(agora.getHours()).padStart(2, '0'),
+        String(agora.getMinutes()).padStart(2, '0')
+    ].join('');
+    const csv = gerarCsvFinanceiro(pagamentos);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="financeiro-${carimbo}.csv"`);
+    res.send(`\uFEFF${csv}`);
 });
 
 router.get('/clientes/exportar.csv', async (req, res) => {
