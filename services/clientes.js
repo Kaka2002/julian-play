@@ -866,6 +866,46 @@ function listarReceitaMensalFinanceira() {
     ));
 }
 
+function listarPagamentosFinanceiro(filtros = {}) {
+    const status = limparTexto(filtros.status || 'validos');
+    const mes = limparTexto(filtros.mes);
+    const busca = limparTexto(filtros.busca);
+    const params = [];
+    const where = [];
+
+    if (status === 'removidos') {
+        where.push("pagamento.excluidoEm IS NOT NULL AND pagamento.excluidoEm != ''");
+    } else if (status === 'todos') {
+        // Sem filtro de status.
+    } else {
+        where.push("(pagamento.excluidoEm IS NULL OR pagamento.excluidoEm = '')");
+    }
+
+    if (mes) {
+        where.push("substr(COALESCE(NULLIF(pagamento.dataPagamento, ''), pagamento.criadoEm), 1, 7) = ?");
+        params.push(mes.slice(0, 7));
+    }
+
+    if (busca) {
+        where.push('(clientes.nome LIKE ? OR clientes.telefone LIKE ? OR pagamento.plano LIKE ? OR pagamento.formaPagamento LIKE ?)');
+        const termo = `%${busca}%`;
+        params.push(termo, termo, termo, termo);
+    }
+
+    return buscarTodos(
+        `SELECT
+            pagamento.*,
+            clientes.nome AS clienteNome,
+            clientes.telefone AS clienteTelefone,
+            clientes.status AS clienteStatus
+        FROM cliente_pagamentos pagamento
+        INNER JOIN clientes ON clientes.id = pagamento.clienteId
+        ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+        ORDER BY datetime(COALESCE(NULLIF(pagamento.dataPagamento, ''), pagamento.criadoEm)) DESC, pagamento.id DESC`,
+        params
+    );
+}
+
 async function renovarCliente(dados = {}) {
     const clienteId = Number.parseInt(dados.clienteId || dados.id, 10);
     if (!clienteId) {
@@ -1244,6 +1284,7 @@ module.exports = {
     aplicarBonusCliente,
     listarPagamentosCliente,
     listarReceitaMensalFinanceira,
+    listarPagamentosFinanceiro,
     renovarCliente,
     marcarPagamentoMensagem,
     removerPagamentoCliente,

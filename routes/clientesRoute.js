@@ -9,6 +9,7 @@ const {
     aplicarBonusCliente,
     listarPagamentosCliente,
     listarReceitaMensalFinanceira,
+    listarPagamentosFinanceiro,
     renovarCliente,
     marcarPagamentoMensagem,
     removerPagamentoCliente,
@@ -475,6 +476,7 @@ function icon(nome) {
         apps: '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
         dispositivos: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3"/><path d="M16 6V3"/><path d="M3 11h18"/></svg>',
         paineis: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8"/><path d="M12 18v4"/></svg>',
+        financeiro: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/><path d="M7 6v12"/><path d="M17 6v12"/></svg>',
         sair: '<svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>',
         check: '<svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>',
         alert: '<svg viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
@@ -1940,6 +1942,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
+                <a class="navlink ${ativo === 'financeiro' ? 'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
                 <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
@@ -4036,6 +4039,120 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
     ${autoAtualizarPaginaScript(CLIENTES_AUTO_REFRESH_MS)}`;
 }
 
+function mesAtualInput() {
+    const data = new Date();
+    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
+    return data.toISOString().slice(0, 7);
+}
+
+function resumoFinanceiro(pagamentos = []) {
+    return pagamentos.reduce((resumo, pagamento) => {
+        const removido = Boolean(pagamento.excluidoEm);
+        const valor = numeroMoeda(pagamento.valorTotal);
+
+        resumo.totalRegistros += 1;
+
+        if (removido) {
+            resumo.removidos += 1;
+            resumo.totalRemovido += valor;
+        } else {
+            resumo.validos += 1;
+            resumo.totalValido += valor;
+        }
+
+        return resumo;
+    }, {
+        totalRegistros: 0,
+        validos: 0,
+        removidos: 0,
+        totalValido: 0,
+        totalRemovido: 0
+    });
+}
+
+function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro }) {
+    const resumo = resumoFinanceiro(pagamentos);
+    const linhas = paginacaoFinanceiro.itens.length
+        ? paginacaoFinanceiro.itens.map(pagamento => `<tr>
+            <td data-label="Data">${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
+            <td data-label="Cliente">
+                <div class="cell-title">${escapar(pagamento.clienteNome || '-')}</div>
+                <div class="cell-muted">${escapar(pagamento.clienteTelefone || '')}</div>
+            </td>
+            <td data-label="Plano">
+                <div class="cell-title">${escapar(pagamento.plano || '-')}</div>
+                <div class="cell-muted">${escapar(pagamento.diasContrato || 0)} dias</div>
+            </td>
+            <td data-label="Valor">
+                <div class="cell-title">R$ ${escapar(pagamento.valorTotal || '0,00')}</div>
+                <div class="cell-muted">Plano: R$ ${escapar(pagamento.valorPlano || '0,00')} | App: R$ ${escapar(pagamento.assinaturaApp || '0,00')}</div>
+            </td>
+            <td data-label="Pagamento">${escapar(pagamento.formaPagamento || '-')}</td>
+            <td data-label="Vencimento">${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
+            <td data-label="Status">
+                ${pagamento.excluidoEm ? '<span class="badge red">Removido</span>' : '<span class="badge green">Válido</span>'}
+                ${pagamento.excluidoEm ? `<div class="cell-muted">${escapar(formatarDataHoraCurta(pagamento.excluidoEm))}</div>` : ''}
+            </td>
+            <td data-label="Ações">
+                <a class="button secondary icon-only" href="/clientes/${escapar(pagamento.clienteId)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
+            </td>
+        </tr>`).join('')
+        : '<tr><td colspan="8" class="empty">Nenhum pagamento encontrado.</td></tr>';
+
+    return `<section class="page-title">
+        <h1>Financeiro</h1>
+        <div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div>
+    </section>
+
+    <section class="metrics">
+        ${metricCard({ label: 'Recebido válido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Removido', valor: formatarMoeda(resumo.totalRemovido), nota: `${resumo.removidos} pagamento(s)`, tipo: 'red', icone: 'trash' })}
+        ${metricCard({ label: 'Registros', valor: resumo.totalRegistros, nota: 'No filtro atual', tipo: 'info', icone: 'info' })}
+    </section>
+
+    <form class="clients-toolbar" method="get" action="/financeiro">
+        <div class="clients-search">
+            ${icon('search')}
+            <input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar por cliente, telefone, plano ou pagamento...">
+        </div>
+        <input type="month" name="mes" value="${escapar(filtros.mes || '')}" onchange="this.form.submit()">
+        <select name="status" onchange="this.form.submit()">
+            ${[
+                ['validos', 'Válidos'],
+                ['removidos', 'Removidos'],
+                ['todos', 'Todos']
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtros.status ? 'selected' : ''}>${texto}</option>`).join('')}
+        </select>
+        <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
+    </form>
+
+    <section class="clients-panel">
+        <table class="clients-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Cliente</th>
+                    <th>Plano</th>
+                    <th>Valor</th>
+                    <th>Pagamento</th>
+                    <th>Vencimento</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>${linhas}</tbody>
+        </table>
+        ${paginacao({
+            base: '/financeiro',
+            params: filtros,
+            pagina: paginacaoFinanceiro.pagina,
+            totalPaginas: paginacaoFinanceiro.totalPaginas,
+            total: paginacaoFinanceiro.total,
+            porPagina: paginacaoFinanceiro.porPagina
+        })}
+    </section>`;
+}
+
 function planoCard(plano) {
     return `<article class="device-card">
         <span class="device-icon">${icon('planos')}</span>
@@ -4636,6 +4753,27 @@ router.get('/clientes/todos', async (req, res) => {
         }),
         mensagem,
         ativo: 'clientes'
+    });
+});
+
+router.get('/financeiro', async (req, res) => {
+    desativarCache(res);
+    const filtros = {
+        busca: String(req.query.busca || '').trim(),
+        mes: String(req.query.mes || mesAtualInput()).slice(0, 7),
+        status: ['validos', 'removidos', 'todos'].includes(String(req.query.status || ''))
+            ? String(req.query.status)
+            : 'validos'
+    };
+    const pagina = paginaAtual(req.query.pagina);
+    const pagamentos = await listarPagamentosFinanceiro(filtros);
+    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, CLIENTES_POR_PAGINA);
+
+    await renderizar(res, {
+        titulo: 'Financeiro',
+        conteudo: telaFinanceiro({ pagamentos, filtros, paginacaoFinanceiro }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'financeiro'
     });
 });
 
