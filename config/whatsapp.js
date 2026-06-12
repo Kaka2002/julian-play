@@ -189,6 +189,16 @@ async function iniciarWhatsApp() {
         return;
     }
 
+    if (conectado && client) {
+        console.log('WhatsApp ja esta conectado');
+        return;
+    }
+
+    if (client && ['iniciando', 'autenticado', 'aguardando_qr', 'conectando'].includes(statusWhatsApp)) {
+        console.log(`Cliente WhatsApp ja existe com status ${statusWhatsApp}`);
+        return;
+    }
+
     inicializando = true;
     statusWhatsApp = 'iniciando';
 
@@ -285,6 +295,21 @@ async function iniciarWhatsApp() {
         console.log('Erro geral:', err);
 
         const mensagem = err && err.message ? err.message : String(err);
+
+        if (mensagem.includes('The browser is already running')) {
+            statusWhatsApp = 'chrome_em_uso';
+            console.log('Sessao do WhatsApp ja esta em uso por outro Chrome/processo. Pare o processo antigo antes de tentar novamente.');
+        }
+
+        if (client) {
+            try {
+                await client.destroy();
+            } catch (destroyErr) {
+                console.log('Nao foi possivel destruir cliente apos erro:', destroyErr.message);
+            } finally {
+                client = null;
+            }
+        }
 
         if (
             mensagem.includes('Execution context was destroyed') ||

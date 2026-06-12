@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
@@ -29,6 +30,49 @@ process.on('unhandledRejection', (err) => {
 });
 
 const app = express();
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : __dirname);
+const PROCESS_LOCK_PATH = path.join(DATA_DIR, '.julian-play.pid');
+
+function processoExiste(pid) {
+    if (!pid || Number(pid) === process.pid) return false;
+
+    try {
+        process.kill(Number(pid), 0);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function adquirirTravaProcesso() {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+
+    if (fs.existsSync(PROCESS_LOCK_PATH)) {
+        const pidAtual = Number(fs.readFileSync(PROCESS_LOCK_PATH, 'utf8'));
+
+        if (processoExiste(pidAtual)) {
+            console.error(`julian-play ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
+            process.exit(1);
+        }
+    }
+
+    fs.writeFileSync(PROCESS_LOCK_PATH, String(process.pid));
+}
+
+function liberarTravaProcesso() {
+    try {
+        if (!fs.existsSync(PROCESS_LOCK_PATH)) return;
+
+        const pidAtual = Number(fs.readFileSync(PROCESS_LOCK_PATH, 'utf8'));
+        if (pidAtual === process.pid) {
+            fs.unlinkSync(PROCESS_LOCK_PATH);
+        }
+    } catch (err) {
+        console.log('Nao foi possivel liberar trava do processo:', err.message);
+    }
+}
+
+adquirirTravaProcesso();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
@@ -69,8 +113,10 @@ server.on('error', (err) => {
 async function desligar(signal) {
     console.log(`Recebido ${signal}. Encerrando WhatsApp...`);
     await encerrarWhatsApp();
+    liberarTravaProcesso();
     process.exit(0);
 }
 
 process.on('SIGTERM', () => desligar('SIGTERM'));
 process.on('SIGINT', () => desligar('SIGINT'));
+process.on('exit', liberarTravaProcesso);
