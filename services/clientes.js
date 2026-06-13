@@ -1211,6 +1211,33 @@ function listarClientesParaAvisosProgramados() {
     ));
 }
 
+function listarClientesVencidosParaCobranca(codigoAviso) {
+    const agoraIso = agoraSaoPauloISO();
+
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
+            FROM clientes
+            WHERE status IN ('ativo', 'pendente', 'expirado')
+                AND plano NOT LIKE '%Teste%'
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE datetime(replace(vencimentoEfetivo, 'T', ' ')) < datetime(replace(?, 'T', ' '))
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimentoEfetivo
+                    AND avisos_renovacao.diasAntes = ?
+            )
+        ORDER BY vencimentoEfetivo ASC, nome ASC`,
+        [agoraIso, Number(codigoAviso)]
+    ));
+}
+
 function listarTestesGratisParaAvisoPorHorario(agoraIso, limiteIso, codigoAviso) {
     return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
         `WITH candidatos AS (
@@ -1342,6 +1369,7 @@ module.exports = {
     buscarAlertasCadastroCliente,
     listarClientesParaAviso,
     listarClientesParaAvisosProgramados,
+    listarClientesVencidosParaCobranca,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,

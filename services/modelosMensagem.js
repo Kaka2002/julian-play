@@ -16,6 +16,13 @@ const modelosPadrao = [
         texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara reativar seu acesso, entre em contato o quanto antes.'
     },
     {
+        chave: 'cobranca_vencido',
+        plano: 'cobranca',
+        titulo: 'Cobrança de Cliente Vencido',
+        cor: 'red',
+        texto: 'Olá, *{{nome}}!*\n\nIdentifiquei que seu plano *{{plano}}* venceu no dia *{{vencimento}}*.\n\nPara evitar a interrupção ou reativar seu acesso, entre em contato para regularizar sua assinatura.\n\nValor do plano: *R$ {{valor}}*.'
+    },
+    {
         chave: 'aviso_vencimento_2_dias',
         plano: 'padrao',
         titulo: 'Aviso de Vencimento - 2 Dias Antes',
@@ -138,6 +145,7 @@ function limparTexto(valor) {
 function normalizarPlano(plano) {
     const valor = limparTexto(plano).toLowerCase();
 
+    if (valor.includes('cobranca') || valor.includes('cobran')) return 'cobranca';
     if (valor.includes('mensal')) return 'mensal';
     if (valor.includes('trimestral')) return 'trimestral';
     if (valor.includes('semestral')) return 'semestral';
@@ -386,6 +394,19 @@ async function montarMensagemAniversario(cliente) {
     return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'aniversario_bonus').texto, variaveis);
 }
 
+async function montarMensagemCobrancaVencido(cliente) {
+    const modelo = await obterModeloPorChave('cobranca_vencido');
+    const variaveis = {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano || 'assinatura',
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
+        dias: '',
+        valor: cliente.valorPlano || cliente.valor || ''
+    };
+
+    return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'cobranca_vencido').texto, variaveis);
+}
+
 module.exports = {
     listarModelos,
     buscarModeloPorId,
@@ -394,6 +415,7 @@ module.exports = {
     montarMensagemPorModelo,
     montarMensagemAvisoProgramado,
     montarMensagemAniversario,
+    montarMensagemCobrancaVencido,
     normalizarPlano,
     aplicarVariaveis,
     modelosPadrao

@@ -17,7 +17,9 @@ const {
     normalizarTelefone,
     listarNotasCliente,
     adicionarNotaCliente,
-    buscarAlertasCadastroCliente
+    buscarAlertasCadastroCliente,
+    listarClientesVencidosParaCobranca,
+    registrarAvisoRenovacaoProgramado
 } = require('../services/clientes');
 const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
@@ -25,7 +27,8 @@ const {
     listarModelos,
     buscarModeloPorId,
     salvarModelo,
-    removerModelo
+    removerModelo,
+    montarMensagemCobrancaVencido
 } = require('../services/modelosMensagem');
 const {
     obterConfiguracoes,
@@ -60,9 +63,11 @@ const {
     removerPainel
 } = require('../services/appsDispositivos');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
+const { enviarMensagem } = require('../services/mensagemService');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
+const CODIGO_COBRANCA_VENCIDO = -90;
 const ASSETS_DIR = path.join(__dirname, '..', 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
@@ -4293,7 +4298,12 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <h2 class="panel-title">Vencidos e Inadimplentes</h2>
                 <div class="subtitle">${escapar(inadimplentes.quantidade || 0)} cliente(s), estimativa mensal ${escapar(formatarMoeda(inadimplentes.valorMensal || 0))}</div>
             </div>
-            <a class="button secondary" href="/clientes/todos?status=expirado">Ver todos ${icon('arrow')}</a>
+            <div class="actions">
+                <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobrança para clientes vencidos que ainda não receberam cobrança deste vencimento?');">
+                    <button class="button green" type="submit">${icon('whats')} Cobrar vencidos</button>
+                </form>
+                <a class="button secondary" href="/clientes/todos?status=expirado">Ver todos ${icon('arrow')}</a>
+            </div>
         </div>
         <table class="clients-table">
             <thead>
@@ -4584,7 +4594,8 @@ function formularioModelo(modelo = {}) {
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
                     { valor: 'anual', texto: 'Anual' },
-                    { valor: 'aniversario', texto: 'Aniversário' }
+                    { valor: 'aniversario', texto: 'Aniversário' },
+                    { valor: 'cobranca', texto: 'Cobrança' }
                 ]
             })}
             ${campo({
@@ -5910,6 +5921,43 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
     }
 
     res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) de renovação e ${resultado.aniversarios || 0} aniversário(s) enviado(s).`)}`);
+});
+
+router.post('/clientes/cobrar-vencidos', async (req, res) => {
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return res.redirect(`/financeiro?mensagem=${encodeURIComponent('WhatsApp não está conectado.')}`);
+    }
+
+    const clientes = await listarClientesVencidosParaCobranca(CODIGO_COBRANCA_VENCIDO);
+    let enviados = 0;
+    let ignorados = 0;
+
+    for (const cliente of clientes) {
+        const telefone = normalizarTelefone(cliente.telefone);
+        const vencimento = cliente.vencimentoEfetivo || cliente.dataVencimento || cliente.vencimento;
+
+        if (!telefone || !vencimento) {
+            ignorados += 1;
+            continue;
+        }
+
+        const destino = await resolverDestinoWhatsApp(client, telefone);
+        const mensagem = await montarMensagemCobrancaVencido(cliente);
+        const enviado = await enviarMensagem(client, destino, mensagem);
+
+        if (enviado) {
+            enviados += 1;
+            await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_COBRANCA_VENCIDO);
+            await adicionarNotaCliente(cliente.id, `Cobrança de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
+        } else {
+            ignorados += 1;
+        }
+    }
+
+    res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobrança(s) enviada(s), ${ignorados} ignorada(s).`)}`);
 });
 
 module.exports = router;
