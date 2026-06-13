@@ -21,7 +21,10 @@ const {
     listarClientesVencidosParaCobranca,
     registrarAvisoRenovacaoProgramado
 } = require('../services/clientes');
-const { verificarRenovacoes } = require('../services/renovacaoAutomatica');
+const {
+    verificarRenovacoes,
+    verificarClientesVencendoUmaHora
+} = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
 const {
     listarModelos,
@@ -5914,14 +5917,45 @@ router.post('/clientes/:id/excluir', async (req, res) => {
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {
-    const diasAviso = Number(process.env.RENOVACAO_DIAS_AVISO || 3);
-    const resultado = await verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso });
+    try {
+        const diasAviso = Number(process.env.RENOVACAO_DIAS_AVISO || 3);
+        console.log('[dashboard] Disparo manual de avisos solicitado.');
+        logControleClientes('Disparo manual de avisos solicitado');
 
-    if (resultado.erro) {
-        return res.redirect(`/clientes?mensagem=${encodeURIComponent(resultado.erro)}`);
+        const resultado = await verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso });
+        const resultadoUmaHora = await verificarClientesVencendoUmaHora({ getClient, getStatusWhatsApp });
+
+        if (resultado.erro) {
+            console.log(`[dashboard] Disparo manual de avisos falhou: ${resultado.erro}`);
+            logControleClientes('Disparo manual de avisos falhou', { erro: resultado.erro });
+            return res.redirect(`/clientes?mensagem=${encodeURIComponent(resultado.erro)}`);
+        }
+
+        const enviados = Number(resultado.enviados || 0);
+        const aniversarios = Number(resultado.aniversarios || 0);
+        const ignorados = Number(resultado.ignorados || 0);
+        const enviadosUmaHora = Number(resultadoUmaHora.enviados || 0);
+        const ignoradosUmaHora = Number(resultadoUmaHora.ignorados || 0);
+        const totalEnviados = enviados + aniversarios + enviadosUmaHora;
+        const totalIgnorados = ignorados + ignoradosUmaHora;
+        const mensagem = totalEnviados
+            ? `${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora e ${aniversarios} aniversário(s) enviado(s).`
+            : 'Nenhum aviso novo para enviar agora. Os avisos podem já ter sido enviados para este vencimento.';
+
+        console.log(`[dashboard] Disparo manual concluido: renovacao=${enviados}, umaHora=${enviadosUmaHora}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
+        logControleClientes('Disparo manual de avisos concluido', {
+            renovacao: enviados,
+            umaHora: enviadosUmaHora,
+            aniversarios,
+            ignorados: totalIgnorados
+        });
+
+        res.redirect(`/clientes?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        console.error(`[dashboard] Erro no disparo manual de avisos: ${err.message}`);
+        logControleClientes('Erro no disparo manual de avisos', { erro: err.message });
+        res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao disparar avisos: ${err.message}`)}`);
     }
-
-    res.redirect(`/clientes?mensagem=${encodeURIComponent(`${resultado.enviados} aviso(s) de renovação e ${resultado.aniversarios || 0} aniversário(s) enviado(s).`)}`);
 });
 
 router.post('/clientes/cobrar-vencidos', async (req, res) => {
