@@ -44,6 +44,13 @@ const modelosPadrao = [
         texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence *hoje*, dia *{{vencimento}}*.\n\nEntre em contato para renovar e manter seu acesso ativo.'
     },
     {
+        chave: 'aviso_vencimento_1_hora',
+        plano: 'padrao',
+        titulo: 'Aviso de Vencimento - Faltando 1 Hora',
+        cor: 'red',
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em aproximadamente *1 hora*, dia *{{vencimento}}*.\n\nEntre em contato para renovar e evitar a interrupção do acesso.'
+    },
+    {
         chave: 'mensal_vencimento',
         plano: 'mensal',
         titulo: 'Renovação Mensal - Vencimento Próximo',
@@ -342,7 +349,8 @@ async function obterModeloAvisoProgramado(diasAntes) {
     const chaves = {
         2: 'aviso_vencimento_2_dias',
         1: 'aviso_vencimento_1_dia',
-        0: 'aviso_vencimento_hoje'
+        0: 'aviso_vencimento_hoje',
+        '-60': 'aviso_vencimento_1_hora'
     };
 
     const chave = chaves[Number(diasAntes)];

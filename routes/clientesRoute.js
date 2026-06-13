@@ -4123,6 +4123,7 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
                 ['teste', 'Teste'],
                 ['pendente', 'Pendente'],
                 ['expirado', 'Expirado'],
+                ['inadimplente', 'Inadimplentes'],
                 ['suspenso', 'Suspenso'],
                 ['cancelado', 'Cancelado']
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ? 'selected' : ''}>${texto}</option>`).join('')}
@@ -4302,7 +4303,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobrança para clientes vencidos que ainda não receberam cobrança deste vencimento?');">
                     <button class="button green" type="submit">${icon('whats')} Cobrar vencidos</button>
                 </form>
-                <a class="button secondary" href="/clientes/todos?status=expirado">Ver todos ${icon('arrow')}</a>
+                <a class="button secondary" href="/clientes/todos?status=inadimplente">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
         <table class="clients-table">

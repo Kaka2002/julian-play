@@ -613,7 +613,10 @@ async function listarClientes(filtros = {}) {
         params.push(termo, termo, termo, termo, termo, termo, termo);
     }
 
-    if (status) {
+    if (status === 'inadimplente') {
+        where.push("status = 'expirado' AND (plano IS NULL OR plano NOT LIKE ?)");
+        params.push('%Teste%');
+    } else if (status) {
         where.push('status = ?');
         params.push(status);
     }
@@ -1238,6 +1241,32 @@ function listarClientesVencidosParaCobranca(codigoAviso) {
     ));
 }
 
+function listarClientesParaAvisoUmaHora(agoraIso, limiteIso, codigoAviso) {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
+            FROM clientes
+            WHERE status IN ('ativo', 'pendente')
+                AND (plano IS NULL OR plano NOT LIKE '%Teste%')
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE datetime(replace(vencimentoEfetivo, 'T', ' ')) > datetime(replace(?, 'T', ' '))
+            AND datetime(replace(vencimentoEfetivo, 'T', ' ')) <= datetime(replace(?, 'T', ' '))
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimentoEfetivo
+                    AND avisos_renovacao.diasAntes = ?
+            )
+        ORDER BY vencimentoEfetivo ASC, nome ASC`,
+        [agoraIso, limiteIso, Number(codigoAviso)]
+    ));
+}
+
 function listarTestesGratisParaAvisoPorHorario(agoraIso, limiteIso, codigoAviso) {
     return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
         `WITH candidatos AS (
@@ -1370,6 +1399,7 @@ module.exports = {
     listarClientesParaAviso,
     listarClientesParaAvisosProgramados,
     listarClientesVencidosParaCobranca,
+    listarClientesParaAvisoUmaHora,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,

@@ -1,6 +1,7 @@
 const { enviarMensagem } = require('./mensagemService');
 const {
     listarClientesParaAvisosProgramados,
+    listarClientesParaAvisoUmaHora,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,
@@ -19,8 +20,10 @@ const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const TESTE_AVISO_MINUTOS = 30;
 const TESTE_AVISO_PLANO = -30;
 const TESTE_AVISO_EXPIRADO_FORA_HORARIO = -31;
+const AVISO_CLIENTE_UMA_HORA = -60;
 let agendador = null;
 let executando = false;
+let executandoUmaHora = false;
 let executandoTestes = false;
 let ultimoEnvioAutomatico = '';
 
@@ -237,6 +240,52 @@ async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = 
     }
 }
 
+async function verificarClientesVencendoUmaHora({ getClient, getStatusWhatsApp } = {}) {
+    if (executandoUmaHora) {
+        return { enviados: 0, ignorados: 0, erro: null };
+    }
+
+    executandoUmaHora = true;
+
+    try {
+        const status = getStatusWhatsApp ? getStatusWhatsApp() : {};
+        const client = getClient ? getClient() : null;
+
+        if (!client || !status.conectado) {
+            return { enviados: 0, ignorados: 0, erro: 'WhatsApp não está conectado.' };
+        }
+
+        const agoraIso = formatarDataHoraSaoPaulo();
+        const limiteIso = formatarDataHoraSaoPaulo(new Date(Date.now() + 60 * 60 * 1000));
+        const clientes = await listarClientesParaAvisoUmaHora(agoraIso, limiteIso, AVISO_CLIENTE_UMA_HORA);
+        let enviados = 0;
+        let ignorados = 0;
+
+        for (const cliente of clientes) {
+            const destino = montarDestinoWhatsApp(cliente.telefone);
+
+            if (!normalizarTelefone(cliente.telefone)) {
+                ignorados += 1;
+                continue;
+            }
+
+            const mensagem = await montarMensagemAvisoProgramado(cliente, AVISO_CLIENTE_UMA_HORA);
+            const enviado = await enviarMensagem(client, destino, mensagem);
+
+            if (enviado) {
+                enviados += 1;
+                await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, AVISO_CLIENTE_UMA_HORA);
+            } else {
+                ignorados += 1;
+            }
+        }
+
+        return { enviados, ignorados, erro: null };
+    } finally {
+        executandoUmaHora = false;
+    }
+}
+
 function iniciarAgendadorRenovacao(options) {
     if (agendador) return;
 
@@ -277,6 +326,17 @@ function iniciarAgendadorRenovacao(options) {
                 console.log('Erro no aviso de teste grátis:', err.message);
             });
 
+        verificarClientesVencendoUmaHora(options)
+            .then((resultado) => {
+                if (resultado.erro) return;
+                if (resultado.enviados || resultado.ignorados) {
+                    console.log(`Vencimento em 1 hora: ${resultado.enviados} aviso(s), ${resultado.ignorados} ignorado(s).`);
+                }
+            })
+            .catch((err) => {
+                console.log('Erro no aviso de vencimento em 1 hora:', err.message);
+            });
+
         if (!jaPassouHorario) return;
         if (ultimoEnvioAutomatico === agora.data) return;
 
@@ -292,5 +352,6 @@ module.exports = {
     iniciarAgendadorRenovacao,
     verificarRenovacoes,
     verificarTestesGratisVencendo,
+    verificarClientesVencendoUmaHora,
     montarMensagemRenovacao
 };
