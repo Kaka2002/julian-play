@@ -33,6 +33,7 @@ db.serialize(() => {
             appsInstalados TEXT,
             dispositivosSelecionados TEXT,
             paineisSelecionados TEXT,
+            conexoesPainel INTEGER DEFAULT 0,
             appInstalado INTEGER DEFAULT 0,
             usuarioApp TEXT,
             senhaApp TEXT,
@@ -98,7 +99,6 @@ db.serialize(() => {
         CREATE TABLE IF NOT EXISTS paineis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE,
-            conexoes INTEGER DEFAULT 1,
             ativo INTEGER DEFAULT 1,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -111,7 +111,6 @@ db.serialize(() => {
             nome TEXT NOT NULL UNIQUE,
             dias INTEGER NOT NULL,
             valor TEXT,
-            conexoes INTEGER DEFAULT 1,
             ativo INTEGER DEFAULT 1,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -180,6 +179,7 @@ db.serialize(() => {
         appsInstalados: 'TEXT',
         dispositivosSelecionados: 'TEXT',
         paineisSelecionados: 'TEXT',
+        conexoesPainel: 'INTEGER DEFAULT 0',
         appInstalado: 'INTEGER DEFAULT 0',
         usuarioApp: 'TEXT',
         senhaApp: 'TEXT',
@@ -234,9 +234,7 @@ function adicionarColunaSeNaoExiste(tabela, coluna, definicao, done) {
 }
 
 function migrarCatalogos(done) {
-    adicionarColunaSeNaoExiste('tipos_planos', 'conexoes', 'INTEGER DEFAULT 1', () => {
-        adicionarColunaSeNaoExiste('paineis', 'conexoes', 'INTEGER DEFAULT 1', done);
-    });
+    done();
 }
 
 function migrarPagamentos(done) {
@@ -298,6 +296,7 @@ function migrarTelefoneDuplicado(done) {
                     appsInstalados TEXT,
                     dispositivosSelecionados TEXT,
                     paineisSelecionados TEXT,
+                    conexoesPainel INTEGER DEFAULT 0,
                     appInstalado INTEGER DEFAULT 0,
                     usuarioApp TEXT,
                     senhaApp TEXT,
@@ -320,7 +319,7 @@ function migrarTelefoneDuplicado(done) {
                     id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
-                    dispositivosSelecionados, paineisSelecionados, appInstalado,
+                    dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
                     usuarioApp, senhaApp, observacoes, origem, tags, bonusMeses, status, ultimoAvisoRenovacao,
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 )
@@ -328,7 +327,7 @@ function migrarTelefoneDuplicado(done) {
                     id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
-                    dispositivosSelecionados, paineisSelecionados, appInstalado,
+                    dispositivosSelecionados, paineisSelecionados, 0, appInstalado,
                     usuarioApp, senhaApp, observacoes, origem, tags, bonusMeses, status, ultimoAvisoRenovacao,
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 FROM clientes_backup_unico

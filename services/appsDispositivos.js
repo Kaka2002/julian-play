@@ -68,12 +68,6 @@ function limparTexto(valor) {
     return String(valor || '').trim();
 }
 
-function normalizarConexoes(valor) {
-    const numero = Number.parseInt(valor || 1, 10);
-    if (!Number.isFinite(numero)) return 1;
-    return Math.min(2, Math.max(1, numero));
-}
-
 async function garantirAppsPadrao() {
     for (const [nome, descricao] of appsPadrao) {
         await executar(
@@ -95,8 +89,8 @@ async function garantirDispositivosPadrao() {
 async function garantirPaineisPadrao() {
     for (const nome of paineisPadrao) {
         await executar(
-            'INSERT OR IGNORE INTO paineis (nome, conexoes) VALUES (?, ?)',
-            [nome, 1]
+            'INSERT OR IGNORE INTO paineis (nome) VALUES (?)',
+            [nome]
         );
     }
 }
@@ -198,7 +192,6 @@ async function buscarPainelPorId(id) {
 async function salvarPainel(dados = {}) {
     const id = limparTexto(dados.id);
     const nome = limparTexto(dados.nome);
-    const conexoes = normalizarConexoes(dados.conexoes);
 
     if (!nome) throw new Error('Informe o nome do painel.');
 
@@ -206,19 +199,18 @@ async function salvarPainel(dados = {}) {
         await executar(
             `UPDATE paineis SET
                 nome = ?,
-                conexoes = ?,
                 ativo = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
-            [nome, conexoes, dados.ativo === '0' ? 0 : 1, id]
+            [nome, dados.ativo === '0' ? 0 : 1, id]
         );
 
         return buscarPainelPorId(id);
     }
 
     const resultado = await executar(
-        'INSERT INTO paineis (nome, conexoes, ativo) VALUES (?, ?, ?)',
-        [nome, conexoes, dados.ativo === '0' ? 0 : 1]
+        'INSERT INTO paineis (nome, ativo) VALUES (?, ?)',
+        [nome, dados.ativo === '0' ? 0 : 1]
     );
 
     return buscarPainelPorId(resultado.id);

@@ -3366,9 +3366,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
     const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
     const tagsSelecionadas = normalizarTagsTela(cliente.tags);
-    const acessosAtuais = lerAcessosApp(cliente);
-    const painelVisualInicial = paineisSelecionados[0] || acessosAtuais.find(acesso => acesso.painel)?.painel || '';
-    const painelAtualInfo = paineis.find(painel => String(painel.nome || '') === String(painelVisualInicial)) || {};
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
@@ -3411,7 +3408,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     }))
                 ]
             })}
-            ${campo({ nome: 'conexoesPainelVisual', label: 'Conexões do Painel', valor: painelVisualInicial ? `${painelAtualInfo.conexoes || 1} conexão(ões)` : '', attrs: 'id="conexoesPainelVisual" readonly placeholder="Selecione um painel"' })}
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
@@ -3467,6 +3463,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             </label>
 
             <div class="form-section full">Acesso ao aplicativo</div>
+            ${campo({ nome: 'conexoesPainel', label: 'Conexões do Painel', valor: cliente.conexoesPainel || '', tipo: 'number', attrs: 'id="conexoesPainel" min="0" step="1" placeholder="Quantidade de conexões"' })}
             ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
             ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
             ${opcoesMulti('paineisSelecionados', 'Painéis', paineis, paineisSelecionados, 'Adicionar painel...')}
@@ -3491,13 +3488,11 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             id: String(plano.id),
             nome: plano.nome,
             dias: plano.dias,
-            valor: plano.valor || '',
-            conexoes: plano.conexoes || 1
+            valor: plano.valor || ''
         })))};
         const tipoPlano = document.getElementById('tipoPlanoId');
         const diasContrato = document.getElementById('diasContrato');
         const valorPlano = document.getElementById('valorPlano');
-        const conexoesPainelVisual = document.getElementById('conexoesPainelVisual');
         const planoLegado = document.getElementById('planoLegado');
         const dataInicio = document.getElementById('dataInicio');
         const dataVencimento = document.getElementById('dataVencimento');
@@ -3511,30 +3506,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const opcoesApps = ${JSON.stringify(apps.map(item => item.nome))};
         const opcoesDispositivos = ${JSON.stringify(dispositivos.map(item => item.nome))};
         const opcoesPaineis = ${JSON.stringify(paineis.map(item => item.nome))};
-        const conexoesPorPainel = ${JSON.stringify(Object.fromEntries(paineis.map(item => [item.nome, Math.min(2, Math.max(1, Number(item.conexoes || 1)))])))};
-
-        function painelReferenciaAtual() {
-            const painelAcesso = Array.from(document.querySelectorAll('select[name="acessoPainel"]'))
-                .map(select => select.value)
-                .find(Boolean);
-
-            if (painelAcesso) return painelAcesso;
-
-            return document.querySelector('.multi-picker[data-name="paineisSelecionados"] .multi-hidden input[name="paineisSelecionados"]')?.value || '';
-        }
-
-        function atualizarConexoesPainelVisual() {
-            if (!conexoesPainelVisual) return;
-
-            const painel = painelReferenciaAtual();
-            if (!painel) {
-                conexoesPainelVisual.value = '';
-                return;
-            }
-
-            const limite = conexoesPorPainel[painel] || 1;
-            conexoesPainelVisual.value = painel + ': ' + limite + ' conexão(ões)';
-        }
 
         function formatarMoedaCampo(valor) {
             const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
@@ -3705,28 +3676,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             });
         }
 
-        function validarConexoesPorPainel() {
-            const contagem = {};
-
-            document.querySelectorAll('select[name="acessoPainel"]').forEach((selectPainel) => {
-                const painel = selectPainel.value;
-                if (!painel) return;
-                contagem[painel] = (contagem[painel] || 0) + 1;
-            });
-
-            const excesso = Object.entries(contagem).find(([painel, total]) => {
-                const limite = conexoesPorPainel[painel] || 2;
-                return total > limite;
-            });
-
-            if (!excesso) return true;
-
-            const [painel, total] = excesso;
-            const limite = conexoesPorPainel[painel] || 2;
-            alert('O painel "' + painel + '" permite no máximo ' + limite + ' conexão(ões). Você informou ' + total + '.');
-            return false;
-        }
-
         document.addEventListener('input', (event) => {
             if (!event.target.matches('.mac-field')) return;
             event.target.value = formatarMac(event.target.value);
@@ -3734,12 +3683,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         adicionarAcessoApp?.addEventListener('click', () => {
             listaAcessosApp?.appendChild(novaLinhaAcessoApp());
-            atualizarConexoesPainelVisual();
-        });
-
-        document.addEventListener('change', (event) => {
-            if (!event.target.matches('select[name="acessoPainel"]')) return;
-            atualizarConexoesPainelVisual();
         });
 
         document.addEventListener('click', (event) => {
@@ -3754,16 +3697,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 linha.querySelectorAll('input, select').forEach(campo => {
                     campo.value = '';
                 });
-                atualizarConexoesPainelVisual();
                 return;
             }
 
             linha.remove();
-            atualizarConexoesPainelVisual();
         });
 
         formatarMacsDaTela();
-        atualizarConexoesPainelVisual();
 
         camposMoeda.forEach((campoMoeda) => {
             campoMoeda.value = formatarMoedaCampo(campoMoeda.value);
@@ -3807,7 +3747,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 chips.appendChild(chip);
 
                 select.value = '';
-                atualizarConexoesPainelVisual();
             });
         });
 
@@ -3824,12 +3763,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
             input?.remove();
             chip.remove();
-            atualizarConexoesPainelVisual();
-        });
-
-        document.querySelector('form.client-form[action="/clientes/salvar"]')?.addEventListener('submit', (event) => {
-            if (validarConexoesPorPainel()) return;
-            event.preventDefault();
         });
     </script>`;
 
@@ -4471,7 +4404,7 @@ function planoCard(plano) {
         <span class="device-icon">${icon('planos')}</span>
         <div>
             <div class="device-name">${escapar(plano.nome)}</div>
-            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''} - ${escapar(plano.conexoes || 1)} conexão(ões)</div>
+            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''}</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/planos/${plano.id}/editar" title="Editar plano">${icon('edit')}</a>
@@ -4508,7 +4441,6 @@ function formularioPlano(plano = {}) {
             ${campo({ nome: 'nome', label: 'Nome do plano', valor: plano.nome })}
             ${campo({ nome: 'dias', label: 'Quantidade de dias', valor: plano.dias, tipo: 'number' })}
             ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
-            ${campo({ nome: 'conexoes', label: 'Quantidade de conexões', valor: plano.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -4784,7 +4716,6 @@ function panelCard(painel) {
         <span class="device-icon">${icon('paineis')}</span>
         <div>
             <div class="device-name">${escapar(painel.nome)}</div>
-            <div class="helper">${escapar(painel.conexoes || 1)} conexão(ões)</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/paineis/${painel.id}/editar" title="Editar painel">${icon('edit')}</a>
@@ -5017,7 +4948,6 @@ function formularioPainel(painel = {}) {
         <form class="fields" method="post" action="/paineis/salvar">
             ${painel.id ? `<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
-            ${campo({ nome: 'conexoes', label: 'Conexões permitidas no painel', valor: painel.conexoes || 1, tipo: 'number', attrs: 'min="1" max="2" step="1"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',

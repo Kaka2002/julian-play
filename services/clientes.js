@@ -129,7 +129,6 @@ function normalizarAcessosApp(dados = {}) {
     const senhas = normalizarListaComVazios(dados.acessoSenha);
     const total = Math.max(apps.length, dispositivos.length, paineis.length, locais.length, urls.length, macs.length, ids.length, usuarios.length, senhas.length);
     const acessos = [];
-    const conexoesPorPainel = new Map();
 
     for (let index = 0; index < total; index += 1) {
         const acesso = {
@@ -145,15 +144,6 @@ function normalizarAcessosApp(dados = {}) {
         };
 
         if (acesso.app || acesso.dispositivo || acesso.painel || acesso.usuario || acesso.senha || acesso.localInstalacao || acesso.urlAtivarAplicativo || acesso.enderecoMac || acesso.idAplicativo) {
-            if (acesso.painel) {
-                const chavePainel = acesso.painel.toLowerCase();
-                const totalPainel = (conexoesPorPainel.get(chavePainel) || 0) + 1;
-                if (totalPainel > 2) {
-                    throw new Error(`O painel ${acesso.painel} aceita no máximo 2 conexões neste cadastro.`);
-                }
-                conexoesPorPainel.set(chavePainel, totalPainel);
-            }
-
             acessos.push(acesso);
         }
     }
@@ -247,6 +237,7 @@ function montarCliente(dados = {}) {
         appsInstalados: listaUnicaComAcessos(dados.appsInstalados, acessos, 'app'),
         dispositivosSelecionados: listaUnicaComAcessos(dados.dispositivosSelecionados, acessos, 'dispositivo'),
         paineisSelecionados: listaUnicaComAcessos(dados.paineisSelecionados, acessos, 'painel'),
+        conexoesPainel: Math.max(0, Number.parseInt(dados.conexoesPainel || 0, 10) || 0),
         appInstalado: dados.appInstalado ? 1 : 0,
         usuarioApp: limparTexto(dados.usuarioApp),
         senhaApp: limparTexto(dados.senhaApp),
@@ -477,6 +468,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 appsInstalados = ?,
                 dispositivosSelecionados = ?,
                 paineisSelecionados = ?,
+                conexoesPainel = ?,
                 appInstalado = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
@@ -494,6 +486,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 appsInstalados,
                 dispositivosSelecionados,
                 paineisSelecionados,
+                0,
                 aplicativo ? 1 : 0,
                 'teste',
                 clienteExistente.id
@@ -670,6 +663,7 @@ async function salvarCliente(dados) {
                 appsInstalados = ?,
                 dispositivosSelecionados = ?,
                 paineisSelecionados = ?,
+                conexoesPainel = ?,
                 appInstalado = ?,
                 usuarioApp = ?,
                 senhaApp = ?,
@@ -703,6 +697,7 @@ async function salvarCliente(dados) {
                 cliente.appsInstalados,
                 cliente.dispositivosSelecionados,
                 cliente.paineisSelecionados,
+                cliente.conexoesPainel,
                 cliente.appInstalado,
                 cliente.usuarioApp,
                 cliente.senhaApp,
@@ -732,9 +727,9 @@ async function salvarCliente(dados) {
             nome, telefone, usuario, senha, plano, aparelho, vencimento,
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
-            dispositivosSelecionados, paineisSelecionados, appInstalado,
+            dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
             usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -755,6 +750,7 @@ async function salvarCliente(dados) {
             cliente.appsInstalados,
             cliente.dispositivosSelecionados,
             cliente.paineisSelecionados,
+            cliente.conexoesPainel,
             cliente.appInstalado,
             cliente.usuarioApp,
             cliente.senhaApp,
