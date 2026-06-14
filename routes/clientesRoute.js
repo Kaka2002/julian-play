@@ -68,6 +68,7 @@ const {
 } = require('../services/appsDispositivos');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const { enviarMensagem } = require('../services/mensagemService');
+const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('../services/pixService');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -3105,6 +3106,39 @@ function clienteEhTeste(cliente = {}) {
     return status === 'teste' || plano.includes('teste');
 }
 
+function clientePodeReceberReativacao(cliente = {}) {
+    if (clienteEhTeste(cliente)) return false;
+
+    const status = String(cliente.status || '').toLowerCase();
+    const vencimento = cliente.dataVencimento || cliente.vencimento;
+
+    return (
+        status === 'expirado' ||
+        status === 'inadimplente' ||
+        vencimentoExpirou(vencimento)
+    );
+}
+
+function montarMensagemReativacaoCliente(cliente = {}) {
+    const vencimento = formatarDataHoraMensagem(cliente.dataVencimento || cliente.vencimento);
+    const valorPlano = cliente.valorPlano || '0,00';
+    const assinaturaApp = cliente.assinaturaApp || '0,00';
+
+    return `*REATIVAÇÃO DE PLANO*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*!
+
+Seu plano *${cliente.plano || 'atual'}* está vencido${vencimento ? ` desde *${vencimento}*` : ''}.
+
+Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em seguida.
+
+*Plano:* ${cliente.plano || '-'}
+*Valor do plano:* R$ ${valorPlano}
+*Assinatura App:* R$ ${assinaturaApp}
+
+Depois do pagamento, envie o comprovante aqui para confirmar a reativação.`;
+}
+
 function dadosTesteLiberadoDoCliente(cliente = {}) {
     const acesso = primeiroAcessoApp(cliente);
     const dispositivo = acesso.dispositivo || valorPrimeiroItem(cliente.dispositivosSelecionados) || cliente.aparelho || '';
@@ -3942,6 +3976,9 @@ function tabelaClientes(clientes) {
         <td data-label="Ações">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                ${clientePodeReceberReativacao(cliente) ? `<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativação com QR Code para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar reativação com QR Code">${icon('financeiro')}</button>
+                </form>` : ''}
                 <form method="post" action="/clientes/verificar-renovacoes">
                     <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
                 </form>
@@ -5220,6 +5257,66 @@ router.post('/clientes/:id/renovar', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
+    }
+});
+
+router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
+    try {
+        const cliente = await buscarClientePorId(req.params.id);
+
+        if (!cliente) {
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente não encontrado.')}`);
+        }
+
+        if (!clientePodeReceberReativacao(cliente)) {
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Este cliente não está vencido para receber reativação.')}`);
+        }
+
+        const planoPix = buscarPlanoPorNome(cliente.plano);
+
+        if (!planoPix) {
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente não possui QR Code configurado para reativação.')}`);
+        }
+
+        const status = getStatusWhatsApp();
+        const client = getClient();
+
+        if (!client || !status.conectado) {
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp não está conectado para enviar a reativação.')}`);
+        }
+
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+        const mensagem = montarMensagemReativacaoCliente(cliente);
+        const mensagemEnviada = await enviarMensagem(client, destino, mensagem);
+
+        if (!mensagemEnviada) {
+            throw new Error('Não foi possível enviar a mensagem de reativação.');
+        }
+
+        const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, planoPix, {
+            tipo: 'renovacao',
+            nomeCliente: cliente.nome
+        });
+
+        if (!qrEnviado) {
+            throw new Error('A mensagem foi enviada, mas não foi possível enviar o QR Code PIX.');
+        }
+
+        await adicionarNotaCliente(cliente.id, `Mensagem de reativação com QR Code enviada para o plano ${cliente.plano}.`);
+        logControleClientes('Reativacao enviada ao cliente', {
+            clienteId: cliente.id,
+            nome: cliente.nome,
+            plano: cliente.plano,
+            destino
+        });
+
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativação com QR Code enviada ao cliente.')}`);
+    } catch (err) {
+        logControleClientes('Erro ao enviar reativacao', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(`Erro ao enviar reativação: ${err.message}`)}`);
     }
 });
 
