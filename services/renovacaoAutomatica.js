@@ -2,6 +2,7 @@ const { enviarMensagem } = require('./mensagemService');
 const {
     listarClientesParaAvisosProgramados,
     listarClientesParaAvisoUmaHora,
+    listarClientesVencidosPorDiasParaAviso,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,
@@ -21,9 +22,14 @@ const TESTE_AVISO_MINUTOS = 30;
 const TESTE_AVISO_PLANO = -30;
 const TESTE_AVISO_EXPIRADO_FORA_HORARIO = -31;
 const AVISO_CLIENTE_UMA_HORA = -60;
+const AVISOS_CLIENTES_VENCIDOS_DIAS = [
+    { dias: 2, codigo: -102 },
+    { dias: 5, codigo: -105 }
+];
 let agendador = null;
 let executando = false;
 let executandoUmaHora = false;
+let executandoVencidosDias = false;
 let executandoTestes = false;
 let ultimoEnvioAutomatico = '';
 
@@ -180,6 +186,10 @@ function estaNoHorarioDeTeste(agora = obterAgoraSaoPaulo()) {
     return agora.hora >= 8 && agora.hora < 23;
 }
 
+function estaNoHorarioAvisoVencido(agora = obterAgoraSaoPaulo()) {
+    return agora.hora < 22;
+}
+
 async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = {}) {
     if (executandoTestes) {
         return { enviados: 0, ignorados: 0, erro: null };
@@ -286,6 +296,59 @@ async function verificarClientesVencendoUmaHora({ getClient, getStatusWhatsApp }
     }
 }
 
+async function verificarClientesVencidosPorDias({ getClient, getStatusWhatsApp } = {}) {
+    if (executandoVencidosDias) {
+        return { enviados: 0, ignorados: 0, erro: null };
+    }
+
+    executandoVencidosDias = true;
+
+    try {
+        const agoraRelogio = obterAgoraSaoPaulo();
+        if (!estaNoHorarioAvisoVencido(agoraRelogio)) {
+            return { enviados: 0, ignorados: 0, erro: null };
+        }
+
+        const status = getStatusWhatsApp ? getStatusWhatsApp() : {};
+        const client = getClient ? getClient() : null;
+
+        if (!client || !status.conectado) {
+            return { enviados: 0, ignorados: 0, erro: 'WhatsApp não está conectado.' };
+        }
+
+        const agoraIso = formatarDataHoraSaoPaulo();
+        let enviados = 0;
+        let ignorados = 0;
+
+        for (const aviso of AVISOS_CLIENTES_VENCIDOS_DIAS) {
+            const clientes = await listarClientesVencidosPorDiasParaAviso(agoraIso, aviso.dias, aviso.codigo);
+
+            for (const cliente of clientes) {
+                const destino = montarDestinoWhatsApp(cliente.telefone);
+
+                if (!normalizarTelefone(cliente.telefone)) {
+                    ignorados += 1;
+                    continue;
+                }
+
+                const mensagem = await montarMensagemAvisoProgramado(cliente, aviso.codigo);
+                const enviado = await enviarMensagem(client, destino, mensagem);
+
+                if (enviado) {
+                    enviados += 1;
+                    await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, aviso.codigo);
+                } else {
+                    ignorados += 1;
+                }
+            }
+        }
+
+        return { enviados, ignorados, erro: null };
+    } finally {
+        executandoVencidosDias = false;
+    }
+}
+
 function iniciarAgendadorRenovacao(options) {
     if (agendador) return;
 
@@ -337,6 +400,17 @@ function iniciarAgendadorRenovacao(options) {
                 console.log('Erro no aviso de vencimento em 1 hora:', err.message);
             });
 
+        verificarClientesVencidosPorDias(options)
+            .then((resultado) => {
+                if (resultado.erro) return;
+                if (resultado.enviados || resultado.ignorados) {
+                    console.log(`Vencidos 2/5 dias: ${resultado.enviados} aviso(s), ${resultado.ignorados} ignorado(s).`);
+                }
+            })
+            .catch((err) => {
+                console.log('Erro no aviso de vencidos 2/5 dias:', err.message);
+            });
+
         if (!jaPassouHorario) return;
         if (ultimoEnvioAutomatico === agora.data) return;
 
@@ -353,5 +427,6 @@ module.exports = {
     verificarRenovacoes,
     verificarTestesGratisVencendo,
     verificarClientesVencendoUmaHora,
+    verificarClientesVencidosPorDias,
     montarMensagemRenovacao
 };

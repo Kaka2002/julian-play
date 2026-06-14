@@ -1263,6 +1263,32 @@ function listarClientesParaAvisoUmaHora(agoraIso, limiteIso, codigoAviso) {
     ));
 }
 
+function listarClientesVencidosPorDiasParaAviso(agoraIso, diasVencidos, codigoAviso) {
+    return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
+        `WITH candidatos AS (
+            SELECT
+                clientes.*,
+                COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
+            FROM clientes
+            WHERE status IN ('ativo', 'pendente', 'expirado')
+                AND (plano IS NULL OR plano NOT LIKE '%Teste%')
+                AND vencimento IS NOT NULL
+                AND vencimento != ''
+        )
+        SELECT * FROM candidatos
+        WHERE CAST(julianday(date(?)) - julianday(date(vencimentoEfetivo)) AS INTEGER) = ?
+            AND datetime(replace(vencimentoEfetivo, 'T', ' ')) < datetime(replace(?, 'T', ' '))
+            AND NOT EXISTS (
+                SELECT 1 FROM avisos_renovacao
+                WHERE avisos_renovacao.clienteId = candidatos.id
+                    AND avisos_renovacao.vencimento = candidatos.vencimentoEfetivo
+                    AND avisos_renovacao.diasAntes = ?
+            )
+        ORDER BY vencimentoEfetivo ASC, nome ASC`,
+        [agoraIso, Number(diasVencidos), agoraIso, Number(codigoAviso)]
+    ));
+}
+
 function listarTestesGratisParaAvisoPorHorario(agoraIso, limiteIso, codigoAviso) {
     return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
         `WITH candidatos AS (
@@ -1396,6 +1422,7 @@ module.exports = {
     listarClientesParaAvisosProgramados,
     listarClientesVencidosParaCobranca,
     listarClientesParaAvisoUmaHora,
+    listarClientesVencidosPorDiasParaAviso,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
     listarClientesAniversarioHoje,

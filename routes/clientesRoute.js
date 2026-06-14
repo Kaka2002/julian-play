@@ -23,7 +23,8 @@ const {
 } = require('../services/clientes');
 const {
     verificarRenovacoes,
-    verificarClientesVencendoUmaHora
+    verificarClientesVencendoUmaHora,
+    verificarClientesVencidosPorDias
 } = require('../services/renovacaoAutomatica');
 const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
 const {
@@ -5889,6 +5890,7 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
 
         const resultado = await verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso });
         const resultadoUmaHora = await verificarClientesVencendoUmaHora({ getClient, getStatusWhatsApp });
+        const resultadoVencidosDias = await verificarClientesVencidosPorDias({ getClient, getStatusWhatsApp });
 
         if (resultado.erro) {
             console.log(`[dashboard] Disparo manual de avisos falhou: ${resultado.erro}`);
@@ -5901,16 +5903,19 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         const ignorados = Number(resultado.ignorados || 0);
         const enviadosUmaHora = Number(resultadoUmaHora.enviados || 0);
         const ignoradosUmaHora = Number(resultadoUmaHora.ignorados || 0);
-        const totalEnviados = enviados + aniversarios + enviadosUmaHora;
-        const totalIgnorados = ignorados + ignoradosUmaHora;
+        const enviadosVencidosDias = Number(resultadoVencidosDias.enviados || 0);
+        const ignoradosVencidosDias = Number(resultadoVencidosDias.ignorados || 0);
+        const totalEnviados = enviados + aniversarios + enviadosUmaHora + enviadosVencidosDias;
+        const totalIgnorados = ignorados + ignoradosUmaHora + ignoradosVencidosDias;
         const mensagem = totalEnviados
-            ? `${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora e ${aniversarios} aniversário(s) enviado(s).`
+            ? `${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversário(s) enviado(s).`
             : 'Nenhum aviso novo para enviar agora. Os avisos podem já ter sido enviados para este vencimento.';
 
-        console.log(`[dashboard] Disparo manual concluido: renovacao=${enviados}, umaHora=${enviadosUmaHora}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
+        console.log(`[dashboard] Disparo manual concluido: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
         logControleClientes('Disparo manual de avisos concluido', {
             renovacao: enviados,
             umaHora: enviadosUmaHora,
+            vencidosDias: enviadosVencidosDias,
             aniversarios,
             ignorados: totalIgnorados
         });
