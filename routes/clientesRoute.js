@@ -3366,10 +3366,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
     const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
     const tagsSelecionadas = normalizarTagsTela(cliente.tags);
+    const acessosAtuais = lerAcessosApp(cliente);
+    const painelVisualInicial = paineisSelecionados[0] || acessosAtuais.find(acesso => acesso.painel)?.painel || '';
+    const painelAtualInfo = paineis.find(painel => String(painel.nome || '') === String(painelVisualInicial)) || {};
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
-    const planoAtualInfo = planos.find(plano => String(plano.id) === String(planoAtual)) || {};
 
     const formulario = `<section class="page-title">
         <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
@@ -3409,7 +3411,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     }))
                 ]
             })}
-            ${campo({ nome: 'conexoesPlanoVisual', label: 'Conexões do Plano', valor: planoAtualInfo.conexoes || 1, tipo: 'number', attrs: 'id="conexoesPlanoVisual" min="1" max="2" readonly' })}
+            ${campo({ nome: 'conexoesPainelVisual', label: 'Conexões do Painel', valor: painelVisualInicial ? `${painelAtualInfo.conexoes || 1} conexão(ões)` : '', attrs: 'id="conexoesPainelVisual" readonly placeholder="Selecione um painel"' })}
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
@@ -3495,7 +3497,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const tipoPlano = document.getElementById('tipoPlanoId');
         const diasContrato = document.getElementById('diasContrato');
         const valorPlano = document.getElementById('valorPlano');
-        const conexoesPlanoVisual = document.getElementById('conexoesPlanoVisual');
+        const conexoesPainelVisual = document.getElementById('conexoesPainelVisual');
         const planoLegado = document.getElementById('planoLegado');
         const dataInicio = document.getElementById('dataInicio');
         const dataVencimento = document.getElementById('dataVencimento');
@@ -3510,6 +3512,29 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const opcoesDispositivos = ${JSON.stringify(dispositivos.map(item => item.nome))};
         const opcoesPaineis = ${JSON.stringify(paineis.map(item => item.nome))};
         const conexoesPorPainel = ${JSON.stringify(Object.fromEntries(paineis.map(item => [item.nome, Math.min(2, Math.max(1, Number(item.conexoes || 1)))])))};
+
+        function painelReferenciaAtual() {
+            const painelAcesso = Array.from(document.querySelectorAll('select[name="acessoPainel"]'))
+                .map(select => select.value)
+                .find(Boolean);
+
+            if (painelAcesso) return painelAcesso;
+
+            return document.querySelector('.multi-picker[data-name="paineisSelecionados"] .multi-hidden input[name="paineisSelecionados"]')?.value || '';
+        }
+
+        function atualizarConexoesPainelVisual() {
+            if (!conexoesPainelVisual) return;
+
+            const painel = painelReferenciaAtual();
+            if (!painel) {
+                conexoesPainelVisual.value = '';
+                return;
+            }
+
+            const limite = conexoesPorPainel[painel] || 1;
+            conexoesPainelVisual.value = painel + ': ' + limite + ' conexão(ões)';
+        }
 
         function formatarMoedaCampo(valor) {
             const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
@@ -3538,7 +3563,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             if (!plano) return;
             diasContrato.value = plano.dias || '';
             valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
-            conexoesPlanoVisual.value = plano.conexoes || 1;
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 statusCliente.value = 'teste';
@@ -3710,6 +3734,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         adicionarAcessoApp?.addEventListener('click', () => {
             listaAcessosApp?.appendChild(novaLinhaAcessoApp());
+            atualizarConexoesPainelVisual();
+        });
+
+        document.addEventListener('change', (event) => {
+            if (!event.target.matches('select[name="acessoPainel"]')) return;
+            atualizarConexoesPainelVisual();
         });
 
         document.addEventListener('click', (event) => {
@@ -3724,13 +3754,16 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 linha.querySelectorAll('input, select').forEach(campo => {
                     campo.value = '';
                 });
+                atualizarConexoesPainelVisual();
                 return;
             }
 
             linha.remove();
+            atualizarConexoesPainelVisual();
         });
 
         formatarMacsDaTela();
+        atualizarConexoesPainelVisual();
 
         camposMoeda.forEach((campoMoeda) => {
             campoMoeda.value = formatarMoedaCampo(campoMoeda.value);
@@ -3774,6 +3807,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 chips.appendChild(chip);
 
                 select.value = '';
+                atualizarConexoesPainelVisual();
             });
         });
 
@@ -3790,6 +3824,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
             input?.remove();
             chip.remove();
+            atualizarConexoesPainelVisual();
         });
 
         document.querySelector('form.client-form[action="/clientes/salvar"]')?.addEventListener('submit', (event) => {
