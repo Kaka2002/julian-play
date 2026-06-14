@@ -16,6 +16,7 @@ const {
 } = require('./modelosMensagem');
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
+const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('./pixService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const TESTE_AVISO_MINUTOS = 30;
@@ -336,6 +337,15 @@ async function verificarClientesVencidosPorDias({ getClient, getStatusWhatsApp }
 
                 if (enviado) {
                     enviados += 1;
+                    const planoPix = buscarPlanoPorNome(cliente.plano);
+
+                    if (planoPix) {
+                        await enviarQRCodePIXParaDestino(client, destino, planoPix, {
+                            tipo: 'renovacao',
+                            nomeCliente: nomeCliente(cliente)
+                        });
+                    }
+
                     await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, aviso.codigo);
                 } else {
                     ignorados += 1;

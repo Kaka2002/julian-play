@@ -56,6 +56,24 @@ function buscarPlano(opcao) {
     return planos[opcao] || null;
 }
 
+function normalizarNomePlano(valor) {
+    return String(valor || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}
+
+function buscarPlanoPorNome(nomePlano) {
+    const plano = normalizarNomePlano(nomePlano);
+
+    if (plano.includes('mensal')) return planos['1'];
+    if (plano.includes('trimestral')) return planos['2'];
+    if (plano.includes('semestral')) return planos['3'];
+    if (plano.includes('anual')) return planos['4'];
+
+    return null;
+}
+
 function normalizarCampo(valor, tamanhoMaximo) {
     return valor
         .toString()
@@ -183,6 +201,10 @@ async function gerarQRCodeAutomatico(plano) {
 async function enviarQRCodePIX(message, plano, options = {}) {
     const destino = message?.fromMe && message?.to ? message.to : message.from;
 
+    return enviarQRCodePIXParaDestino(message.client, destino, plano, options);
+}
+
+async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     try {
         const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
         const caption = legendaPixPorContexto(plano, options);
@@ -190,7 +212,7 @@ async function enviarQRCodePIX(message, plano, options = {}) {
         registrarEnvioDoRobo(destino, caption);
 
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, media, {
+            client.sendMessage(destino, media, {
                 caption
             }),
             ENVIO_TIMEOUT_MS,
@@ -205,7 +227,7 @@ async function enviarQRCodePIX(message, plano, options = {}) {
 
         try {
             await comTimeout(
-                message.client.sendMessage(destino, `⚠️ *ERRO AO GERAR QR CODE*
+                client.sendMessage(destino, `⚠️ *ERRO AO GERAR QR CODE*
 ━━━━━━━━━━━━━━━━━━━━
 Não foi possível gerar o QR Code neste momento.
 
@@ -226,7 +248,9 @@ ${RODAPE_ATENDIMENTO}`),
 
 module.exports = {
     buscarPlano,
+    buscarPlanoPorNome,
     enviarQRCodePIX,
+    enviarQRCodePIXParaDestino,
     gerarPixCopiaECola,
     planos
 };
