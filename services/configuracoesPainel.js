@@ -29,6 +29,10 @@ async function obterConfiguracoes() {
         licencaAtivacao: '',
         licencaVencimento: '',
         licencaObservacoes: '',
+        pixChave: process.env.CHAVE_PIX || '61319147704',
+        pixNome: process.env.PIX_NOME || 'JULIAN PLAY',
+        pixCidade: process.env.PIX_CIDADE || 'SAO PAULO',
+        pixTxid: process.env.PIX_TXID || 'JULIANPLAY',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -98,10 +102,37 @@ async function salvarConfiguracoesLicenca(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesPix(dados = {}) {
+    const chave = String(dados.pixChave || '').trim();
+    const nome = String(dados.pixNome || '').trim();
+    const cidade = String(dados.pixCidade || '').trim();
+    const txid = String(dados.pixTxid || '').trim();
+
+    if (!chave) {
+        throw new Error('Informe a chave PIX que recebera os pagamentos.');
+    }
+
+    if (!nome) {
+        throw new Error('Informe o nome do recebedor do PIX.');
+    }
+
+    if (!cidade) {
+        throw new Error('Informe a cidade do recebedor do PIX.');
+    }
+
+    await salvarConfiguracao('pixChave', chave);
+    await salvarConfiguracao('pixNome', nome);
+    await salvarConfiguracao('pixCidade', cidade);
+    await salvarConfiguracao('pixTxid', txid || 'JULIANPLAY');
+
+    return obterConfiguracoes();
+}
+
 module.exports = {
     obterConfiguracoes,
     salvarConfiguracao,
     salvarConfiguracoesPainel,
     salvarConfiguracoesLicenca,
+    salvarConfiguracoesPix,
     salvarConfiguracoesAcesso
 };

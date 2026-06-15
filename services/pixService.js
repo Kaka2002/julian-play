@@ -1,14 +1,12 @@
-const fs = require('fs');
-const path = require('path');
 const QRCode = require('qrcode');
 const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
+const { obterConfiguracoes } = require('./configuracoesPainel');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '61319147704';
 const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY';
 const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
 const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
-const assetsDir = path.join(__dirname, '..', 'assets');
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 
@@ -29,28 +27,48 @@ const planos = {
     '1': {
         nome: 'MENSAL',
         valor: '35,00',
-        arquivoQr: 'pix_mensal.png',
-        pixCode: CHAVE_PIX
+        arquivoQr: 'pix_mensal.png'
     },
     '2': {
         nome: 'TRIMESTRAL',
         valor: '96,00',
-        arquivoQr: 'pix_trimestral.png',
-        pixCode: CHAVE_PIX
+        arquivoQr: 'pix_trimestral.png'
     },
     '3': {
         nome: 'SEMESTRAL',
         valor: '180,00',
-        arquivoQr: 'pix_semestral.png',
-        pixCode: CHAVE_PIX
+        arquivoQr: 'pix_semestral.png'
     },
     '4': {
         nome: 'ANUAL',
         valor: '336,00',
-        arquivoQr: 'pix_anual.png',
-        pixCode: CHAVE_PIX
+        arquivoQr: 'pix_anual.png'
     }
 };
+
+function configuracaoPixPadrao() {
+    return {
+        chave: CHAVE_PIX,
+        nome: PIX_NOME,
+        cidade: PIX_CIDADE,
+        txid: PIX_TXID
+    };
+}
+
+async function obterConfiguracaoPix() {
+    try {
+        const config = await obterConfiguracoes();
+        return {
+            chave: config.pixChave || CHAVE_PIX,
+            nome: config.pixNome || PIX_NOME,
+            cidade: config.pixCidade || PIX_CIDADE,
+            txid: config.pixTxid || PIX_TXID
+        };
+    } catch (err) {
+        console.log(`PIX: usando configuracao padrao porque nao foi possivel ler o painel: ${err.message}`);
+        return configuracaoPixPadrao();
+    }
+}
 
 function buscarPlano(opcao) {
     return planos[opcao] || null;
@@ -104,9 +122,9 @@ function crc16(payload) {
     return crc.toString(16).toUpperCase().padStart(4, '0');
 }
 
-function gerarPixCopiaECola(plano) {
+function gerarPixCopiaECola(plano, configPix = configuracaoPixPadrao()) {
     const merchantAccount = campo('00', 'br.gov.bcb.pix') +
-        campo('01', CHAVE_PIX) +
+        campo('01', configPix.chave) +
         campo('02', `JULIAN PLAY ${plano.nome}`);
 
     const payloadSemCRC =
@@ -116,21 +134,21 @@ function gerarPixCopiaECola(plano) {
         campo('53', '986') +
         campo('54', plano.valor.replace(',', '.')) +
         campo('58', 'BR') +
-        campo('59', normalizarCampo(PIX_NOME, 25)) +
-        campo('60', normalizarCampo(PIX_CIDADE, 15)) +
-        campo('62', campo('05', normalizarCampo(PIX_TXID, 25))) +
+        campo('59', normalizarCampo(configPix.nome, 25)) +
+        campo('60', normalizarCampo(configPix.cidade, 15)) +
+        campo('62', campo('05', normalizarCampo(configPix.txid, 25))) +
         '6304';
 
     return payloadSemCRC + crc16(payloadSemCRC);
 }
 
-function legendaPix(plano) {
+function legendaPix(plano, configPix = configuracaoPixPadrao()) {
     return `💳 *PIX - PLANO ${plano.nome}*
 ━━━━━━━━━━━━━━━━━━━━
 Confira os dados antes de pagar:
 
 💰 *Valor:* R$ ${plano.valor}
-🔑 *Chave PIX:* ${CHAVE_PIX}
+🔑 *Chave PIX:* ${configPix.chave}
 
 📲 *Como pagar:*
 1 - Abra o app do seu banco
@@ -145,14 +163,14 @@ Confira os dados antes de pagar:
 ${RODAPE_ATENDIMENTO}`;
 }
 
-function legendaPixRenovacao(plano, nomeCliente) {
+function legendaPixRenovacao(plano, nomeCliente, configPix = configuracaoPixPadrao()) {
     return `💳 *PIX - RENOVAÇÃO ${plano.nome}*
 ━━━━━━━━━━━━━━━━━━━━
 Confira os dados antes de pagar:
 
 👤 *Cliente:* ${nomeCliente}
 💰 *Valor:* R$ ${plano.valor}
-🔑 *Chave PIX:* ${CHAVE_PIX}
+🔑 *Chave PIX:* ${configPix.chave}
 
 📲 *Como pagar:*
 1 - Abra o app do seu banco
@@ -167,24 +185,16 @@ Confira os dados antes de pagar:
 ${RODAPE_ATENDIMENTO}`;
 }
 
-function legendaPixPorContexto(plano, options = {}) {
+function legendaPixPorContexto(plano, options = {}, configPix = configuracaoPixPadrao()) {
     if (options.tipo === 'renovacao') {
-        return legendaPixRenovacao(plano, options.nomeCliente || 'não informado');
+        return legendaPixRenovacao(plano, options.nomeCliente || 'não informado', configPix);
     }
 
-    return legendaPix(plano);
+    return legendaPix(plano, configPix);
 }
 
-function buscarQRCodeDoPlano(plano) {
-    const caminho = path.join(assetsDir, plano.arquivoQr);
-
-    if (!fs.existsSync(caminho)) return null;
-
-    return MessageMedia.fromFilePath(caminho);
-}
-
-async function gerarQRCodeAutomatico(plano) {
-    const pixCopiaECola = gerarPixCopiaECola(plano);
+async function gerarQRCodeAutomatico(plano, configPix = configuracaoPixPadrao()) {
+    const pixCopiaECola = gerarPixCopiaECola(plano, configPix);
     const qrCodeBuffer = await QRCode.toBuffer(pixCopiaECola, {
         width: 400,
         margin: 2,
@@ -206,8 +216,9 @@ async function enviarQRCodePIX(message, plano, options = {}) {
 
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     try {
-        const media = buscarQRCodeDoPlano(plano) || await gerarQRCodeAutomatico(plano);
-        const caption = legendaPixPorContexto(plano, options);
+        const configPix = await obterConfiguracaoPix();
+        const media = await gerarQRCodeAutomatico(plano, configPix);
+        const caption = legendaPixPorContexto(plano, options, configPix);
         console.log(`Enviando QR Code PIX ${plano.nome} para:`, destino);
         registrarEnvioDoRobo(destino, caption);
 

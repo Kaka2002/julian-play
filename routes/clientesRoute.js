@@ -38,6 +38,7 @@ const {
     obterConfiguracoes,
     salvarConfiguracoesPainel,
     salvarConfiguracoesLicenca,
+    salvarConfiguracoesPix,
     salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
 const {
@@ -2529,6 +2530,7 @@ function gerarCsvClientes(clientes = []) {
         'Data/Hora de início',
         'Data/Hora de vencimento',
         'Validade app',
+        'Data validade app',
         'Apps instalados',
         'Dispositivos',
         'Painéis',
@@ -2557,6 +2559,7 @@ function gerarCsvClientes(clientes = []) {
         formatarDataHoraCurta(cliente.dataInicio),
         formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento),
         cliente.validadeApp,
+        cliente.dataValidadeApp || '',
         juntarListaCsv(cliente.appsInstalados),
         juntarListaCsv(cliente.dispositivosSelecionados),
         juntarListaCsv(cliente.paineisSelecionados),
@@ -2803,6 +2806,7 @@ function montarDadosClienteImportado(registro, planos = []) {
         valorPlano: valorCsv(registro, ['Valor do plano', 'Valor plano', 'Valor']),
         assinaturaApp: valorCsv(registro, ['Assinatura app', 'Assinatura App']),
         validadeApp: valorCsv(registro, ['Validade app', 'Validade App']),
+        dataValidadeApp: dataCsvParaIso(valorCsv(registro, ['Data validade app', 'Data de validade do app', 'Validade do app data']), false),
         horasTeste: valorCsv(registro, ['Horas de teste', 'Horas teste']),
         status,
         dataInicio,
@@ -3119,10 +3123,47 @@ function clientePodeReceberReativacao(cliente = {}) {
     );
 }
 
-function montarMensagemReativacaoCliente(cliente = {}) {
+function valorMoedaPix(valor) {
+    return Number(valor || 0).toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
+function appClienteVencido(cliente = {}) {
+    const validade = cliente.dataValidadeApp;
+    if (!validade) return false;
+
+    const data = new Date(`${validade}T23:59:59`);
+    return !Number.isNaN(data.getTime()) && data < new Date();
+}
+
+function prepararPlanoPixCliente(cliente = {}, planoPix = {}) {
+    const valorPlano = numeroMoeda(cliente.valorPlano || planoPix.valor);
+    const valorApp = numeroMoeda(cliente.assinaturaApp);
+    const incluirApp = appClienteVencido(cliente) && valorApp > 0;
+    const total = valorPlano + (incluirApp ? valorApp : 0);
+
+    return {
+        plano: {
+            ...planoPix,
+            valor: valorMoedaPix(total || numeroMoeda(planoPix.valor)),
+            nome: incluirApp ? `${planoPix.nome} + APP` : planoPix.nome
+        },
+        incluirApp,
+        valorPlano: valorMoedaPix(valorPlano),
+        valorApp: valorMoedaPix(valorApp),
+        total: valorMoedaPix(total || numeroMoeda(planoPix.valor))
+    };
+}
+
+function montarMensagemReativacaoCliente(cliente = {}, pixCliente = null) {
     const vencimento = formatarDataHoraMensagem(cliente.dataVencimento || cliente.vencimento);
-    const valorPlano = cliente.valorPlano || '0,00';
-    const assinaturaApp = cliente.assinaturaApp || '0,00';
+    const valorPlano = pixCliente?.valorPlano || cliente.valorPlano || '0,00';
+    const assinaturaApp = pixCliente?.valorApp || cliente.assinaturaApp || '0,00';
+    const textoApp = pixCliente?.incluirApp
+        ? `*Assinatura App:* R$ ${assinaturaApp} (incluída porque a validade do app venceu)`
+        : `*Assinatura App:* não incluída neste PIX${cliente.dataValidadeApp ? ` (app válido até ${formatarDataHoraCurta(cliente.dataValidadeApp)})` : ''}`;
 
     return `*REATIVAÇÃO DE PLANO*
 --------------------
@@ -3134,7 +3175,8 @@ Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em
 
 *Plano:* ${cliente.plano || '-'}
 *Valor do plano:* R$ ${valorPlano}
-*Assinatura App:* R$ ${assinaturaApp}
+${textoApp}
+*Total do PIX:* R$ ${pixCliente?.total || valorPlano}
 
 Depois do pagamento, envie o comprovante aqui para confirmar a reativação.`;
 }
@@ -3456,6 +3498,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: 'Vitalicio', texto: 'Vitalício' }
                 ]
             })}
+            ${campo({ nome: 'dataValidadeApp', label: 'Data de validade do app', valor: cliente.dataValidadeApp || '', tipo: 'date' })}
             ${campo({
                 nome: 'status',
                 label: 'Status',
@@ -3967,6 +4010,7 @@ function tabelaClientes(clientes) {
         <td data-label="Aplicativos">
             ${renderChips(cliente.appsInstalados, 'app-chip')}
             ${cliente.validadeApp ? `<div class="cell-muted">Validade: ${escapar(cliente.validadeApp)}</div>` : ''}
+            ${cliente.dataValidadeApp ? `<div class="cell-muted">App vence: ${escapar(formatarDataHoraCurta(cliente.dataValidadeApp))}</div>` : ''}
             ${cliente.appInstalado ? '<span class="installed-chip">Instalado</span>' : ''}
         </td>
         <td data-label="Dispositivos">
@@ -4906,6 +4950,25 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
+                <h2 class="panel-title">PIX de recebimento</h2>
+                <div class="subtitle">Dados usados para gerar o QR Code bancário enviado aos clientes</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/manutencao/pix" style="padding-top:0;">
+            ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"' })}
+            ${campo({ nome: 'pixNome', label: 'Nome do recebedor', valor: status.config?.pixNome || '', attrs: 'required maxlength="25" placeholder="Nome que aparece no banco"' })}
+            ${campo({ nome: 'pixCidade', label: 'Cidade do recebedor', valor: status.config?.pixCidade || '', attrs: 'required maxlength="15" placeholder="Cidade"' })}
+            ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || 'JULIANPLAY', attrs: 'maxlength="25" placeholder="Ex: JULIANPLAY"' })}
+            <div class="notice full">O QR Code será gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar PIX</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
                 <h2 class="panel-title">Backup dos dados</h2>
                 <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
             </div>
@@ -5278,6 +5341,7 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
             return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente não possui QR Code configurado para reativação.')}`);
         }
 
+        const pixCliente = prepararPlanoPixCliente(cliente, planoPix);
         const status = getStatusWhatsApp();
         const client = getClient();
 
@@ -5286,14 +5350,14 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         }
 
         const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
-        const mensagem = montarMensagemReativacaoCliente(cliente);
+        const mensagem = montarMensagemReativacaoCliente(cliente, pixCliente);
         const mensagemEnviada = await enviarMensagem(client, destino, mensagem);
 
         if (!mensagemEnviada) {
             throw new Error('Não foi possível enviar a mensagem de reativação.');
         }
 
-        const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, planoPix, {
+        const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, pixCliente.plano, {
             tipo: 'renovacao',
             nomeCliente: cliente.nome
         });
@@ -5752,6 +5816,22 @@ router.post('/manutencao/licenca', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/pix', async (req, res) => {
+    try {
+        await salvarConfiguracoesPix(req.body);
+        logControleClientes('Configuracao PIX atualizada', {
+            chave: req.body.pixChave,
+            nome: req.body.pixNome
+        });
+        res.redirect('/manutencao?mensagem=PIX salvo com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar PIX', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar PIX: ${err.message}`)}`);
     }
 });
 
