@@ -8,10 +8,12 @@ const {
     buscarClientePorTelefone,
     aplicarBonusCliente,
     listarPagamentosCliente,
+    buscarPagamentoCliente,
     listarReceitaMensalFinanceira,
     listarPagamentosFinanceiro,
     renovarCliente,
     marcarPagamentoMensagem,
+    atualizarPagamentoCliente,
     removerPagamentoCliente,
     removerCliente,
     normalizarTelefone,
@@ -440,7 +442,7 @@ function calcularResumo(clientes) {
         vencemMes: clientes.filter(cliente => {
             const vencimento = vencimentoCliente(cliente);
             const data = vencimento.slice(0, 10);
-            return vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= fimMesISO;
+            return !clienteEhTeste(cliente) && vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= fimMesISO;
         }).length
     };
 }
@@ -3298,9 +3300,12 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             <td>${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
             <td>${pagamento.mensagemEnviada ? '<span class="badge green">Enviada</span>' : '<span class="badge orange">Não enviada</span>'}</td>
             <td>
-                <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico? O vencimento atual do cliente não será alterado.');">
-                    <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
-                </form>
+                <div class="row-actions">
+                    <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
+                    <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico? O vencimento atual do cliente não será alterado.');">
+                        <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
+                    </form>
+                </div>
             </td>
         </tr>`).join('')
         : '<tr><td colspan="7" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
@@ -3394,6 +3399,43 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                 atualizarPlanoRenovacao();
             })();
         </script>
+    </section>`;
+}
+
+function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
+    return `<section class="page-title">
+        <h1>Editar pagamento</h1>
+        <div class="subtitle">${escapar(cliente.nome || '')} - corrija os dados do histórico financeiro</div>
+    </section>
+    <section class="panel">
+        <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/salvar">
+            ${campo({ nome: 'plano', label: 'Plano', valor: pagamento.plano || '', attrs: 'required' })}
+            ${campo({ nome: 'diasContrato', label: 'Dias de contrato', valor: pagamento.diasContrato || '', tipo: 'number', attrs: 'min="0"' })}
+            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: pagamento.valorPlano || '', attrs: 'inputmode="decimal" class="money-field" placeholder="0,00" required' })}
+            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: pagamento.assinaturaApp || '0,00', attrs: 'inputmode="decimal" class="money-field" placeholder="0,00"' })}
+            ${campo({
+                nome: 'formaPagamento',
+                label: 'Forma de pagamento',
+                valor: pagamento.formaPagamento || '',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    { valor: 'Pix', texto: 'Pix' },
+                    { valor: 'Dinheiro', texto: 'Dinheiro' },
+                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
+                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
+                    { valor: 'Transferência', texto: 'Transferência' },
+                    { valor: 'Outro', texto: 'Outro' }
+                ]
+            })}
+            ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: inputDateTime(pagamento.dataPagamento || pagamento.criadoEm), tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'vencimentoNovo', label: 'Novo vencimento registrado', valor: inputDateTime(pagamento.vencimentoNovo), tipo: 'datetime-local' })}
+            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: pagamento.observacoes || '' })}
+            <div class="notice full">A edição altera apenas o histórico financeiro. O vencimento atual do cliente não será recalculado automaticamente.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar pagamento</button>
+                <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#renovar">Cancelar</a>
+            </div>
+        </form>
     </section>`;
 }
 
@@ -5196,6 +5238,24 @@ router.get('/clientes/:id/editar', async (req, res) => {
     });
 });
 
+router.get('/clientes/:id/pagamentos/:pagamentoId/editar', async (req, res) => {
+    const [cliente, pagamento] = await Promise.all([
+        buscarClientePorId(req.params.id),
+        buscarPagamentoCliente(req.params.id, req.params.pagamentoId)
+    ]);
+
+    if (!cliente || !pagamento) {
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento não encontrado para edição.'));
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar pagamento',
+        conteudo: formularioPagamentoCliente(cliente, pagamento),
+        mensagem: req.query.mensagem || '',
+        ativo: 'clientes'
+    });
+});
+
 router.post('/clientes/salvar', async (req, res) => {
     try {
         const alertas = await buscarAlertasCadastroCliente(req.body);
@@ -5396,6 +5456,26 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) =>
         return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histórico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao remover pagamento', {
+            clienteId: req.params.id,
+            pagamentoId: req.params.pagamentoId,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
+    }
+});
+
+router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => {
+    try {
+        const pagamento = await atualizarPagamentoCliente(req.params.id, req.params.pagamentoId, req.body);
+        logControleClientes('Pagamento editado no historico', {
+            clienteId: req.params.id,
+            pagamentoId: req.params.pagamentoId,
+            valor: pagamento.valorTotal
+        });
+
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histórico financeiro.'));
+    } catch (err) {
+        logControleClientes('Erro ao editar pagamento', {
             clienteId: req.params.id,
             pagamentoId: req.params.pagamentoId,
             erro: err.message

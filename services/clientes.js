@@ -875,6 +875,16 @@ function listarPagamentosCliente(clienteId) {
     );
 }
 
+function buscarPagamentoCliente(clienteId, pagamentoId) {
+    return buscarUm(
+        `SELECT * FROM cliente_pagamentos
+        WHERE id = ?
+            AND clienteId = ?
+            AND (excluidoEm IS NULL OR excluidoEm = '')`,
+        [pagamentoId, clienteId]
+    );
+}
+
 function listarReceitaMensalFinanceira() {
     return atualizarStatusAutomaticoClientes().then(() => buscarTodos(
         `SELECT
@@ -1096,6 +1106,58 @@ async function removerPagamentoCliente(clienteId, pagamentoId) {
     );
 
     return pagamento;
+}
+
+async function atualizarPagamentoCliente(clienteId, pagamentoId, dados = {}) {
+    const pagamento = await buscarPagamentoCliente(clienteId, pagamentoId);
+
+    if (!pagamento) {
+        throw new Error('Pagamento nao encontrado no historico deste cliente.');
+    }
+
+    const plano = limparTexto(dados.plano) || pagamento.plano;
+    const diasContrato = Number.parseInt(dados.diasContrato || pagamento.diasContrato || 0, 10) || 0;
+    const valorPlano = normalizarMoeda(dados.valorPlano);
+    const assinaturaApp = normalizarMoeda(dados.assinaturaApp);
+    const valorTotal = normalizarMoeda((moedaParaNumero(valorPlano) + moedaParaNumero(assinaturaApp)).toFixed(2));
+    const formaPagamento = limparTexto(dados.formaPagamento) || pagamento.formaPagamento;
+    const dataPagamento = limparTexto(dados.dataPagamento) || pagamento.dataPagamento;
+    const vencimentoNovo = limparTexto(dados.vencimentoNovo) || pagamento.vencimentoNovo;
+    const observacoes = limparTexto(dados.observacoes);
+
+    await executar(
+        `UPDATE cliente_pagamentos SET
+            plano = ?,
+            diasContrato = ?,
+            valorPlano = ?,
+            assinaturaApp = ?,
+            valorTotal = ?,
+            formaPagamento = ?,
+            dataPagamento = ?,
+            vencimentoNovo = ?,
+            observacoes = ?
+        WHERE id = ? AND clienteId = ?`,
+        [
+            plano,
+            diasContrato,
+            valorPlano,
+            assinaturaApp,
+            valorTotal,
+            formaPagamento,
+            dataPagamento,
+            vencimentoNovo,
+            observacoes,
+            pagamentoId,
+            clienteId
+        ]
+    );
+
+    await adicionarNotaCliente(
+        clienteId,
+        `Pagamento editado no historico: ${plano}, R$ ${valorTotal}, pagamento ${formaPagamento}.`
+    );
+
+    return buscarPagamentoCliente(clienteId, pagamentoId);
 }
 
 function buscarAlertasCadastroCliente(dados = {}) {
@@ -1413,10 +1475,12 @@ module.exports = {
     buscarClientePorId,
     aplicarBonusCliente,
     listarPagamentosCliente,
+    buscarPagamentoCliente,
     listarReceitaMensalFinanceira,
     listarPagamentosFinanceiro,
     renovarCliente,
     marcarPagamentoMensagem,
+    atualizarPagamentoCliente,
     removerPagamentoCliente,
     removerCliente,
     listarNotasCliente,
