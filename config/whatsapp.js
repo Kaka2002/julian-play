@@ -16,6 +16,7 @@ const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwe
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
+const SESSION_DATA_PATH = path.join(AUTH_DATA_PATH, 'session-julianplay');
 
 let client;
 let qrAtual = '';
@@ -24,8 +25,65 @@ let conectado = false;
 let tentativaReconexao = null;
 let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
+let limpandoCliente = false;
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
+
+const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+class LocalAuthControlado extends LocalAuth {
+    async logout() {
+        // A exclusao ocorre depois que o Chrome for encerrado para evitar EBUSY no Windows.
+        console.log('Logout recebido; limpeza da sessao sera feita de forma controlada.');
+    }
+}
+
+async function removerSessaoLocal() {
+    await fs.promises.rm(SESSION_DATA_PATH, {
+        recursive: true,
+        force: true,
+        maxRetries: 8,
+        retryDelay: 750
+    });
+}
+
+async function limparClienteDesconectado(clienteAtual, removerSessao = false) {
+    if (limpandoCliente) return;
+
+    limpandoCliente = true;
+    if (tentativaReconexao) {
+        clearTimeout(tentativaReconexao);
+        tentativaReconexao = null;
+    }
+
+    try {
+        await esperar(1000);
+        if (clienteAtual) {
+            try {
+                await clienteAtual.destroy();
+            } catch (err) {
+                console.log('Cliente anterior ja estava encerrado:', err.message);
+            }
+        }
+
+        if (client === clienteAtual) client = null;
+        await esperar(1000);
+
+        if (removerSessao) {
+            await removerSessaoLocal();
+            qrAtual = '';
+            console.log('Sessao desconectada removida. Um novo QR Code sera gerado.');
+        }
+    } catch (err) {
+        console.log('Erro ao limpar cliente WhatsApp desconectado:', err.message);
+    } finally {
+        conectado = false;
+        inicializando = false;
+        limpandoCliente = false;
+        statusWhatsApp = removerSessao ? 'reconectando' : 'desconectado';
+        agendarReconexao();
+    }
+}
 
 async function obterExecutablePath() {
     if (process.env.PUPPETEER_EXECUTABLE_PATH) {
@@ -184,6 +242,11 @@ function processarMensagemEmFila(message, options = {}) {
 }
 
 async function iniciarWhatsApp() {
+    if (limpandoCliente) {
+        console.log('Inicializacao pausada: cliente anterior ainda esta sendo limpo');
+        return;
+    }
+
     if (inicializando) {
         console.log('Inicializacao do WhatsApp ja esta em andamento');
         return;
@@ -208,7 +271,7 @@ async function iniciarWhatsApp() {
         console.log('Chrome encontrado:', executablePath);
 
         client = new Client({
-            authStrategy: new LocalAuth({
+            authStrategy: new LocalAuthControlado({
                 clientId: 'julianplay',
                 dataPath: AUTH_DATA_PATH
             }),
@@ -269,11 +332,14 @@ async function iniciarWhatsApp() {
         });
 
         client.on('disconnected', (reason) => {
+            const clienteAtual = client;
             conectado = false;
             inicializando = false;
-            statusWhatsApp = 'desconectado';
+            statusWhatsApp = reason === 'LOGOUT' ? 'limpando_logout' : 'desconectado';
             console.log('Desconectado:', reason);
-            agendarReconexao();
+            limparClienteDesconectado(clienteAtual, reason === 'LOGOUT').catch((err) => {
+                console.log('Falha na limpeza apos desconexao:', err.message);
+            });
         });
 
         client.on('message', async (message) => {

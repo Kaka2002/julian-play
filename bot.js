@@ -20,7 +20,10 @@ process.on('unhandledRejection', (err) => {
         mensagem.includes('Execution context was destroyed') ||
         mensagem.includes('Runtime.callFunctionOn timed out') ||
         mensagem.includes('ProtocolError') ||
-        mensagem.includes('auth timeout')
+        mensagem.includes('auth timeout') ||
+        mensagem.includes('Target closed') ||
+        mensagem.includes('Session closed') ||
+        mensagem.includes('Navigating frame was detached')
     ) {
         console.log('WhatsApp Web demorou/recarregou durante a inicializacao. Aguardando estabilizar...');
         return;
