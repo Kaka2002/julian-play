@@ -33,6 +33,12 @@ async function obterConfiguracoes() {
         pixNome: process.env.PIX_NOME || 'JULIAN PLAY',
         pixCidade: process.env.PIX_CIDADE || 'SAO PAULO',
         pixTxid: process.env.PIX_TXID || 'JULIANPLAY',
+        backupAutomaticoAtivo: '1',
+        backupAutomaticoHora: '03:00',
+        backupRetencaoDias: '30',
+        alertaWhatsAppMinutos: '5',
+        alertaWebhookUrl: '',
+        ultimoBackupAutomatico: '',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -124,11 +130,35 @@ async function salvarConfiguracoesPix(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesMonitoramento(dados = {}) {
+    const hora = String(dados.backupAutomaticoHora || '03:00').trim();
+    const retencao = Math.max(1, Math.min(365, Number.parseInt(dados.backupRetencaoDias || 30, 10) || 30));
+    const minutos = Math.max(1, Math.min(1440, Number.parseInt(dados.alertaWhatsAppMinutos || 5, 10) || 5));
+    const webhook = String(dados.alertaWebhookUrl || '').trim();
+
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
+        throw new Error('Informe um horario valido para o backup automatico.');
+    }
+
+    if (webhook && !/^https:\/\//i.test(webhook)) {
+        throw new Error('O webhook de alerta precisa usar HTTPS.');
+    }
+
+    await salvarConfiguracao('backupAutomaticoAtivo', dados.backupAutomaticoAtivo ? '1' : '0');
+    await salvarConfiguracao('backupAutomaticoHora', hora);
+    await salvarConfiguracao('backupRetencaoDias', String(retencao));
+    await salvarConfiguracao('alertaWhatsAppMinutos', String(minutos));
+    await salvarConfiguracao('alertaWebhookUrl', webhook);
+
+    return obterConfiguracoes();
+}
+
 module.exports = {
     obterConfiguracoes,
     salvarConfiguracao,
     salvarConfiguracoesPainel,
     salvarConfiguracoesLicenca,
     salvarConfiguracoesPix,
+    salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 };

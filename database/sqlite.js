@@ -162,6 +162,17 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`
+        CREATE TABLE IF NOT EXISTS eventos_sistema (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL,
+            nivel TEXT DEFAULT 'info',
+            mensagem TEXT NOT NULL,
+            detalhes TEXT,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     const colunas = {
         usuario: 'TEXT',
         senha: 'TEXT',

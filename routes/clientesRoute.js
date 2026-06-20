@@ -41,6 +41,7 @@ const {
     salvarConfiguracoesPainel,
     salvarConfiguracoesLicenca,
     salvarConfiguracoesPix,
+    salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
 const {
@@ -4926,6 +4927,7 @@ function resumoImportacaoClientes(importacao = {}) {
 function telaManutencao(status = {}, opcoes = {}) {
     const whatsapp = status.whatsapp || {};
     const backups = status.backups || [];
+    const eventos = status.eventos || [];
     const licenca = status.licenca || {};
     const ultimoBackup = status.ultimoBackup
         ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
@@ -5011,6 +5013,29 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
+                <h2 class="panel-title">Monitoramento comercial</h2>
+                <div class="subtitle">Backup automático, retenção e alerta quando o WhatsApp ficar desconectado</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/manutencao/monitoramento" style="padding-top:0;">
+            <label class="toggle-line">
+                <input type="checkbox" name="backupAutomaticoAtivo" value="1" ${String(status.config?.backupAutomaticoAtivo) === '1' ? 'checked' : ''}>
+                <span>Ativar backup automático diário</span>
+            </label>
+            ${campo({ nome: 'backupAutomaticoHora', label: 'Horário do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
+            ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
+            ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
+            ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
+            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca são apagados pela retenção automática.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
                 <h2 class="panel-title">Backup dos dados</h2>
                 <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
             </div>
@@ -5049,7 +5074,7 @@ function telaManutencao(status = {}, opcoes = {}) {
 
     ${resumoImportacaoClientes(opcoes.importacao)}
 
-    <section class="panel">
+    <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backups recentes</h2>
@@ -5079,6 +5104,33 @@ function telaManutencao(status = {}, opcoes = {}) {
                 </tr>`).join('')}
             </tbody>
         </table>` : '<div class="empty">Nenhum backup gerado ainda.</div>'}
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Eventos do sistema</h2>
+                <div class="subtitle">Últimos backups, alertas e recuperações registrados</div>
+            </div>
+        </div>
+        ${eventos.length ? `<table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Nível</th>
+                    <th>Mensagem</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${eventos.map(evento => `<tr>
+                    <td>${escapar(formatarDataHoraCurta(evento.criadoEm))}</td>
+                    <td>${escapar(evento.tipo)}</td>
+                    <td><span class="badge ${evento.nivel === 'erro' ? 'red' : evento.nivel === 'alerta' ? 'orange' : 'green'}">${escapar(evento.nivel)}</span></td>
+                    <td>${escapar(evento.mensagem)}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>` : '<div class="empty">Nenhum evento registrado ainda.</div>'}
     </section>`;
 }
 
@@ -5912,6 +5964,22 @@ router.post('/manutencao/pix', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar PIX: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/monitoramento', async (req, res) => {
+    try {
+        await salvarConfiguracoesMonitoramento(req.body);
+        logControleClientes('Monitoramento comercial atualizado', {
+            backupAtivo: Boolean(req.body.backupAutomaticoAtivo),
+            horario: req.body.backupAutomaticoHora,
+            retencao: req.body.backupRetencaoDias,
+            alertaMinutos: req.body.alertaWhatsAppMinutos
+        });
+        res.redirect('/manutencao?mensagem=Monitoramento salvo com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar monitoramento comercial', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar monitoramento: ${err.message}`)}`);
     }
 });
 

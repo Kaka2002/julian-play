@@ -11,6 +11,7 @@ const {
     getStatusWhatsApp
 } = require('./config/whatsapp');
 const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
+const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComercial');
 const { protegerPainel } = require('./services/authService');
 
 process.on('unhandledRejection', (err) => {
@@ -93,9 +94,15 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/', authRoute);
 
 app.get('/health', (req, res) => {
+    const whatsapp = getStatusWhatsApp();
     res.status(200).json({
         ok: true,
+        estado: whatsapp.conectado ? 'operacional' : 'degradado',
         service: 'julian-play',
+        whatsapp: {
+            conectado: Boolean(whatsapp.conectado),
+            status: whatsapp.status
+        },
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
@@ -111,6 +118,7 @@ const server = app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);
     iniciarWhatsApp();
     iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
+    iniciarMonitoramentoComercial({ getStatusWhatsApp });
 });
 
 server.on('error', (err) => {

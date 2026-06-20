@@ -47,6 +47,22 @@ Variaveis opcionais:
 - `RENOVACAO_DIAS_AVISO`: quantos dias antes do vencimento avisar. Padrao: `3`.
 - `RENOVACAO_INTERVALO_MINUTOS`: intervalo entre verificacoes automaticas. Padrao: `60`.
 
+## Monitoramento comercial
+
+Na tela `/manutencao` e possivel configurar:
+
+- backup automatico diario e horario de execucao;
+- retencao dos backups automaticos em dias;
+- tempo maximo de WhatsApp desconectado antes do alerta;
+- webhook HTTPS opcional para receber alertas externos;
+- historico persistente de backups, desconexoes e recuperacoes.
+
+Backups manuais nao sao removidos pela retencao automatica. O monitor roda a cada minuto e tambem registra os eventos no banco local.
+
+Variavel opcional:
+
+- `MONITOR_INTERVALO_MS`: intervalo do monitor em milissegundos. Padrao: `60000`.
+
 ## Modelos de mensagem e logo
 
 Na tela `/modelos`, use as variaveis abaixo nos textos:

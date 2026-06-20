@@ -3,6 +3,7 @@ const path = require('path');
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
+const { listarEventosSistema } = require('./eventosSistema');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -90,7 +91,7 @@ function calcularLicenca(config = {}) {
     };
 }
 
-async function criarBackupManual() {
+async function criarBackup(prefixo = 'clientes') {
     await db.ready;
 
     if (!fs.existsSync(db.dbPath)) {
@@ -99,7 +100,7 @@ async function criarBackupManual() {
 
     fs.mkdirSync(BACKUP_DIR, { recursive: true });
 
-    const nome = `clientes-${timestampArquivo()}.db`;
+    const nome = `${prefixo}-${timestampArquivo()}.db`;
     const destino = path.join(BACKUP_DIR, nome);
 
     fs.copyFileSync(db.dbPath, destino);
@@ -109,6 +110,31 @@ async function criarBackupManual() {
         caminho: destino,
         tamanho: fs.statSync(destino).size
     };
+}
+
+function criarBackupManual() {
+    return criarBackup('clientes');
+}
+
+function criarBackupAutomatico() {
+    return criarBackup('clientes-auto');
+}
+
+function limparBackupsAutomaticos(retencaoDias = 30) {
+    if (!fs.existsSync(BACKUP_DIR)) return 0;
+
+    const limite = Date.now() - Math.max(1, Number(retencaoDias || 30)) * 86400000;
+    let removidos = 0;
+
+    listarBackups().forEach((backup) => {
+        if (!backup.nome.startsWith('clientes-auto-')) return;
+        if (backup.criadoEm.getTime() >= limite) return;
+
+        fs.unlinkSync(backup.caminho);
+        removidos += 1;
+    });
+
+    return removidos;
 }
 
 async function restaurarBackup(nomeBackup) {
@@ -149,6 +175,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
     const config = await obterConfiguracoes();
+    const eventos = await listarEventosSistema(20);
 
     return {
         versao: packageInfo.version || '1.0.0',
@@ -163,6 +190,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
         backups: backups.slice(0, 8),
+        eventos,
         config,
         licenca: calcularLicenca(config),
         whatsapp: statusWhatsApp
@@ -171,6 +199,8 @@ async function obterStatusSistema(statusWhatsApp = {}) {
 
 module.exports = {
     criarBackupManual,
+    criarBackupAutomatico,
+    limparBackupsAutomaticos,
     restaurarBackup,
     obterStatusSistema,
     formatarBytes
