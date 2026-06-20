@@ -1,5 +1,5 @@
 const db = require('../database/sqlite');
-const crypto = require('crypto');
+const { criarHashSenha } = require('./passwordService');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -55,10 +55,6 @@ function salvarConfiguracao(chave, valor) {
     );
 }
 
-function hashSenhaPainel(senha) {
-    return crypto.createHash('sha256').update(String(senha || '')).digest('hex');
-}
-
 async function salvarConfiguracoesAcesso(dados = {}) {
     const usuario = String(dados.painelUsuario || '').trim();
     const senha = String(dados.painelSenha || '');
@@ -71,15 +67,15 @@ async function salvarConfiguracoesAcesso(dados = {}) {
     await salvarConfiguracao('painelUsuario', usuario);
 
     if (senha || confirmarSenha) {
-        if (senha.length < 6) {
-            throw new Error('A senha do painel precisa ter pelo menos 6 caracteres.');
+        if (senha.length < 8) {
+            throw new Error('A senha do painel precisa ter pelo menos 8 caracteres.');
         }
 
         if (senha !== confirmarSenha) {
             throw new Error('A confirmacao da senha nao confere.');
         }
 
-        await salvarConfiguracao('painelSenhaHash', hashSenhaPainel(senha));
+        await salvarConfiguracao('painelSenhaHash', criarHashSenha(senha));
     }
 
     return obterConfiguracoes();

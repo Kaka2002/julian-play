@@ -30,6 +30,9 @@ process.on('unhandledRejection', (err) => {
 });
 
 const app = express();
+if (process.env.TRUST_PROXY === '1' || process.env.RENDER) {
+    app.set('trust proxy', 1);
+}
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : __dirname);
 const PROCESS_LOCK_PATH = path.join(DATA_DIR, '.julian-play.pid');
 
@@ -76,6 +79,13 @@ adquirirTravaProcesso();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+});
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/', authRoute);
 

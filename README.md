@@ -14,10 +14,7 @@ Com o servidor rodando, acesse:
 - `/clientes/novo` para cadastrar um novo cliente.
 - `/qr` para conectar o WhatsApp pelo QR Code.
 
-O painel possui tela de login. Por padrao, quando nenhuma variavel for configurada, o acesso inicial e:
-
-- Usuario: `admin`
-- Senha: `admin123`
+O painel possui tela de login. Em uma instalacao nova, acesse o sistema e conclua a tela de configuracao inicial para criar o primeiro usuario administrador. O codigo de instalacao aparece no log do processo. Nao existe mais senha padrao para novas instalacoes.
 
 Para producao, configure as variaveis:
 
@@ -25,6 +22,12 @@ Para producao, configure as variaveis:
 - `PANEL_PASSWORD`: senha do painel.
 - `PANEL_SESSION_HOURS`: duracao da sessao em horas. Padrao: `8`.
 - `PANEL_COOKIE_SECURE`: use `1` quando estiver acessando por HTTPS.
+- `PANEL_LOGIN_MAX_ATTEMPTS`: tentativas invalidas antes do bloqueio. Padrao: `5`.
+- `PANEL_LOGIN_LOCK_MINUTES`: duracao do bloqueio do login. Padrao: `15`.
+- `PANEL_SETUP_TOKEN`: codigo fixo opcional exigido somente na primeira configuracao.
+- `TRUST_PROXY`: use `1` somente quando o painel estiver atras de proxy reverso confiavel com HTTPS.
+
+Senhas antigas armazenadas em SHA-256 continuam funcionando e sao migradas automaticamente para `scrypt` depois de um login bem-sucedido.
 
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 

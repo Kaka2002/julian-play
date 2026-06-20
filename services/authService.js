@@ -1,5 +1,6 @@
 const crypto = require('crypto');
-const { obterConfiguracoes } = require('./configuracoesPainel');
+const { obterConfiguracoes, salvarConfiguracao } = require('./configuracoesPainel');
+const { criarHashSenha, verificarSenha, hashEhLegado, hashLegado } = require('./passwordService');
 
 const sessoes = new Map();
 const COOKIE_NAME = 'julian_play_session';
@@ -7,26 +8,30 @@ const SESSION_HOURS = Number(process.env.PANEL_SESSION_HOURS || 8);
 const SESSION_MS = Math.max(1, SESSION_HOURS) * 60 * 60 * 1000;
 
 function hashSenha(senha) {
-    return crypto.createHash('sha256').update(String(senha || '')).digest('hex');
-}
-
-function usuarioConfigurado() {
-    return process.env.PANEL_USER || 'admin';
-}
-
-function senhaHashConfigurada() {
-    return process.env.PANEL_PASSWORD_HASH || hashSenha(process.env.PANEL_PASSWORD || 'admin123');
+    return hashLegado(senha);
 }
 
 async function obterCredenciaisConfiguradas() {
     const config = await obterConfiguracoes();
-    const usuario = config.painelUsuario || process.env.PANEL_USER || 'admin';
-    const senhaHash = config.painelSenhaHash
-        || process.env.PANEL_PASSWORD_HASH
-        || (process.env.PANEL_PASSWORD ? hashSenha(process.env.PANEL_PASSWORD) : '')
-        || hashSenha('admin123');
 
-    return { usuario, senhaHash };
+    if (config.painelUsuario && config.painelSenhaHash) {
+        return {
+            usuario: config.painelUsuario,
+            senhaHash: config.painelSenhaHash,
+            origem: 'banco'
+        };
+    }
+
+    const senhaEnv = process.env.PANEL_PASSWORD_HASH
+        || (process.env.PANEL_PASSWORD ? hashSenha(process.env.PANEL_PASSWORD) : '');
+    const usuarioEnv = process.env.PANEL_USER || (senhaEnv ? 'admin' : '');
+
+    return { usuario: usuarioEnv, senhaHash: senhaEnv, origem: 'ambiente' };
+}
+
+async function acessoConfigurado() {
+    const credenciais = await obterCredenciaisConfiguradas();
+    return Boolean(credenciais.usuario && credenciais.senhaHash);
 }
 
 async function obterUsuarioConfigurado() {
@@ -44,8 +49,14 @@ function compararSeguro(a, b) {
 
 async function validarLogin(usuario, senha) {
     const credenciais = await obterCredenciaisConfiguradas();
+    if (!credenciais.usuario || !credenciais.senhaHash) return false;
+
     const usuarioOk = compararSeguro(String(usuario || '').trim(), credenciais.usuario);
-    const senhaOk = compararSeguro(hashSenha(senha), credenciais.senhaHash);
+    const senhaOk = verificarSenha(senha, credenciais.senhaHash);
+
+    if (usuarioOk && senhaOk && credenciais.origem === 'banco' && hashEhLegado(credenciais.senhaHash)) {
+        await salvarConfiguracao('painelSenhaHash', criarHashSenha(senha));
+    }
 
     return usuarioOk && senhaOk;
 }
@@ -94,7 +105,7 @@ function obterSessao(req) {
     return { token, ...sessao };
 }
 
-function cookieSessao(token) {
+function cookieSessao(token, req = null) {
     const partes = [
         `${COOKIE_NAME}=${encodeURIComponent(token)}`,
         'HttpOnly',
@@ -103,7 +114,8 @@ function cookieSessao(token) {
         `Max-Age=${Math.floor(SESSION_MS / 1000)}`
     ];
 
-    if (process.env.PANEL_COOKIE_SECURE === '1') {
+    const protocoloEncaminhado = String(req?.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
+    if (process.env.PANEL_COOKIE_SECURE === '1' || req?.secure || protocoloEncaminhado === 'https') {
         partes.push('Secure');
     }
 
@@ -144,12 +156,12 @@ module.exports = {
     SESSION_HOURS,
     hashSenha,
     validarLogin,
+    acessoConfigurado,
     obterUsuarioConfigurado,
     criarSessao,
     obterSessao,
     cookieSessao,
     cookieLogout,
     encerrarSessao,
-    protegerPainel,
-    usuarioConfigurado
+    protegerPainel
 };

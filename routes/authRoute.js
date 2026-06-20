@@ -1,6 +1,8 @@
 const express = require('express');
+const crypto = require('crypto');
 const {
     validarLogin,
+    acessoConfigurado,
     criarSessao,
     obterSessao,
     cookieSessao,
@@ -8,9 +10,69 @@ const {
     encerrarSessao,
     obterUsuarioConfigurado
 } = require('../services/authService');
-const { obterConfiguracoes } = require('../services/configuracoesPainel');
+const {
+    obterConfiguracoes,
+    salvarConfiguracoesAcesso,
+    salvarConfiguracoesPainel
+} = require('../services/configuracoesPainel');
 
 const router = express.Router();
+const tentativasLogin = new Map();
+const MAX_TENTATIVAS_LOGIN = Number(process.env.PANEL_LOGIN_MAX_ATTEMPTS || 5);
+const BLOQUEIO_LOGIN_MS = Number(process.env.PANEL_LOGIN_LOCK_MINUTES || 15) * 60 * 1000;
+const CODIGO_CONFIGURACAO = process.env.PANEL_SETUP_TOKEN || crypto.randomBytes(6).toString('hex').toUpperCase();
+
+acessoConfigurado()
+    .then((configurado) => {
+        if (!configurado) {
+            console.log(`[seguranca] Codigo da configuracao inicial: ${CODIGO_CONFIGURACAO}`);
+        }
+    })
+    .catch((err) => console.log('[seguranca] Nao foi possivel verificar a configuracao inicial:', err.message));
+
+function chaveTentativa(req, usuario = '') {
+    const origem = process.env.TRUST_PROXY === '1'
+        ? req.ip
+        : req.socket?.remoteAddress;
+    return `${origem || 'desconhecido'}:${String(usuario).trim().toLowerCase()}`;
+}
+
+function bloqueioAtual(req, usuario) {
+    const chave = chaveTentativa(req, usuario);
+    const registro = tentativasLogin.get(chave);
+    if (!registro) return null;
+
+    if (registro.bloqueadoAte && registro.bloqueadoAte > Date.now()) return registro;
+    if (registro.bloqueadoAte || Date.now() - registro.inicio > BLOQUEIO_LOGIN_MS) {
+        tentativasLogin.delete(chave);
+    }
+
+    return null;
+}
+
+function registrarFalhaLogin(req, usuario) {
+    const chave = chaveTentativa(req, usuario);
+    const atual = tentativasLogin.get(chave);
+    const registro = atual && Date.now() - atual.inicio <= BLOQUEIO_LOGIN_MS
+        ? atual
+        : { tentativas: 0, inicio: Date.now(), bloqueadoAte: 0 };
+
+    registro.tentativas += 1;
+    if (registro.tentativas >= MAX_TENTATIVAS_LOGIN) {
+        registro.bloqueadoAte = Date.now() + BLOQUEIO_LOGIN_MS;
+    }
+    tentativasLogin.set(chave, registro);
+}
+
+function limparFalhasLogin(req, usuario) {
+    tentativasLogin.delete(chaveTentativa(req, usuario));
+}
+
+function codigoConfiguracaoValido(valor) {
+    const informado = Buffer.from(String(valor || '').trim());
+    const esperado = Buffer.from(CODIGO_CONFIGURACAO);
+    return informado.length === esperado.length && crypto.timingSafeEqual(informado, esperado);
+}
 
 function escapar(valor) {
     return String(valor ?? '')
@@ -35,7 +97,7 @@ function destinoSeguro(valor) {
     return destino;
 }
 
-function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = 'admin' }) {
+function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
 
@@ -47,7 +109,7 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <title>Login - ${escapar(nomeSistema)}</title>
+    <title>${configuracaoInicial ? 'Configuração inicial' : 'Login'} - ${escapar(nomeSistema)}</title>
     <style>
         :root {
             --bg: #f5f6f8;
@@ -181,10 +243,28 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             ${logoUrl ? `<img src="${escapar(logoUrl)}" alt="Logo">` : '<span class="brand-icon">JP</span>'}
             <span>${escapar(nomeSistema)}</span>
         </div>
-        <h1>Entrar</h1>
-        <p class="subtitle">Informe o usuário e senha para acessar o painel.</p>
+        <h1>${configuracaoInicial ? 'Configuração inicial' : 'Entrar'}</h1>
+        <p class="subtitle">${configuracaoInicial ? 'Crie o primeiro acesso administrativo desta instalação.' : 'Informe o usuário e senha para acessar o painel.'}</p>
         ${mensagem ? `<div class="notice">${escapar(mensagem)}</div>` : ''}
-        <form method="post" action="/login">
+        ${configuracaoInicial ? `<form method="post" action="/configuracao-inicial">
+            <label>Nome do sistema
+                <input name="nomeSistema" required value="${escapar(nomeSistema)}">
+            </label>
+            <label>Código de instalação
+                <input name="codigoInstalacao" autocomplete="one-time-code" required placeholder="Consulte o log do servidor">
+            </label>
+            <label>Usuário administrador
+                <input name="painelUsuario" autocomplete="username" required autofocus>
+            </label>
+            <label>Senha
+                <input type="password" name="painelSenha" autocomplete="new-password" minlength="8" required>
+            </label>
+            <label>Confirmar senha
+                <input type="password" name="painelConfirmarSenha" autocomplete="new-password" minlength="8" required>
+            </label>
+            <button type="submit">Concluir configuração</button>
+        </form>
+        <div class="helper">Use uma senha exclusiva com pelo menos 8 caracteres.</div>` : `<form method="post" action="/login">
             <input type="hidden" name="next" value="${escapar(next)}">
             <label>Usuário
                 <input name="usuario" autocomplete="username" required autofocus value="${escapar(usuarioPainel)}">
@@ -194,7 +274,7 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             </label>
             <button type="submit">Acessar painel</button>
         </form>
-        <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>
+        <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>`}
     </main>
 </body>
 </html>`;
@@ -202,6 +282,10 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
 
 router.get('/login', async (req, res) => {
     desativarCache(res);
+
+    if (!(await acessoConfigurado())) {
+        return res.redirect('/configuracao-inicial');
+    }
 
     if (obterSessao(req)) {
         return res.redirect(destinoSeguro(req.query.next));
@@ -222,14 +306,54 @@ router.get('/login', async (req, res) => {
 router.post('/login', async (req, res) => {
     desativarCache(res);
     const next = destinoSeguro(req.body.next);
+    const bloqueio = bloqueioAtual(req, req.body.usuario);
+
+    if (bloqueio) {
+        const minutos = Math.max(1, Math.ceil((bloqueio.bloqueadoAte - Date.now()) / 60000));
+        return res.redirect(`/login?erro=${encodeURIComponent(`Muitas tentativas. Aguarde ${minutos} minuto(s).`)}&next=${encodeURIComponent(next)}`);
+    }
 
     if (!(await validarLogin(req.body.usuario, req.body.senha))) {
+        registrarFalhaLogin(req, req.body.usuario);
         return res.redirect(`/login?erro=${encodeURIComponent('Usuário ou senha inválidos.')}&next=${encodeURIComponent(next)}`);
     }
 
+    limparFalhasLogin(req, req.body.usuario);
     const sessao = criarSessao(String(req.body.usuario || '').trim());
-    res.setHeader('Set-Cookie', cookieSessao(sessao.token));
+    res.setHeader('Set-Cookie', cookieSessao(sessao.token, req));
     return res.redirect(next);
+});
+
+router.get('/configuracao-inicial', async (req, res) => {
+    desativarCache(res);
+    if (await acessoConfigurado()) return res.redirect('/login');
+
+    const config = await obterConfiguracoes();
+    return res.send(telaLogin({
+        mensagem: req.query.erro || '',
+        config,
+        configuracaoInicial: true
+    }));
+});
+
+router.post('/configuracao-inicial', async (req, res) => {
+    desativarCache(res);
+    if (await acessoConfigurado()) return res.redirect('/login');
+
+    try {
+        if (!codigoConfiguracaoValido(req.body.codigoInstalacao)) {
+            throw new Error('Código de instalação inválido. Consulte o log do servidor.');
+        }
+
+        await salvarConfiguracoesPainel({
+            nomeSistema: req.body.nomeSistema,
+            logoUrl: ''
+        });
+        await salvarConfiguracoesAcesso(req.body);
+        return res.redirect(`/login?erro=${encodeURIComponent('Configuração concluída. Entre com o acesso criado.')}`);
+    } catch (err) {
+        return res.redirect(`/configuracao-inicial?erro=${encodeURIComponent(err.message)}`);
+    }
 });
 
 router.get('/logout', (req, res) => {
