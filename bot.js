@@ -4,6 +4,7 @@ const path = require('path');
 const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
+const licencaRoute = require('./routes/licencaRoute');
 const {
     iniciarWhatsApp,
     encerrarWhatsApp,
@@ -13,6 +14,7 @@ const {
 const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
 const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComercial');
 const { protegerPainel } = require('./services/authService');
+const { protegerLicenca } = require('./services/licencaService');
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -109,6 +111,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use(protegerPainel);
+app.use('/licenca', licencaRoute);
+app.use(protegerLicenca);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);
 

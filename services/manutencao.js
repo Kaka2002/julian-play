@@ -4,6 +4,7 @@ const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarEventosSistema, registrarEventoSistema } = require('./eventosSistema');
+const { calcularEstadoLicenca } = require('./licencaService');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -49,51 +50,8 @@ function listarBackups() {
         .sort((a, b) => b.criadoEm - a.criadoEm);
 }
 
-function dataISOHoje() {
-    const data = new Date();
-    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
-    return data.toISOString().slice(0, 10);
-}
-
 function calcularLicenca(config = {}) {
-    const vencimento = String(config.licencaVencimento || '').slice(0, 10);
-    const vitalicia = String(config.licencaVitalicia || '0') === '1';
-    const hoje = dataISOHoje();
-    let diasRestantes = null;
-    let status = 'nao_configurada';
-    let rotulo = 'Não configurada';
-
-    if (vitalicia && String(config.licencaCliente || '').trim()) {
-        status = 'ativa';
-        rotulo = 'Vitalícia';
-    } else if (vencimento) {
-        const hojeData = new Date(`${hoje}T00:00:00`);
-        const vencimentoData = new Date(`${vencimento}T00:00:00`);
-        diasRestantes = Math.ceil((vencimentoData - hojeData) / 86400000);
-
-        if (diasRestantes < 0) {
-            status = 'vencida';
-            rotulo = 'Vencida';
-        } else if (diasRestantes <= 7) {
-            status = 'vencendo';
-            rotulo = 'Vencendo';
-        } else {
-            status = 'ativa';
-            rotulo = 'Ativa';
-        }
-    }
-
-    return {
-        cliente: config.licencaCliente || '',
-        telefone: config.licencaTelefone || '',
-        ativacao: config.licencaAtivacao || '',
-        vencimento,
-        vitalicia,
-        observacoes: config.licencaObservacoes || '',
-        diasRestantes,
-        status,
-        rotulo
-    };
+    return calcularEstadoLicenca(config);
 }
 
 function verificarBancoDados() {

@@ -6,6 +6,9 @@ param(
 
     [string]$PastaDados = '',
 
+    [ValidateSet(0, 15, 30)]
+    [int]$AvaliacaoDias = 0,
+
     [switch]$SemInicioAutomatico,
 
     [switch]$AbrirFirewall,
@@ -90,14 +93,36 @@ if ($PastaDados -ne [IO.Path]::GetFullPath($diretorioProjeto)) {
     }
 }
 
+$arquivoInstalacao = Join-Path $diretorioProjeto '.julian-play-install.json'
+$configAnterior = $null
+if (Test-Path -LiteralPath $arquivoInstalacao) {
+    try {
+        $configAnterior = Get-Content -LiteralPath $arquivoInstalacao -Raw | ConvertFrom-Json
+    } catch {
+        Write-Warning 'A configuracao anterior da instalacao nao pode ser lida e sera recriada.'
+    }
+}
+
+if (-not $PSBoundParameters.ContainsKey('AvaliacaoDias') -and $null -ne $configAnterior -and $null -ne $configAnterior.trialDays) {
+    $AvaliacaoDias = [int]$configAnterior.trialDays
+}
+
+$codigoFornecedor = if ($null -ne $configAnterior -and $configAnterior.licenseAdminToken) {
+    [string]$configAnterior.licenseAdminToken
+} else {
+    ([guid]::NewGuid().ToString('N').Substring(0, 20)).ToUpperInvariant()
+}
+
 $configInstalacao = [ordered]@{
     appName = $NomeProcesso
     port = $Porta
     dataDir = $PastaDados
+    trialDays = $AvaliacaoDias
+    licenseAdminToken = $codigoFornecedor
 }
 $jsonInstalacao = $configInstalacao | ConvertTo-Json
 $utf8SemBom = New-Object System.Text.UTF8Encoding($false)
-[IO.File]::WriteAllText((Join-Path $diretorioProjeto '.julian-play-install.json'), $jsonInstalacao, $utf8SemBom)
+[IO.File]::WriteAllText($arquivoInstalacao, $jsonInstalacao, $utf8SemBom)
 
 Etapa 'Preservando os dados atuais'
 $backup = CriarBackupLocal $PastaDados
@@ -194,4 +219,8 @@ if ($AbrirFirewall) {
 Etapa 'Instalacao concluida'
 & $pm2.Source status
 Write-Host "Painel local: http://localhost:$Porta" -ForegroundColor Green
+Write-Host "Codigo do fornecedor: $codigoFornecedor" -ForegroundColor Yellow
+if ($AvaliacaoDias -in @(15, 30)) {
+    Write-Host "Avaliacao automatica configurada: $AvaliacaoDias dias" -ForegroundColor Yellow
+}
 Write-Host 'Abra /qr para conectar o WhatsApp e /manutencao para executar o diagnostico.'

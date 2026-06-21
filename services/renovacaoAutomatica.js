@@ -17,6 +17,7 @@ const {
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
 const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('./pixService');
+const { licencaPermiteUso } = require('./licencaService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const TESTE_AVISO_MINUTOS = 30;
@@ -384,7 +385,11 @@ function iniciarAgendadorRenovacao(options) {
             });
     };
 
-    const verificarHorario = () => {
+    const verificarHorario = async () => {
+        if (!(await licencaPermiteUso())) {
+            return;
+        }
+
         const agora = obterAgoraSaoPaulo();
         const jaPassouHorario = agora.hora > horaEnvio || (agora.hora === horaEnvio && agora.minuto >= minutoEnvio);
 

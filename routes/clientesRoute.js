@@ -39,11 +39,11 @@ const {
 const {
     obterConfiguracoes,
     salvarConfiguracoesPainel,
-    salvarConfiguracoesLicenca,
     salvarConfiguracoesPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
+const { atualizarLicencaComercial, calcularEstadoLicenca } = require('../services/licencaService');
 const {
     criarBackupManual,
     restaurarBackup,
@@ -532,6 +532,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const status = getStatusWhatsApp();
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
+    const licenca = calcularEstadoLicenca(config);
+    const avisoAvaliacao = licenca.bloqueioAtivo && licenca.tipo === 'avaliacao' && licenca.permitida
+        ? `Período de avaliação: ${Math.max(0, licenca.diasRestantes)} dia(s) restante(s).`
+        : '';
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -1989,6 +1993,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         </div>
     </div>
     <main>
+        ${avisoAvaliacao ? `<div class="notice">${escapar(avisoAvaliacao)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
         ${mensagem ? `<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
     </main>
@@ -5009,31 +5014,17 @@ function telaManutencao(status = {}, opcoes = {}) {
             </div>
             <span class="badge ${licenca.status === 'vencida' ? 'red' : licenca.status === 'vencendo' ? 'orange' : licenca.status === 'ativa' ? 'green' : ''}">${escapar(licenca.rotulo || 'Não configurada')}</span>
         </div>
-        <form class="fields" method="post" action="/manutencao/licenca" style="padding-top:0;">
-            ${campo({ nome: 'licencaCliente', label: 'Cliente / Empresa', valor: licenca.cliente || '' })}
-            ${campo({ nome: 'licencaTelefone', label: 'Telefone do responsável', valor: licenca.telefone || '' })}
-            ${campo({ nome: 'licencaAtivacao', label: 'Data de ativação', valor: licenca.ativacao || '', tipo: 'date' })}
-            ${campo({ nome: 'licencaVencimento', label: 'Data de vencimento', valor: licenca.vencimento || '', tipo: 'date', attrs: `id="licencaVencimento" ${licenca.vitalicia ? 'disabled' : ''}` })}
-            <label class="toggle-line">
-                <input type="checkbox" id="licencaVitalicia" name="licencaVitalicia" value="1" ${licenca.vitalicia ? 'checked' : ''}>
-                <span>Licença vitalícia (sem vencimento)</span>
-            </label>
-            ${areaTexto({ nome: 'licencaObservacoes', label: 'Observações da licença', valor: licenca.observacoes || '' })}
-            <div class="notice full">${escapar(notaLicenca)}</div>
-            <div class="actions full">
-                <button class="button" type="submit">${icon('check')} Salvar licença</button>
-            </div>
-        </form>
-        <script>
-            (() => {
-                const vitalicia = document.getElementById('licencaVitalicia');
-                const vencimento = document.getElementById('licencaVencimento');
-                if (!vitalicia || !vencimento) return;
-                const atualizar = () => { vencimento.disabled = vitalicia.checked; };
-                vitalicia.addEventListener('change', atualizar);
-                atualizar();
-            })();
-        </script>
+        <table><tbody>
+            <tr><th>Cliente / Empresa</th><td>${escapar(licenca.cliente || '-')}</td></tr>
+            <tr><th>Tipo</th><td>${escapar(licenca.rotulo || '-')}</td></tr>
+            <tr><th>Ativação</th><td>${escapar(licenca.ativacao || '-')}</td></tr>
+            <tr><th>Vencimento</th><td>${escapar(licenca.vitalicia ? 'Sem vencimento' : licenca.vencimento || '-')}</td></tr>
+            <tr><th>Instalação</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
+        </tbody></table>
+        <div class="actions" style="padding:18px 20px;">
+            <a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>
+            <span class="notice">${escapar(notaLicenca)}</span>
+        </div>
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
@@ -5994,11 +5985,11 @@ router.post('/manutencao/restaurar', async (req, res) => {
 
 router.post('/manutencao/licenca', async (req, res) => {
     try {
-        await salvarConfiguracoesLicenca(req.body);
+        await atualizarLicencaComercial(req.body);
         logControleClientes('Licenca da instalacao atualizada', {
             cliente: req.body.licencaCliente,
             vencimento: req.body.licencaVencimento,
-            vitalicia: Boolean(req.body.licencaVitalicia)
+            tipo: req.body.licencaTipo
         });
         res.redirect('/manutencao?mensagem=Licença salva com sucesso');
     } catch (err) {

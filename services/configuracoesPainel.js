@@ -29,6 +29,10 @@ async function obterConfiguracoes() {
         licencaAtivacao: '',
         licencaVencimento: '',
         licencaVitalicia: '0',
+        licencaTipo: '',
+        licencaPeriodoTesteDias: '0',
+        licencaBloqueioAtivo: '0',
+        instalacaoId: '',
         licencaObservacoes: '',
         pixChave: process.env.CHAVE_PIX || '61319147704',
         pixNome: process.env.PIX_NOME || 'JULIAN PLAY',
@@ -95,19 +99,6 @@ async function salvarConfiguracoesPainel(dados = {}) {
     return obterConfiguracoes();
 }
 
-async function salvarConfiguracoesLicenca(dados = {}) {
-    const vitalicia = dados.licencaVitalicia ? '1' : '0';
-
-    await salvarConfiguracao('licencaCliente', dados.licencaCliente || '');
-    await salvarConfiguracao('licencaTelefone', dados.licencaTelefone || '');
-    await salvarConfiguracao('licencaAtivacao', dados.licencaAtivacao || '');
-    await salvarConfiguracao('licencaVencimento', vitalicia === '1' ? '' : (dados.licencaVencimento || ''));
-    await salvarConfiguracao('licencaVitalicia', vitalicia);
-    await salvarConfiguracao('licencaObservacoes', dados.licencaObservacoes || '');
-
-    return obterConfiguracoes();
-}
-
 async function salvarConfiguracoesPix(dados = {}) {
     const chave = String(dados.pixChave || '').trim();
     const nome = String(dados.pixNome || '').trim();
@@ -161,7 +152,6 @@ module.exports = {
     obterConfiguracoes,
     salvarConfiguracao,
     salvarConfiguracoesPainel,
-    salvarConfiguracoesLicenca,
     salvarConfiguracoesPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso

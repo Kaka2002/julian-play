@@ -10,6 +10,7 @@ const {
     normalizar
 } = require('../services/conversaService');
 const { foiMensagemDoRobo } = require('../services/mensagensPropriasService');
+const { licencaPermiteUso } = require('../services/licencaService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -222,7 +223,12 @@ function processarMensagemEmFila(message, options = {}) {
 
     const proximaFila = filaAtual
         .catch(() => {})
-        .then(() => {
+        .then(async () => {
+            if (!(await licencaPermiteUso())) {
+                console.log('Mensagem ignorada: licença expirada ou bloqueada.');
+                return;
+            }
+
             if (texto === 'sair' || texto === 'encerrar') {
                 return responderEncerramentoRapido(message);
             }

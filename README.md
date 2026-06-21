@@ -48,11 +48,17 @@ Opcoes uteis:
 
 # Guardar banco e backups em outra pasta
 .\install-windows.ps1 -PastaDados "C:\JulianPlayDados"
+
+# Nova instalacao comercial com avaliacao de 15 ou 30 dias
+.\install-windows.ps1 -AvaliacaoDias 15
+.\install-windows.ps1 -AvaliacaoDias 30
 ```
 
 O instalador preserva o banco `clientes.db`, a sessao `.wwebjs_auth` e os backups. Quando executado como Administrador, cria uma tarefa do Windows para restaurar o PM2 depois de reiniciar o servidor. Sem permissao administrativa, cria uma inicializacao no proximo login do usuario.
 
 As escolhas de porta, nome do processo e pasta de dados ficam em `.julian-play-install.json`. Esse arquivo e local, nao e enviado ao GitHub e e reutilizado automaticamente nas atualizacoes.
+
+O instalador tambem gera um codigo exclusivo do fornecedor. Guarde esse codigo: ele e exigido para iniciar avaliacoes, renovar licencas ou liberar uma instalacao vitalicia. Clientes com acesso somente ao painel nao conseguem alterar a licenca sem esse codigo.
 
 Para atualizar uma instalacao existente com backup antes do `git pull`:
 

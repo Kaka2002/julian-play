@@ -30,7 +30,9 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 PORT: String(process.env.JULIAN_PLAY_PORT || process.env.PORT || settings.port || 10000),
-                DATA_DIR: dataDir
+                DATA_DIR: dataDir,
+                LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',
+                LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0)
             }
         }
     ]
