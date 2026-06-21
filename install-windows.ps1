@@ -107,6 +107,19 @@ if ($backup) {
     Write-Host 'Instalacao nova: ainda nao existe banco para copiar.'
 }
 
+$pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+if ($pm2) {
+    Etapa 'Parando a instancia anterior antes de atualizar dependencias'
+    & $pm2.Source stop $NomeProcesso 2>$null | Out-Host
+    Start-Sleep -Seconds 4
+}
+
+$ocupantes = @(Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)
+if ($ocupantes.Count -gt 0) {
+    $pids = ($ocupantes | Select-Object -ExpandProperty OwningProcess -Unique) -join ', '
+    throw "A porta $Porta ainda esta ocupada pelo PID $pids. Encerre esse processo e execute novamente."
+}
+
 if (-not $PularDependencias) {
     Etapa 'Instalando dependencias do projeto'
     & $npm.Source ci --omit=dev
@@ -115,7 +128,6 @@ if (-not $PularDependencias) {
     }
 }
 
-$pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
 if (-not $pm2) {
     Etapa 'Instalando o gerenciador PM2'
     & $npm.Source install --global pm2
