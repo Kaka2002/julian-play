@@ -28,6 +28,7 @@ async function obterConfiguracoes() {
         licencaTelefone: '',
         licencaAtivacao: '',
         licencaVencimento: '',
+        licencaVitalicia: '0',
         licencaObservacoes: '',
         pixChave: process.env.CHAVE_PIX || '61319147704',
         pixNome: process.env.PIX_NOME || 'JULIAN PLAY',
@@ -95,10 +96,13 @@ async function salvarConfiguracoesPainel(dados = {}) {
 }
 
 async function salvarConfiguracoesLicenca(dados = {}) {
+    const vitalicia = dados.licencaVitalicia ? '1' : '0';
+
     await salvarConfiguracao('licencaCliente', dados.licencaCliente || '');
     await salvarConfiguracao('licencaTelefone', dados.licencaTelefone || '');
     await salvarConfiguracao('licencaAtivacao', dados.licencaAtivacao || '');
-    await salvarConfiguracao('licencaVencimento', dados.licencaVencimento || '');
+    await salvarConfiguracao('licencaVencimento', vitalicia === '1' ? '' : (dados.licencaVencimento || ''));
+    await salvarConfiguracao('licencaVitalicia', vitalicia);
     await salvarConfiguracao('licencaObservacoes', dados.licencaObservacoes || '');
 
     return obterConfiguracoes();

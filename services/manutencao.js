@@ -57,12 +57,16 @@ function dataISOHoje() {
 
 function calcularLicenca(config = {}) {
     const vencimento = String(config.licencaVencimento || '').slice(0, 10);
+    const vitalicia = String(config.licencaVitalicia || '0') === '1';
     const hoje = dataISOHoje();
     let diasRestantes = null;
     let status = 'nao_configurada';
     let rotulo = 'Não configurada';
 
-    if (vencimento) {
+    if (vitalicia && String(config.licencaCliente || '').trim()) {
+        status = 'ativa';
+        rotulo = 'Vitalícia';
+    } else if (vencimento) {
         const hojeData = new Date(`${hoje}T00:00:00`);
         const vencimentoData = new Date(`${vencimento}T00:00:00`);
         diasRestantes = Math.ceil((vencimentoData - hojeData) / 86400000);
@@ -84,6 +88,7 @@ function calcularLicenca(config = {}) {
         telefone: config.licencaTelefone || '',
         ativacao: config.licencaAtivacao || '',
         vencimento,
+        vitalicia,
         observacoes: config.licencaObservacoes || '',
         diasRestantes,
         status,

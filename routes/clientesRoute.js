@@ -4936,8 +4936,10 @@ function telaManutencao(status = {}, opcoes = {}) {
     const ultimoBackup = status.ultimoBackup
         ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
-    const notaLicenca = licenca.status === 'ativa'
-        ? `${licenca.diasRestantes} dia(s) restantes`
+    const notaLicenca = licenca.vitalicia && licenca.status === 'ativa'
+        ? 'Licença vitalícia, sem data de vencimento'
+        : licenca.status === 'ativa'
+            ? `${licenca.diasRestantes} dia(s) restantes`
         : licenca.status === 'vencendo'
             ? `Vence em ${licenca.diasRestantes} dia(s)`
             : licenca.status === 'vencida'
@@ -5011,13 +5013,27 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'licencaCliente', label: 'Cliente / Empresa', valor: licenca.cliente || '' })}
             ${campo({ nome: 'licencaTelefone', label: 'Telefone do responsável', valor: licenca.telefone || '' })}
             ${campo({ nome: 'licencaAtivacao', label: 'Data de ativação', valor: licenca.ativacao || '', tipo: 'date' })}
-            ${campo({ nome: 'licencaVencimento', label: 'Data de vencimento', valor: licenca.vencimento || '', tipo: 'date' })}
+            ${campo({ nome: 'licencaVencimento', label: 'Data de vencimento', valor: licenca.vencimento || '', tipo: 'date', attrs: `id="licencaVencimento" ${licenca.vitalicia ? 'disabled' : ''}` })}
+            <label class="toggle-line">
+                <input type="checkbox" id="licencaVitalicia" name="licencaVitalicia" value="1" ${licenca.vitalicia ? 'checked' : ''}>
+                <span>Licença vitalícia (sem vencimento)</span>
+            </label>
             ${areaTexto({ nome: 'licencaObservacoes', label: 'Observações da licença', valor: licenca.observacoes || '' })}
             <div class="notice full">${escapar(notaLicenca)}</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar licença</button>
             </div>
         </form>
+        <script>
+            (() => {
+                const vitalicia = document.getElementById('licencaVitalicia');
+                const vencimento = document.getElementById('licencaVencimento');
+                if (!vitalicia || !vencimento) return;
+                const atualizar = () => { vencimento.disabled = vitalicia.checked; };
+                vitalicia.addEventListener('change', atualizar);
+                atualizar();
+            })();
+        </script>
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
@@ -5981,7 +5997,8 @@ router.post('/manutencao/licenca', async (req, res) => {
         await salvarConfiguracoesLicenca(req.body);
         logControleClientes('Licenca da instalacao atualizada', {
             cliente: req.body.licencaCliente,
-            vencimento: req.body.licencaVencimento
+            vencimento: req.body.licencaVencimento,
+            vitalicia: Boolean(req.body.licencaVitalicia)
         });
         res.redirect('/manutencao?mensagem=Licença salva com sucesso');
     } catch (err) {

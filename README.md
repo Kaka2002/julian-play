@@ -94,6 +94,8 @@ Na tela `/manutencao` e possivel configurar:
 
 Backups manuais nao sao removidos pela retencao automatica. O monitor roda a cada minuto e tambem registra os eventos no banco local.
 
+Na licenca da instalacao, use uma data de vencimento para contratos comerciais ou marque `Licenca vitalicia` para a instalacao principal sem vencimento.
+
 Variavel opcional:
 
 - `MONITOR_INTERVALO_MS`: intervalo do monitor em milissegundos. Padrao: `60000`.
