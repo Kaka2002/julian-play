@@ -62,6 +62,8 @@ powershell -ExecutionPolicy Bypass -File .\update-windows.ps1
 
 O atualizador recusa a operacao quando existem alteracoes locais ainda nao salvas no Git. O arquivo `deploy.ps1`, usado pelo GitHub Actions, chama o mesmo atualizador seguro.
 
+Como o servidor utiliza o Google Chrome ja instalado, os scripts definem `PUPPETEER_SKIP_DOWNLOAD=true` durante o `npm ci`. Assim, uma atualizacao nao tenta baixar uma segunda copia do navegador.
+
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 
 No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.

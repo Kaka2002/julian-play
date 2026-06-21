@@ -122,6 +122,8 @@ if ($ocupantes.Count -gt 0) {
 
 if (-not $PularDependencias) {
     Etapa 'Instalando dependencias do projeto'
+    $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
+    $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
     & $npm.Source ci --omit=dev
     if ($LASTEXITCODE -ne 0) {
         throw "npm ci terminou com codigo $LASTEXITCODE."

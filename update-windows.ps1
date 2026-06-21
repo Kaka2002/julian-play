@@ -83,6 +83,8 @@ try {
     }
 
     Etapa 'Atualizando dependencias'
+    $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
+    $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
     & $npm.Source ci --omit=dev
     if ($LASTEXITCODE -ne 0) {
         throw "npm ci terminou com codigo $LASTEXITCODE."
@@ -112,6 +114,17 @@ try {
 } catch {
     Write-Error $_
     Write-Warning "A atualizacao falhou. O backup foi preservado em: $PastaDados\backups"
-    Write-Warning "Depois de corrigir o erro, execute: pm2 start ecosystem.config.js --only $NomeProcesso --update-env"
+    Write-Warning 'Tentando restaurar a execucao da versao instalada...'
+    try {
+        & $pm2.Source startOrReload (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
+        if ($LASTEXITCODE -eq 0) {
+            & $pm2.Source save --force
+            Write-Warning 'O aplicativo foi reiniciado, mas a atualizacao precisa ser corrigida.'
+        } else {
+            Write-Warning "Nao foi possivel reiniciar. Execute: pm2 start ecosystem.config.js --only $NomeProcesso --update-env"
+        }
+    } catch {
+        Write-Warning "Nao foi possivel reiniciar. Execute: pm2 start ecosystem.config.js --only $NomeProcesso --update-env"
+    }
     exit 1
 }
