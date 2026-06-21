@@ -4,3 +4,6 @@ node_modules/
 clientes.db
 database/conversas.json
 backups/
+*.log
+.julian-play.pid
+.julian-play-install.json

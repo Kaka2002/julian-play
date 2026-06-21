@@ -29,6 +29,39 @@ Para producao, configure as variaveis:
 
 Senhas antigas armazenadas em SHA-256 continuam funcionando e sao migradas automaticamente para `scrypt` depois de um login bem-sucedido.
 
+## Instalacao comercial no Windows
+
+Abra o PowerShell na pasta do projeto. Para instalar dependencias, configurar uma unica instancia no PM2 e preparar o inicio automatico:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-windows.ps1
+```
+
+Opcoes uteis:
+
+```powershell
+# Usar outra porta
+.\install-windows.ps1 -Porta 10001
+
+# Liberar a porta no Firewall (execute como Administrador)
+.\install-windows.ps1 -AbrirFirewall
+
+# Guardar banco e backups em outra pasta
+.\install-windows.ps1 -PastaDados "C:\JulianPlayDados"
+```
+
+O instalador preserva o banco `clientes.db`, a sessao `.wwebjs_auth` e os backups. Quando executado como Administrador, cria uma tarefa do Windows para restaurar o PM2 depois de reiniciar o servidor. Sem permissao administrativa, cria uma inicializacao no proximo login do usuario.
+
+As escolhas de porta, nome do processo e pasta de dados ficam em `.julian-play-install.json`. Esse arquivo e local, nao e enviado ao GitHub e e reutilizado automaticamente nas atualizacoes.
+
+Para atualizar uma instalacao existente com backup antes do `git pull`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\update-windows.ps1
+```
+
+O atualizador recusa a operacao quando existem alteracoes locais ainda nao salvas no Git. O arquivo `deploy.ps1`, usado pelo GitHub Actions, chama o mesmo atualizador seguro.
+
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 
 No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.
