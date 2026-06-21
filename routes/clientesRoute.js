@@ -47,6 +47,7 @@ const {
 const {
     criarBackupManual,
     restaurarBackup,
+    executarDiagnosticoSistema,
     obterStatusSistema
 } = require('../services/manutencao');
 const { agendarEncerramentoTeste } = require('../services/encerramentoTesteService');
@@ -1047,6 +1048,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .badge.ok { background: #c9f7e2; color: #047446; }
         .badge.info { background: #dfe9ff; color: #3158cf; }
         .badge.warn { background: #fff0d5; color: #a76100; }
+        .badge.error { background: var(--red-soft); color: #c52e35; }
         .badge.muted { background: #eef1f5; color: #576171; }
 
         .empty {
@@ -4930,6 +4932,7 @@ function telaManutencao(status = {}, opcoes = {}) {
     const backups = status.backups || [];
     const eventos = status.eventos || [];
     const licenca = status.licenca || {};
+    const diagnostico = status.diagnostico || null;
     const ultimoBackup = status.ultimoBackup
         ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
@@ -4951,6 +4954,31 @@ function telaManutencao(status = {}, opcoes = {}) {
         ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ? 'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ? 'green' : 'red', icone: 'whats' })}
         ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'Não encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
         ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Diagnóstico do sistema</h2>
+                <div class="subtitle">Verifique os serviços essenciais antes de abrir um chamado de suporte</div>
+            </div>
+            <form method="post" action="/manutencao/diagnostico">
+                <button class="button" type="submit">${icon('manutencao')} Executar diagnóstico</button>
+            </form>
+        </div>
+        ${diagnostico?.verificacoes?.length ? `<table>
+            <thead>
+                <tr><th>Verificação</th><th>Resultado</th><th>Detalhes</th></tr>
+            </thead>
+            <tbody>
+                ${diagnostico.verificacoes.map(item => `<tr>
+                    <td>${escapar(item.nome)}</td>
+                    <td><span class="badge ${item.status === 'ok' ? 'ok' : item.status === 'atencao' ? 'warn' : 'error'}">${item.status === 'ok' ? 'Saudável' : item.status === 'atencao' ? 'Atenção' : 'Erro'}</span></td>
+                    <td>${escapar(item.mensagem)}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+        <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnóstico ainda não foi executado.</div>'}
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
@@ -5841,6 +5869,17 @@ router.post('/manutencao/backup', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/diagnostico', async (req, res) => {
+    try {
+        const resultado = await executarDiagnosticoSistema(getStatusWhatsApp(), testarWebhookAlertas);
+        logControleClientes('Diagnostico do sistema executado', { status: resultado.status });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(resultado.mensagem)}`);
+    } catch (err) {
+        logControleClientes('Erro ao executar diagnostico do sistema', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
     }
 });
 

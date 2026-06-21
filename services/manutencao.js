@@ -3,7 +3,7 @@ const path = require('path');
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
-const { listarEventosSistema } = require('./eventosSistema');
+const { listarEventosSistema, registrarEventoSistema } = require('./eventosSistema');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -91,6 +91,111 @@ function calcularLicenca(config = {}) {
     };
 }
 
+function verificarBancoDados() {
+    return db.ready.then(() => new Promise((resolve, reject) => {
+        db.get('PRAGMA quick_check', (err, row) => {
+            if (err) return reject(err);
+            const resultado = String(row?.quick_check || Object.values(row || {})[0] || '');
+            if (resultado.toLowerCase() !== 'ok') {
+                return reject(new Error(resultado || 'Falha na verificação de integridade.'));
+            }
+            resolve(true);
+        });
+    }));
+}
+
+function criarResultadoDiagnostico(nome, status, mensagem) {
+    return { nome, status, mensagem };
+}
+
+async function executarDiagnosticoSistema(statusWhatsApp = {}, testarWebhook = null) {
+    const config = await obterConfiguracoes();
+    const licenca = calcularLicenca(config);
+    const verificacoes = [];
+
+    try {
+        await verificarBancoDados();
+        verificacoes.push(criarResultadoDiagnostico('Banco de dados', 'ok', 'Integridade verificada com sucesso.'));
+    } catch (err) {
+        verificacoes.push(criarResultadoDiagnostico('Banco de dados', 'erro', err.message));
+    }
+
+    let backupDiagnostico = null;
+    try {
+        backupDiagnostico = await criarBackup('diagnostico');
+        fs.unlinkSync(backupDiagnostico.caminho);
+        verificacoes.push(criarResultadoDiagnostico('Backup', 'ok', 'Criação e remoção do backup de teste concluídas.'));
+    } catch (err) {
+        if (backupDiagnostico?.caminho && fs.existsSync(backupDiagnostico.caminho)) {
+            try { fs.unlinkSync(backupDiagnostico.caminho); } catch (_) { /* Mantém o diagnóstico original. */ }
+        }
+        verificacoes.push(criarResultadoDiagnostico('Backup', 'erro', err.message));
+    }
+
+    try {
+        const disco = fs.statfsSync(db.dataDir);
+        const livres = Number(disco.bavail) * Number(disco.bsize);
+        const status = livres < 250 * 1024 * 1024 ? 'erro' : livres < 1024 * 1024 * 1024 ? 'atencao' : 'ok';
+        verificacoes.push(criarResultadoDiagnostico('Espaço em disco', status, `${formatarBytes(livres)} disponíveis.`));
+    } catch (err) {
+        verificacoes.push(criarResultadoDiagnostico('Espaço em disco', 'atencao', `Não foi possível consultar: ${err.message}`));
+    }
+
+    verificacoes.push(criarResultadoDiagnostico(
+        'WhatsApp',
+        statusWhatsApp.conectado ? 'ok' : 'erro',
+        statusWhatsApp.conectado ? 'Conectado e disponível.' : `Desconectado (${statusWhatsApp.status || 'status desconhecido'}).`
+    ));
+
+    const acessoConfigurado = Boolean(config.painelUsuario && config.painelSenhaHash);
+    verificacoes.push(criarResultadoDiagnostico(
+        'Acesso administrativo',
+        acessoConfigurado ? 'ok' : 'erro',
+        acessoConfigurado ? 'Usuário e senha configurados no banco.' : 'Configure o usuário e a senha do painel.'
+    ));
+
+    const pixConfigurado = Boolean(config.pixChave && config.pixNome && config.pixCidade);
+    verificacoes.push(criarResultadoDiagnostico(
+        'PIX',
+        pixConfigurado ? 'ok' : 'atencao',
+        pixConfigurado ? 'Dados de recebimento configurados.' : 'Complete os dados PIX para cobranças.'
+    ));
+
+    const statusLicenca = licenca.status === 'ativa'
+        ? 'ok'
+        : licenca.status === 'vencendo' || licenca.status === 'nao_configurada'
+            ? 'atencao'
+            : 'erro';
+    verificacoes.push(criarResultadoDiagnostico('Licença', statusLicenca, `${licenca.rotulo}${licenca.diasRestantes !== null ? `: ${licenca.diasRestantes} dia(s)` : ''}.`));
+
+    if (config.alertaWebhookUrl && typeof testarWebhook === 'function') {
+        try {
+            await testarWebhook(config.alertaWebhookUrl);
+            verificacoes.push(criarResultadoDiagnostico('Webhook', 'ok', 'Alerta de diagnóstico recebido pelo serviço externo.'));
+        } catch (err) {
+            verificacoes.push(criarResultadoDiagnostico('Webhook', 'erro', err.message));
+        }
+    } else {
+        verificacoes.push(criarResultadoDiagnostico('Webhook', 'atencao', 'Nenhum webhook configurado.'));
+    }
+
+    const temErro = verificacoes.some(item => item.status === 'erro');
+    const temAtencao = verificacoes.some(item => item.status === 'atencao');
+    const statusGeral = temErro ? 'erro' : temAtencao ? 'atencao' : 'ok';
+    const mensagem = statusGeral === 'ok'
+        ? 'Diagnóstico concluído: sistema saudável.'
+        : statusGeral === 'atencao'
+            ? 'Diagnóstico concluído com pontos de atenção.'
+            : 'Diagnóstico encontrou itens que precisam de correção.';
+
+    await registrarEventoSistema('diagnostico', statusGeral === 'atencao' ? 'alerta' : statusGeral, mensagem, {
+        status: statusGeral,
+        verificacoes
+    });
+
+    return { status: statusGeral, mensagem, verificacoes };
+}
+
 async function criarBackup(prefixo = 'clientes') {
     await db.ready;
 
@@ -176,6 +281,18 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const backups = listarBackups();
     const config = await obterConfiguracoes();
     const eventos = await listarEventosSistema(20);
+    const ultimoEventoDiagnostico = eventos.find(evento => evento.tipo === 'diagnostico');
+    let diagnostico = null;
+
+    if (ultimoEventoDiagnostico?.detalhes) {
+        try {
+            diagnostico = JSON.parse(ultimoEventoDiagnostico.detalhes);
+            diagnostico.mensagem = ultimoEventoDiagnostico.mensagem;
+            diagnostico.criadoEm = ultimoEventoDiagnostico.criadoEm;
+        } catch (_) {
+            diagnostico = null;
+        }
+    }
 
     return {
         versao: packageInfo.version || '1.0.0',
@@ -191,6 +308,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         ultimoBackup: backups[0] || null,
         backups: backups.slice(0, 8),
         eventos,
+        diagnostico,
         config,
         licenca: calcularLicenca(config),
         whatsapp: statusWhatsApp
@@ -202,6 +320,7 @@ module.exports = {
     criarBackupAutomatico,
     limparBackupsAutomaticos,
     restaurarBackup,
+    executarDiagnosticoSistema,
     obterStatusSistema,
     formatarBytes
 };
