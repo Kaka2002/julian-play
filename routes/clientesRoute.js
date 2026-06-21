@@ -73,6 +73,7 @@ const {
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const { enviarMensagem } = require('../services/mensagemService');
 const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('../services/pixService');
+const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -5029,6 +5030,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca são apagados pela retenção automática.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
+                <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
             </div>
         </form>
     </section>
@@ -5980,6 +5982,17 @@ router.post('/manutencao/monitoramento', async (req, res) => {
     } catch (err) {
         logControleClientes('Erro ao salvar monitoramento comercial', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar monitoramento: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/monitoramento/testar', async (req, res) => {
+    try {
+        await testarWebhookAlertas(req.body.alertaWebhookUrl);
+        logControleClientes('Alerta de teste enviado ao webhook');
+        res.redirect('/manutencao?mensagem=Alerta de teste enviado com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao testar webhook de alertas', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao enviar teste: ${err.message}`)}`);
     }
 });
 

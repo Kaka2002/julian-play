@@ -62,6 +62,44 @@ async function enviarWebhook(url, evento) {
     }
 }
 
+async function testarWebhookAlertas(url) {
+    const webhook = String(url || '').trim();
+
+    if (!webhook) {
+        throw new Error('Informe a URL HTTPS do webhook antes de testar.');
+    }
+
+    if (!/^https:\/\//i.test(webhook)) {
+        throw new Error('O webhook de alerta precisa usar HTTPS.');
+    }
+
+    const agora = agoraSaoPaulo();
+    const resposta = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            content: 'Teste de alerta concluído. O monitoramento do Controle de Clientes está configurado corretamente.',
+            tipo: 'alerta_teste',
+            nivel: 'info',
+            mensagem: 'Teste de alerta concluído. O monitoramento do Controle de Clientes está configurado corretamente.',
+            data: agora.iso
+        }),
+        signal: AbortSignal.timeout(15000)
+    });
+
+    if (!resposta.ok) {
+        throw new Error(`O serviço recusou o teste (HTTP ${resposta.status}).`);
+    }
+
+    await registrarEventoSistema(
+        'monitoramento',
+        'sucesso',
+        'Alerta de teste enviado ao webhook com sucesso.'
+    );
+
+    return true;
+}
+
 async function verificarBackup(config, agora) {
     if (String(config.backupAutomaticoAtivo) !== '1') return;
     if (agora.hora < String(config.backupAutomaticoHora || '03:00')) return;
@@ -158,5 +196,6 @@ function iniciarMonitoramentoComercial({ getStatusWhatsApp } = {}) {
 module.exports = {
     iniciarMonitoramentoComercial,
     executarMonitoramento,
-    agoraSaoPaulo
+    agoraSaoPaulo,
+    testarWebhookAlertas
 };
