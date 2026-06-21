@@ -60,7 +60,7 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
 }
 
 router.get('/', (req, res) => {
-    res.redirect('/qr');
+    res.redirect('/clientes');
 });
 
 router.get('/status', (req, res) => {
