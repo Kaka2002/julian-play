@@ -21,7 +21,8 @@ if (-not $Senha) {
 }
 if ($Senha.Length -lt 8) { throw 'A senha do Painel Mestre precisa ter pelo menos 8 caracteres.' }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Node.js nao encontrado.' }
-if (-not (Get-Command pm2.cmd -ErrorAction SilentlyContinue)) { throw 'PM2 nao encontrado.' }
+$pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+if (-not $pm2) { throw 'PM2 nao encontrado.' }
 
 Etapa 'Gerando credenciais seguras do Painel Mestre'
 $env:JULIAN_MASTER_PASSWORD_TEMP = $Senha
@@ -79,10 +80,14 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Etapa 'Iniciando o Painel Mestre'
-pm2 delete julian-master 2>$null | Out-Host
-pm2 start (Join-Path $projeto 'master\ecosystem.config.js') --only julian-master
+try {
+    & $pm2.Source delete julian-master 2>$null | Out-Host
+} catch {
+    # Na primeira instalacao o processo ainda nao existe.
+}
+& $pm2.Source start (Join-Path $projeto 'master\ecosystem.config.js') --only julian-master
 if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel iniciar julian-master no PM2.' }
-pm2 save --force
+& $pm2.Source save --force
 & $caddyExe reload --config $caddyFile
 if ($LASTEXITCODE -ne 0) { throw 'Painel iniciado, mas o Caddy nao recarregou.' }
 
@@ -90,4 +95,4 @@ Etapa 'Painel Mestre instalado'
 Write-Host "URL: https://$Dominio" -ForegroundColor Green
 Write-Host "Usuario: $Usuario" -ForegroundColor Yellow
 Write-Host 'Cadastre no DNS um registro A para gestao e um registro A curinga (*) apontando para este servidor.' -ForegroundColor Yellow
-pm2 status
+& $pm2.Source status
