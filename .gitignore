@@ -7,3 +7,5 @@ backups/
 *.log
 .julian-play.pid
 .julian-play-install.json
+.julian-master-install.json
+master/data/

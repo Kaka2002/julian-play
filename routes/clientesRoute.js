@@ -79,7 +79,8 @@ const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
 const CODIGO_COBRANCA_VENCIDO = -90;
-const ASSETS_DIR = path.join(__dirname, '..', 'assets');
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 const CLIENTES_POR_PAGINA = 10;
@@ -1987,6 +1988,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
                 <a class="navlink ${ativo === 'financeiro' ? 'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
+                <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
                 <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
@@ -6141,7 +6143,7 @@ router.post('/configuracoes/logo', async (req, res) => {
         const config = await obterConfiguracoes();
         await salvarConfiguracoesPainel({
             nomeSistema: config.nomeSistema,
-            logoUrl: `/assets/${nomeArquivo}?v=${Date.now()}`
+            logoUrl: `/tenant-assets/${nomeArquivo}?v=${Date.now()}`
         });
 
         res.redirect('/modelos?mensagem=Logo atualizada com sucesso');

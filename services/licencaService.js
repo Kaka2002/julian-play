@@ -3,84 +3,12 @@ const {
     obterConfiguracoes,
     salvarConfiguracao
 } = require('./configuracoesPainel');
-
-function dataHojeSaoPaulo() {
-    const partes = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Sao_Paulo',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    }).formatToParts(new Date()).reduce((mapa, item) => {
-        mapa[item.type] = item.value;
-        return mapa;
-    }, {});
-
-    return `${partes.year}-${partes.month}-${partes.day}`;
-}
-
-function adicionarDias(dataIso, dias) {
-    const data = new Date(`${dataIso}T12:00:00Z`);
-    data.setUTCDate(data.getUTCDate() + Number(dias || 0));
-    return data.toISOString().slice(0, 10);
-}
+const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('./licencaCalculo');
 
 function compararSeguro(a, b) {
     const bufferA = Buffer.from(String(a || ''));
     const bufferB = Buffer.from(String(b || ''));
     return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB);
-}
-
-function calcularEstadoLicenca(config = {}) {
-    const bloqueioAtivo = String(config.licencaBloqueioAtivo || '0') === '1';
-    const vitalicia = String(config.licencaVitalicia || '0') === '1' || config.licencaTipo === 'vitalicia';
-    const vencimento = String(config.licencaVencimento || '').slice(0, 10);
-    const hoje = dataHojeSaoPaulo();
-    const tipo = config.licencaTipo || (vitalicia ? 'vitalicia' : vencimento ? 'assinatura' : 'nao_configurada');
-    let diasRestantes = null;
-    let status = 'nao_configurada';
-    let rotulo = 'Não configurada';
-    let permitida = !bloqueioAtivo;
-
-    if (vitalicia && String(config.licencaCliente || '').trim()) {
-        status = 'ativa';
-        rotulo = 'Vitalícia';
-        permitida = true;
-    } else if (vencimento) {
-        const hojeData = new Date(`${hoje}T00:00:00Z`);
-        const vencimentoData = new Date(`${vencimento}T00:00:00Z`);
-        diasRestantes = Math.ceil((vencimentoData - hojeData) / 86400000);
-
-        if (diasRestantes < 0) {
-            status = 'vencida';
-            rotulo = tipo === 'avaliacao' ? 'Avaliação encerrada' : 'Vencida';
-            permitida = !bloqueioAtivo;
-        } else if (diasRestantes <= 7) {
-            status = 'vencendo';
-            rotulo = tipo === 'avaliacao' ? 'Avaliação terminando' : 'Vencendo';
-            permitida = true;
-        } else {
-            status = 'ativa';
-            rotulo = tipo === 'avaliacao' ? 'Em avaliação' : 'Ativa';
-            permitida = true;
-        }
-    }
-
-    return {
-        cliente: config.licencaCliente || '',
-        telefone: config.licencaTelefone || '',
-        ativacao: config.licencaAtivacao || '',
-        vencimento,
-        vitalicia,
-        tipo,
-        periodoTesteDias: Number(config.licencaPeriodoTesteDias || 0),
-        observacoes: config.licencaObservacoes || '',
-        instalacaoId: config.instalacaoId || '',
-        bloqueioAtivo,
-        diasRestantes,
-        status,
-        rotulo,
-        permitida
-    };
 }
 
 async function garantirIdentificadorInstalacao(config) {
@@ -92,16 +20,32 @@ async function garantirIdentificadorInstalacao(config) {
 
 async function inicializarAvaliacaoPadrao(config) {
     const dias = Number(process.env.LICENSE_DEFAULT_TRIAL_DAYS || 0);
-    if (String(config.licencaBloqueioAtivo || '0') === '1' || ![15, 30].includes(dias)) return config;
+    const modo = String(process.env.LICENSE_DEFAULT_MODE || '').trim().toLowerCase();
+    if (String(config.licencaBloqueioAtivo || '0') === '1') return config;
+
+    if (modo === 'vitalicia') {
+        await salvarConfiguracao('licencaCliente', process.env.LICENSE_CUSTOMER_NAME || 'Cliente licenciado');
+        await salvarConfiguracao('licencaAtivacao', dataHojeSaoPaulo());
+        await salvarConfiguracao('licencaVencimento', '');
+        await salvarConfiguracao('licencaVitalicia', '1');
+        await salvarConfiguracao('licencaTipo', 'vitalicia');
+        await salvarConfiguracao('licencaPeriodoTesteDias', '0');
+        await salvarConfiguracao('licencaBloqueioAtivo', '1');
+        await salvarConfiguracao('licencaSuspensa', '0');
+        return obterConfiguracoes();
+    }
+
+    if (![15, 30].includes(dias)) return config;
 
     const hoje = dataHojeSaoPaulo();
-    await salvarConfiguracao('licencaCliente', config.licencaCliente || 'Instalação em avaliação');
+    await salvarConfiguracao('licencaCliente', process.env.LICENSE_CUSTOMER_NAME || config.licencaCliente || 'Instalação em avaliação');
     await salvarConfiguracao('licencaAtivacao', hoje);
     await salvarConfiguracao('licencaVencimento', adicionarDias(hoje, dias));
     await salvarConfiguracao('licencaVitalicia', '0');
     await salvarConfiguracao('licencaTipo', 'avaliacao');
     await salvarConfiguracao('licencaPeriodoTesteDias', String(dias));
     await salvarConfiguracao('licencaBloqueioAtivo', '1');
+    await salvarConfiguracao('licencaSuspensa', '0');
 
     return obterConfiguracoes();
 }
@@ -160,6 +104,7 @@ async function atualizarLicencaComercial(dados = {}) {
     await salvarConfiguracao('licencaTipo', tipoSalvo);
     await salvarConfiguracao('licencaPeriodoTesteDias', periodoTesteDias);
     await salvarConfiguracao('licencaBloqueioAtivo', '1');
+    await salvarConfiguracao('licencaSuspensa', '0');
     await salvarConfiguracao('licencaObservacoes', dados.licencaObservacoes || '');
 
     return obterEstadoLicenca();

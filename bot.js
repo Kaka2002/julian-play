@@ -93,6 +93,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/tenant-assets', express.static(path.join(DATA_DIR, 'assets')));
 app.use('/', authRoute);
 
 app.get('/health', (req, res) => {
@@ -103,7 +104,8 @@ app.get('/health', (req, res) => {
         service: 'julian-play',
         whatsapp: {
             conectado: Boolean(whatsapp.conectado),
-            status: whatsapp.status
+            status: whatsapp.status,
+            numero: whatsapp.numeroConectado || ''
         },
         uptime: process.uptime(),
         timestamp: new Date().toISOString()

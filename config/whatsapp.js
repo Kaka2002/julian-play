@@ -434,7 +434,8 @@ function getStatusWhatsApp() {
         authDataPath: AUTH_DATA_PATH,
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
-        protocolTimeoutMs: PROTOCOL_TIMEOUT_MS
+        protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
+        numeroConectado: client?.info?.wid?.user || ''
     };
 }
 

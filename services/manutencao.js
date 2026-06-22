@@ -4,7 +4,7 @@ const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarEventosSistema, registrarEventoSistema } = require('./eventosSistema');
-const { calcularEstadoLicenca } = require('./licencaService');
+const { calcularEstadoLicenca } = require('./licencaCalculo');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 

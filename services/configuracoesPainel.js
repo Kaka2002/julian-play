@@ -32,6 +32,7 @@ async function obterConfiguracoes() {
         licencaTipo: '',
         licencaPeriodoTesteDias: '0',
         licencaBloqueioAtivo: '0',
+        licencaSuspensa: '0',
         instalacaoId: '',
         licencaObservacoes: '',
         pixChave: process.env.CHAVE_PIX || '61319147704',

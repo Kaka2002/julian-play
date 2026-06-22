@@ -133,9 +133,19 @@ if ($backup) {
 }
 
 $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+$processosPausados = @()
 if ($pm2) {
-    Etapa 'Parando a instancia anterior antes de atualizar dependencias'
-    & $pm2.Source stop $NomeProcesso 2>$null | Out-Host
+    Etapa 'Parando as instalacoes Julian Play antes de atualizar dependencias'
+    try {
+        $listaPm2 = (& $pm2.Source jlist | ConvertFrom-Json)
+        $processosPausados = @($listaPm2 | Where-Object { $_.name -like 'julian-*' } | Select-Object -ExpandProperty name -Unique)
+    } catch {
+        $processosPausados = @($NomeProcesso)
+    }
+    if ($NomeProcesso -notin $processosPausados) { $processosPausados += $NomeProcesso }
+    foreach ($processo in $processosPausados) {
+        & $pm2.Source stop $processo 2>$null | Out-Host
+    }
     Start-Sleep -Seconds 4
 }
 
@@ -181,6 +191,10 @@ $env:JULIAN_PLAY_DATA_DIR = $PastaDados
 & $pm2.Source start (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
 if ($LASTEXITCODE -ne 0) {
     throw "PM2 start terminou com codigo $LASTEXITCODE."
+}
+foreach ($processo in ($processosPausados | Where-Object { $_ -ne $NomeProcesso })) {
+    & $pm2.Source restart $processo
+    if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel reiniciar $processo." }
 }
 & $pm2.Source save --force
 if ($LASTEXITCODE -ne 0) {

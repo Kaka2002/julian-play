@@ -42,6 +42,15 @@ $PastaDados = [IO.Path]::GetFullPath($PastaDados)
 
 $npm = ExigirComando 'npm.cmd'
 $pm2 = ExigirComando 'pm2.cmd'
+$processosJulian = @()
+try {
+    $listaPm2 = (& $pm2.Source jlist | ConvertFrom-Json)
+    $processosJulian = @($listaPm2 | Where-Object { $_.name -like 'julian-*' } | Select-Object -ExpandProperty name -Unique)
+} catch {
+    Write-Warning 'Nao foi possivel listar todos os processos; o processo principal ainda sera atualizado.'
+}
+if ($NomeProcesso -notin $processosJulian) { $processosJulian += $NomeProcesso }
+
 $git = $null
 if (-not $PularGit) {
     $git = ExigirComando 'git.exe'
@@ -54,10 +63,12 @@ if (-not $PularGit) {
     }
 }
 
-Etapa 'Parando o aplicativo com seguranca'
-& $pm2.Source stop $NomeProcesso
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning 'O processo nao estava cadastrado no PM2; a atualizacao continuara.'
+Etapa 'Parando as instalacoes Julian Play com seguranca'
+foreach ($processo in $processosJulian) {
+    & $pm2.Source stop $processo
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "O processo $processo nao estava ativo; a atualizacao continuara."
+    }
 }
 Start-Sleep -Seconds 4
 
@@ -72,6 +83,25 @@ try {
         Write-Host "Backup criado: $destino" -ForegroundColor Green
     } else {
         Write-Warning 'Banco clientes.db nao encontrado na pasta de dados informada.'
+    }
+
+    $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
+    if (Test-Path -LiteralPath $arquivoMaster) {
+        $configMaster = Get-Content -LiteralPath $arquivoMaster -Raw | ConvertFrom-Json
+        if ($configMaster.clientsDir -and (Test-Path -LiteralPath $configMaster.clientsDir)) {
+            Get-ChildItem -LiteralPath $configMaster.clientsDir -Directory |
+                Where-Object { $_.Name -ne '_arquivados' } |
+                ForEach-Object {
+                    $bancoCliente = Join-Path $_.FullName 'clientes.db'
+                    if (Test-Path -LiteralPath $bancoCliente) {
+                        $backupsCliente = Join-Path $_.FullName 'backups'
+                        New-Item -ItemType Directory -Path $backupsCliente -Force | Out-Null
+                        $backupCliente = Join-Path $backupsCliente ("antes-atualizar-{0}.db" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+                        Copy-Item -LiteralPath $bancoCliente -Destination $backupCliente -Force
+                        Write-Host "Backup do cliente criado: $backupCliente" -ForegroundColor Green
+                    }
+                }
+        }
     }
 
     if (-not $PularGit) {
@@ -104,6 +134,10 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "PM2 startOrReload terminou com codigo $LASTEXITCODE."
     }
+    foreach ($processo in ($processosJulian | Where-Object { $_ -ne $NomeProcesso })) {
+        & $pm2.Source restart $processo
+        if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel reiniciar $processo." }
+    }
     & $pm2.Source save --force
     if ($LASTEXITCODE -ne 0) {
         throw "PM2 save terminou com codigo $LASTEXITCODE."
@@ -118,6 +152,9 @@ try {
     try {
         & $pm2.Source startOrReload (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
         if ($LASTEXITCODE -eq 0) {
+            foreach ($processo in ($processosJulian | Where-Object { $_ -ne $NomeProcesso })) {
+                & $pm2.Source restart $processo 2>$null | Out-Host
+            }
             & $pm2.Source save --force
             Write-Warning 'O aplicativo foi reiniciado, mas a atualizacao precisa ser corrigida.'
         } else {

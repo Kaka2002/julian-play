@@ -70,6 +70,18 @@ O atualizador recusa a operacao quando existem alteracoes locais ainda nao salva
 
 Como o servidor utiliza o Google Chrome ja instalado, os scripts definem `PUPPETEER_SKIP_DOWNLOAD=true` durante o `npm ci`. Assim, uma atualizacao nao tenta baixar uma segunda copia do navegador.
 
+## Painel Mestre comercial
+
+O Painel Mestre cria instalacoes isoladas com URL, porta, banco, sessao do WhatsApp, logo e processo PM2 proprios. No DNS, crie registros `A` para `gestao` e `*`, ambos apontando para o IP do servidor. Depois execute como Administrador:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\install-master-windows.ps1
+```
+
+O acesso padrao sera `https://gestao.julianplay.com.br`. Cada nova instalacao recebe um subdominio, banco em `C:\JulianPlayClientes`, avaliacao de 15/30 dias ou licenca definitiva. O cadastro tambem guarda o WhatsApp esperado e o horario individual dos avisos. O numero precisa ser conectado pelo QR Code dentro do painel do cliente; apenas informa-lo no Painel Mestre nao conecta o WhatsApp.
+
+Cada cliente comercial possui um robo independente. Ao converter uma avaliacao em definitiva, o mesmo banco e a mesma sessao sao preservados. Instalacoes abandonadas devem ser arquivadas antes da exclusao definitiva. O atualizador para todas as instalacoes `julian-*`, cria backups dos bancos e reinicia os processos para evitar arquivos em uso durante o `npm ci`.
+
 O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato brasileiro com DDI `55`.
 
 No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.
