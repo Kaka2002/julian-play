@@ -230,7 +230,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 foreach ($processo in ($processosPausados | Where-Object { $_ -ne $NomeProcesso })) {
     & $pm2.Source restart $processo
-    if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel reiniciar $processo." }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Nao foi possivel reiniciar $processo. Se for uma instalacao incompleta, recrie pelo Painel Mestre."
+    }
 }
 & $pm2.Source save --force
 if ($LASTEXITCODE -ne 0) {
