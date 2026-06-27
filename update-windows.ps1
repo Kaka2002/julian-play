@@ -35,6 +35,48 @@ function ExigirComando([string]$nome) {
     return $comando
 }
 
+function AdicionarProcessoJulian([System.Collections.Generic.List[string]]$lista, [string]$nome) {
+    $nomeLimpo = [string]$nome
+    if ($nomeLimpo -and $nomeLimpo -like 'julian-*' -and -not $lista.Contains($nomeLimpo)) {
+        $lista.Add($nomeLimpo)
+    }
+}
+
+function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
+    $nomes = [System.Collections.Generic.List[string]]::new()
+
+    try {
+        $saida = (& $pm2.Source jlist --silent 2>$null) -join "`n"
+        $inicioJson = $saida.IndexOf('[')
+        if ($inicioJson -ge 0) {
+            $listaPm2 = $saida.Substring($inicioJson) | ConvertFrom-Json
+            @($listaPm2 | Where-Object { $_.name -like 'julian-*' } | Select-Object -ExpandProperty name -Unique) |
+                ForEach-Object { AdicionarProcessoJulian $nomes $_ }
+        }
+    } catch {
+        Write-Warning 'Nao foi possivel listar todos os processos pelo PM2; usando a lista conhecida.'
+    }
+
+    AdicionarProcessoJulian $nomes $nomePrincipal
+    AdicionarProcessoJulian $nomes 'julian-master'
+
+    $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
+    if (Test-Path -LiteralPath $arquivoMaster) {
+        try {
+            $configMaster = Get-Content -LiteralPath $arquivoMaster -Raw | ConvertFrom-Json
+            if ($configMaster.clientsDir -and (Test-Path -LiteralPath $configMaster.clientsDir)) {
+                Get-ChildItem -LiteralPath $configMaster.clientsDir -Directory |
+                    Where-Object { $_.Name -ne '_arquivados' } |
+                    ForEach-Object { AdicionarProcessoJulian $nomes "julian-$($_.Name)" }
+            }
+        } catch {
+            Write-Warning 'Nao foi possivel ler as instalacoes comerciais; a atualizacao continuara.'
+        }
+    }
+
+    return @($nomes)
+}
+
 if (-not $PastaDados) {
     $PastaDados = if ($env:JULIAN_PLAY_DATA_DIR) { $env:JULIAN_PLAY_DATA_DIR } else { $diretorioProjeto }
 }
@@ -42,14 +84,7 @@ $PastaDados = [IO.Path]::GetFullPath($PastaDados)
 
 $npm = ExigirComando 'npm.cmd'
 $pm2 = ExigirComando 'pm2.cmd'
-$processosJulian = @()
-try {
-    $listaPm2 = (& $pm2.Source jlist | ConvertFrom-Json)
-    $processosJulian = @($listaPm2 | Where-Object { $_.name -like 'julian-*' } | Select-Object -ExpandProperty name -Unique)
-} catch {
-    Write-Warning 'Nao foi possivel listar todos os processos; o processo principal ainda sera atualizado.'
-}
-if ($NomeProcesso -notin $processosJulian) { $processosJulian += $NomeProcesso }
+$processosJulian = ObterProcessosJulian $pm2 $NomeProcesso
 
 $git = $null
 if (-not $PularGit) {
