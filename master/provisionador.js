@@ -30,10 +30,9 @@ function executarComando(arquivo, args = []) {
     return new Promise((resolve, reject) => {
         const extensao = path.extname(arquivo).toLowerCase();
         const executarViaCmd = process.platform === 'win32' && (extensao === '.cmd' || extensao === '.bat');
-        const comando = executarViaCmd ? (process.env.ComSpec || 'cmd.exe') : arquivo;
-        const argumentos = executarViaCmd ? ['/d', '/s', '/c', `"${arquivo}" ${args.map(argumentoCmd).join(' ')}`] : args;
+        const opcoes = { windowsHide: true, shell: executarViaCmd };
 
-        execFile(comando, argumentos, { windowsHide: true }, (err, stdout, stderr) => {
+        execFile(arquivo, args, opcoes, (err, stdout, stderr) => {
             if (err) {
                 err.detalhes = String(stderr || stdout || err.message).trim();
                 return reject(err);
@@ -41,12 +40,6 @@ function executarComando(arquivo, args = []) {
             resolve(String(stdout || stderr || '').trim());
         });
     });
-}
-
-function argumentoCmd(valor) {
-    const texto = String(valor ?? '');
-    if (!/[ \t"&|<>^]/.test(texto)) return texto;
-    return `"${texto.replace(/"/g, '\\"')}"`;
 }
 
 function consultarSaude(porta) {
