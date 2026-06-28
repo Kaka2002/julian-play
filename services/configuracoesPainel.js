@@ -35,6 +35,15 @@ async function obterConfiguracoes() {
         licencaSuspensa: '0',
         instalacaoId: '',
         licencaObservacoes: '',
+        nomeEmpresaRobo: process.env.LICENSE_CUSTOMER_NAME || process.env.NOME_EMPRESA_ROBO || 'JULIAN PLAY',
+        imagemRoboMenu: 'Logo 1_7.png',
+        imagemRoboPlanos: 'Plano.png',
+        imagemRoboTeste: '',
+        imagemRoboTesteLiberado: '',
+        imagemRoboRenovacao: '',
+        imagemRoboAtivacao: '',
+        imagemRoboErro: '',
+        imagemRoboEncerramento: '',
         pixChave: process.env.CHAVE_PIX || '61319147704',
         pixNome: process.env.PIX_NOME || 'JULIAN PLAY',
         pixCidade: process.env.PIX_CIDADE || 'SAO PAULO',
@@ -100,6 +109,39 @@ async function salvarConfiguracoesPainel(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesRobo(dados = {}) {
+    const nomeEmpresa = String(dados.nomeEmpresaRobo || '').trim();
+
+    if (!nomeEmpresa) {
+        throw new Error('Informe o nome da empresa que aparecera nas mensagens.');
+    }
+
+    await salvarConfiguracao('nomeEmpresaRobo', nomeEmpresa);
+
+    return obterConfiguracoes();
+}
+
+async function salvarImagemRobo(chave, nomeArquivo) {
+    const camposPermitidos = new Set([
+        'imagemRoboMenu',
+        'imagemRoboPlanos',
+        'imagemRoboTeste',
+        'imagemRoboTesteLiberado',
+        'imagemRoboRenovacao',
+        'imagemRoboAtivacao',
+        'imagemRoboErro',
+        'imagemRoboEncerramento'
+    ]);
+
+    if (!camposPermitidos.has(chave)) {
+        throw new Error('Tipo de imagem do robo invalido.');
+    }
+
+    await salvarConfiguracao(chave, nomeArquivo || '');
+
+    return obterConfiguracoes();
+}
+
 async function salvarConfiguracoesPix(dados = {}) {
     const chave = String(dados.pixChave || '').trim();
     const nome = String(dados.pixNome || '').trim();
@@ -153,6 +195,8 @@ module.exports = {
     obterConfiguracoes,
     salvarConfiguracao,
     salvarConfiguracoesPainel,
+    salvarConfiguracoesRobo,
+    salvarImagemRobo,
     salvarConfiguracoesPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso

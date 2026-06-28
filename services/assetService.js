@@ -3,8 +3,10 @@ const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const tenantAssetsDir = path.join(DATA_DIR, 'assets');
 const assetsDir = path.join(__dirname, '..', 'assets');
-const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_IMAGEM_TIMEOUT_MS || 10000);
+const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_IMAGEM_TIMEOUT_MS || 30000);
 const MAX_ASSET_BYTES = Number(process.env.MAX_ASSET_BYTES || 3000000);
 const ENVIAR_IMAGENS = process.env.ENVIAR_IMAGENS !== 'false';
 
@@ -24,7 +26,12 @@ function comTimeout(promessa, ms, descricao) {
 function caminhoAsset(nomeArquivo) {
     if (!nomeArquivo) return null;
 
-    return path.join(assetsDir, nomeArquivo);
+    const arquivoSeguro = path.basename(String(nomeArquivo).split('?')[0]);
+    const tenantAsset = path.join(tenantAssetsDir, arquivoSeguro);
+
+    if (fs.existsSync(tenantAsset)) return tenantAsset;
+
+    return path.join(assetsDir, arquivoSeguro);
 }
 
 function assetExiste(nomeArquivo) {
@@ -73,6 +80,45 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
     }
 }
 
+async function enviarImagem(message, nomeArquivo) {
+    if (!ENVIAR_IMAGENS) return false;
+    if (!assetExiste(nomeArquivo)) return false;
+
+    try {
+        const arquivo = caminhoAsset(nomeArquivo);
+        const tamanho = fs.statSync(arquivo).size;
+
+        if (tamanho > MAX_ASSET_BYTES) {
+            console.log(`Imagem ${nomeArquivo} ignorada: ${tamanho} bytes acima do limite ${MAX_ASSET_BYTES}`);
+            return false;
+        }
+
+        const media = MessageMedia.fromFilePath(arquivo);
+        const destino = message?.fromMe && message?.to ? message.to : message.from;
+        console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
+
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
+        const enviada = await comTimeout(
+            chat.sendMessage(media),
+            ENVIO_TIMEOUT_MS,
+            'Envio de imagem'
+        );
+
+        console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
+        registrarMensagemDoRobo(enviada);
+        return true;
+    } catch (err) {
+        console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);
+
+        if (err.isTimeout) {
+            console.log('Envio da imagem pode terminar em segundo plano.');
+        }
+
+        return false;
+    }
+}
+
 module.exports = {
-    enviarImagemComLegenda
+    enviarImagemComLegenda,
+    enviarImagem
 };

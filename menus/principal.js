@@ -17,13 +17,14 @@ function getSaudacao() {
     return 'Boa noite';
 }
 
-function menuPrincipal(nome = '') {
+function menuPrincipal(nome = '', nomeEmpresa = 'Nossa empresa') {
     const tratamento = nome ? `, ${nome}` : '';
+    const empresa = nomeEmpresa || 'Nossa empresa';
 
     return `${getSaudacao()}${tratamento}! Seja bem-vindo(a).
 
-📺 *JULIAN PLAY*
-━━━━━━━━━━━━━━━━━━━━
+📺 *${empresa.toUpperCase()}*
+--------------------
 Sua melhor experiência em TV online.
 
 Escolha uma opção:

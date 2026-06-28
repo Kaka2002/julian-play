@@ -2,6 +2,7 @@ const QRCode = require('qrcode');
 const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
+const { listarTiposPlanos } = require('./tiposPlanos');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '61319147704';
 const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY';
@@ -55,6 +56,39 @@ function configuracaoPixPadrao() {
     };
 }
 
+function valorPlanoParaNumero(valor) {
+    const numero = Number(String(valor || '0').replace(/\./g, '').replace(',', '.'));
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function planoEhTesteGratis(plano = {}) {
+    const nome = normalizarNomePlano(plano.nome);
+    return nome.includes('teste') || valorPlanoParaNumero(plano.valor) <= 0;
+}
+
+async function listarPlanosComerciais() {
+    try {
+        const planosBanco = await listarTiposPlanos();
+        return planosBanco
+            .filter(plano => Number(plano.ativo ?? 1) !== 0)
+            .filter(plano => !planoEhTesteGratis(plano))
+            .map((plano, index) => ({
+                id: plano.id,
+                opcao: String(index + 1),
+                nome: plano.nome,
+                valor: plano.valor || '0,00',
+                dias: Number(plano.dias || 0),
+                arquivoQr: `pix_${normalizarNomePlano(plano.nome).replace(/[^a-z0-9]+/g, '_') || index + 1}.png`
+            }));
+    } catch (err) {
+        console.log(`PIX: usando planos padrao porque nao foi possivel ler os planos cadastrados: ${err.message}`);
+        return Object.entries(planos).map(([opcao, plano]) => ({
+            ...plano,
+            opcao
+        }));
+    }
+}
+
 async function obterConfiguracaoPix() {
     try {
         const config = await obterConfiguracoes();
@@ -70,8 +104,9 @@ async function obterConfiguracaoPix() {
     }
 }
 
-function buscarPlano(opcao) {
-    return planos[opcao] || null;
+async function buscarPlano(opcao) {
+    const planosComerciais = await listarPlanosComerciais();
+    return planosComerciais.find(plano => plano.opcao === String(opcao)) || null;
 }
 
 function normalizarNomePlano(valor) {
@@ -123,9 +158,10 @@ function crc16(payload) {
 }
 
 function gerarPixCopiaECola(plano, configPix = configuracaoPixPadrao()) {
+    const identificacao = normalizarCampo(`${configPix.nome || PIX_NOME} ${plano.nome}`, 50);
     const merchantAccount = campo('00', 'br.gov.bcb.pix') +
         campo('01', configPix.chave) +
-        campo('02', `JULIAN PLAY ${plano.nome}`);
+        campo('02', identificacao);
 
     const payloadSemCRC =
         campo('00', '01') +
@@ -260,6 +296,7 @@ ${RODAPE_ATENDIMENTO}`),
 module.exports = {
     buscarPlano,
     buscarPlanoPorNome,
+    listarPlanosComerciais,
     enviarQRCodePIX,
     enviarQRCodePIXParaDestino,
     gerarPixCopiaECola,

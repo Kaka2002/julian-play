@@ -1,19 +1,13 @@
-function menuPlanos() {
-    return `*PLANOS JULIAN PLAY*
+function menuPlanos(planos = [], nomeEmpresa = 'Nossa empresa') {
+    const linhasPlanos = planos.length
+        ? planos.map((plano, index) => `*${index + 1}* - ${plano.nome}\nR$ ${plano.valor}`).join('\n\n')
+        : 'Nenhum plano disponível no momento.';
+
+    return `*PLANOS ${String(nomeEmpresa || '').toUpperCase()}*
 --------------------
 Escolha o plano ideal para você:
 
-*1* - Mensal
-R$ 35,00
-
-*2* - Trimestral
-R$ 96,00
-
-*3* - Semestral
-R$ 180,00
-
-*4* - Anual
-R$ 336,00
+${linhasPlanos}
 
 *0* - Voltar
 
@@ -22,7 +16,7 @@ Para ativar o plano, tenha em mãos:
 *Nome completo*
 *WhatsApp*
 *Data de nascimento*
-*Aparelho que vai usar*
+*Dispositivo que vai usar*
 
 Digite apenas o número do plano desejado.`;
 }

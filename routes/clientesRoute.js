@@ -39,6 +39,8 @@ const {
 const {
     obterConfiguracoes,
     salvarConfiguracoesPainel,
+    salvarConfiguracoesRobo,
+    salvarImagemRobo,
     salvarConfiguracoesPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
@@ -272,6 +274,39 @@ function lerUploadMultipart(req) {
 
 function extensaoLogoPermitida(nome) {
     return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(path.extname(nome).toLowerCase());
+}
+
+function nomeImagemRobo(chave) {
+    return String(chave || '')
+        .replace(/^imagemRobo/, '')
+        .replace(/([A-Z])/g, ' $1')
+        .trim()
+        || 'Imagem';
+}
+
+function campoImagemRobo(config = {}, chave, descricao) {
+    const arquivo = config[chave] || '';
+    const arquivoSeguro = path.basename(String(arquivo).split('?')[0]);
+    const origem = arquivoSeguro && fs.existsSync(path.join(ASSETS_DIR, arquivoSeguro))
+        ? `/tenant-assets/${escapar(arquivoSeguro)}?v=${Date.now()}`
+        : arquivoSeguro
+            ? `/assets/${escapar(arquivoSeguro)}`
+            : '';
+    const preview = arquivo
+        ? `<div class="subtitle">Atual: ${escapar(arquivoSeguro)}</div><img class="brand-logo" src="${origem}" alt="${escapar(descricao)}" style="width:54px;height:54px;margin-top:8px;">`
+        : '<div class="subtitle">Nenhuma imagem configurada</div>';
+
+    return `<div class="panel mini-card" style="padding:14px;">
+        <strong>${escapar(descricao)}</strong>
+        ${preview}
+        <form method="post" action="/manutencao/robo/imagem/${escapar(chave)}" enctype="multipart/form-data" style="margin-top:10px;">
+            <label class="logo-upload">
+                Escolher imagem
+                <input type="file" name="imagem" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
+                <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar</span>
+            </label>
+        </form>
+    </div>`;
 }
 
 function formatarData(dataISO) {
@@ -4975,7 +5010,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
     </section>
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Diagnóstico do sistema</h2>
@@ -4998,7 +5033,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             </tbody>
         </table>
         <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnóstico ainda não foi executado.</div>'}
-    </section>
+    </section>`}
 
     ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5021,6 +5056,32 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
+                <h2 class="panel-title">Configuração do robô</h2>
+                <div class="subtitle">Nome da empresa e imagens usadas nas respostas automáticas desta instalação</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
+            ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
+            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos.</div>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar nome do robô</button>
+            </div>
+        </form>
+        <div class="cards-grid" style="display:grid;gap:12px;padding:0 20px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
+            ${campoImagemRobo(status.config, 'imagemRoboMenu', 'Boas-vindas / menu')}
+            ${campoImagemRobo(status.config, 'imagemRoboPlanos', 'Planos e valores')}
+            ${campoImagemRobo(status.config, 'imagemRoboTeste', 'Teste grátis')}
+            ${campoImagemRobo(status.config, 'imagemRoboTesteLiberado', 'Teste liberado')}
+            ${campoImagemRobo(status.config, 'imagemRoboRenovacao', 'Renovação')}
+            ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'Ativação')}
+            ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opções inválidas')}
+            ${campoImagemRobo(status.config, 'imagemRoboEncerramento', 'Encerramento')}
+        </div>
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
                 <h2 class="panel-title">Licença da instalação</h2>
                 <div class="subtitle">Controle comercial da instalação individual deste cliente</div>
             </div>
@@ -5039,7 +5100,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </div>
     </section>
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">PIX de recebimento</h2>
@@ -5056,7 +5117,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>
             </div>
         </form>
-    </section>`}
+    </section>
 
     ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5082,7 +5143,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>`}
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backup dos dados</h2>
@@ -5100,7 +5161,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
             </tbody>
         </table>
-    </section>
+    </section>`}
 
     ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5123,7 +5184,7 @@ function telaManutencao(status = {}, opcoes = {}) {
 
     ${resumoImportacaoClientes(opcoes.importacao)}`}
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backups recentes</h2>
@@ -5153,7 +5214,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 </tr>`).join('')}
             </tbody>
         </table>` : '<div class="empty">Nenhum backup gerado ainda.</div>'}
-    </section>
+    </section>`}
 
     <section class="panel">
         <div class="panel-head">
@@ -5876,7 +5937,7 @@ router.get('/manutencao', async (req, res) => {
     });
 });
 
-router.post('/manutencao/backup', async (req, res) => {
+router.post('/manutencao/backup', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const backup = await criarBackupManual();
         logControleClientes('Backup manual criado', {
@@ -6012,7 +6073,49 @@ router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req
     }
 });
 
-router.post('/manutencao/pix', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/robo', async (req, res) => {
+    try {
+        await salvarConfiguracoesRobo(req.body);
+        logControleClientes('Configuracao do robo atualizada', {
+            nomeEmpresa: req.body.nomeEmpresaRobo
+        });
+        res.redirect('/manutencao?mensagem=Configuração do robô salva com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar configuracao do robo', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuração do robô: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/robo/imagem/:chave', async (req, res) => {
+    try {
+        const upload = await lerUploadMultipart(req);
+
+        if (!extensaoLogoPermitida(upload.filename)) {
+            return res.redirect('/manutencao?mensagem=Use uma imagem PNG, JPG, WEBP, GIF ou SVG');
+        }
+
+        fs.mkdirSync(ASSETS_DIR, { recursive: true });
+
+        const extensao = path.extname(upload.filename).toLowerCase();
+        const chave = String(req.params.chave || '');
+        const nomeArquivo = `${chave}-${Date.now()}${extensao}`;
+        const destino = path.join(ASSETS_DIR, nomeArquivo);
+
+        fs.writeFileSync(destino, upload.buffer);
+        await salvarImagemRobo(chave, nomeArquivo);
+
+        logControleClientes('Imagem do robo atualizada', {
+            chave,
+            arquivo: nomeArquivo
+        });
+        res.redirect('/manutencao?mensagem=Imagem do robô atualizada com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar imagem do robo', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robô: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/pix', async (req, res) => {
     try {
         await salvarConfiguracoesPix(req.body);
         logControleClientes('Configuracao PIX atualizada', {
@@ -6363,3 +6466,5 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
 });
 
 module.exports = router;
+
+
