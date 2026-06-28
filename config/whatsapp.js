@@ -180,24 +180,40 @@ function ehConversaCliente(message) {
     return Boolean(telefone && /@(c\.us|lid)$/.test(String(telefone)));
 }
 
+function obterTextoMensagem(message) {
+    return message?.body ||
+        message?._data?.body ||
+        message?._data?.caption ||
+        message?._data?.text ||
+        '';
+}
+
+function obterTipoMensagem(message) {
+    return message?.type ||
+        message?._data?.type ||
+        message?._data?.subtype ||
+        'desconhecido';
+}
+
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
-    const texto = normalizar(message.body || '');
-
-    if (!texto) {
-        console.log('Mensagem vazia ignorada');
-        return;
-    }
-
     if (!ehConversaCliente(message)) {
-        console.log('Mensagem ignorada: conversa nao individual.');
+        console.log('Mensagem ignorada: conversa não individual:', obterTelefoneMensagem(message));
         return;
     }
+
+    const textoMensagem = obterTextoMensagem(message);
+    const texto = normalizar(textoMensagem);
 
     if (message.fromMe) {
         if (foiMensagemDoRobo(message)) {
-            console.log('Mensagem do robo ignorada sem registrar conteudo.');
+            console.log('Mensagem do robô ignorada sem registrar conteúdo.');
+            return;
+        }
+
+        if (!texto) {
+            console.log(`Mensagem própria vazia ignorada: ${obterTelefoneMensagem(message)} tipo=${obterTipoMensagem(message)}`);
             return;
         }
 
@@ -206,7 +222,12 @@ function processarMensagemEmFila(message, options = {}) {
         registrarTesteLiberadoPorMensagem(message).catch((err) => {
             console.log('Erro ao registrar teste liberado:', err.message);
         });
-        console.log('Mensagem prÃ³pria ignorada sem registrar conteÃºdo.');
+        console.log('Mensagem própria ignorada sem registrar conteúdo.');
+        return;
+    }
+
+    if (!texto) {
+        console.log(`Mensagem individual vazia ignorada: ${obterTelefoneMensagem(message)} tipo=${obterTipoMensagem(message)}`);
         return;
     }
 
