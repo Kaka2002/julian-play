@@ -128,6 +128,15 @@ const NOTAS_ATENDIMENTO_PADRAO = [
     'Cliente retornou após período sem usar o serviço.',
     'Cliente precisa de acompanhamento no próximo atendimento.'
 ];
+function instalacaoComercialCliente() {
+    return Boolean(String(process.env.LICENSE_CUSTOMER_NAME || '').trim());
+}
+
+function bloquearManutencaoRestritaCliente(req, res, next) {
+    if (!instalacaoComercialCliente()) return next();
+    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Esta opção é restrita ao fornecedor.')}`);
+}
+
 const LOCAIS_INSTALACAO_APP = [
     'TV da sala',
     'TV do quarto',
@@ -3997,7 +4006,6 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes) {
     const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
     const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
-
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -4953,6 +4961,8 @@ function telaManutencao(status = {}, opcoes = {}) {
                 ? `Vencida há ${Math.abs(licenca.diasRestantes)} dia(s)`
                 : 'Informe a licença';
 
+    const modoClienteComercial = instalacaoComercialCliente();
+
     return `<section class="page-title">
         <h1>Manutenção</h1>
         <div class="subtitle">Status, backup e preparação para instalação comercial individual</div>
@@ -4990,7 +5000,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnóstico ainda não foi executado.</div>'}
     </section>
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Acesso ao painel</h2>
@@ -5006,7 +5016,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <button class="button" type="submit">${icon('check')} Salvar acesso</button>
             </div>
         </form>
-    </section>
+    </section>`}
 
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5024,12 +5034,12 @@ function telaManutencao(status = {}, opcoes = {}) {
             <tr><th>Instalação</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
         </tbody></table>
         <div class="actions" style="padding:18px 20px;">
-            <a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>
+            ${modoClienteComercial ? '' : `<a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>`}
             <span class="notice">${escapar(notaLicenca)}</span>
         </div>
     </section>
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">PIX de recebimento</h2>
@@ -5046,9 +5056,9 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>
             </div>
         </form>
-    </section>
+    </section>`}
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Monitoramento comercial</h2>
@@ -5070,7 +5080,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
             </div>
         </form>
-    </section>
+    </section>`}
 
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5092,7 +5102,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </table>
     </section>
 
-    <section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Importar clientes CSV</h2>
@@ -5111,7 +5121,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>
 
-    ${resumoImportacaoClientes(opcoes.importacao)}
+    ${resumoImportacaoClientes(opcoes.importacao)}`}
 
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5126,7 +5136,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <th>Arquivo</th>
                     <th>Tamanho</th>
                     <th>Data</th>
-                    <th>Ações</th>
+                    ${modoClienteComercial ? '' : '<th>Ações</th>'}
                 </tr>
             </thead>
             <tbody>
@@ -5134,12 +5144,12 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <td>${escapar(backup.nome)}</td>
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
-                    <td>
+                    ${modoClienteComercial ? '' : `<td>
                         <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup? O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
-                    </td>
+                    </td>`}
                 </tr>`).join('')}
             </tbody>
         </table>` : '<div class="empty">Nenhum backup gerado ainda.</div>'}
@@ -5892,14 +5902,14 @@ router.post('/manutencao/diagnostico', async (req, res) => {
     }
 });
 
-router.get('/manutencao/clientes-modelo.csv', (req, res) => {
+router.get('/manutencao/clientes-modelo.csv', bloquearManutencaoRestritaCliente, (req, res) => {
     desativarCache(res);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="modelo-clientes.csv"');
     res.send(`\uFEFF${csvModeloClientes()}`);
 });
 
-router.post('/manutencao/importar-clientes', async (req, res) => {
+router.post('/manutencao/importar-clientes', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const upload = await lerUploadMultipart(req);
         const preview = await prepararImportacaoClientesCsv(upload.buffer.toString('utf8'));
@@ -5924,7 +5934,7 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
     }
 });
 
-router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
+router.post('/manutencao/importar-clientes/confirmar', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const preview = lerPreviaImportacao(req.body.token);
         const itens = preview.itens || [];
@@ -5968,7 +5978,7 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
     }
 });
 
-router.post('/manutencao/restaurar', async (req, res) => {
+router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const resultado = await restaurarBackup(req.body.backup);
         logControleClientes('Backup restaurado', {
@@ -5985,7 +5995,7 @@ router.post('/manutencao/restaurar', async (req, res) => {
     }
 });
 
-router.post('/manutencao/licenca', async (req, res) => {
+router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await atualizarLicencaComercial(req.body);
         logControleClientes('Licenca da instalacao atualizada', {
@@ -6002,7 +6012,7 @@ router.post('/manutencao/licenca', async (req, res) => {
     }
 });
 
-router.post('/manutencao/pix', async (req, res) => {
+router.post('/manutencao/pix', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await salvarConfiguracoesPix(req.body);
         logControleClientes('Configuracao PIX atualizada', {
@@ -6018,7 +6028,7 @@ router.post('/manutencao/pix', async (req, res) => {
     }
 });
 
-router.post('/manutencao/monitoramento', async (req, res) => {
+router.post('/manutencao/monitoramento', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await salvarConfiguracoesMonitoramento(req.body);
         logControleClientes('Monitoramento comercial atualizado', {
@@ -6034,7 +6044,7 @@ router.post('/manutencao/monitoramento', async (req, res) => {
     }
 });
 
-router.post('/manutencao/monitoramento/testar', async (req, res) => {
+router.post('/manutencao/monitoramento/testar', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await testarWebhookAlertas(req.body.alertaWebhookUrl);
         logControleClientes('Alerta de teste enviado ao webhook');
@@ -6045,7 +6055,7 @@ router.post('/manutencao/monitoramento/testar', async (req, res) => {
     }
 });
 
-router.post('/manutencao/acesso', async (req, res) => {
+router.post('/manutencao/acesso', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await salvarConfiguracoesAcesso(req.body);
         logControleClientes('Acesso ao painel atualizado', {

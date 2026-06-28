@@ -6,6 +6,7 @@ const {
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,
+    prorrogarAvaliacao,
     arquivarInstalacao,
     excluirDefinitivamente
 } = require('./provisionador');
@@ -79,7 +80,7 @@ function pagina(instalacoes, opcoes = {}) {
         <td><span class="badge ${item.saude?.online ? (item.saude.whatsapp ? (item.saude.numero === item.whatsappEsperado ? 'ok' : 'error') : 'warn') : 'error'}">${item.saude?.online ? (item.saude.whatsapp ? (item.saude.numero === item.whatsappEsperado ? 'WhatsApp conectado' : 'WhatsApp divergente') : 'Aguardando WhatsApp') : 'Processo indisponível'}</span><div class="small">${item.saude?.numero ? `conectado: ${escapar(item.saude.numero)} · ` : ''}porta ${escapar(item.porta)} · ${escapar(item.processoPm2)}</div></td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ? `<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ? ` (${item.diasAvaliacao} dias)` : ''}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ? 'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ? item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ? `<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="actions">
-          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/vitalicia"><button type="submit">Tornar definitiva</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
+          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/vitalicia"><button type="submit">Tornar definitiva</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
         </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
     </div></section></main></body></html>`;
 }
@@ -113,6 +114,14 @@ function acao(servico, mensagem) {
 
 app.post('/instalacoes/:id/suspender', acao(suspenderInstalacao, 'Instalação suspensa.'));
 app.post('/instalacoes/:id/vitalicia', acao(tornarVitalicia, 'Instalação convertida em definitiva.'));
+app.post('/instalacoes/:id/prorrogar', async (req, res) => {
+    try {
+        const vencimento = await prorrogarAvaliacao(req.params.id, req.body.dias);
+        res.redirect(`/?mensagem=${encodeURIComponent(`Avaliação prorrogada até ${vencimento.split('-').reverse().join('/')}.`)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
+});
 app.post('/instalacoes/:id/arquivar', acao(arquivarInstalacao, 'Instalação arquivada.'));
 app.post('/instalacoes/:id/excluir', acao(excluirDefinitivamente, 'Instalação excluída definitivamente.'));
 

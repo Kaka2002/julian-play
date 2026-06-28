@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { execFile } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
 const { criarHashSenha } = require('../services/passwordService');
-const { calcularEstadoLicenca } = require('../services/licencaCalculo');
+const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('../services/licencaCalculo');
 const masterDb = require('./db');
 
 const sourceDir = path.resolve(process.env.JULIAN_PLAY_SOURCE_DIR || path.join(__dirname, '..'));
@@ -263,6 +263,39 @@ async function tornarVitalicia(id) {
     );
 }
 
+async function prorrogarAvaliacao(id, dias = 15) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    const quantidadeDias = Number(dias);
+    if (![15, 30].includes(quantidadeDias)) throw new Error('Escolha uma prorrogação de 15 ou 30 dias.');
+
+    const dbPath = path.join(instalacao.pastaDados, 'clientes.db');
+    const config = await lerConfiguracoesTenant(dbPath);
+    const hoje = dataHojeSaoPaulo();
+    const vencimentoAtual = String(config.licencaVencimento || '').slice(0, 10);
+    const dataBase = vencimentoAtual && vencimentoAtual >= hoje ? vencimentoAtual : hoje;
+    const novoVencimento = adicionarDias(dataBase, quantidadeDias);
+
+    await salvarConfiguracoesTenant(dbPath, {
+        licencaCliente: instalacao.nome,
+        licencaAtivacao: config.licencaAtivacao || hoje,
+        licencaVencimento: novoVencimento,
+        licencaVitalicia: '0',
+        licencaTipo: 'avaliacao',
+        licencaPeriodoTesteDias: String(quantidadeDias),
+        licencaBloqueioAtivo: '1',
+        licencaSuspensa: '0'
+    });
+
+    await masterDb.executar(
+        `UPDATE instalacoes SET tipoLicenca = ?, diasAvaliacao = ?,
+         status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
+        [`avaliacao_${quantidadeDias}`, quantidadeDias, `Avaliação prorrogada até ${novoVencimento}.`, id]
+    );
+
+    return novoVencimento;
+}
+
 function caminhoDentro(caminho, raiz) {
     const alvo = path.resolve(caminho);
     const base = `${path.resolve(raiz)}${path.sep}`;
@@ -307,6 +340,7 @@ module.exports = {
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,
+    prorrogarAvaliacao,
     arquivarInstalacao,
     excluirDefinitivamente
 };
