@@ -195,6 +195,12 @@ function obterTipoMensagem(message) {
         'desconhecido';
 }
 
+function ehRespostaAutomaticaWhatsapp(texto) {
+    const normalizado = normalizar(texto || '');
+    return normalizado.includes('agradece sua mensagem') &&
+        normalizado.includes('nao estamos disponiveis no momento');
+}
+
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
@@ -214,6 +220,11 @@ function processarMensagemEmFila(message, options = {}) {
 
         if (!texto) {
             console.log(`Mensagem própria vazia ignorada: ${obterTelefoneMensagem(message)} tipo=${obterTipoMensagem(message)}`);
+            return;
+        }
+
+        if (ehRespostaAutomaticaWhatsapp(textoMensagem)) {
+            console.log('Resposta automática do WhatsApp ignorada sem pausar atendimento:', obterTelefoneMensagem(message));
             return;
         }
 
