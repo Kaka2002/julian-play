@@ -263,6 +263,43 @@ async function tornarVitalicia(id) {
     );
 }
 
+function obterPeriodoLicencaComercial(tipo) {
+    const normalizado = String(tipo || '').toLowerCase();
+    if (normalizado === 'mensal') return { tipo: 'mensal', dias: 30, rotulo: 'Mensal' };
+    if (normalizado === 'semestral') return { tipo: 'semestral', dias: 180, rotulo: 'Semestral' };
+    if (normalizado === 'anual') return { tipo: 'anual', dias: 365, rotulo: 'Anual' };
+    if (normalizado === 'vitalicia') return { tipo: 'vitalicia', dias: 0, rotulo: 'Vitalícia' };
+    throw new Error('Selecione uma licença mensal, semestral, anual ou vitalícia.');
+}
+
+async function ativarLicencaComercial(id, tipoLicenca = 'mensal') {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+
+    const periodo = obterPeriodoLicencaComercial(tipoLicenca);
+    const hoje = dataHojeSaoPaulo();
+    const vencimento = periodo.dias ? adicionarDias(hoje, periodo.dias) : '';
+
+    await salvarConfiguracoesTenant(path.join(instalacao.pastaDados, 'clientes.db'), {
+        licencaCliente: instalacao.nome,
+        licencaAtivacao: hoje,
+        licencaTipo: periodo.tipo,
+        licencaVitalicia: periodo.tipo === 'vitalicia' ? '1' : '0',
+        licencaVencimento: vencimento,
+        licencaPeriodoTesteDias: '0',
+        licencaBloqueioAtivo: '1',
+        licencaSuspensa: '0'
+    });
+
+    await masterDb.executar(
+        `UPDATE instalacoes SET tipoLicenca = ?, diasAvaliacao = 0,
+         status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
+        [periodo.tipo, vencimento ? `${periodo.rotulo} ativa até ${vencimento}.` : `${periodo.rotulo} ativa.`, id]
+    );
+
+    return { ...periodo, vencimento };
+}
+
 async function prorrogarAvaliacao(id, dias = 15) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -377,6 +414,7 @@ module.exports = {
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,
+    ativarLicencaComercial,
     prorrogarAvaliacao,
     reiniciarInstalacao,
     resetarSenhaPainel,

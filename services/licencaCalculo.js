@@ -24,6 +24,12 @@ function calcularEstadoLicenca(config = {}) {
     const vencimento = String(config.licencaVencimento || '').slice(0, 10);
     const hoje = dataHojeSaoPaulo();
     const tipo = config.licencaTipo || (vitalicia ? 'vitalicia' : vencimento ? 'assinatura' : 'nao_configurada');
+    const rotulosPorTipo = {
+        mensal: 'Licença mensal',
+        semestral: 'Licença semestral',
+        anual: 'Licença anual',
+        assinatura: 'Ativa'
+    };
     let diasRestantes = null;
     let status = 'nao_configurada';
     let rotulo = 'Não configurada';
@@ -52,7 +58,7 @@ function calcularEstadoLicenca(config = {}) {
             permitida = true;
         } else {
             status = 'ativa';
-            rotulo = tipo === 'avaliacao' ? 'Em avaliação' : 'Ativa';
+            rotulo = tipo === 'avaliacao' ? 'Em avaliação' : (rotulosPorTipo[tipo] || 'Ativa');
             permitida = true;
         }
     }
