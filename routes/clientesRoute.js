@@ -5095,7 +5095,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             <tr><th>Instalação</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
         </tbody></table>
         <div class="actions" style="padding:18px 20px;">
-            ${modoClienteComercial ? '' : `<a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>`}
+            <a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>
             <span class="notice">${escapar(notaLicenca)}</span>
         </div>
     </section>

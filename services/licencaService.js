@@ -72,6 +72,11 @@ async function atualizarLicencaComercial(dados = {}) {
 
     const cliente = String(dados.licencaCliente || '').trim();
     const tipo = String(dados.licencaTipo || '').trim();
+    const periodosComerciais = {
+        mensal: 30,
+        semestral: 180,
+        anual: 365
+    };
     const hoje = dataHojeSaoPaulo();
     let ativacao = String(dados.licencaAtivacao || hoje).slice(0, 10);
     let vencimento = String(dados.licencaVencimento || '').slice(0, 10);
@@ -85,6 +90,8 @@ async function atualizarLicencaComercial(dados = {}) {
         ativacao = hoje;
         vencimento = adicionarDias(hoje, dias);
         periodoTesteDias = String(dias);
+    } else if (Object.prototype.hasOwnProperty.call(periodosComerciais, tipo)) {
+        vencimento = adicionarDias(ativacao || hoje, periodosComerciais[tipo]);
     } else if (tipo === 'vitalicia') {
         vitalicia = '1';
         vencimento = '';

@@ -19,22 +19,22 @@ function escapar(valor) {
 function tipoSelecionado(licenca) {
     if (licenca.tipo === 'vitalicia') return 'vitalicia';
     if (licenca.tipo === 'avaliacao') return Number(licenca.periodoTesteDias) === 30 ? 'avaliacao_30' : 'avaliacao_15';
+    if (['mensal', 'semestral', 'anual', 'assinatura'].includes(licenca.tipo)) return licenca.tipo;
     return 'assinatura';
 }
 
-function instalacaoComercialCliente() {
-    return Boolean(String(process.env.LICENSE_CUSTOMER_NAME || '').trim());
+function formatarDataBrasileira(dataIso) {
+    return String(dataIso || '').slice(0, 10).split('-').reverse().join('/');
 }
 
 function pagina({ licenca, config, mensagem = '', erro = '' }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const tipoAtual = tipoSelecionado(licenca);
-    const modoClienteComercial = instalacaoComercialCliente();
     const classe = licenca.permitida ? (licenca.status === 'vencendo' ? 'warn' : 'ok') : 'error';
     const detalhe = licenca.vitalicia
         ? 'Sem data de vencimento'
         : licenca.vencimento
-            ? `Válida até ${licenca.vencimento.split('-').reverse().join('/')}`
+            ? `Válida até ${formatarDataBrasileira(licenca.vencimento)}`
             : 'Aguardando configuração';
 
     return `<!doctype html>
@@ -60,10 +60,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
         </div>
         ${!licenca.permitida ? '<p>O período de avaliação terminou. Entre em contato com o fornecedor para renovar ou ativar esta instalação.</p>' : ''}
     </section>
-    ${modoClienteComercial ? `<section class="panel">
-        <h2>Licença gerenciada pelo fornecedor</h2>
-        <div class="sub">Para prorrogar avaliação, tornar definitiva ou alterar datas, entre em contato com o fornecedor do sistema.</div>
-    </section>` : `<section class="panel">
+    <section class="panel">
         <h2>Gerenciar licença</h2>
         <div class="sub">Esta alteração exige o código exclusivo do fornecedor.</div>
         <form class="fields" method="post" action="/licenca">
@@ -71,6 +68,9 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
                 <select name="licencaTipo" id="licencaTipo">
                     <option value="avaliacao_15" ${tipoAtual === 'avaliacao_15' ? 'selected' : ''}>Avaliação por 15 dias</option>
                     <option value="avaliacao_30" ${tipoAtual === 'avaliacao_30' ? 'selected' : ''}>Avaliação por 30 dias</option>
+                    <option value="mensal" ${tipoAtual === 'mensal' ? 'selected' : ''}>Licença mensal</option>
+                    <option value="semestral" ${tipoAtual === 'semestral' ? 'selected' : ''}>Licença semestral</option>
+                    <option value="anual" ${tipoAtual === 'anual' ? 'selected' : ''}>Licença anual</option>
                     <option value="assinatura" ${tipoAtual === 'assinatura' ? 'selected' : ''}>Licença com vencimento</option>
                     <option value="vitalicia" ${tipoAtual === 'vitalicia' ? 'selected' : ''}>Licença vitalícia</option>
                 </select>
@@ -83,7 +83,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
             <label class="full">Observações<textarea name="licencaObservacoes">${escapar(licenca.observacoes)}</textarea></label>
             <div class="full"><button type="submit">Salvar e ativar licença</button></div>
         </form>
-    </section>`}
+    </section>
 </main>
 </body>
 </html>`;
@@ -99,10 +99,6 @@ router.get('/', async (req, res, next) => {
 });
 
 router.post('/', async (req, res) => {
-    if (instalacaoComercialCliente()) {
-        return res.redirect(`/licenca?erro=${encodeURIComponent('A alteração da licença é restrita ao fornecedor.')}`);
-    }
-
     try {
         await atualizarLicencaComercial(req.body);
         res.redirect(`/licenca?mensagem=${encodeURIComponent('Licença atualizada com sucesso.')}`);

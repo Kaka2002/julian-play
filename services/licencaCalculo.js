@@ -64,11 +64,21 @@ function calcularEstadoLicenca(config = {}) {
     }
 
     return {
-        cliente: config.licencaCliente || '', telefone: config.licencaTelefone || '',
-        ativacao: config.licencaAtivacao || '', vencimento, vitalicia, tipo,
+        cliente: config.licencaCliente || '',
+        telefone: config.licencaTelefone || '',
+        ativacao: config.licencaAtivacao || '',
+        vencimento,
+        vitalicia,
+        tipo,
         periodoTesteDias: Number(config.licencaPeriodoTesteDias || 0),
-        observacoes: config.licencaObservacoes || '', instalacaoId: config.instalacaoId || '',
-        bloqueioAtivo, suspensa, diasRestantes, status, rotulo, permitida
+        observacoes: config.licencaObservacoes || '',
+        instalacaoId: config.instalacaoId || '',
+        bloqueioAtivo,
+        suspensa,
+        diasRestantes,
+        status,
+        rotulo,
+        permitida
     };
 }
 
