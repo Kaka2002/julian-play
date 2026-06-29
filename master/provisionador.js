@@ -98,19 +98,6 @@ async function slugEmUso(slug) {
     return Boolean(row);
 }
 
-async function gerarSlugDisponivel(slugBase) {
-    let candidato = slugBase;
-    let contador = 2;
-
-    while (await slugEmUso(candidato)) {
-        const sufixo = `-${contador}`;
-        candidato = `${slugBase.slice(0, 40 - sufixo.length)}${sufixo}`;
-        contador += 1;
-    }
-
-    return candidato;
-}
-
 function escreverArquivoSeguro(caminho, conteudo) {
     fs.mkdirSync(path.dirname(caminho), { recursive: true });
     fs.writeFileSync(caminho, conteudo, { encoding: 'utf8', mode: 0o600 });
@@ -187,8 +174,9 @@ async function criarInstalacao(dados = {}) {
     if (whatsappEsperado.length < 10 || whatsappEsperado.length > 15) throw new Error('Informe o WhatsApp que sera conectado ao robo, com DDD.');
     if (!Number.isInteger(horaEnvio) || horaEnvio < 0 || horaEnvio > 23) throw new Error('Informe uma hora de envio entre 0 e 23.');
     if (!Number.isInteger(minutoEnvio) || minutoEnvio < 0 || minutoEnvio > 59) throw new Error('Informe um minuto de envio entre 0 e 59.');
+    if (await slugEmUso(slugBase)) throw new Error('Este identificador da URL já está em uso. Informe outro identificador para criar uma nova instalação.');
 
-    const slug = await gerarSlugDisponivel(slugBase);
+    const slug = slugBase;
     const porta = await proximaPorta();
     const pastaDados = path.join(clientesDir, slug);
     const dominio = `${slug}.${baseDomain}`;
