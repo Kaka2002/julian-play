@@ -189,6 +189,10 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
     try {
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
+        if (imagem) {
+            await enviarImagem(message, imagem);
+        }
+
         const enviada = await comTimeout(
             chat.sendMessage(resposta),
             ENVIO_TIMEOUT_MS,
@@ -197,10 +201,6 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
         console.log('Resposta enviada:', enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);
-
-        if (imagem) {
-            await enviarImagem(message, imagem);
-        }
     } catch (err) {
         if (err.isTimeout) {
             console.log('Envio demorou demais. O WhatsApp pode concluir em segundo plano:', err.message);
@@ -208,6 +208,10 @@ async function responderComDigitacao(message, texto, imagem = null) {
         }
 
         console.log('Falha ao responder pelo chat. Tentando envio direto:', err.message);
+        if (imagem) {
+            await enviarImagem(message, imagem);
+        }
+
         const enviada = await comTimeout(
             message.client.sendMessage(destino, resposta),
             ENVIO_TIMEOUT_MS,
@@ -216,10 +220,6 @@ async function responderComDigitacao(message, texto, imagem = null) {
 
         console.log('Resposta enviada por reserva:', enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);
-
-        if (imagem) {
-            await enviarImagem(message, imagem);
-        }
     }
 }
 

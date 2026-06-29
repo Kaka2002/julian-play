@@ -305,6 +305,22 @@ async function reiniciarInstalacao(id) {
     await atualizarStatus(id, 'ativo', 'Robô reiniciado pelo Painel Mestre.');
 }
 
+async function resetarSenhaPainel(id, senha = '') {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem ter senha alterada.');
+
+    const novaSenha = String(senha || '');
+    if (novaSenha.length < 8) throw new Error('A nova senha precisa ter pelo menos 8 caracteres.');
+
+    const ecossistema = path.join(instalacao.pastaDados, 'ecosystem.config.cjs');
+    if (!fs.existsSync(instalacao.pastaDados)) throw new Error('Pasta da instalação não encontrada.');
+
+    escreverArquivoSeguro(ecossistema, configuracaoPm2(instalacao, criarHashSenha(novaSenha)));
+    await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
+    await atualizarStatus(id, 'ativo', 'Senha do painel redefinida pelo Painel Mestre.');
+}
+
 async function obterLogsInstalacao(id, linhas = 120) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -363,6 +379,7 @@ module.exports = {
     tornarVitalicia,
     prorrogarAvaliacao,
     reiniciarInstalacao,
+    resetarSenhaPainel,
     obterLogsInstalacao,
     arquivarInstalacao,
     excluirDefinitivamente

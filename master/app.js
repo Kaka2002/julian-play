@@ -8,6 +8,7 @@ const {
     tornarVitalicia,
     prorrogarAvaliacao,
     reiniciarInstalacao,
+    resetarSenhaPainel,
     obterLogsInstalacao,
     arquivarInstalacao,
     excluirDefinitivamente
@@ -85,8 +86,9 @@ function pagina(instalacoes, opcoes = {}) {
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/health" target="_blank">Saúde</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
-          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robÃ´ desta instalaÃ§Ã£o?');"><button class="smallbtn" type="submit">Reiniciar robÃ´</button></form>` : ''}
+          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
         </div><div class="actions">
+          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
           ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/vitalicia"><button type="submit">Tornar definitiva</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
         </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
     </div></section></main></body></html>`;
@@ -128,6 +130,14 @@ function acao(servico, mensagem) {
 app.post('/instalacoes/:id/suspender', acao(suspenderInstalacao, 'Instalação suspensa.'));
 app.post('/instalacoes/:id/vitalicia', acao(tornarVitalicia, 'Instalação convertida em definitiva.'));
 app.post('/instalacoes/:id/reiniciar', acao(reiniciarInstalacao, 'Robô reiniciado.'));
+app.post('/instalacoes/:id/resetar-senha', async (req, res) => {
+    try {
+        await resetarSenhaPainel(req.params.id, req.body.senhaPainel);
+        res.redirect(`/?mensagem=${encodeURIComponent('Senha do painel redefinida.')}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
+});
 app.get('/instalacoes/:id/logs', async (req, res) => {
     try {
         const resultado = await obterLogsInstalacao(req.params.id, req.query.linhas);
