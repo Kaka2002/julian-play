@@ -145,6 +145,7 @@ function deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa = {}) {
     }
 
     return (
+        ['1', '2', '3', '4'].includes(texto) ||
         ['oi', 'ola', 'olá', 'menu', 'inicio', 'iniciar', 'bom dia', 'boa tarde', 'boa noite'].includes(texto) ||
         isPedidoTeste(texto)
     );
@@ -676,7 +677,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagens.encerramento);
             apagarConversa(telefone);
             conversa = null;
         } else {
-            console.log('Mensagem ignorada: atendimento humano em andamento para:', telefone);
+            console.log(`Mensagem ignorada: atendimento humano em andamento para: ${telefone} origem=${conversa.origem || 'indefinida'}`);
             return;
         }
     }
