@@ -296,6 +296,27 @@ async function prorrogarAvaliacao(id, dias = 15) {
     return novoVencimento;
 }
 
+async function reiniciarInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem ser reiniciadas.');
+
+    await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
+    await atualizarStatus(id, 'ativo', 'Robô reiniciado pelo Painel Mestre.');
+}
+
+async function obterLogsInstalacao(id, linhas = 120) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+
+    const quantidade = Math.max(20, Math.min(Number(linhas) || 120, 300));
+    const saida = await executarComando('pm2.cmd', ['logs', instalacao.processoPm2, '--lines', String(quantidade), '--nostream']);
+    return {
+        instalacao,
+        logs: saida.replace(/\u001b\[[0-9;]*m/g, '')
+    };
+}
+
 function caminhoDentro(caminho, raiz) {
     const alvo = path.resolve(caminho);
     const base = `${path.resolve(raiz)}${path.sep}`;
@@ -341,6 +362,8 @@ module.exports = {
     suspenderInstalacao,
     tornarVitalicia,
     prorrogarAvaliacao,
+    reiniciarInstalacao,
+    obterLogsInstalacao,
     arquivarInstalacao,
     excluirDefinitivamente
 };
