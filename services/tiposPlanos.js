@@ -2,10 +2,10 @@ const db = require('../database/sqlite');
 
 const planosPadrao = [
     ['Teste Grátis', 0, '0,00'],
-    ['Mensal', 30, '35,00'],
-    ['Trimestral', 90, '96,00'],
-    ['Semestral', 180, '180,00'],
-    ['Anual', 365, '336,00']
+    ['Mensal', 30, ''],
+    ['Trimestral', 90, ''],
+    ['Semestral', 180, ''],
+    ['Anual', 365, '']
 ];
 
 function executar(sql, params = []) {

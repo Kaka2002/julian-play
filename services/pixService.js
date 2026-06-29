@@ -4,10 +4,10 @@ const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPr
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarTiposPlanos } = require('./tiposPlanos');
 
-const CHAVE_PIX = process.env.CHAVE_PIX || '61319147704';
-const PIX_NOME = process.env.PIX_NOME || 'JULIAN PLAY';
-const PIX_CIDADE = process.env.PIX_CIDADE || 'SAO PAULO';
-const PIX_TXID = process.env.PIX_TXID || 'JULIANPLAY';
+const CHAVE_PIX = process.env.CHAVE_PIX || '';
+const PIX_NOME = process.env.PIX_NOME || '';
+const PIX_CIDADE = process.env.PIX_CIDADE || '';
+const PIX_TXID = process.env.PIX_TXID || '';
 const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 
@@ -27,22 +27,22 @@ function comTimeout(promessa, ms, descricao) {
 const planos = {
     '1': {
         nome: 'MENSAL',
-        valor: '35,00',
+        valor: '',
         arquivoQr: 'pix_mensal.png'
     },
     '2': {
         nome: 'TRIMESTRAL',
-        valor: '96,00',
+        valor: '',
         arquivoQr: 'pix_trimestral.png'
     },
     '3': {
         nome: 'SEMESTRAL',
-        valor: '180,00',
+        valor: '',
         arquivoQr: 'pix_semestral.png'
     },
     '4': {
         nome: 'ANUAL',
-        valor: '336,00',
+        valor: '',
         arquivoQr: 'pix_anual.png'
     }
 };
@@ -54,6 +54,12 @@ function configuracaoPixPadrao() {
         cidade: PIX_CIDADE,
         txid: PIX_TXID
     };
+}
+
+function validarConfiguracaoPix(configPix = {}) {
+    if (!configPix.chave || !configPix.nome || !configPix.cidade) {
+        throw new Error('Configure os dados PIX de recebimento na tela Manutenção antes de enviar cobranças.');
+    }
 }
 
 function valorPlanoParaNumero(valor) {
@@ -158,6 +164,7 @@ function crc16(payload) {
 }
 
 function gerarPixCopiaECola(plano, configPix = configuracaoPixPadrao()) {
+    validarConfiguracaoPix(configPix);
     const identificacao = normalizarCampo(`${configPix.nome || PIX_NOME} ${plano.nome}`, 50);
     const merchantAccount = campo('00', 'br.gov.bcb.pix') +
         campo('01', configPix.chave) +

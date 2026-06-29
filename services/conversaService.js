@@ -42,6 +42,7 @@ const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 
 async function obterPerfilRobo() {
     const config = await obterConfiguracoes().catch(() => ({}));
+    const usarImagensPadrao = !String(process.env.LICENSE_CUSTOMER_NAME || '').trim();
     const nomeEmpresa = (
         config.nomeEmpresaRobo ||
         config.licencaCliente ||
@@ -53,14 +54,14 @@ async function obterPerfilRobo() {
     return {
         nomeEmpresa,
         imagens: {
-            menu: config.imagemRoboMenu || imagensRespostas.menu,
-            planos: config.imagemRoboPlanos || imagensRespostas.planos,
-            teste: config.imagemRoboTeste || imagensRespostas.teste,
-            testeLiberado: config.imagemRoboTesteLiberado || imagensRespostas.testeLiberado,
-            renovacao: config.imagemRoboRenovacao || imagensRespostas.renovacao,
-            ativacao: config.imagemRoboAtivacao || imagensRespostas.ativacao,
-            erro: config.imagemRoboErro || imagensRespostas.erro,
-            encerramento: config.imagemRoboEncerramento || imagensRespostas.encerramento
+            menu: config.imagemRoboMenu || (usarImagensPadrao ? imagensRespostas.menu : ''),
+            planos: config.imagemRoboPlanos || (usarImagensPadrao ? imagensRespostas.planos : ''),
+            teste: config.imagemRoboTeste || (usarImagensPadrao ? imagensRespostas.teste : ''),
+            testeLiberado: config.imagemRoboTesteLiberado || (usarImagensPadrao ? imagensRespostas.testeLiberado : ''),
+            renovacao: config.imagemRoboRenovacao || (usarImagensPadrao ? imagensRespostas.renovacao : ''),
+            ativacao: config.imagemRoboAtivacao || (usarImagensPadrao ? imagensRespostas.ativacao : ''),
+            erro: config.imagemRoboErro || (usarImagensPadrao ? imagensRespostas.erro : ''),
+            encerramento: config.imagemRoboEncerramento || (usarImagensPadrao ? imagensRespostas.encerramento : '')
         },
         planos: await listarPlanosComerciais()
     };

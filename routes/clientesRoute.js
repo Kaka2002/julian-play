@@ -5111,7 +5111,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"' })}
             ${campo({ nome: 'pixNome', label: 'Nome do recebedor', valor: status.config?.pixNome || '', attrs: 'required maxlength="25" placeholder="Nome que aparece no banco"' })}
             ${campo({ nome: 'pixCidade', label: 'Cidade do recebedor', valor: status.config?.pixCidade || '', attrs: 'required maxlength="15" placeholder="Cidade"' })}
-            ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || 'JULIANPLAY', attrs: 'maxlength="25" placeholder="Ex: JULIANPLAY"' })}
+            ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
             <div class="notice full">O QR Code será gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>

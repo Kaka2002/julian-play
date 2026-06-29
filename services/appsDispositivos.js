@@ -28,13 +28,8 @@ const dispositivosPadrao = [
 ];
 
 const paineisPadrao = [
-    'Painel Aura TV+',
-    'Painel Authentic',
-    'Painel Office Genial',
-    'Painel Sigma Genial',
-    'Painel Souiptv',
-    'Painel TVS Zumi',
-    'Painel Wplay'
+    'Painel 1',
+    'Painel 2'
 ];
 
 function executar(sql, params = []) {
