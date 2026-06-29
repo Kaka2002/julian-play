@@ -93,6 +93,24 @@ async function proximaPorta() {
     return Math.max(primeiraPorta, Number(row?.maior || 0) + 1);
 }
 
+async function slugEmUso(slug) {
+    const row = await masterDb.buscarUm('SELECT id FROM instalacoes WHERE slug = ? LIMIT 1', [slug]);
+    return Boolean(row);
+}
+
+async function gerarSlugDisponivel(slugBase) {
+    let candidato = slugBase;
+    let contador = 2;
+
+    while (await slugEmUso(candidato)) {
+        const sufixo = `-${contador}`;
+        candidato = `${slugBase.slice(0, 40 - sufixo.length)}${sufixo}`;
+        contador += 1;
+    }
+
+    return candidato;
+}
+
 function escreverArquivoSeguro(caminho, conteudo) {
     fs.mkdirSync(path.dirname(caminho), { recursive: true });
     fs.writeFileSync(caminho, conteudo, { encoding: 'utf8', mode: 0o600 });
@@ -153,7 +171,7 @@ async function atualizarStatus(id, status, detalhe = '') {
 
 async function criarInstalacao(dados = {}) {
     const nome = String(dados.nome || '').trim();
-    const slug = slugificar(dados.slug || nome);
+    const slugBase = slugificar(dados.slug || nome);
     const usuarioPainel = String(dados.usuarioPainel || 'admin').trim();
     const senha = String(dados.senhaPainel || '');
     const whatsappEsperado = String(dados.whatsappEsperado || '').replace(/\D/g, '');
@@ -163,27 +181,36 @@ async function criarInstalacao(dados = {}) {
     const minutoEnvio = Number(dados.minutoEnvio ?? 0);
 
     if (!nome) throw new Error('Informe o nome do cliente.');
-    if (!slug) throw new Error('Informe um identificador válido para a URL.');
+    if (!slugBase) throw new Error('Informe um identificador válido para a URL.');
     if (!usuarioPainel) throw new Error('Informe o usuário do painel.');
     if (senha.length < 8) throw new Error('A senha inicial precisa ter pelo menos 8 caracteres.');
     if (whatsappEsperado.length < 10 || whatsappEsperado.length > 15) throw new Error('Informe o WhatsApp que sera conectado ao robo, com DDD.');
     if (!Number.isInteger(horaEnvio) || horaEnvio < 0 || horaEnvio > 23) throw new Error('Informe uma hora de envio entre 0 e 23.');
     if (!Number.isInteger(minutoEnvio) || minutoEnvio < 0 || minutoEnvio > 59) throw new Error('Informe um minuto de envio entre 0 e 59.');
 
+    const slug = await gerarSlugDisponivel(slugBase);
     const porta = await proximaPorta();
     const pastaDados = path.join(clientesDir, slug);
     const dominio = `${slug}.${baseDomain}`;
     const processoPm2 = `julian-${slug}`;
     const codigoFornecedor = crypto.randomBytes(16).toString('hex').toUpperCase();
 
-    const resultado = await masterDb.executar(
-        `INSERT INTO instalacoes
-        (nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipoLicenca, diasAvaliacao,
-         codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipo, diasAvaliacao,
-            codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio]
-    );
+    let resultado;
+    try {
+        resultado = await masterDb.executar(
+            `INSERT INTO instalacoes
+            (nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipoLicenca, diasAvaliacao,
+             codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipo, diasAvaliacao,
+                codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio]
+        );
+    } catch (err) {
+        if (String(err.message || '').includes('SQLITE_CONSTRAINT')) {
+            throw new Error('Não foi possível reservar um identificador livre para esta instalação. Tente novamente com outro identificador da URL.');
+        }
+        throw err;
+    }
     const instalacao = await buscarInstalacao(resultado.id);
 
     try {
