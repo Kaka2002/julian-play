@@ -11,6 +11,7 @@ const {
     prorrogarAvaliacao,
     reiniciarInstalacao,
     resetarSenhaPainel,
+    obterDiagnosticoInstalacao,
     obterLogsInstalacao,
     arquivarInstalacao,
     excluirDefinitivamente
@@ -147,10 +148,63 @@ function statusClasse(status) {
     return 'warn';
 }
 
+function formatarTempoOnline(segundos) {
+    const total = Math.max(0, Math.floor(Number(segundos || 0)));
+    if (!total) return 'não informado';
+    const dias = Math.floor(total / 86400);
+    const horas = Math.floor((total % 86400) / 3600);
+    const minutos = Math.floor((total % 3600) / 60);
+    if (dias) return `${dias}d ${horas}h`;
+    if (horas) return `${horas}h ${minutos}min`;
+    return `${Math.max(1, minutos)}min`;
+}
+
+function resumoDiagnostico(item) {
+    const saude = item.saude || {};
+    const numeroEsperado = String(item.whatsappEsperado || '').replace(/\D/g, '');
+    const numeroConectado = String(saude.numero || '').replace(/\D/g, '');
+    const processoOnline = Boolean(saude.online);
+    const whatsappOnline = Boolean(saude.whatsapp);
+    const numeroDivergente = whatsappOnline && numeroEsperado && numeroConectado && numeroEsperado !== numeroConectado;
+    const classe = processoOnline ? (whatsappOnline ? (numeroDivergente ? 'error' : 'ok') : 'warn') : 'error';
+    const rotulo = processoOnline ? (whatsappOnline ? (numeroDivergente ? 'WhatsApp divergente' : 'WhatsApp conectado') : 'Aguardando WhatsApp') : 'Processo indisponível';
+    const detalhes = [
+        `porta ${item.porta}`,
+        item.processoPm2,
+        numeroEsperado ? `esperado ${numeroEsperado}` : 'WhatsApp esperado não informado',
+        numeroConectado ? `conectado ${numeroConectado}` : 'sem número conectado',
+        processoOnline ? `online ${formatarTempoOnline(saude.uptime)}` : (saude.erro || 'sem resposta')
+    ];
+
+    return `
+        <span class="badge ${classe}">${escapar(rotulo)}</span>
+        <div class="diagnostic">
+            ${detalhes.map(detalhe => `<span>${escapar(detalhe)}</span>`).join('')}
+        </div>
+        ${numeroDivergente ? '<div class="small dangertext">O número conectado não é o WhatsApp cadastrado para esta instalação.</div>' : ''}
+    `;
+}
+
+function paginaSaude(instalacao, saude) {
+    const classe = saude.online ? (saude.whatsapp ? 'ok' : 'warn') : 'error';
+    const rotulo = saude.online ? (saude.whatsapp ? 'WhatsApp conectado' : 'Aguardando WhatsApp') : 'Processo indisponível';
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saúde - ${escapar(instalacao.nome)}</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(960px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:22px}.badge{display:inline-flex;padding:6px 11px;border-radius:999px;font-weight:800}.ok{background:#dff8ee;color:#047446}.warn{background:#fff2dc;color:#a76100}.error{background:#ffe5e7;color:#c52e35}.row{display:grid;grid-template-columns:220px 1fr;border-top:1px solid #e8ebf0;padding:12px 0}.row:first-of-type{border-top:0}.label{font-weight:800;color:#697386}
+    </style></head><body><main><a class="button" href="/">Voltar</a><h1>Saúde de ${escapar(instalacao.nome)}</h1><div class="sub">${escapar(instalacao.processoPm2)} · porta ${escapar(instalacao.porta)}</div><section class="panel">
+        <p><span class="badge ${classe}">${escapar(rotulo)}</span></p>
+        <div class="row"><div class="label">WhatsApp esperado</div><div>${escapar(instalacao.whatsappEsperado || 'Não informado')}</div></div>
+        <div class="row"><div class="label">WhatsApp conectado</div><div>${escapar(saude.numero || 'Não conectado')}</div></div>
+        <div class="row"><div class="label">Status interno</div><div>${escapar(saude.whatsappStatus || saude.estado || 'Não informado')}</div></div>
+        <div class="row"><div class="label">Tempo online</div><div>${escapar(formatarTempoOnline(saude.uptime))}</div></div>
+        <div class="row"><div class="label">Última checagem</div><div>${escapar(saude.timestamp || new Date().toISOString())}</div></div>
+        ${saude.erro ?`<div class="row"><div class="label">Detalhe</div><div>${escapar(saude.erro)}</div></div>` : ''}
+    </section></main></body></html>`;
+}
+
 function pagina(instalacoes, opcoes = {}) {
     const criado = opcoes.criado;
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
     </style></head><body><main>
     <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
     <form method="post" action="/logout" style="margin-top:12px"><button class="secondary" type="submit">Sair</button></form>
@@ -175,11 +229,11 @@ function pagina(instalacoes, opcoes = {}) {
       ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
         <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div></td>
-        <td><span class="badge ${item.saude?.online ?(item.saude.whatsapp ?(item.saude.numero === item.whatsappEsperado ?'ok' : 'error') : 'warn') : 'error'}">${item.saude?.online ?(item.saude.whatsapp ?(item.saude.numero === item.whatsappEsperado ?'WhatsApp conectado' : 'WhatsApp divergente') : 'Aguardando WhatsApp') : 'Processo indisponível'}</span><div class="small">${item.saude?.numero ?`conectado: ${escapar(item.saude.numero)} · ` : ''}porta ${escapar(item.porta)} · ${escapar(item.processoPm2)}</div></td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
+        <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="support-actions">
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
-          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/health" target="_blank">Saúde</a>
+          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/saude">Saúde</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
         </div><div class="actions">
@@ -283,6 +337,14 @@ app.get('/instalacoes/:id/logs', async (req, res) => {
     try {
         const resultado = await obterLogsInstalacao(req.params.id, req.query.linhas);
         res.send(paginaLogs(resultado.instalacao, resultado.logs));
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
+});
+app.get('/instalacoes/:id/saude', async (req, res) => {
+    try {
+        const resultado = await obterDiagnosticoInstalacao(req.params.id);
+        res.send(paginaSaude(resultado.instalacao, resultado.saude));
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
     }

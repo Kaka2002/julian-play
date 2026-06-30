@@ -54,16 +54,22 @@ function consultarSaude(porta) {
                     const dados = JSON.parse(corpo);
                     resolve({
                         online: res.statusCode === 200,
+                        ok: Boolean(dados.ok),
+                        estado: String(dados.estado || ''),
+                        service: String(dados.service || ''),
                         whatsapp: Boolean(dados.whatsapp?.conectado),
-                        numero: String(dados.whatsapp?.numero || '').replace(/\D/g, '')
+                        whatsappStatus: String(dados.whatsapp?.status || ''),
+                        numero: String(dados.whatsapp?.numero || '').replace(/\D/g, ''),
+                        uptime: Number(dados.uptime || 0),
+                        timestamp: String(dados.timestamp || new Date().toISOString())
                     });
                 } catch (_) {
-                    resolve({ online: false, whatsapp: false, numero: '' });
+                    resolve({ online: false, whatsapp: false, numero: '', erro: 'Resposta de saúde inválida.' });
                 }
             });
         });
         req.on('timeout', () => req.destroy());
-        req.on('error', () => resolve({ online: false, whatsapp: false, numero: '' }));
+        req.on('error', () => resolve({ online: false, whatsapp: false, numero: '', erro: 'Processo sem resposta na porta local.' }));
     });
 }
 
@@ -389,6 +395,15 @@ async function obterLogsInstalacao(id, linhas = 120) {
     };
 }
 
+async function obterDiagnosticoInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    const saude = instalacao.status === 'arquivado'
+        ? { online: false, whatsapp: false, numero: '', erro: 'Instalação arquivada.' }
+        : await consultarSaude(instalacao.porta);
+    return { instalacao, saude };
+}
+
 function caminhoDentro(caminho, raiz) {
     const alvo = path.resolve(caminho);
     const base = `${path.resolve(raiz)}${path.sep}`;
@@ -437,6 +452,7 @@ module.exports = {
     prorrogarAvaliacao,
     reiniciarInstalacao,
     resetarSenhaPainel,
+    obterDiagnosticoInstalacao,
     obterLogsInstalacao,
     arquivarInstalacao,
     excluirDefinitivamente
