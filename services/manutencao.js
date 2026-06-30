@@ -243,7 +243,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
     const config = await obterConfiguracoes();
-    const eventos = await listarEventosSistema(20);
+    const eventos = await listarEventosSistema(6);
     const ultimoEventoDiagnostico = eventos.find(evento => evento.tipo === 'diagnostico');
     let diagnostico = null;
 
@@ -269,7 +269,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         backupDir: BACKUP_DIR,
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
-        backups: backups.slice(0, 8),
+        backups: backups.slice(0, 6),
         eventos,
         diagnostico,
         config,
