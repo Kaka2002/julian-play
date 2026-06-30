@@ -73,6 +73,42 @@ function consultarSaude(porta) {
     });
 }
 
+function chamarApiInstalacao(instalacao, metodo, caminho, corpo = null, timeout = 6000) {
+    return new Promise((resolve, reject) => {
+        const http = require('http');
+        const payload = corpo ? JSON.stringify(corpo) : '';
+        const req = http.request({
+            host: '127.0.0.1',
+            port: Number(instalacao.porta),
+            path: caminho,
+            method: metodo,
+            timeout,
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(payload),
+                'x-master-token': instalacao.codigoFornecedor
+            }
+        }, (res) => {
+            let resposta = '';
+            res.setEncoding('utf8');
+            res.on('data', trecho => { resposta += trecho; });
+            res.on('end', () => {
+                let dados = {};
+                try { dados = resposta ? JSON.parse(resposta) : {}; } catch (_) { dados = { erro: resposta }; }
+                if (res.statusCode >= 200 && res.statusCode < 300) return resolve(dados);
+                reject(new Error(dados.erro || `Instalação respondeu HTTP ${res.statusCode}.`));
+            });
+        });
+
+        req.on('timeout', () => {
+            req.destroy(new Error('Instalação demorou para responder.'));
+        });
+        req.on('error', reject);
+        if (payload) req.write(payload);
+        req.end();
+    });
+}
+
 async function listarInstalacoes() {
     const instalacoes = await masterDb.buscarTodos('SELECT * FROM instalacoes ORDER BY datetime(criadoEm) DESC, id DESC');
     return Promise.all(instalacoes.map(async (instalacao) => {
@@ -383,6 +419,28 @@ async function resetarSenhaPainel(id, senha = '') {
     await atualizarStatus(id, 'ativo', 'Senha do painel redefinida pelo Painel Mestre.');
 }
 
+async function gerarBackupInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem gerar backup pelo robô.');
+
+    const resultado = await chamarApiInstalacao(instalacao, 'POST', '/api/admin/backup');
+    const nomeBackup = resultado.backup?.nome || resultado.backup?.arquivo || 'backup criado';
+    await atualizarStatus(id, 'ativo', `Backup solicitado pelo Painel Mestre: ${nomeBackup}.`);
+    return nomeBackup;
+}
+
+async function liberarAtendimentoInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem liberar atendimento.');
+
+    const resultado = await chamarApiInstalacao(instalacao, 'POST', '/api/admin/atendimentos/liberar');
+    const liberados = Number(resultado.liberados || 0);
+    await atualizarStatus(id, 'ativo', `${liberados} atendimento(s) humano(s) liberado(s) pelo Painel Mestre.`);
+    return liberados;
+}
+
 async function obterLogsInstalacao(id, linhas = 120) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -452,6 +510,8 @@ module.exports = {
     prorrogarAvaliacao,
     reiniciarInstalacao,
     resetarSenhaPainel,
+    gerarBackupInstalacao,
+    liberarAtendimentoInstalacao,
     obterDiagnosticoInstalacao,
     obterLogsInstalacao,
     arquivarInstalacao,

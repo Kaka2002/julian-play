@@ -11,6 +11,8 @@ const {
     prorrogarAvaliacao,
     reiniciarInstalacao,
     resetarSenhaPainel,
+    gerarBackupInstalacao,
+    liberarAtendimentoInstalacao,
     obterDiagnosticoInstalacao,
     obterLogsInstalacao,
     arquivarInstalacao,
@@ -232,9 +234,12 @@ function pagina(instalacoes, opcoes = {}) {
         <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="support-actions">
+          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/clientes" target="_blank">Painel</a>
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/saude">Saúde</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/backup"><button class="smallbtn secondary" type="submit">Backup</button></form>` : ''}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="smallbtn secondary" type="submit">Liberar atendimento</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
         </div><div class="actions">
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
@@ -325,6 +330,22 @@ app.post('/instalacoes/:id/licenca', async (req, res) => {
     }
 });
 app.post('/instalacoes/:id/reiniciar', acao(reiniciarInstalacao, 'Robô reiniciado.'));
+app.post('/instalacoes/:id/backup', async (req, res) => {
+    try {
+        const nomeBackup = await gerarBackupInstalacao(req.params.id);
+        res.redirect(`/?mensagem=${encodeURIComponent(`Backup criado: ${nomeBackup}`)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
+});
+app.post('/instalacoes/:id/liberar-atendimento', async (req, res) => {
+    try {
+        const liberados = await liberarAtendimentoInstalacao(req.params.id);
+        res.redirect(`/?mensagem=${encodeURIComponent(`${liberados} atendimento(s) liberado(s).`)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
+});
 app.post('/instalacoes/:id/resetar-senha', async (req, res) => {
     try {
         await resetarSenhaPainel(req.params.id, req.body.senhaPainel);

@@ -118,6 +118,28 @@ function pausarParaAtendente(telefone, nome = '', origem = 'bot') {
     });
 }
 
+function liberarAtendimentosHumanos(telefone = '') {
+    const alvo = String(telefone || '').trim();
+
+    if (alvo) {
+        const existia = conversas.has(alvo);
+        conversas.delete(alvo);
+        salvarConversas();
+        return { liberados: existia ? 1 : 0, totalRestante: conversas.size };
+    }
+
+    let liberados = 0;
+    for (const [numero, conversa] of conversas.entries()) {
+        if (conversa?.etapa === 'atendimento_humano') {
+            conversas.delete(numero);
+            liberados += 1;
+        }
+    }
+
+    salvarConversas();
+    return { liberados, totalRestante: conversas.size };
+}
+
 function prepararRenovacaoTesteGratis(telefone, cliente = {}) {
     definirConversa(telefone, {
         etapa: 'renovacao_plano',
@@ -1029,6 +1051,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagens.re
 
 module.exports = {
     pausarParaAtendente,
+    liberarAtendimentosHumanos,
     prepararRenovacaoTesteGratis,
     responderMensagem,
     responderEncerramentoRapido,
