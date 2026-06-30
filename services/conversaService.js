@@ -417,7 +417,8 @@ function marcaSmartTV(opcao) {
         '9': 'Panasonic',
         '10': 'Sony',
         '11': 'Telefunken',
-        '12': 'Thomson'
+        '12': 'Thomson',
+        '13': 'TV Smart Android'
     };
 
     return marcas[opcao] || null;
@@ -440,6 +441,7 @@ Escolha a marca da sua TV:
 *10* - Sony
 *11* - Telefunken
 *12* - Thomson
+*13* - TV Smart Android
 
 Se não for nenhuma acima, digite o nome da marca da sua TV.`;
 }
