@@ -55,6 +55,9 @@ async function obterConfiguracoes() {
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
         ultimoBackupAutomatico: '',
+        roboPalavrasChave: 'oi, ola, olá, menu, planos, teste, grátis, gratis',
+        roboMensagemDesconhecida: 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
+        roboAtendimentoHumanoMinutos: '30',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -112,12 +115,18 @@ async function salvarConfiguracoesPainel(dados = {}) {
 
 async function salvarConfiguracoesRobo(dados = {}) {
     const nomeEmpresa = String(dados.nomeEmpresaRobo || '').trim();
+    const palavrasChave = String(dados.roboPalavrasChave || '').trim();
+    const mensagemDesconhecida = String(dados.roboMensagemDesconhecida || '').trim();
+    const minutosAtendimento = Math.max(1, Math.min(1440, Number.parseInt(dados.roboAtendimentoHumanoMinutos || 30, 10) || 30));
 
     if (!nomeEmpresa) {
         throw new Error('Informe o nome da empresa que aparecera nas mensagens.');
     }
 
     await salvarConfiguracao('nomeEmpresaRobo', nomeEmpresa);
+    await salvarConfiguracao('roboPalavrasChave', palavrasChave || 'oi, ola, olá, menu, planos, teste, grátis, gratis');
+    await salvarConfiguracao('roboMensagemDesconhecida', mensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.');
+    await salvarConfiguracao('roboAtendimentoHumanoMinutos', String(minutosAtendimento));
 
     return obterConfiguracoes();
 }

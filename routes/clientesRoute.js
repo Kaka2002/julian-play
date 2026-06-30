@@ -5062,16 +5062,23 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Configuração do robô</h2>
-                <div class="subtitle">Nome da empresa e imagens usadas nas respostas automáticas desta instalação</div>
+                <div class="subtitle">Identidade, gatilhos, imagens e atalhos usados nas respostas automáticas desta instalação</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
-            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos.</div>
+            ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, planos, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, planos, teste"' })}
+            ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
+            ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
+            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento.</div>
             <div class="actions full">
-                <button class="button" type="submit">${icon('check')} Salvar nome do robô</button>
+                <button class="button" type="submit">${icon('check')} Salvar configuração do robô</button>
+                <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
+                <a class="button secondary" href="/planos">${icon('planos')} Editar planos</a>
+                <a class="button secondary" href="/qr">${icon('whats')} Ver WhatsApp</a>
             </div>
         </form>
+        <div class="notice" style="margin:0 20px 18px;">Envie imagens leves, preferencialmente JPG ou PNG em 1080x1080 para cards e 1200x628 para banners. O envio ao WhatsApp aguarda até 30 segundos.</div>
         <div class="cards-grid" style="display:grid;gap:12px;padding:0 20px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
             ${campoImagemRobo(status.config, 'imagemRoboMenu', 'Boas-vindas / menu')}
             ${campoImagemRobo(status.config, 'imagemRoboPlanos', 'Planos e valores')}

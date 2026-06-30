@@ -53,6 +53,12 @@ async function obterPerfilRobo() {
 
     return {
         nomeEmpresa,
+        palavrasChave: String(config.roboPalavrasChave || 'oi, ola, olá, menu, planos, teste, grátis, gratis')
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean),
+        mensagemDesconhecida: config.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
+        atendimentoHumanoMs: Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000,
         imagens: {
             menu: config.imagemRoboMenu || (usarImagensPadrao ?imagensRespostas.menu : ''),
             planos: config.imagemRoboPlanos || (usarImagensPadrao ?imagensRespostas.planos : ''),
@@ -124,14 +130,14 @@ function prepararRenovacaoTesteGratis(telefone, cliente = {}) {
 
 carregarConversas();
 
-function atendimentoHumanoExpirou(conversa = {}) {
+function atendimentoHumanoExpirou(conversa = {}, perfil = {}) {
     if (conversa.etapa !== 'atendimento_humano') return false;
     if (!conversa.iniciadoEm) return true;
 
     const inicio = new Date(conversa.iniciadoEm).getTime();
     if (!inicio) return true;
 
-    return Date.now() - inicio > ATENDIMENTO_HUMANO_TIMEOUT_MS;
+    return Date.now() - inicio > (perfil.atendimentoHumanoMs || ATENDIMENTO_HUMANO_TIMEOUT_MS);
 }
 
 function textoCurto(texto) {
@@ -282,6 +288,20 @@ function normalizar(texto) {
         .toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '');
+}
+
+function isPalavraChaveConfigurada(texto, perfil = {}) {
+    const textoNormalizado = normalizar(texto);
+    const palavras = Array.isArray(perfil.palavrasChave) ? perfil.palavrasChave : [];
+
+    if (!textoNormalizado || !palavras.length) return false;
+
+    return palavras.some((palavra) => {
+        const chave = normalizar(palavra);
+        if (!chave) return false;
+
+        return new RegExp(`\\b${chave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(textoNormalizado);
+    });
 }
 
 function obterDestinoMensagem(message) {
@@ -675,7 +695,7 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagens.encerramento);
     }
 
     if (conversa?.etapa === 'atendimento_humano') {
-        if (atendimentoHumanoExpirou(conversa) || deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa)) {
+        if (atendimentoHumanoExpirou(conversa, perfil) || deveReiniciarAtendimentoHumano(texto, textoOriginal, conversa)) {
             apagarConversa(telefone);
             conversa = null;
         } else {
@@ -982,7 +1002,7 @@ Escolha um dispositivo da lista:
         return;
     }
 
-    if (textoCurto(textoOriginal) && isPalavraChave(texto)) {
+    if (textoCurto(textoOriginal) && (isPalavraChaveConfigurada(textoOriginal, perfil) || isPalavraChave(texto))) {
         await iniciarBoasVindas(message, telefone, perfil);
         return;
     }
@@ -1004,7 +1024,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagens.re
         await responderComDigitacao(message, menuDispositivos(), imagens.ativacao);
         return;
     }
-    console.log('Mensagem ignorada: sem palavra-chave para iniciar atendimento:', telefone);
+    console.log(perfil.mensagemDesconhecida || 'Mensagem ignorada: sem palavra-chave para iniciar atendimento:', telefone);
 }
 
 module.exports = {
