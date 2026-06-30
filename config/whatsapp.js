@@ -195,6 +195,20 @@ function obterTipoMensagem(message) {
         'desconhecido';
 }
 
+function ehMidiaPropria(message) {
+    if (message?.hasMedia) return true;
+
+    const tipo = normalizar(obterTipoMensagem(message));
+    return [
+        'image',
+        'video',
+        'audio',
+        'ptt',
+        'document',
+        'sticker'
+    ].includes(tipo);
+}
+
 function ehRespostaAutomaticaWhatsapp(texto) {
     const normalizado = normalizar(texto || '');
     return normalizado.includes('agradece sua mensagem') &&
@@ -225,6 +239,11 @@ function processarMensagemEmFila(message, options = {}) {
 
         if (ehRespostaAutomaticaWhatsapp(textoMensagem)) {
             console.log('Resposta automática do WhatsApp ignorada sem pausar atendimento:', obterTelefoneMensagem(message));
+            return;
+        }
+
+        if (ehMidiaPropria(message)) {
+            console.log(`Mensagem própria de mídia ignorada sem pausar atendimento: ${obterTelefoneMensagem(message)} tipo=${obterTipoMensagem(message)}`);
             return;
         }
 
