@@ -98,7 +98,7 @@ function paginaLogin(opcoes = {}) {
       <div class="brand">Painel Mestre - Julian Play</div>
       <h1>Entrar</h1>
       <div class="sub">Informe o usu&aacute;rio e a senha para acessar o painel.</div>
-      ${opcoes.erro ? `<div class="erro">${escapar(opcoes.erro)}</div>` : ''}
+      ${opcoes.erro ?`<div class="erro">${escapar(opcoes.erro)}</div>` : ''}
       <input type="hidden" name="destino" value="${escapar(destino)}">
       <label>Usu&aacute;rio<input name="usuario" autocomplete="username" autofocus required></label>
       <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
@@ -121,11 +121,11 @@ function autenticar(req, res, next) {
             const [usuario, ...senhaPartes] = Buffer.from(cabecalho.slice(6), 'base64').toString('utf8').split(':');
             const senha = senhaPartes.join(':');
             if (usuario === usuarioEsperado && verificarSenha(senha, hashEsperado)) return next();
-        } catch (_) { /* Solicita autenticaÃ§Ã£o novamente. */ }
+        } catch (_) { /* Solicita autenticação novamente. */ }
     }
 
     res.setHeader('WWW-Authenticate', 'Basic realm="Painel Mestre Julian Play", charset="UTF-8"');
-    return res.status(401).send('AutenticaÃ§Ã£o necessÃ¡ria.');
+    return res.status(401).send('Autenticação necessária.');
 }
 
 function autenticarSessao(req, res, next) {
@@ -152,47 +152,47 @@ function pagina(instalacoes, opcoes = {}) {
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
     </style></head><body><main>
-    <h1>Painel Mestre</h1><div class="sub">InstalaÃ§Ãµes comerciais isoladas em ${escapar(baseDomain)}</div>
+    <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
     <form method="post" action="/logout" style="margin-top:12px"><button class="secondary" type="submit">Sair</button></form>
-    ${opcoes.mensagem ? `<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
-    ${opcoes.erro ? `<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
-    ${criado ? `<div class="credentials"><strong>InstalaÃ§Ã£o criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>UsuÃ¡rio: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha nÃ£o fica armazenada no Painel Mestre.</div></div>` : ''}
-    <section class="panel"><h2>Nova instalaÃ§Ã£o</h2><div class="sub">Crie um painel, banco e robÃ´ independentes</div>
+    ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
+    ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
+    ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
+    <section class="panel"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
       <form class="fields" method="post" action="/instalacoes">
         <label>Cliente / Empresa<input name="nome" required></label>
         <label>Identificador da URL<input name="slug" placeholder="ex: cliente-teste"></label>
-        <label>LicenÃ§a<select name="tipoLicenca"><option value="avaliacao_15">AvaliaÃ§Ã£o de 15 dias</option><option value="avaliacao_30">AvaliaÃ§Ã£o de 30 dias</option><option value="vitalicia">Definitiva / vitalÃ­cia</option></select></label>
+        <label>Licença<select name="tipoLicenca"><option value="avaliacao_15">Avaliação de 15 dias</option><option value="avaliacao_30">Avaliação de 30 dias</option><option value="vitalicia">Definitiva / vitalícia</option></select></label>
         <label>Perfil da instalação<select name="perfilLicenca"><option value="cliente">Cliente normal</option><option value="admin">Administrador / fornecedor</option></select></label>
-        <label>WhatsApp do robÃ´<input name="whatsappEsperado" inputmode="numeric" placeholder="Ex.: 5512999999999" required></label>
+        <label>WhatsApp do robô<input name="whatsappEsperado" inputmode="numeric" placeholder="Ex.: 5512999999999" required></label>
         <label>Hora dos avisos<input type="number" name="horaEnvio" value="9" min="0" max="23" required></label>
         <label>Minuto dos avisos<input type="number" name="minutoEnvio" value="0" min="0" max="59" required></label>
-        <label>UsuÃ¡rio do painel<input name="usuarioPainel" value="admin" required></label>
+        <label>Usuário do painel<input name="usuarioPainel" value="admin" required></label>
         <label>Senha inicial<input type="password" name="senhaPainel" minlength="8" required></label>
-        <div style="align-self:end"><button type="submit">Criar instalaÃ§Ã£o</button></div>
+        <div style="align-self:end"><button type="submit">Criar instalação</button></div>
       </form>
     </section>
-    <section class="panel"><h2>InstalaÃ§Ãµes</h2><div class="sub">${instalacoes.length} instalaÃ§Ã£o(Ãµes) cadastrada(s)</div><div class="table-wrap">
-      ${instalacoes.length ? `<table><thead><tr><th>Cliente</th><th>URL</th><th>RobÃ´</th><th>LicenÃ§a</th><th>Status</th><th>AÃ§Ãµes</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
-        <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp nÃ£o informado')} Â· avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
+    <section class="panel"><h2>Instalações</h2><div class="sub">${instalacoes.length} instalação(ões) cadastrada(s)</div><div class="table-wrap">
+      ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
+        <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div></td>
-        <td><span class="badge ${item.saude?.online ? (item.saude.whatsapp ? (item.saude.numero === item.whatsappEsperado ? 'ok' : 'error') : 'warn') : 'error'}">${item.saude?.online ? (item.saude.whatsapp ? (item.saude.numero === item.whatsappEsperado ? 'WhatsApp conectado' : 'WhatsApp divergente') : 'Aguardando WhatsApp') : 'Processo indisponÃ­vel'}</span><div class="small">${item.saude?.numero ? `conectado: ${escapar(item.saude.numero)} Â· ` : ''}porta ${escapar(item.porta)} Â· ${escapar(item.processoPm2)}</div></td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ? `<div class="small">atÃ© ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ? ` (${item.diasAvaliacao} dias)` : ''}</td>
-        <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ? 'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ? item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ? `<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
+        <td><span class="badge ${item.saude?.online ?(item.saude.whatsapp ?(item.saude.numero === item.whatsappEsperado ?'ok' : 'error') : 'warn') : 'error'}">${item.saude?.online ?(item.saude.whatsapp ?(item.saude.numero === item.whatsappEsperado ?'WhatsApp conectado' : 'WhatsApp divergente') : 'Aguardando WhatsApp') : 'Processo indisponível'}</span><div class="small">${item.saude?.numero ?`conectado: ${escapar(item.saude.numero)} · ` : ''}porta ${escapar(item.porta)} · ${escapar(item.processoPm2)}</div></td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
+        <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="support-actions">
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
-          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/health" target="_blank">SaÃºde</a>
+          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/health" target="_blank">Saúde</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
-          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robÃ´ desta instalaÃ§Ã£o?');"><button class="smallbtn" type="submit">Reiniciar robÃ´</button></form>` : ''}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
         </div><div class="actions">
-          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
-          ${item.status !== 'arquivado' ? `<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licenÃ§a comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licenÃ§a comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">VitalÃ­cia</option></select><button type="submit">Ativar licenÃ§a</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogaÃ§Ã£o"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalaÃ§Ã£o e parar o robÃ´?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃƒO DEFINITIVA: apagar banco, sessÃ£o e todos os clientes desta instalaÃ§Ã£o?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
-        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalaÃ§Ã£o criada.</div>'}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÒO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
+        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
     </div></section></main></body></html>`;
 }
 
 function paginaLogs(instalacao, logs) {
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Logs - ${escapar(instalacao.nome)}</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1200px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}pre{white-space:pre-wrap;background:#081225;color:#dfe7ff;border-radius:8px;padding:16px;line-height:1.45;max-height:76vh;overflow:auto}
-    </style></head><body><main><a class="button" href="/">Voltar</a><h1>Logs de ${escapar(instalacao.nome)}</h1><div class="sub">${escapar(instalacao.processoPm2)} Â· porta ${escapar(instalacao.porta)}</div><pre>${escapar(logs || 'Nenhum log encontrado.')}</pre></main></body></html>`;
+    </style></head><body><main><a class="button" href="/">Voltar</a><h1>Logs de ${escapar(instalacao.nome)}</h1><div class="sub">${escapar(instalacao.processoPm2)} · porta ${escapar(instalacao.porta)}</div><pre>${escapar(logs || 'Nenhum log encontrado.')}</pre></main></body></html>`;
 }
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
@@ -257,20 +257,20 @@ function acao(servico, mensagem) {
     };
 }
 
-app.post('/instalacoes/:id/suspender', acao(suspenderInstalacao, 'InstalaÃ§Ã£o suspensa.'));
-app.post('/instalacoes/:id/vitalicia', acao(tornarVitalicia, 'InstalaÃ§Ã£o convertida em definitiva.'));
+app.post('/instalacoes/:id/suspender', acao(suspenderInstalacao, 'Instalação suspensa.'));
+app.post('/instalacoes/:id/vitalicia', acao(tornarVitalicia, 'Instalação convertida em definitiva.'));
 app.post('/instalacoes/:id/licenca', async (req, res) => {
     try {
         const licenca = await ativarLicencaComercial(req.params.id, req.body.tipoLicenca);
         const detalhe = licenca.vencimento
-            ? `${licenca.rotulo} ativada atÃ© ${licenca.vencimento.split('-').reverse().join('/')}.`
+            ?`${licenca.rotulo} ativada até ${licenca.vencimento.split('-').reverse().join('/')}.`
             : `${licenca.rotulo} ativada.`;
         res.redirect(`/?mensagem=${encodeURIComponent(detalhe)}`);
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
     }
 });
-app.post('/instalacoes/:id/reiniciar', acao(reiniciarInstalacao, 'RobÃ´ reiniciado.'));
+app.post('/instalacoes/:id/reiniciar', acao(reiniciarInstalacao, 'Robô reiniciado.'));
 app.post('/instalacoes/:id/resetar-senha', async (req, res) => {
     try {
         await resetarSenhaPainel(req.params.id, req.body.senhaPainel);
@@ -290,12 +290,12 @@ app.get('/instalacoes/:id/logs', async (req, res) => {
 app.post('/instalacoes/:id/prorrogar', async (req, res) => {
     try {
         const vencimento = await prorrogarAvaliacao(req.params.id, req.body.dias);
-        res.redirect(`/?mensagem=${encodeURIComponent(`AvaliaÃ§Ã£o prorrogada atÃ© ${vencimento.split('-').reverse().join('/')}.`)}`);
+        res.redirect(`/?mensagem=${encodeURIComponent(`Avaliação prorrogada até ${vencimento.split('-').reverse().join('/')}.`)}`);
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
     }
 });
-app.post('/instalacoes/:id/arquivar', acao(arquivarInstalacao, 'InstalaÃ§Ã£o arquivada.'));
-app.post('/instalacoes/:id/excluir', acao(excluirDefinitivamente, 'InstalaÃ§Ã£o excluÃ­da definitivamente.'));
+app.post('/instalacoes/:id/arquivar', acao(arquivarInstalacao, 'Instalação arquivada.'));
+app.post('/instalacoes/:id/excluir', acao(excluirDefinitivamente, 'Instalação excluída definitivamente.'));
 
 app.listen(PORT, HOST, () => console.log(`Painel Mestre em http://${HOST}:${PORT}`));

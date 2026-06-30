@@ -81,7 +81,7 @@ const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
 const CODIGO_COBRANCA_VENCIDO = -90;
-const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path.join(__dirname, '..'));
 const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
@@ -89,7 +89,7 @@ const CLIENTES_POR_PAGINA = 10;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
-    'IndicaÃ§Ã£o pessoal',
+    'Indicação pessoal',
     'Instagram',
     'WhatsApp',
     'Facebook',
@@ -100,7 +100,7 @@ const ORIGENS_CLIENTE = [
 ];
 const TAGS_CLIENTE = [
     'VIP',
-    'ProblemÃ¡tico',
+    'Problemático',
     'Indicado',
     'Retorno',
     'Fornecedor',
@@ -109,26 +109,26 @@ const TAGS_CLIENTE = [
     'Atrasou pagamento'
 ];
 const NOTAS_ATENDIMENTO_PADRAO = [
-    'Cliente pediu teste grÃ¡tis.',
+    'Cliente pediu teste grátis.',
     'Cliente teve dificuldade para instalar o aplicativo.',
-    'Cliente recebeu orientaÃ§Ã£o passo a passo pelo WhatsApp.',
+    'Cliente recebeu orientação passo a passo pelo WhatsApp.',
     'Cliente reclamou de travamentos.',
     'Orientado a testar a internet e reiniciar o roteador.',
-    'Cliente solicitou renovaÃ§Ã£o de assinatura.',
+    'Cliente solicitou renovação de assinatura.',
     'Cliente informou pagamento realizado.',
     'Pagamento atrasou, mas foi regularizado.',
     'Cliente pediu troca de aplicativo.',
     'Cliente pediu troca de dispositivo.',
     'Cliente pediu suporte para configurar TV.',
     'Cliente pediu suporte para configurar celular.',
-    'O Cliente informou que o aplicativo nÃ£o estÃ¡ carregando os canais e/ou app nÃ£o estÃ¡ funcionando.',
+    'O Cliente informou que o aplicativo não está carregando os canais e/ou app não está funcionando.',
     'Cliente indicado por outro cliente.',
     'Cliente deve receber atendimento com prioridade.',
-    'Cliente demonstrou comportamento problemÃ¡tico.',
-    'Cliente nÃ£o seguiu as orientaÃ§Ãµes enviadas.',
+    'Cliente demonstrou comportamento problemático.',
+    'Cliente não seguiu as orientações enviadas.',
     'Cliente pediu cancelamento.',
-    'Cliente retornou apÃ³s perÃ­odo sem usar o serviÃ§o.',
-    'Cliente precisa de acompanhamento no prÃ³ximo atendimento.'
+    'Cliente retornou após período sem usar o serviço.',
+    'Cliente precisa de acompanhamento no próximo atendimento.'
 ];
 function instalacaoComercialCliente() {
     return Boolean(String(process.env.LICENSE_CUSTOMER_NAME || '').trim());
@@ -136,7 +136,7 @@ function instalacaoComercialCliente() {
 
 function bloquearManutencaoRestritaCliente(req, res, next) {
     if (!instalacaoComercialCliente() || instalacaoAdministrador()) return next();
-    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Esta opÃ§Ã£o Ã© restrita ao fornecedor.')}`);
+    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Esta opção é restrita ao fornecedor.')}`);
 }
 
 const LOCAIS_INSTALACAO_APP = [
@@ -144,7 +144,7 @@ const LOCAIS_INSTALACAO_APP = [
     'TV do quarto',
     'TV da cozinha',
     'TV principal',
-    'TV secundÃ¡ria',
+    'TV secundária',
     'TV box',
     'Celular do cliente',
     'Celular do filho',
@@ -164,7 +164,7 @@ function escapar(valor) {
 
 function paginaAtual(valor) {
     const pagina = Number.parseInt(valor, 10);
-    return Number.isFinite(pagina) && pagina > 0 ? pagina : 1;
+    return Number.isFinite(pagina) && pagina > 0 ?pagina : 1;
 }
 
 function paginarItens(itens = [], pagina = 1, porPagina = 10) {
@@ -205,7 +205,7 @@ function montarUrlComFiltros(base, params = {}) {
     });
 
     const textoQuery = query.toString();
-    return textoQuery ? `${base}?${textoQuery}` : base;
+    return textoQuery ?`${base}?${textoQuery}` : base;
 }
 
 function filtrosClientesQuery(query = {}) {
@@ -225,7 +225,7 @@ function filtrosFinanceiroQuery(query = {}) {
         mes: String(query.mes || mesAtualInput()).slice(0, 7),
         dataInicio: String(query.dataInicio || '').slice(0, 10),
         dataFim: String(query.dataFim || '').slice(0, 10),
-        status: ['validos', 'removidos', 'todos'].includes(status) ? status : 'validos'
+        status: ['validos', 'removidos', 'todos'].includes(status) ?status : 'validos'
     };
 }
 
@@ -260,7 +260,7 @@ function lerUploadMultipart(req) {
             const fimArquivo = buffer.indexOf(fimMarcador, inicioArquivo);
 
             if (fimArquivo < 0) {
-                reject(new Error('NÃ£o foi possÃ­vel ler o arquivo enviado.'));
+                reject(new Error('Não foi possível ler o arquivo enviado.'));
                 return;
             }
 
@@ -288,12 +288,12 @@ function campoImagemRobo(config = {}, chave, descricao) {
     const arquivo = config[chave] || '';
     const arquivoSeguro = path.basename(String(arquivo).split('?')[0]);
     const origem = arquivoSeguro && fs.existsSync(path.join(ASSETS_DIR, arquivoSeguro))
-        ? `/tenant-assets/${escapar(arquivoSeguro)}?v=${Date.now()}`
+        ?`/tenant-assets/${escapar(arquivoSeguro)}?v=${Date.now()}`
         : arquivoSeguro
-            ? `/assets/${escapar(arquivoSeguro)}`
+            ?`/assets/${escapar(arquivoSeguro)}`
             : '';
     const preview = arquivo
-        ? `<div class="subtitle">Atual: ${escapar(arquivoSeguro)}</div><img class="brand-logo" src="${origem}" alt="${escapar(descricao)}" style="width:54px;height:54px;margin-top:8px;">`
+        ?`<div class="subtitle">Atual: ${escapar(arquivoSeguro)}</div><img class="brand-logo" src="${origem}" alt="${escapar(descricao)}" style="width:54px;height:54px;margin-top:8px;">`
         : '<div class="subtitle">Nenhuma imagem configurada</div>';
 
     return `<div class="panel mini-card" style="padding:14px;">
@@ -357,8 +357,8 @@ function dataHoraVencimento(valor) {
     if (!valor) return null;
 
     const texto = String(valor);
-    const data = new Date(texto.length <= 10 ? `${texto}T23:59:59` : texto);
-    return Number.isNaN(data.getTime()) ? null : data;
+    const data = new Date(texto.length <= 10 ?`${texto}T23:59:59` : texto);
+    return Number.isNaN(data.getTime()) ?null : data;
 }
 
 function vencimentoExpirou(valor) {
@@ -379,7 +379,7 @@ function numeroMoeda(valor) {
 
     const numero = Number(texto);
 
-    return Number.isFinite(numero) ? numero : 0;
+    return Number.isFinite(numero) ?numero : 0;
 }
 
 function formatarMoeda(valor) {
@@ -422,7 +422,7 @@ function calcularReceitaMensal(clientes) {
             const temHistoricoFinanceiro = Number(cliente.totalPagamentos || 0) > 0;
             const temPagamentoValido = Boolean(cliente.pagamentoPlano);
             const base = temHistoricoFinanceiro
-                ? {
+                ?{
                     plano: cliente.pagamentoPlano || cliente.plano,
                     diasContrato: cliente.pagamentoDiasContrato,
                     valorPlano: cliente.pagamentoValorPlano,
@@ -431,9 +431,9 @@ function calcularReceitaMensal(clientes) {
                 : cliente;
             const grupo = grupoPlanoReceita(base);
             const dias = diasPlanoCliente(base);
-            const valorPlano = temHistoricoFinanceiro && !temPagamentoValido ? 0 : numeroMoeda(base.valorPlano);
-            const assinaturaApp = temHistoricoFinanceiro && !temPagamentoValido ? 0 : numeroMoeda(base.assinaturaApp);
-            const mensalPlano = dias > 0 ? (valorPlano / dias) * 30 : valorPlano;
+            const valorPlano = temHistoricoFinanceiro && !temPagamentoValido ?0 : numeroMoeda(base.valorPlano);
+            const assinaturaApp = temHistoricoFinanceiro && !temPagamentoValido ?0 : numeroMoeda(base.assinaturaApp);
+            const mensalPlano = dias > 0 ?(valorPlano / dias) * 30 : valorPlano;
             const mensal = mensalPlano + assinaturaApp;
             const atual = grupos.get(grupo) || { plano: grupo, clientes: 0, total: 0 };
 
@@ -449,7 +449,7 @@ function calcularReceitaMensal(clientes) {
         .sort((a, b) => {
             const posA = ordem.indexOf(a.plano);
             const posB = ordem.indexOf(b.plano);
-            if (posA !== -1 || posB !== -1) return (posA === -1 ? 99 : posA) - (posB === -1 ? 99 : posB);
+            if (posA !== -1 || posB !== -1) return (posA === -1 ?99 : posA) - (posB === -1 ?99 : posB);
             return a.plano.localeCompare(b.plano, 'pt-BR');
         });
     const total = itens.reduce((soma, item) => soma + item.total, 0);
@@ -523,9 +523,9 @@ function textoVencimento(cliente) {
     if (dias === null) return 'Sem vencimento';
     if (vencimentoExpirou(vencimento)) {
         if (dias === 0) return 'Vencido hoje';
-        return `Vencido hÃ¡ ${Math.abs(dias)} dia(s)`;
+        return `Vencido há ${Math.abs(dias)} dia(s)`;
     }
-    if (dias < 0) return `Vencido hÃ¡ ${Math.abs(dias)} dia(s)`;
+    if (dias < 0) return `Vencido há ${Math.abs(dias)} dia(s)`;
     if (tempo && tempo !== '-') {
         return `Vence em ${tempo.replace(/ restantes?$/, '')}`;
     }
@@ -579,7 +579,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const logoUrl = config.logoUrl || '';
     const licenca = calcularEstadoLicenca(config);
     const avisoAvaliacao = licenca.bloqueioAtivo && licenca.tipo === 'avaliacao' && licenca.permitida
-        ? `PerÃ­odo de avaliaÃ§Ã£o: ${Math.max(0, licenca.diasRestantes)} dia(s) restante(s).`
+        ?`Período de avaliação: ${Math.max(0, licenca.diasRestantes)} dia(s) restante(s).`
         : '';
 
     return `<!doctype html>
@@ -2017,30 +2017,30 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             <div class="brand">
                 <form method="post" action="/configuracoes/logo" enctype="multipart/form-data">
                     <label class="logo-click" title="Clique para trocar a logo">
-                        ${logoUrl ? `<img class="brand-logo" src="${escapar(logoUrl)}" alt="Logo">` : `<span class="brand-icon">${icon('logo')}</span>`}
+                        ${logoUrl ?`<img class="brand-logo" src="${escapar(logoUrl)}" alt="Logo">` : `<span class="brand-icon">${icon('logo')}</span>`}
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
                     </label>
                 </form>
                 <a class="brand-text" href="/clientes">${escapar(nomeSistema)}</a>
             </div>
             <nav>
-                <a class="navlink ${ativo === 'painel' ? 'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
-                <a class="navlink ${ativo === 'clientes' ? 'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
-                <a class="navlink ${ativo === 'planos' ? 'active' : ''}" href="/planos">${icon('planos')} Planos</a>
-                <a class="navlink ${ativo === 'modelos' ? 'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
-                <a class="navlink ${ativo === 'apps' ? 'active' : ''}" href="/apps">${icon('apps')} Apps</a>
-                <a class="navlink ${ativo === 'dispositivos' ? 'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
-                <a class="navlink ${ativo === 'paineis' ? 'active' : ''}" href="/paineis">${icon('paineis')} PainÃ©is</a>
-                <a class="navlink ${ativo === 'financeiro' ? 'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
+                <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
+                <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
+                <a class="navlink ${ativo === 'planos' ?'active' : ''}" href="/planos">${icon('planos')} Planos</a>
+                <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
+                <a class="navlink ${ativo === 'apps' ?'active' : ''}" href="/apps">${icon('apps')} Apps</a>
+                <a class="navlink ${ativo === 'dispositivos' ?'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
+                <a class="navlink ${ativo === 'paineis' ?'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
+                <a class="navlink ${ativo === 'financeiro' ?'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
-                <a class="navlink ${ativo === 'manutencao' ? 'active' : ''}" href="/manutencao">${icon('manutencao')} ManutenÃ§Ã£o</a>
+                <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
         </div>
     </div>
     <main>
-        ${avisoAvaliacao ? `<div class="notice">${escapar(avisoAvaliacao)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
-        ${mensagem ? `<div class="notice">${escapar(mensagem)}</div>` : ''}
+        ${avisoAvaliacao ?`<div class="notice">${escapar(avisoAvaliacao)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
+        ${mensagem ?`<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
     </main>
 </body>
@@ -2074,7 +2074,7 @@ function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = ''
     if (opcoes.length) {
         return `<label>${label}
             <select name="${nome}" ${attrs}>
-                ${opcoes.map(opcao => `<option value="${escapar(opcao.valor)}" ${String(opcao.valor) === String(valor) ? 'selected' : ''}>${escapar(opcao.texto)}</option>`).join('')}
+                ${opcoes.map(opcao => `<option value="${escapar(opcao.valor)}" ${String(opcao.valor) === String(valor) ?'selected' : ''}>${escapar(opcao.texto)}</option>`).join('')}
             </select>
         </label>`;
     }
@@ -2101,7 +2101,7 @@ function renderTagsCliente(tags) {
 
     return `<div class="client-tags">${itens.map((tag) => {
         const aviso = tag.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('problematico');
-        return `<span class="tag-chip ${aviso ? 'warn' : ''}">${escapar(tag)}</span>`;
+        return `<span class="tag-chip ${aviso ?'warn' : ''}">${escapar(tag)}</span>`;
     }).join('')}</div>`;
 }
 
@@ -2120,12 +2120,12 @@ function alertaClienteHtml(alertas = []) {
     if (!alertas.length) return '';
 
     const itens = alertas.map(alerta => `<div class="client-alert-item">
-        AtenÃ§Ã£o: existe cadastro anterior para ${escapar(alerta.nome || 'cliente')} (${escapar(alerta.telefone || '-')})
-        <small>Status: ${escapar(rotuloStatus(alerta.status))}${alerta.tags ? ` | Tags: ${escapar(alerta.tags)}` : ''}${alerta.origem ? ` | Origem: ${escapar(alerta.origem)}` : ''}</small>
-        ${alerta.ultimaNota ? `<small>Ãšltima nota: ${escapar(alerta.ultimaNota)}</small>` : ''}
+        Atenção: existe cadastro anterior para ${escapar(alerta.nome || 'cliente')} (${escapar(alerta.telefone || '-')})
+        <small>Status: ${escapar(rotuloStatus(alerta.status))}${alerta.tags ?` | Tags: ${escapar(alerta.tags)}` : ''}${alerta.origem ?` | Origem: ${escapar(alerta.origem)}` : ''}</small>
+        ${alerta.ultimaNota ?`<small>Última nota: ${escapar(alerta.ultimaNota)}</small>` : ''}
     </div>`).join('');
 
-    return `<div class="notice warn">Cliente com histÃ³rico que merece avaliaÃ§Ã£o antes de continuar.</div>
+    return `<div class="notice warn">Cliente com histórico que merece avaliação antes de continuar.</div>
     <div class="client-alert-list">${itens}</div>`;
 }
 
@@ -2133,7 +2133,7 @@ function secaoNotasCliente(cliente = {}, notas = []) {
     if (!cliente.id) return '';
 
     const listaNotas = notas.length
-        ? `<div class="notes-list">${notas.map(nota => `<div class="note-item">
+        ?`<div class="notes-list">${notas.map(nota => `<div class="note-item">
             <span class="note-date">${escapar(formatarDataNota(nota.criadoEm))}</span>
             <div>${escapar(nota.texto)}</div>
         </div>`).join('')}</div>`
@@ -2141,7 +2141,7 @@ function secaoNotasCliente(cliente = {}, notas = []) {
 
     return `<section class="panel" style="margin-top:24px;">
         <div class="fields">
-            <div class="form-section full">HistÃ³rico de atendimento</div>
+            <div class="form-section full">Histórico de atendimento</div>
             <div class="full">${listaNotas}</div>
         </div>
     </section>`;
@@ -2151,7 +2151,7 @@ function camposNovaNotaAtendimento() {
     return `<div class="form-section full">Nova nota de atendimento</div>
         ${campo({
             nome: 'novaNotaPadrao',
-            label: 'Nota padrÃ£o',
+            label: 'Nota padrão',
             attrs: 'id="novaNotaPadraoAtendimento"',
             opcoes: [
                 { valor: '', texto: 'Selecione uma nota pronta...' },
@@ -2187,7 +2187,7 @@ function camposNovaNotaAtendimento() {
                     if (!select.value) return;
                     const nota = dataHoraAtual() + ' - ' + select.value;
                     textarea.value = textarea.value
-                        ? textarea.value.trim() + '\\n' + nota
+                        ?textarea.value.trim() + '\\n' + nota
                         : nota;
                     textarea.focus();
                 });
@@ -2197,17 +2197,17 @@ function camposNovaNotaAtendimento() {
 
 function editorMensagemModelo(valor = '') {
     const grupos = [
-        ['Mais usados', ['ðŸ˜€', 'ðŸ˜', 'ðŸ˜‚', 'ðŸ¤£', 'ðŸ˜Š', 'ðŸ˜', 'ðŸ˜˜', 'ðŸ˜‰', 'ðŸ˜Ž', 'ðŸ¤', 'ðŸ™Œ', 'ðŸ™', 'ðŸ‘', 'ðŸ‘', 'ðŸ‘Œ', 'ðŸ’ª', 'â¤ï¸', 'ðŸ’™', 'ðŸ’š', 'ðŸ’›']],
-        ['Atendimento', ['âœ…', 'â˜‘ï¸', 'âš ï¸', 'â—', 'âŒ', 'ðŸ””', 'ðŸ“¢', 'ðŸ“Œ', 'ðŸ“', 'ðŸ“', 'ðŸ“„', 'ðŸ“·', 'ðŸ–¼ï¸', 'ðŸ’¬', 'ðŸ“ž', 'â˜Žï¸', 'ðŸ“²', 'ðŸ“©', 'ðŸ“¤', 'ðŸ“¥']],
-        ['IPTV e apps', ['ðŸ“º', 'ðŸ“±', 'ðŸ’»', 'ðŸ–¥ï¸', 'âŒ¨ï¸', 'ðŸ–±ï¸', 'ðŸŽ¬', 'ðŸŽ¥', 'ðŸ“¡', 'ðŸ“¶', 'ðŸŒ', 'ðŸ”Œ', 'ðŸ”§', 'âš™ï¸', 'ðŸ› ï¸', 'ðŸ“¦', 'ðŸš€', 'â­', 'ðŸ”¥', 'ðŸ’Ž']],
-        ['Festas', ['ðŸŽ‰', 'ðŸŽŠ', 'ðŸ¥³', 'ðŸŽˆ', 'ðŸŽ', 'ðŸŽ‚', 'ðŸ°', 'ðŸ§', 'ðŸ¾', 'ðŸ¥‚', 'ðŸ»', 'ðŸ¹', 'âœ¨', 'ðŸŒŸ', 'â­', 'ðŸ’«', 'ðŸŽ†', 'ðŸŽ‡', 'ðŸª…', 'ðŸŽµ']],
-        ['Datas e pagamento', ['â°', 'â³', 'âŒ›', 'ðŸ“…', 'ðŸ—“ï¸', 'ðŸŽ', 'ðŸŽ‰', 'ðŸŽŠ', 'ðŸ¥³', 'ðŸŽ‚', 'ðŸ’³', 'ðŸ’°', 'ðŸ’µ', 'ðŸ§¾', 'ðŸ¦', 'ðŸ”', 'ðŸ”‘', 'ðŸ”’', 'ðŸ”“', 'ðŸŸ¢', 'ðŸŸ¡', 'ðŸ”´']],
-        ['MÃ£os e sinais', ['ðŸ‘‹', 'ðŸ¤š', 'âœ‹', 'ðŸ–ï¸', 'ðŸ‘', 'ðŸ‘Ž', 'ðŸ‘Œ', 'ðŸ¤Œ', 'ðŸ¤™', 'ðŸ‘ˆ', 'ðŸ‘‰', 'ðŸ‘†', 'ðŸ‘‡', 'â˜ï¸', 'âœï¸', 'ðŸ™', 'ðŸ‘', 'ðŸ™Œ', 'ðŸ¤²', 'ðŸ’ª']]
+        ['Mais usados', ['😀', '😃', '😄', '😁', '😉', '😊', '😍', '🤔', '👍', '🙏', '💪', '👏', '💬', '📲', '📺', '💰', '💳', '📅', '⏰', '✅']],
+        ['Atendimento', ['👋', '🤗', '🙂', '✅', '⚠', '🚨', '📞', '📱', '📩', '📝', '📌', '📋', '🧾', '🔒', '🔑', '🔎', '🔧', '💡', '🚀', '🎯']],
+        ['IPTV e apps', ['📺', '📱', '🖥', '⌨', '💻', '🕹', '📡', '📶', '💬', '🌐', '🔗', '🎞', '▶', '⏯', '🎧', '📦', '🛠', '⚡', '🔋', '💾']],
+        ['Festas', ['🎉', '🎊', '🎁', '🎂', '🥳', '🥂', '🍾', '🌟', '✨', '💖', '💚', '💙', '❤', '🥇', '🏆', '🎁', '🙌', '👏', '🥰', '😍']],
+        ['Datas e pagamento', ['📅', '⏰', '⌛', '💸', '💵', '💰', '💳', '🧾', '📈', '📊', '📤', '📥', '📋', '📝', '📢', '🔔', '🔜', '🔁', '🆗', '🆘', '🟢', '🔴']],
+        ['Mãos e sinais', ['👍', '👎', '☝', '✌', '🤝', '👌', '🤞', '🙏', '👏', '💪', '👉', '👈', '👆', '👇', '🖐', '🖖', '🤟', '🤘', '✋', '🤚']]
     ];
 
     return `<label class="full message-editor">Mensagem
         <div class="emoji-toolbar">
-            <button class="button secondary" type="button" id="toggleEmojiPicker">ðŸ˜Š Adicionar emoji</button>
+            <button class="button secondary" type="button" id="toggleEmojiPicker">?? Adicionar emoji</button>
             <div class="emoji-picker" id="emojiPicker" hidden>
                 <input class="emoji-search" id="emojiSearch" type="search" placeholder="Buscar emoji...">
                 ${grupos.map(([titulo, emojis]) => `<div class="emoji-title">${escapar(titulo)}</div><div class="emoji-group">${emojis.map(emoji => `<button type="button" data-emoji="${escapar(emoji)}" title="${escapar(emoji)}">${escapar(emoji)}</button>`).join('')}</div>`).join('')}
@@ -2217,36 +2217,41 @@ function editorMensagemModelo(valor = '') {
     </label>
     <script>
         (() => {
-            const textarea = document.getElementById('modeloTexto');
-            const toggle = document.getElementById('toggleEmojiPicker');
             const picker = document.getElementById('emojiPicker');
+            const toggle = document.getElementById('toggleEmojiPicker');
+            const textarea = document.getElementById('modeloTexto');
             const search = document.getElementById('emojiSearch');
+            if (!picker || !toggle || !textarea) return;
 
-            if (!textarea || !toggle || !picker) return;
-
-            toggle.addEventListener('click', () => {
-                picker.hidden = !picker.hidden;
-                if (!picker.hidden) search?.focus();
-            });
-
-            picker.addEventListener('click', (event) => {
-                const button = event.target.closest('[data-emoji]');
-                if (!button) return;
-
-                const emoji = button.dataset.emoji;
+            const inserirEmoji = (emoji) => {
                 const inicio = textarea.selectionStart ?? textarea.value.length;
                 const fim = textarea.selectionEnd ?? textarea.value.length;
                 textarea.value = textarea.value.slice(0, inicio) + emoji + textarea.value.slice(fim);
+                const pos = inicio + emoji.length;
                 textarea.focus();
-                textarea.selectionStart = textarea.selectionEnd = inicio + emoji.length;
+                textarea.setSelectionRange(pos, pos);
+            };
+
+            toggle.addEventListener('click', () => {
+                picker.hidden = !picker.hidden;
+                if (!picker.hidden && search) search.focus();
             });
 
-            search?.addEventListener('input', () => {
-                const termo = search.value.trim().toLowerCase();
-                picker.querySelectorAll('[data-emoji]').forEach((button) => {
-                    button.hidden = termo && !button.dataset.emoji.includes(termo);
-                });
+            picker.addEventListener('click', (event) => {
+                const botao = event.target.closest('button[data-emoji]');
+                if (!botao) return;
+                inserirEmoji(botao.dataset.emoji || '');
             });
+
+            if (search) {
+                search.addEventListener('input', () => {
+                    const termo = search.value.trim().toLowerCase();
+                    picker.querySelectorAll('button[data-emoji]').forEach(botao => {
+                        const texto = botao.dataset.emoji || '';
+                        botao.style.display = !termo || texto.includes(termo) ? '' : 'none';
+                    });
+                });
+            }
         })();
     </script>`;
 }
@@ -2280,7 +2285,7 @@ function lerListaSalva(valor) {
 
     try {
         const lista = JSON.parse(valor);
-        return Array.isArray(lista) ? lista.map(String) : [];
+        return Array.isArray(lista) ?lista.map(String) : [];
     } catch (err) {
         return String(valor).split(',').map(item => item.trim()).filter(Boolean);
     }
@@ -2295,7 +2300,7 @@ function formatarAniversario(dataISO) {
 function formatarDataHoraCurta(valor) {
     if (!valor) return '-';
 
-    const data = new Date(String(valor).length <= 10 ? `${valor}T00:00:00` : valor);
+    const data = new Date(String(valor).length <= 10 ?`${valor}T00:00:00` : valor);
     if (Number.isNaN(data.getTime())) return valor;
 
     const dia = String(data.getDate()).padStart(2, '0');
@@ -2312,14 +2317,14 @@ function textoDiasRestantes(valor) {
 }
 
 function plural(valor, singular, pluralTexto) {
-    return Number(valor) === 1 ? singular : pluralTexto;
+    return Number(valor) === 1 ?singular : pluralTexto;
 }
 
 function textoTempoRestante(valor) {
     if (!valor) return '-';
 
     const hoje = new Date();
-    const data = new Date(String(valor).length <= 10 ? `${valor}T23:59:59` : valor);
+    const data = new Date(String(valor).length <= 10 ?`${valor}T23:59:59` : valor);
     if (Number.isNaN(data.getTime())) return '-';
 
     const minuto = 60 * 1000;
@@ -2329,12 +2334,12 @@ function textoTempoRestante(valor) {
     const vencido = diff < 0;
     const totalMinutos = Math.ceil(Math.abs(diff) / minuto);
 
-    if (totalMinutos <= 0) return vencido ? 'vencido agora' : 'vence agora';
+    if (totalMinutos <= 0) return vencido ?'vencido agora' : 'vence agora';
 
     if (totalMinutos < 60) {
         const unidade = plural(totalMinutos, 'minuto', 'minutos');
         const sufixo = plural(totalMinutos, 'restante', 'restantes');
-        return vencido ? `${totalMinutos} ${unidade} vencido` : `${totalMinutos} ${unidade} ${sufixo}`;
+        return vencido ?`${totalMinutos} ${unidade} vencido` : `${totalMinutos} ${unidade} ${sufixo}`;
     }
 
     if (totalMinutos < 24 * 60) {
@@ -2344,17 +2349,17 @@ function textoTempoRestante(valor) {
 
         if (!minutos) {
             const sufixo = plural(horas, 'restante', 'restantes');
-            return vencido ? `${textoHoras} vencido` : `${textoHoras} ${sufixo}`;
+            return vencido ?`${textoHoras} vencido` : `${textoHoras} ${sufixo}`;
         }
 
         const textoMinutos = `${minutos} ${plural(minutos, 'minuto', 'minutos')}`;
-        return vencido ? `${textoHoras} e ${textoMinutos} vencido` : `${textoHoras} e ${textoMinutos} restantes`;
+        return vencido ?`${textoHoras} e ${textoMinutos} vencido` : `${textoHoras} e ${textoMinutos} restantes`;
     }
 
     const dias = Math.ceil(Math.abs(diff) / dia);
     const textoDias = `${dias} ${plural(dias, 'dia', 'dias')}`;
     const sufixo = plural(dias, 'restante', 'restantes');
-    return vencido ? `${textoDias} vencido` : `${textoDias} ${sufixo}`;
+    return vencido ?`${textoDias} vencido` : `${textoDias} ${sufixo}`;
 }
 
 function renderChips(valor, classe) {
@@ -2379,7 +2384,7 @@ function rotuloStatus(status) {
 
 function detalhePlanoCliente(cliente = {}) {
     if (clienteEhTeste(cliente)) {
-        return cliente.horasTeste || 'Teste grÃ¡tis';
+        return cliente.horasTeste || 'Teste grátis';
     }
 
     return `${cliente.diasContrato || '-'} dias`;
@@ -2387,7 +2392,7 @@ function detalhePlanoCliente(cliente = {}) {
 
 function opcoesMulti(nome, label, itens, selecionados, placeholder) {
     const chips = selecionados.length
-        ? selecionados.map(item => `<span class="selected-chip" data-value="${escapar(item)}">${escapar(item)} <button type="button" aria-label="Remover ${escapar(item)}">x</button></span>`).join('')
+        ?selecionados.map(item => `<span class="selected-chip" data-value="${escapar(item)}">${escapar(item)} <button type="button" aria-label="Remover ${escapar(item)}">x</button></span>`).join('')
         : '';
     const hiddenInputs = selecionados
         .map(item => `<input type="hidden" name="${nome}" value="${escapar(item)}">`)
@@ -2449,7 +2454,7 @@ function lerAcessosApp(cliente = {}) {
 function opcoesSelectLista(itens = [], selecionado = '', placeholder = 'Selecione...') {
     return `<option value="">${escapar(placeholder)}</option>${itens.map(item => {
         const nome = item.nome || item;
-        return `<option value="${escapar(nome)}" ${nome === selecionado ? 'selected' : ''}>${escapar(nome)}</option>`;
+        return `<option value="${escapar(nome)}" ${nome === selecionado ?'selected' : ''}>${escapar(nome)}</option>`;
     }).join('')}`;
 }
 
@@ -2470,13 +2475,13 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
         </label>
-        <label>UsuÃ¡rio IPTV
-            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="UsuÃ¡rio desta conexÃ£o">
+        <label>Usuário IPTV
+            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="Usuário desta conexão">
         </label>
         <label>Senha IPTV
-            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexÃ£o">
+            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexão">
         </label>
-        <label>EndereÃ§o MAC
+        <label>Endereço MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
         </label>
         <label>ID do Aplicativo
@@ -2495,7 +2500,7 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
 function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = []) {
     const acessos = lerAcessosApp(cliente);
     const linhas = acessos.length
-        ? acessos.map(acesso => linhaAcessoApp(acesso, apps, dispositivos, paineis)).join('')
+        ?acessos.map(acesso => linhaAcessoApp(acesso, apps, dispositivos, paineis)).join('')
         : linhaAcessoApp({}, apps, dispositivos, paineis);
 
     return `<div class="app-access-list full">
@@ -2505,7 +2510,7 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
         <div class="app-access-header">
             <div>
                 <strong>Dados por app instalado</strong>
-                <span>Cada linha representa uma conexÃ£o: app, dispositivo, painel, usuÃ¡rio, senha, MAC e ID quando exigir.</span>
+                <span>Cada linha representa uma conexão: app, dispositivo, painel, usuário, senha, MAC e ID quando exigir.</span>
             </div>
             <button class="button secondary" type="button" id="adicionarAcessoApp">${icon('plus')} Adicionar acesso</button>
         </div>
@@ -2514,7 +2519,7 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
 }
 
 function inputDateTime(valor) {
-    return valor ? String(valor).slice(0, 16) : '';
+    return valor ?String(valor).slice(0, 16) : '';
 }
 
 function agoraLocalDateTime() {
@@ -2547,18 +2552,18 @@ function juntarListaCsv(valor) {
 function descreverAcessosAppCsv(cliente = {}) {
     return lerAcessosApp(cliente).map((acesso, index) => {
         const partes = [
-            acesso.app ? `App: ${acesso.app}` : '',
-            acesso.dispositivo ? `Dispositivo: ${acesso.dispositivo}` : '',
-            acesso.painel ? `Painel: ${acesso.painel}` : '',
-            acesso.usuario ? `UsuÃ¡rio: ${acesso.usuario}` : '',
-            acesso.senha ? `Senha: ${acesso.senha}` : '',
-            acesso.localInstalacao ? `Onde: ${acesso.localInstalacao}` : '',
-            acesso.enderecoMac ? `MAC: ${acesso.enderecoMac}` : '',
-            acesso.idAplicativo ? `ID: ${acesso.idAplicativo}` : '',
-            acesso.urlAtivarAplicativo ? `URL: ${acesso.urlAtivarAplicativo}` : ''
+            acesso.app ?`App: ${acesso.app}` : '',
+            acesso.dispositivo ?`Dispositivo: ${acesso.dispositivo}` : '',
+            acesso.painel ?`Painel: ${acesso.painel}` : '',
+            acesso.usuario ?`Usuário: ${acesso.usuario}` : '',
+            acesso.senha ?`Senha: ${acesso.senha}` : '',
+            acesso.localInstalacao ?`Onde: ${acesso.localInstalacao}` : '',
+            acesso.enderecoMac ?`MAC: ${acesso.enderecoMac}` : '',
+            acesso.idAplicativo ?`ID: ${acesso.idAplicativo}` : '',
+            acesso.urlAtivarAplicativo ?`URL: ${acesso.urlAtivarAplicativo}` : ''
         ].filter(Boolean);
 
-        return partes.length ? `${index + 1}. ${partes.join(' | ')}` : '';
+        return partes.length ?`${index + 1}. ${partes.join(' | ')}` : '';
     }).filter(Boolean).join(' || ');
 }
 
@@ -2584,30 +2589,30 @@ function gerarCsvClientes(clientes = []) {
         'Valor do plano',
         'Assinatura app',
         'Status',
-        'Data/Hora de inÃ­cio',
+        'Data/Hora de início',
         'Data/Hora de vencimento',
         'Validade app',
         'Data validade app',
         'Apps instalados',
         'Dispositivos',
-        'PainÃ©is',
+        'Painéis',
         'App instalado',
-        'UsuÃ¡rio IPTV',
+        'Usuário IPTV',
         'Senha IPTV',
-        'EndereÃ§o MAC',
+        'Endereço MAC',
         'ID do aplicativo',
         'Dados por app instalado',
         'Origem',
         'Tags',
-        'BÃ´nus disponÃ­veis',
-        'ObservaÃ§Ãµes'
+        'Bônus disponíveis',
+        'Observações'
     ];
 
     const linhas = clientes.map(cliente => [
         cliente.id,
         cliente.nome,
         cliente.telefone,
-        cliente.nascimento ? formatarAniversario(cliente.nascimento) : '',
+        cliente.nascimento ?formatarAniversario(cliente.nascimento) : '',
         cliente.plano,
         detalhePlanoCliente(cliente),
         cliente.valorPlano,
@@ -2620,7 +2625,7 @@ function gerarCsvClientes(clientes = []) {
         juntarListaCsv(cliente.appsInstalados),
         juntarListaCsv(cliente.dispositivosSelecionados),
         juntarListaCsv(cliente.paineisSelecionados),
-        cliente.appInstalado ? 'Sim' : 'NÃ£o',
+        cliente.appInstalado ?'Sim' : 'Não',
         valoresAcessosAppCsv(cliente, 'usuario') || cliente.usuario,
         valoresAcessosAppCsv(cliente, 'senha') || cliente.senha,
         valoresAcessosAppCsv(cliente, 'enderecoMac'),
@@ -2655,7 +2660,7 @@ function gerarCsvFinanceiro(pagamentos = []) {
         'Removido em',
         'Mensagem enviada',
         'Erro da mensagem',
-        'ObservaÃ§Ãµes'
+        'Observações'
     ];
 
     const linhas = pagamentos.map(pagamento => [
@@ -2671,9 +2676,9 @@ function gerarCsvFinanceiro(pagamentos = []) {
         pagamento.formaPagamento,
         formatarDataHoraCurta(pagamento.vencimentoAnterior),
         formatarDataHoraCurta(pagamento.vencimentoNovo),
-        pagamento.excluidoEm ? 'Removido' : 'VÃ¡lido',
+        pagamento.excluidoEm ?'Removido' : 'Válido',
         formatarDataHoraCurta(pagamento.excluidoEm),
-        pagamento.mensagemEnviada ? 'Sim' : 'NÃ£o',
+        pagamento.mensagemEnviada ?'Sim' : 'Não',
         pagamento.erroMensagem,
         pagamento.observacoes
     ]);
@@ -2750,7 +2755,7 @@ function linhasCsv(texto = '') {
 function detectarSeparadorCsv(linha = '') {
     const pontoVirgula = dividirLinhaCsv(linha, ';').length;
     const virgula = dividirLinhaCsv(linha, ',').length;
-    return pontoVirgula >= virgula ? ';' : ',';
+    return pontoVirgula >= virgula ?';' : ',';
 }
 
 function parseCsv(texto = '') {
@@ -2798,18 +2803,18 @@ function dataCsvParaIso(valor = '', comHora = false) {
     const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/);
     if (iso) {
         const [, ano, mes, dia, hora = '00', minuto = '00'] = iso;
-        return comHora ? `${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
+        return comHora ?`${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
     }
 
     const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
     if (br) {
         const [, diaBruto, mesBruto, anoBruto, horaBruta = '00', minutoBruto = '00'] = br;
-        const ano = anoBruto.length === 2 ? `20${anoBruto}` : anoBruto;
+        const ano = anoBruto.length === 2 ?`20${anoBruto}` : anoBruto;
         const mes = mesBruto.padStart(2, '0');
         const dia = diaBruto.padStart(2, '0');
         const hora = horaBruta.padStart(2, '0');
         const minuto = minutoBruto.padStart(2, '0');
-        return comHora ? `${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
+        return comHora ?`${ano}-${mes}-${dia}T${hora}:${minuto}` : `${ano}-${mes}-${dia}`;
     }
 
     return '';
@@ -2839,17 +2844,17 @@ function montarDadosClienteImportado(registro, planos = []) {
     const nome = valorCsv(registro, ['Nome', 'Cliente', 'Nome completo']);
     const telefone = valorCsv(registro, ['WhatsApp', 'Telefone', 'Celular']);
     const plano = valorCsv(registro, ['Plano', 'Tipo do plano']) || 'Mensal';
-    const status = statusCsv(valorCsv(registro, ['Status', 'SituaÃ§Ã£o'])) || 'ativo';
+    const status = statusCsv(valorCsv(registro, ['Status', 'Situação'])) || 'ativo';
     const planoEncontrado = planos.find(item => normalizarCabecalhoCsv(item.nome) === normalizarCabecalhoCsv(plano));
     const isTeste = normalizarCabecalhoCsv(plano).includes('teste') || status === 'teste';
-    const diasContrato = valorCsv(registro, ['Dias de contrato', 'Dias contrato', 'Dias']) || planoEncontrado?.dias || (isTeste ? 0 : 30);
-    const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de inÃ­cio', 'Data inicio', 'InÃ­cio', 'Inicio']), true);
+    const diasContrato = valorCsv(registro, ['Dias de contrato', 'Dias contrato', 'Dias']) || planoEncontrado?.dias || (isTeste ?0 : 30);
+    const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']), true);
     const dataVencimento = dataCsvParaIso(valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']), true);
-    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversÃ¡rio', 'Data aniversario']), false);
+    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']), false);
     const apps = listaCsvParaArray(valorCsv(registro, ['Apps instalados', 'Aplicativos', 'App']));
     const dispositivos = listaCsvParaArray(valorCsv(registro, ['Dispositivos', 'Dispositivo', 'Aparelho']));
-    const paineis = listaCsvParaArray(valorCsv(registro, ['PainÃ©is', 'Paineis', 'Painel']));
-    const enderecoMac = valorCsv(registro, ['EndereÃ§o MAC', 'Endereco MAC', 'MAC']);
+    const paineis = listaCsvParaArray(valorCsv(registro, ['Painéis', 'Paineis', 'Painel']));
+    const enderecoMac = valorCsv(registro, ['Endereço MAC', 'Endereco MAC', 'MAC']);
     const idAplicativo = valorCsv(registro, ['ID do aplicativo', 'ID aplicativo', 'ID']);
 
     return {
@@ -2872,7 +2877,7 @@ function montarDadosClienteImportado(registro, planos = []) {
         dispositivosSelecionados: dispositivos,
         paineisSelecionados: paineis,
         appInstalado: booleanoCsv(valorCsv(registro, ['App instalado', 'Instalado'])),
-        usuario: valorCsv(registro, ['UsuÃ¡rio IPTV', 'Usuario IPTV', 'UsuÃ¡rio', 'Usuario']),
+        usuario: valorCsv(registro, ['Usuário IPTV', 'Usuario IPTV', 'Usuário', 'Usuario']),
         senha: valorCsv(registro, ['Senha IPTV', 'Senha']),
         enderecoMac,
         idAplicativo,
@@ -2881,12 +2886,12 @@ function montarDadosClienteImportado(registro, planos = []) {
         acessoPainel: paineis[0] || '',
         acessoEnderecoMac: enderecoMac,
         acessoIdAplicativo: idAplicativo,
-        acessoLocalInstalacao: valorCsv(registro, ['Onde foi instalado', 'Local de instalaÃ§Ã£o', 'Local instalacao']),
-        acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativaÃ§Ã£o', 'URL ativacao']),
+        acessoLocalInstalacao: valorCsv(registro, ['Onde foi instalado', 'Local de instalação', 'Local instalacao']),
+        acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativação', 'URL ativacao']),
         origem: valorCsv(registro, ['Origem']),
         tags: listaCsvParaArray(valorCsv(registro, ['Tags', 'Categoria', 'Categorias'])),
-        bonusMeses: valorCsv(registro, ['BÃ´nus disponÃ­veis', 'Bonus disponiveis', 'BÃ´nus', 'Bonus']),
-        observacoes: valorCsv(registro, ['ObservaÃ§Ãµes', 'Observacoes', 'Notas'])
+        bonusMeses: valorCsv(registro, ['Bônus disponíveis', 'Bonus disponiveis', 'Bônus', 'Bonus']),
+        observacoes: valorCsv(registro, ['Observações', 'Observacoes', 'Notas'])
     };
 }
 
@@ -2897,14 +2902,14 @@ function validarClienteImportado(dados = {}, registro = {}, planos = []) {
     const planoExiste = planos.some(item => normalizarCabecalhoCsv(item.nome) === planoNormalizado);
     const isTeste = planoNormalizado.includes('teste') || dados.status === 'teste';
 
-    if (!dados.nome) erros.push('Nome obrigatÃ³rio.');
-    if (!normalizarTelefone(dados.telefone)) erros.push('WhatsApp invÃ¡lido ou vazio.');
-    if (!dados.plano) erros.push('Plano obrigatÃ³rio.');
-    if (dados.plano && !planoExiste && !isTeste) erros.push(`Plano nÃ£o cadastrado: ${dados.plano}.`);
-    if (valorCsv(registro, ['Data/Hora de inÃ­cio', 'Data inicio', 'InÃ­cio', 'Inicio']) && !dados.dataInicio) erros.push('Data/Hora de inÃ­cio invÃ¡lida.');
-    if (valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']) && !dados.dataVencimento) erros.push('Data/Hora de vencimento invÃ¡lida.');
-    if (valorCsv(registro, ['Nascimento', 'Data de aniversÃ¡rio', 'Data aniversario']) && !dados.nascimento) avisos.push('Nascimento nÃ£o reconhecido; serÃ¡ importado vazio.');
-    if (!dados.dataInicio) avisos.push('Data/Hora de inÃ­cio vazia.');
+    if (!dados.nome) erros.push('Nome obrigatório.');
+    if (!normalizarTelefone(dados.telefone)) erros.push('WhatsApp inválido ou vazio.');
+    if (!dados.plano) erros.push('Plano obrigatório.');
+    if (dados.plano && !planoExiste && !isTeste) erros.push(`Plano não cadastrado: ${dados.plano}.`);
+    if (valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']) && !dados.dataInicio) erros.push('Data/Hora de início inválida.');
+    if (valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']) && !dados.dataVencimento) erros.push('Data/Hora de vencimento inválida.');
+    if (valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']) && !dados.nascimento) avisos.push('Nascimento não reconhecido; será importado vazio.');
+    if (!dados.dataInicio) avisos.push('Data/Hora de início vazia.');
     if (!dados.dataVencimento) avisos.push('Data/Hora de vencimento vazia.');
 
     return { erros, avisos };
@@ -2924,7 +2929,7 @@ async function prepararImportacaoClientesCsv(textoCsv = '') {
 
         const dados = montarDadosClienteImportado(registro, planos);
         const telefoneNormalizado = normalizarTelefone(dados.telefone);
-        const existente = telefoneNormalizado ? await buscarClientePorTelefone(telefoneNormalizado) : null;
+        const existente = telefoneNormalizado ?await buscarClientePorTelefone(telefoneNormalizado) : null;
         const validacao = validarClienteImportado(dados, registro, planos);
 
         if (telefoneNormalizado && telefonesNoCsv.has(telefoneNormalizado)) {
@@ -2935,7 +2940,7 @@ async function prepararImportacaoClientesCsv(textoCsv = '') {
 
         itens.push({
             linha: registro.__linha,
-            acao: validacao.erros.length ? 'ignorar' : existente ? 'atualizar' : 'criar',
+            acao: validacao.erros.length ?'ignorar' : existente ?'atualizar' : 'criar',
             existenteId: existente?.id || null,
             dados: {
                 ...dados,
@@ -2967,7 +2972,7 @@ function lerPreviaImportacao(token) {
     const nomeSeguro = path.basename(String(token || ''));
     const caminho = path.join(IMPORTACOES_DIR, nomeSeguro);
     if (!nomeSeguro || !fs.existsSync(caminho)) {
-        throw new Error('PrÃ©-visualizaÃ§Ã£o da importaÃ§Ã£o nÃ£o encontrada. Envie o CSV novamente.');
+        throw new Error('Pré-visualização da importação não encontrada. Envie o CSV novamente.');
     }
 
     return JSON.parse(fs.readFileSync(caminho, 'utf8'));
@@ -2990,23 +2995,23 @@ function csvModeloClientes() {
             'Valor do plano',
             'Assinatura app',
             'Status',
-            'Data/Hora de inÃ­cio',
+            'Data/Hora de início',
             'Data/Hora de vencimento',
             'Validade app',
             'Apps instalados',
             'Dispositivos',
-            'PainÃ©is',
+            'Painéis',
             'App instalado',
-            'UsuÃ¡rio IPTV',
+            'Usuário IPTV',
             'Senha IPTV',
-            'EndereÃ§o MAC',
+            'Endereço MAC',
             'ID do aplicativo',
             'Onde foi instalado',
             'URL Ativar Aplicativo',
             'Origem',
             'Tags',
-            'BÃ´nus disponÃ­veis',
-            'ObservaÃ§Ãµes'
+            'Bônus disponíveis',
+            'Observações'
         ],
         [
             'Cliente Exemplo',
@@ -3054,7 +3059,7 @@ function logControleClientes(evento, dados = {}) {
         .map(([chave, valor]) => `${chave}=${valor}`)
         .join(' ');
 
-    console.log(`[controle-clientes] ${evento}${resumo ? ` | ${resumo}` : ''}`);
+    console.log(`[controle-clientes] ${evento}${resumo ?` | ${resumo}` : ''}`);
 }
 
 function aguardarComTimeout(promessa, ms, descricao) {
@@ -3099,7 +3104,7 @@ async function resolverDestinoWhatsApp(client, telefone) {
 function formatarDataHoraMensagem(valor) {
     if (!valor) return '';
 
-    const data = new Date(String(valor).length <= 10 ? `${valor}T00:00:00` : valor);
+    const data = new Date(String(valor).length <= 10 ?`${valor}T00:00:00` : valor);
     if (Number.isNaN(data.getTime())) return valor;
 
     const dia = String(data.getDate()).padStart(2, '0');
@@ -3108,11 +3113,11 @@ function formatarDataHoraMensagem(valor) {
     const hora = String(data.getHours()).padStart(2, '0');
     const minuto = String(data.getMinutes()).padStart(2, '0');
 
-    return `${dia}/${mes}/${ano} Ã s ${hora}:${minuto}`;
+    return `${dia}/${mes}/${ano} às ${hora}:${minuto}`;
 }
 
 function montarMensagemTesteLiberado(dados = {}) {
-    return `*TESTE GRÃTIS LIBERADO*
+    return `*TESTE GRÁTIS LIBERADO*
 --------------------
 Seu acesso de teste foi preparado com sucesso.
 
@@ -3120,44 +3125,44 @@ Seu acesso de teste foi preparado com sucesso.
 *Dispositivo:* ${dados.aparelho}
 *Aplicativo:* ${dados.aplicativo}
 *Painel:* ${dados.painel}
-*UsuÃ¡rio:* ${dados.usuario}
+*Usuário:* ${dados.usuario}
 *Senha:* ${dados.senha}
-*Data/InÃ­cio:* ${formatarDataHoraMensagem(dados.dataInicio)}
-*VÃ¡lido atÃ©:* ${formatarDataHoraMensagem(dados.validade)}
+*Data/Início:* ${formatarDataHoraMensagem(dados.dataInicio)}
+*Válido até:* ${formatarDataHoraMensagem(dados.validade)}
 
 Teste configurado. Para encerrar o atendimento, digite *sair*.`;
 }
 
 function montarMensagemBonusAplicado(cliente = {}, resultado = {}) {
     const meses = Number(resultado.meses || 1);
-    const textoMeses = meses === 1 ? '1 mÃªs grÃ¡tis' : `${meses} meses grÃ¡tis`;
+    const textoMeses = meses === 1 ?'1 mês grátis' : `${meses} meses grátis`;
     const saldo = Number(resultado.saldoRestante || 0);
 
-    return `ðŸŽ *BÃ”NUS APLICADO*
+    return `🎁 *BÔNUS APLICADO*
 --------------------
-OlÃ¡, *${cliente.nome || 'cliente'}*!
+Olá, *${cliente.nome || 'cliente'}*!
 
-Foi aplicado em seu cadastro um bÃ´nus de *${textoMeses}* no seu plano.
+Foi aplicado em seu cadastro um bônus de *${textoMeses}* no seu plano.
 
 *Novo vencimento:* ${formatarDataHoraMensagem(resultado.dataVencimento)}
-*Saldo de bÃ´nus restante:* ${saldo}
+*Saldo de bônus restante:* ${saldo}
 
-Obrigado pela preferÃªncia.`;
+Obrigado pela preferência.`;
 }
 
 function montarMensagemRenovacaoConfirmada(cliente = {}, resultado = {}) {
-    return `*RENOVAÃ‡ÃƒO CONFIRMADA*
+    return `*RENOVAÇÃO CONFIRMADA*
 --------------------
-OlÃ¡, *${cliente.nome || 'cliente'}*!
+Olá, *${cliente.nome || 'cliente'}*!
 
-Sua renovaÃ§Ã£o foi registrada com sucesso.
+Sua renovação foi registrada com sucesso.
 
 *Plano:* ${resultado.plano}
 *Valor:* R$ ${resultado.valorTotal}
 *Forma de pagamento:* ${resultado.formaPagamento}
 *Novo vencimento:* ${formatarDataHoraMensagem(resultado.vencimentoNovo)}
 
-Obrigado pela preferÃªncia.`;
+Obrigado pela preferência.`;
 }
 
 function clienteEhTeste(cliente = {}) {
@@ -3199,13 +3204,13 @@ function prepararPlanoPixCliente(cliente = {}, planoPix = {}) {
     const valorPlano = numeroMoeda(cliente.valorPlano || planoPix.valor);
     const valorApp = numeroMoeda(cliente.assinaturaApp);
     const incluirApp = appClienteVencido(cliente) && valorApp > 0;
-    const total = valorPlano + (incluirApp ? valorApp : 0);
+    const total = valorPlano + (incluirApp ?valorApp : 0);
 
     return {
         plano: {
             ...planoPix,
             valor: valorMoedaPix(total || numeroMoeda(planoPix.valor)),
-            nome: incluirApp ? `${planoPix.nome} + APP` : planoPix.nome
+            nome: incluirApp ?`${planoPix.nome} + APP` : planoPix.nome
         },
         incluirApp,
         valorPlano: valorMoedaPix(valorPlano),
@@ -3219,14 +3224,14 @@ function montarMensagemReativacaoCliente(cliente = {}, pixCliente = null) {
     const valorPlano = pixCliente?.valorPlano || cliente.valorPlano || '0,00';
     const assinaturaApp = pixCliente?.valorApp || cliente.assinaturaApp || '0,00';
     const textoApp = pixCliente?.incluirApp
-        ? `*Assinatura App:* R$ ${assinaturaApp} (incluÃ­da porque a validade do app venceu)`
-        : `*Assinatura App:* nÃ£o incluÃ­da neste PIX${cliente.dataValidadeApp ? ` (app vÃ¡lido atÃ© ${formatarDataHoraCurta(cliente.dataValidadeApp)})` : ''}`;
+        ?`*Assinatura App:* R$ ${assinaturaApp} (incluída porque a validade do app venceu)`
+        : `*Assinatura App:* não incluída neste PIX${cliente.dataValidadeApp ?` (app válido até ${formatarDataHoraCurta(cliente.dataValidadeApp)})` : ''}`;
 
-    return `*REATIVAÃ‡ÃƒO DE PLANO*
+    return `*REATIVAÇÃO DE PLANO*
 --------------------
-OlÃ¡, *${cliente.nome || 'cliente'}*!
+Olá, *${cliente.nome || 'cliente'}*!
 
-Seu plano *${cliente.plano || 'atual'}* estÃ¡ vencido${vencimento ? ` desde *${vencimento}*` : ''}.
+Seu plano *${cliente.plano || 'atual'}* está vencido${vencimento ?` desde *${vencimento}*` : ''}.
 
 Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em seguida.
 
@@ -3235,7 +3240,7 @@ Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em
 ${textoApp}
 *Total do PIX:* R$ ${pixCliente?.total || valorPlano}
 
-Depois do pagamento, envie o comprovante aqui para confirmar a reativaÃ§Ã£o.`;
+Depois do pagamento, envie o comprovante aqui para confirmar a reativação.`;
 }
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
@@ -3285,7 +3290,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     return `<section class="panel" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Teste grÃ¡tis liberado</h2>
+                <h2 class="panel-title">Teste grátis liberado</h2>
                 <div class="subtitle">Preencha os dados e envie a resposta para o cliente pelo WhatsApp</div>
             </div>
         </div>
@@ -3321,10 +3326,10 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
                     ...paineis.map(item => ({ valor: item.nome, texto: item.nome }))
                 ]
             })}
-            ${campo({ nome: 'usuario', label: 'UsuÃ¡rio', valor: acesso.usuario || cliente.usuario, attrs: 'required' })}
+            ${campo({ nome: 'usuario', label: 'Usuário', valor: acesso.usuario || cliente.usuario, attrs: 'required' })}
             ${campo({ nome: 'senha', label: 'Senha', valor: acesso.senha || cliente.senha, attrs: 'required' })}
-            ${campo({ nome: 'dataInicio', label: 'Data/InÃ­cio', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
-            ${campo({ nome: 'validade', label: 'VÃ¡lido atÃ©', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Início', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'validade', label: 'Válido até', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
             <div class="actions full">
                 <button class="button green" type="submit">${icon('whats')} Enviar teste liberado</button>
             </div>
@@ -3344,7 +3349,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
     })?.id || planos[0]?.id || '';
     const planoInicial = planos.find(plano => String(plano.id) === String(planoAtual)) || planos[0] || {};
     const linhasHistorico = pagamentos.length
-        ? pagamentos.map(pagamento => `<tr>
+        ?pagamentos.map(pagamento => `<tr>
             <td>${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
             <td>
                 <div class="cell-title">${escapar(pagamento.plano)}</div>
@@ -3353,30 +3358,30 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             <td>R$ ${escapar(pagamento.valorTotal || '0,00')}</td>
             <td>${escapar(pagamento.formaPagamento || '-')}</td>
             <td>${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
-            <td>${pagamento.mensagemEnviada ? '<span class="badge green">Enviada</span>' : '<span class="badge orange">NÃ£o enviada</span>'}</td>
+            <td>${pagamento.mensagemEnviada ?'<span class="badge green">Enviada</span>' : '<span class="badge orange">Não enviada</span>'}</td>
             <td>
                 <div class="row-actions">
                     <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
-                    <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histÃ³rico? O vencimento atual do cliente nÃ£o serÃ¡ alterado.');">
+                    <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico?O vencimento atual do cliente não será alterado.');">
                         <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
                     </form>
                 </div>
             </td>
         </tr>`).join('')
-        : '<tr><td colspan="7" class="empty">Nenhuma renovaÃ§Ã£o registrada ainda.</td></tr>';
+        : '<tr><td colspan="7" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
 
     return `<section class="panel" id="renovar" style="margin-top:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Renovar cliente</h2>
-                <div class="subtitle">Registre o pagamento, atualize o vencimento e envie a confirmaÃ§Ã£o se desejar.</div>
+                <div class="subtitle">Registre o pagamento, atualize o vencimento e envie a confirmação se desejar.</div>
             </div>
             <span class="badge green">Vencimento atual: ${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</span>
         </div>
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/renovar">
             ${campo({
                 nome: 'tipoPlanoId',
-                label: 'Plano da renovaÃ§Ã£o',
+                label: 'Plano da renovação',
                 valor: planoAtual,
                 attrs: 'id="renovarTipoPlanoId" required',
                 opcoes: [
@@ -3396,25 +3401,25 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     { valor: '', texto: 'Selecione...' },
                     { valor: 'Pix', texto: 'Pix' },
                     { valor: 'Dinheiro', texto: 'Dinheiro' },
-                    { valor: 'CartÃ£o de crÃ©dito', texto: 'CartÃ£o de crÃ©dito' },
-                    { valor: 'CartÃ£o de dÃ©bito', texto: 'CartÃ£o de dÃ©bito' },
-                    { valor: 'TransferÃªncia', texto: 'TransferÃªncia' },
+                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
+                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
+                    { valor: 'Transferência', texto: 'Transferência' },
                     { valor: 'Outro', texto: 'Outro' }
                 ]
             })}
             ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: agoraLocalDateTime(), tipo: 'datetime-local', attrs: 'required' })}
             <label class="toggle-line">
                 <input type="checkbox" name="enviarMensagem" value="1" checked>
-                <span>Enviar confirmaÃ§Ã£o da renovaÃ§Ã£o pelo WhatsApp</span>
+                <span>Enviar confirmação da renovação pelo WhatsApp</span>
             </label>
-            <label class="full">ObservaÃ§Ãµes do pagamento
+            <label class="full">Observações do pagamento
                 <textarea name="observacoes" rows="3" placeholder="Opcional"></textarea>
             </label>
             <div class="actions full">
                 <button class="button green" type="submit">${icon('refresh')} Renovar cliente</button>
             </div>
         </form>
-        <div class="form-section full" style="margin-top:22px;">HistÃ³rico de pagamentos</div>
+        <div class="form-section full" style="margin-top:22px;">Histórico de pagamentos</div>
         <table class="clients-table compact-table">
             <thead>
                 <tr>
@@ -3424,7 +3429,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     <th>Pagamento</th>
                     <th>Novo vencimento</th>
                     <th>Mensagem</th>
-                    <th>AÃ§Ãµes</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>${linhasHistorico}</tbody>
@@ -3460,7 +3465,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
 function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
     return `<section class="page-title">
         <h1>Editar pagamento</h1>
-        <div class="subtitle">${escapar(cliente.nome || '')} - corrija os dados do histÃ³rico financeiro</div>
+        <div class="subtitle">${escapar(cliente.nome || '')} - corrija os dados do histórico financeiro</div>
     </section>
     <section class="panel">
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/salvar">
@@ -3476,16 +3481,16 @@ function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
                     { valor: '', texto: 'Selecione...' },
                     { valor: 'Pix', texto: 'Pix' },
                     { valor: 'Dinheiro', texto: 'Dinheiro' },
-                    { valor: 'CartÃ£o de crÃ©dito', texto: 'CartÃ£o de crÃ©dito' },
-                    { valor: 'CartÃ£o de dÃ©bito', texto: 'CartÃ£o de dÃ©bito' },
-                    { valor: 'TransferÃªncia', texto: 'TransferÃªncia' },
+                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
+                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
+                    { valor: 'Transferência', texto: 'Transferência' },
                     { valor: 'Outro', texto: 'Outro' }
                 ]
             })}
             ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: inputDateTime(pagamento.dataPagamento || pagamento.criadoEm), tipo: 'datetime-local', attrs: 'required' })}
             ${campo({ nome: 'vencimentoNovo', label: 'Novo vencimento registrado', valor: inputDateTime(pagamento.vencimentoNovo), tipo: 'datetime-local' })}
-            ${areaTexto({ nome: 'observacoes', label: 'ObservaÃ§Ãµes', valor: pagamento.observacoes || '' })}
-            <div class="notice full">A ediÃ§Ã£o altera apenas o histÃ³rico financeiro. O vencimento atual do cliente nÃ£o serÃ¡ recalculado automaticamente.</div>
+            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: pagamento.observacoes || '' })}
+            <div class="notice full">A edição altera apenas o histórico financeiro. O vencimento atual do cliente não será recalculado automaticamente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar pagamento</button>
                 <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#renovar">Cancelar</a>
@@ -3499,28 +3504,28 @@ function secaoBonusCliente(cliente = {}) {
 
     const saldo = Number.parseInt(cliente.bonusMeses || 0, 10) || 0;
     const opcoes = Array.from({ length: Math.max(1, Math.min(12, saldo || 1)) }, (_, index) => index + 1)
-        .map(valor => `<option value="${valor}">${valor} ${valor === 1 ? 'mÃªs' : 'meses'}</option>`)
+        .map(valor => `<option value="${valor}">${valor} ${valor === 1 ?'mês' : 'meses'}</option>`)
         .join('');
 
     return `<section class="panel" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">BÃ´nus do cliente</h2>
-                <div class="subtitle">Cada bÃ´nus equivale a 1 mÃªs grÃ¡tis de plano. Ao aplicar, o vencimento Ã© prorrogado e o saldo Ã© descontado.</div>
+                <h2 class="panel-title">Bônus do cliente</h2>
+                <div class="subtitle">Cada bônus equivale a 1 mês grátis de plano. Ao aplicar, o vencimento é prorrogado e o saldo é descontado.</div>
             </div>
-            <span class="badge green">${escapar(saldo)} disponÃ­vel(is)</span>
+            <span class="badge green">${escapar(saldo)} disponível(is)</span>
         </div>
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/aplicar-bonus">
-            <label>Quantidade de bÃ´nus para aplicar
-                <select name="quantidade" ${saldo <= 0 ? 'disabled' : ''}>
-                    ${saldo > 0 ? opcoes : '<option value="">Sem bÃ´nus disponÃ­vel</option>'}
+            <label>Quantidade de bônus para aplicar
+                <select name="quantidade" ${saldo <= 0 ?'disabled' : ''}>
+                    ${saldo > 0 ?opcoes : '<option value="">Sem bônus disponível</option>'}
                 </select>
             </label>
-            <label class="full">ObservaÃ§Ã£o da bonificaÃ§Ã£o
-                <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicaÃ§Ã£o, aniversÃ¡rio ou detalhe da bonificaÃ§Ã£o"></textarea>
+            <label class="full">Observação da bonificação
+                <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicação, aniversário ou detalhe da bonificação"></textarea>
             </label>
             <div class="actions full">
-                <button class="button green" type="submit" ${saldo <= 0 ? 'disabled' : ''}>${icon('whats')} Aplicar bÃ´nus e avisar cliente</button>
+                <button class="button green" type="submit" ${saldo <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
             </div>
         </form>
     </section>`;
@@ -3545,17 +3550,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     })?.id || '';
 
     const formulario = `<section class="page-title">
-        <h1>${cliente.id ? 'Editar Cliente' : 'Novo Cliente'}</h1>
+        <h1>${cliente.id ?'Editar Cliente' : 'Novo Cliente'}</h1>
         <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
     ${alertaClienteHtml(alertas)}
     <section class="panel">
         <form class="fields client-form" method="post" action="/clientes/salvar">
-            ${cliente.id ? `<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
+            ${cliente.id ?`<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsApp(cliente.telefone)}
-            ${campo({ nome: 'nascimento', label: 'Data de AniversÃ¡rio', valor: cliente.nascimento, tipo: 'date' })}
+            ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
             ${campo({
                 nome: 'origem',
                 label: 'Origem do Cliente',
@@ -3566,7 +3571,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
-            ${campo({ nome: 'bonusMeses', label: 'BÃ´nus disponÃ­veis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
+            ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
 
             <div class="form-section full">Plano</div>
             ${campo({
@@ -3578,7 +3583,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: '', texto: 'Selecione...' },
                     ...planos.map(plano => ({
                         valor: plano.id,
-                        texto: plano.dias > 0 ? `${plano.nome} (${plano.dias} dias)` : plano.nome
+                        texto: plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
                     }))
                 ]
             })}
@@ -3592,7 +3597,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     { valor: '1 Ano', texto: '1 Ano' },
-                    { valor: 'Vitalicio', texto: 'VitalÃ­cio' }
+                    { valor: 'Vitalicio', texto: 'Vitalício' }
                 ]
             })}
             ${campo({ nome: 'dataValidadeApp', label: 'Data de validade do app', valor: cliente.dataValidadeApp || '', tipo: 'date' })}
@@ -3628,30 +3633,30 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: '24 horas', texto: '24 horas' }
                 ]
             })}
-            ${campo({ nome: 'dataInicio', label: 'Data/Hora de InÃ­cio *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Hora de Início *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
             <label>Data/Hora de Vencimento *
                 <div class="inline-field">
                     <input type="datetime-local" name="dataVencimento" id="dataVencimento" value="${escapar(vencimento)}" required>
                     <button class="button secondary icon-only" type="button" id="recalcularVencimento" title="Recalcular vencimento">${icon('refresh')}</button>
                 </div>
-                <span class="helper">Clique em recalcular para usar inÃ­cio + dias</span>
+                <span class="helper">Clique em recalcular para usar início + dias</span>
             </label>
 
             <div class="form-section full">Acesso ao aplicativo</div>
-            ${campo({ nome: 'conexoesPainel', label: 'ConexÃµes do Painel', valor: cliente.conexoesPainel || '', tipo: 'number', attrs: 'id="conexoesPainel" min="0" step="1" placeholder="Quantidade de conexÃµes"' })}
+            ${campo({ nome: 'conexoesPainel', label: 'Conexões do Painel', valor: cliente.conexoesPainel || '', tipo: 'number', attrs: 'id="conexoesPainel" min="0" step="1" placeholder="Quantidade de conexões"' })}
             ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
             ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
-            ${opcoesMulti('paineisSelecionados', 'PainÃ©is', paineis, paineisSelecionados, 'Adicionar painel...')}
+            ${opcoesMulti('paineisSelecionados', 'Painéis', paineis, paineisSelecionados, 'Adicionar painel...')}
             <label class="toggle-line">
-                <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ? 'checked' : ''}>
+                <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ?'checked' : ''}>
                 <span>App instalado no dispositivo</span>
             </label>
-            ${campo({ nome: 'usuario', label: 'UsuÃ¡rio IPTV', valor: cliente.usuario })}
+            ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
             ${listaAcessosApp(cliente, apps, dispositivos, paineis)}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
-            ${areaTexto({ nome: 'observacoes', label: 'ObservaÃ§Ãµes', valor: cliente.observacoes })}
-            ${cliente.id ? camposNovaNotaAtendimento() : ''}
+            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
+            ${cliente.id ?camposNovaNotaAtendimento() : ''}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
                 <a class="button secondary" href="/clientes/todos">Cancelar</a>
@@ -3686,7 +3691,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             const texto = String(valor || '').replace(/[^\\d,.-]/g, '');
             if (!texto) return '';
             const numero = texto.includes(',')
-                ? Number(texto.replace(/\\./g, '').replace(',', '.'))
+                ?Number(texto.replace(/\\./g, '').replace(',', '.'))
                 : Number(texto);
 
             if (!Number.isFinite(numero)) return '';
@@ -3777,7 +3782,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             if (!statusCliente || !horasTeste) return;
             const habilitado = statusCliente.value === 'teste';
             horasTeste.disabled = !habilitado;
-            horasTeste.closest('label').style.opacity = habilitado ? '1' : '.55';
+            horasTeste.closest('label').style.opacity = habilitado ?'1' : '.55';
             if (!habilitado) horasTeste.value = '';
         }
 
@@ -3823,13 +3828,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '<label>Painel'
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
                 + '</label>'
-                + '<label>UsuÃ¡rio IPTV'
-                + '<input type="text" name="acessoUsuario" placeholder="UsuÃ¡rio desta conexÃ£o">'
+                + '<label>Usuário IPTV'
+                + '<input type="text" name="acessoUsuario" placeholder="Usuário desta conexão">'
                 + '</label>'
                 + '<label>Senha IPTV'
-                + '<input type="text" name="acessoSenha" placeholder="Senha desta conexÃ£o">'
+                + '<input type="text" name="acessoSenha" placeholder="Senha desta conexão">'
                 + '</label>'
-                + '<label>EndereÃ§o MAC'
+                + '<label>Endereço MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
                 + '</label>'
                 + '<label>ID do Aplicativo'
@@ -3944,7 +3949,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const extras = [
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
-        cliente.id && clienteEhTeste(cliente) ? secaoTesteLiberado(cliente, listas) : '',
+        cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
         secaoNotasCliente(cliente, notas)
     ].filter(Boolean).join('');
 
@@ -3956,41 +3961,41 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
         <div>
             <span class="metric-label">${escapar(label)}</span>
             <strong class="metric-value">${escapar(valor)}</strong>
-            ${nota ? `<span class="metric-note">${escapar(nota)}</span>` : ''}
+            ${nota ?`<span class="metric-note">${escapar(nota)}</span>` : ''}
         </div>
         <span class="metric-icon ${tipo}">${icon(icone)}</span>
     </div>`;
 }
 
 function pluralCliente(total) {
-    return Number(total) === 1 ? 'cliente' : 'clientes';
+    return Number(total) === 1 ?'cliente' : 'clientes';
 }
 
 function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }) {
     if (totalPaginas <= 1) return '';
 
-    const inicio = total ? ((pagina - 1) * porPagina) + 1 : 0;
+    const inicio = total ?((pagina - 1) * porPagina) + 1 : 0;
     const fim = Math.min(total, pagina * porPagina);
     const paginas = [];
     const primeira = Math.max(1, pagina - 2);
     const ultima = Math.min(totalPaginas, pagina + 2);
 
     for (let numero = primeira; numero <= ultima; numero += 1) {
-        paginas.push(`<a class="page-link ${numero === pagina ? 'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
+        paginas.push(`<a class="page-link ${numero === pagina ?'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
     }
 
-    return `<nav class="pagination" aria-label="PaginaÃ§Ã£o">
+    return `<nav class="pagination" aria-label="Paginação">
         <span class="pagination-info">${escapar(inicio)}-${escapar(fim)} de ${escapar(total)}</span>
-        <a class="page-link ${pagina <= 1 ? 'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
+        <a class="page-link ${pagina <= 1 ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
         ${paginas.join('')}
-        <a class="page-link ${pagina >= totalPaginas ? 'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">PrÃ³xima</a>
+        <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
     </nav>`;
 }
 
 function receitaMensalCard(receita) {
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
-        ? receita.itens.map((item) => {
+        ?receita.itens.map((item) => {
             const largura = Math.max(8, Math.round((item.total / maiorValor) * 100));
 
             return `<div class="revenue-row">
@@ -4007,7 +4012,7 @@ function receitaMensalCard(receita) {
             <div>
                 <div class="revenue-title">Receita Mensal Recorrente</div>
                 <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
-                <span class="revenue-note">Baseada nos pagamentos vÃ¡lidos e nos clientes ativos sem histÃ³rico financeiro</span>
+                <span class="revenue-note">Baseada nos pagamentos válidos e nos clientes ativos sem histórico financeiro</span>
             </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
@@ -4018,8 +4023,8 @@ function receitaMensalCard(receita) {
 function cardVencimento(cliente) {
     const vencimento = vencimentoCliente(cliente);
     const dias = calcularDiasRestantes(vencimento);
-    const classeVencimento = dias < 0 || vencimentoExpirou(vencimento) ? 'expired' : '';
-    const marcadorTeste = clienteEhTeste(cliente) ? '<span class="badge info">Teste gr&aacute;tis</span>' : '';
+    const classeVencimento = dias < 0 || vencimentoExpirou(vencimento) ?'expired' : '';
+    const marcadorTeste = clienteEhTeste(cliente) ?'<span class="badge info">Teste gr&aacute;tis</span>' : '';
 
     return `<div class="client-row">
         <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
@@ -4043,22 +4048,22 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes) {
     const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
-        <div class="subtitle">VisÃ£o geral dos seus clientes</div>
+        <div class="subtitle">Visão geral dos seus clientes</div>
     </section>
     <section class="metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
-        ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grÃ¡tis', tipo: 'info', icone: 'apps' })}
+        ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grátis', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
-        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenÃ§Ã£o', tipo: 'orange', icone: 'alert' })}
-        ${metricCard({ label: 'Vencem este mÃªs', valor: resumo.vencemMes, nota: 'Ainda este mÃªs', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
     </section>
     ${receitaMensalCard(receita)}
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Clientes com Vencimento PrÃ³ximo</h2>
-                <div class="subtitle">Clientes que vencem nos prÃ³ximos ${DIAS_DASHBOARD} dias ou jÃ¡ venceram</div>
+                <h2 class="panel-title">Clientes com Vencimento Próximo</h2>
+                <div class="subtitle">Clientes que vencem nos próximos ${DIAS_DASHBOARD} dias ou já venceram</div>
             </div>
             <div class="actions">
                 <form method="post" action="/clientes/verificar-renovacoes">
@@ -4067,7 +4072,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes) {
                 <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
-        ${proximosPaginados.itens.length ? proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos prÃ³ximos dias.</div>'}
+        ${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
         ${paginacao({
             base: '/clientes',
             pagina: proximosPaginados.pagina,
@@ -4088,36 +4093,36 @@ function tabelaClientes(clientes) {
         <td data-label="Cliente">
             <div class="cell-title">${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
-            ${cliente.origem ? `<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
-            ${cliente.nascimento ? `<div class="cell-muted">ðŸŽ‚ ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
-            ${Number(cliente.bonusMeses || 0) > 0 ? `<div class="cell-muted">ðŸŽ ${escapar(cliente.bonusMeses)} bÃ´nus</div>` : ''}
+            ${cliente.origem ?`<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
+            ${cliente.nascimento ?`<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+            ${Number(cliente.bonusMeses || 0) > 0 ?`<div class="cell-muted">🎁 ${escapar(cliente.bonusMeses)} bônus</div>` : ''}
             ${renderTagsCliente(cliente.tags)}
         </td>
         <td data-label="Plano">
             <div class="cell-title">${escapar(cliente.plano || '-')}</div>
             <div class="cell-muted">${escapar(detalhePlanoCliente(cliente))}</div>
-            <div class="cell-muted">${cliente.valorPlano ? `R$ ${escapar(cliente.valorPlano)}` : ''}</div>
+            <div class="cell-muted">${cliente.valorPlano ?`R$ ${escapar(cliente.valorPlano)}` : ''}</div>
         </td>
-        <td data-label="InÃ­cio">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
+        <td data-label="Início">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
         <td data-label="Vencimento">
             <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
             <div class="cell-muted" data-vencimento-restante="${escapar(cliente.dataVencimento || cliente.vencimento)}">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
         </td>
         <td data-label="Aplicativos">
             ${renderChips(cliente.appsInstalados, 'app-chip')}
-            ${cliente.validadeApp ? `<div class="cell-muted">Validade: ${escapar(cliente.validadeApp)}</div>` : ''}
-            ${cliente.dataValidadeApp ? `<div class="cell-muted">App vence: ${escapar(formatarDataHoraCurta(cliente.dataValidadeApp))}</div>` : ''}
-            ${cliente.appInstalado ? '<span class="installed-chip">Instalado</span>' : ''}
+            ${cliente.validadeApp ?`<div class="cell-muted">Validade: ${escapar(cliente.validadeApp)}</div>` : ''}
+            ${cliente.dataValidadeApp ?`<div class="cell-muted">App vence: ${escapar(formatarDataHoraCurta(cliente.dataValidadeApp))}</div>` : ''}
+            ${cliente.appInstalado ?'<span class="installed-chip">Instalado</span>' : ''}
         </td>
         <td data-label="Dispositivos">
             ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
         </td>
         <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span></td>
-        <td data-label="AÃ§Ãµes">
+        <td data-label="Ações">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
-                ${clientePodeReceberReativacao(cliente) ? `<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativaÃ§Ã£o com QR Code para este cliente?');">
-                    <button class="button icon-only icon-action green" type="submit" title="Enviar reativaÃ§Ã£o com QR Code">${icon('financeiro')}</button>
+                ${clientePodeReceberReativacao(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativação com QR Code para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar reativação com QR Code">${icon('financeiro')}</button>
                 </form>` : ''}
                 <form method="post" action="/clientes/verificar-renovacoes">
                     <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
@@ -4136,12 +4141,12 @@ function tabelaClientes(clientes) {
             <tr>
                 <th>Cliente</th>
                 <th>Plano</th>
-                <th>InÃ­cio</th>
+                <th>Início</th>
                 <th>Vencimento</th>
                 <th>Aplicativos</th>
                 <th>Dispositivos</th>
                 <th>Status</th>
-                <th>AÃ§Ãµes</th>
+                <th>Ações</th>
             </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -4169,13 +4174,13 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
             }
 
             function plural(valor, singular, pluralTexto) {
-                return Number(valor) === 1 ? singular : pluralTexto;
+                return Number(valor) === 1 ?singular : pluralTexto;
             }
 
             function textoTempoRestante(valor, prefixo) {
                 if (!valor) return '-';
 
-                const data = new Date(String(valor).length <= 10 ? String(valor) + 'T23:59:59' : valor);
+                const data = new Date(String(valor).length <= 10 ?String(valor) + 'T23:59:59' : valor);
                 if (Number.isNaN(data.getTime())) return '-';
 
                 const minuto = 60 * 1000;
@@ -4185,14 +4190,14 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                 const vencido = diff < 0;
                 const totalMinutos = Math.ceil(Math.abs(diff) / minuto);
 
-                if (totalMinutos <= 0) return vencido ? 'vencido agora' : 'vence agora';
+                if (totalMinutos <= 0) return vencido ?'vencido agora' : 'vence agora';
 
                 let texto = '';
 
                 if (totalMinutos < 60) {
                     const unidade = plural(totalMinutos, 'minuto', 'minutos');
                     const sufixo = plural(totalMinutos, 'restante', 'restantes');
-                    texto = vencido ? totalMinutos + ' ' + unidade + ' vencido' : totalMinutos + ' ' + unidade + ' ' + sufixo;
+                    texto = vencido ?totalMinutos + ' ' + unidade + ' vencido' : totalMinutos + ' ' + unidade + ' ' + sufixo;
                 } else if (totalMinutos < 24 * 60) {
                     const horas = Math.floor(totalMinutos / 60);
                     const minutos = totalMinutos % 60;
@@ -4200,16 +4205,16 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
 
                     if (!minutos) {
                         const sufixo = plural(horas, 'restante', 'restantes');
-                        texto = vencido ? textoHoras + ' vencido' : textoHoras + ' ' + sufixo;
+                        texto = vencido ?textoHoras + ' vencido' : textoHoras + ' ' + sufixo;
                     } else {
                         const textoMinutos = minutos + ' ' + plural(minutos, 'minuto', 'minutos');
-                        texto = vencido ? textoHoras + ' e ' + textoMinutos + ' vencido' : textoHoras + ' e ' + textoMinutos + ' restantes';
+                        texto = vencido ?textoHoras + ' e ' + textoMinutos + ' vencido' : textoHoras + ' e ' + textoMinutos + ' restantes';
                     }
                 } else {
                     const dias = Math.ceil(Math.abs(diff) / dia);
                     const textoDias = dias + ' ' + plural(dias, 'dia', 'dias');
                     const sufixo = plural(dias, 'restante', 'restantes');
-                    texto = vencido ? textoDias + ' vencido' : textoDias + ' ' + sufixo;
+                    texto = vencido ?textoDias + ' vencido' : textoDias + ' ' + sufixo;
                 }
 
                 if (prefixo === 'dashboard' && !vencido && texto !== '-') {
@@ -4217,7 +4222,7 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                 }
 
                 if (prefixo === 'dashboard' && vencido) {
-                    return texto.includes('vencido agora') ? 'Vencido agora' : texto.replace(' vencido', ' vencido');
+                    return texto.includes('vencido agora') ?'Vencido agora' : texto.replace(' vencido', ' vencido');
                 }
 
                 return texto;
@@ -4228,7 +4233,7 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                     const texto = textoTempoRestante(elemento.dataset.vencimentoRestante, elemento.dataset.prefixo || '');
                     if (texto && texto !== '-') elemento.textContent = texto;
                     const data = new Date(String(elemento.dataset.vencimentoRestante || '').length <= 10
-                        ? String(elemento.dataset.vencimentoRestante || '') + 'T23:59:59'
+                        ?String(elemento.dataset.vencimentoRestante || '') + 'T23:59:59'
                         : elemento.dataset.vencimentoRestante);
                     if (!Number.isNaN(data.getTime()) && elemento.classList.contains('due')) {
                         elemento.classList.toggle('expired', data < new Date());
@@ -4275,19 +4280,19 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
                 ['inadimplente', 'Inadimplentes'],
                 ['suspenso', 'Suspenso'],
                 ['cancelado', 'Cancelado']
-            ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ? 'selected' : ''}>${texto}</option>`).join('')}
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === status ?'selected' : ''}>${texto}</option>`).join('')}
         </select>
         <select name="origem" onchange="this.form.submit()">
             ${[
                 ['', 'Todas as origens'],
                 ...ORIGENS_CLIENTE.map(item => [item, item])
-            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === origem ? 'selected' : ''}>${escapar(texto)}</option>`).join('')}
+            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === origem ?'selected' : ''}>${escapar(texto)}</option>`).join('')}
         </select>
         <select name="tag" onchange="this.form.submit()">
             ${[
                 ['', 'Todas as tags'],
                 ...TAGS_CLIENTE.map(item => [item, item])
-            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === tag ? 'selected' : ''}>${escapar(texto)}</option>`).join('')}
+            ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === tag ?'selected' : ''}>${escapar(texto)}</option>`).join('')}
         </select>
     </form>
     <div class="toolbar">
@@ -4302,7 +4307,7 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
     </div>
     <section class="clients-panel">
         ${tabelaClientes(clientes)}
-        ${paginacaoClientes ? paginacao({
+        ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',
             params: { busca, status, origem, tag },
             pagina: paginacaoClientes.pagina,
@@ -4345,7 +4350,7 @@ function resumoFinanceiro(pagamentos = []) {
     });
 }
 
-function agruparFinanceiro(pagamentos = [], campo, fallback = 'NÃ£o informado') {
+function agruparFinanceiro(pagamentos = [], campo, fallback = 'Não informado') {
     const grupos = pagamentos
         .filter(pagamento => !pagamento.excluidoEm)
         .reduce((mapa, pagamento) => {
@@ -4365,7 +4370,7 @@ function agruparFinanceiro(pagamentos = [], campo, fallback = 'NÃ£o informado'
 function financeiroBreakdownCard({ titulo, nota, itens = [], icone = 'financeiro' }) {
     const maiorValor = Math.max(...itens.map(item => item.total), 1);
     const linhas = itens.length
-        ? itens.map(item => {
+        ?itens.map(item => {
             const largura = Math.max(8, Math.round((item.total / maiorValor) * 100));
 
             return `<div class="revenue-row">
@@ -4375,7 +4380,7 @@ function financeiroBreakdownCard({ titulo, nota, itens = [], icone = 'financeiro
                 <div class="revenue-value">${escapar(formatarMoeda(item.total))}</div>
             </div>`;
         }).join('')
-        : '<div class="empty">Nenhum pagamento vÃ¡lido encontrado neste filtro.</div>';
+        : '<div class="empty">Nenhum pagamento válido encontrado neste filtro.</div>';
 
     return `<section class="panel revenue-card">
         <div class="revenue-head">
@@ -4402,7 +4407,7 @@ function resumoInadimplentes(clientes = []) {
         const dias = diasPlanoCliente(cliente);
         const valorPlano = numeroMoeda(cliente.valorPlano);
         const assinaturaApp = numeroMoeda(cliente.assinaturaApp);
-        const mensalPlano = dias > 0 ? (valorPlano / dias) * 30 : valorPlano;
+        const mensalPlano = dias > 0 ?(valorPlano / dias) * 30 : valorPlano;
         return total + mensalPlano + assinaturaApp;
     }, 0);
 
@@ -4418,7 +4423,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
     const linhas = clientes.slice(0, 8).map(cliente => {
         const vencimento = vencimentoCliente(cliente);
         const telefone = String(cliente.telefone || '').replace(/\D/g, '');
-        const linkWhats = telefone ? `https://wa.me/${telefone}` : '';
+        const linkWhats = telefone ?`https://wa.me/${telefone}` : '';
 
         return `<tr>
             <td data-label="Cliente">
@@ -4433,9 +4438,9 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <div class="cell-title">${escapar(formatarDataHoraCurta(vencimento))}</div>
                 <div class="cell-muted">${escapar(textoTempoRestante(vencimento))}</div>
             </td>
-            <td data-label="AÃ§Ãµes">
+            <td data-label="Ações">
                 <div class="actions">
-                    ${linkWhats ? `<a class="button secondary icon-only" href="${escapar(linkWhats)}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${icon('whats')}</a>` : ''}
+                    ${linkWhats ?`<a class="button secondary icon-only" href="${escapar(linkWhats)}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${icon('whats')}</a>` : ''}
                     <a class="button secondary icon-only" href="/clientes/${escapar(cliente.id)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
                 </div>
             </td>
@@ -4449,7 +4454,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <div class="subtitle">${escapar(inadimplentes.quantidade || 0)} cliente(s), estimativa mensal ${escapar(formatarMoeda(inadimplentes.valorMensal || 0))}</div>
             </div>
             <div class="actions">
-                <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobranÃ§a para clientes vencidos que ainda nÃ£o receberam cobranÃ§a deste vencimento?');">
+                <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobrança para clientes vencidos que ainda não receberam cobrança deste vencimento?');">
                     <button class="button green" type="submit">${icon('whats')} Cobrar vencidos</button>
                 </form>
                 <a class="button secondary" href="/clientes/todos?status=inadimplente">Ver todos ${icon('arrow')}</a>
@@ -4461,7 +4466,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                     <th>Cliente</th>
                     <th>Plano</th>
                     <th>Vencimento</th>
-                    <th>AÃ§Ãµes</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>${linhas || '<tr><td colspan="4" class="empty">Nenhum cliente vencido encontrado.</td></tr>'}</tbody>
@@ -4472,11 +4477,11 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
 function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, clientes = [] }) {
     const resumo = resumoFinanceiro(pagamentos);
     const urlExportar = montarUrlComFiltros('/financeiro/exportar.csv', filtros);
-    const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'NÃ£o informado');
+    const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'Não informado');
     const porPlano = agruparFinanceiro(pagamentos, 'plano', 'Sem plano');
     const inadimplentes = resumoInadimplentes(clientes);
     const linhas = paginacaoFinanceiro.itens.length
-        ? paginacaoFinanceiro.itens.map(pagamento => `<tr>
+        ?paginacaoFinanceiro.itens.map(pagamento => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
             <td data-label="Cliente">
                 <div class="cell-title">${escapar(pagamento.clienteNome || '-')}</div>
@@ -4493,10 +4498,10 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
             <td data-label="Pagamento">${escapar(pagamento.formaPagamento || '-')}</td>
             <td data-label="Vencimento">${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
             <td data-label="Status">
-                ${pagamento.excluidoEm ? '<span class="badge red">Removido</span>' : '<span class="badge green">VÃ¡lido</span>'}
-                ${pagamento.excluidoEm ? `<div class="cell-muted">${escapar(formatarDataHoraCurta(pagamento.excluidoEm))}</div>` : ''}
+                ${pagamento.excluidoEm ?'<span class="badge red">Removido</span>' : '<span class="badge green">Válido</span>'}
+                ${pagamento.excluidoEm ?`<div class="cell-muted">${escapar(formatarDataHoraCurta(pagamento.excluidoEm))}</div>` : ''}
             </td>
-            <td data-label="AÃ§Ãµes">
+            <td data-label="Ações">
                 <a class="button secondary icon-only" href="/clientes/${escapar(pagamento.clienteId)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
             </td>
         </tr>`).join('')
@@ -4504,11 +4509,11 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
 
     return `<section class="page-title">
         <h1>Financeiro</h1>
-        <div class="subtitle">Pagamentos recebidos, removidos e conferÃªncia da receita</div>
+        <div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div>
     </section>
 
     <section class="metrics">
-        ${metricCard({ label: 'Recebido vÃ¡lido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Recebido válido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Removido', valor: formatarMoeda(resumo.totalRemovido), nota: `${resumo.removidos} pagamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Registros', valor: resumo.totalRegistros, nota: 'No filtro atual', tipo: 'info', icone: 'info' })}
         ${metricCard({ label: 'Inadimplentes', valor: inadimplentes.quantidade, nota: formatarMoeda(inadimplentes.valorMensal), tipo: 'orange', icone: 'alert' })}
@@ -4517,13 +4522,13 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     <section class="finance-breakdown-grid">
         ${financeiroBreakdownCard({
             titulo: 'Por forma de pagamento',
-            nota: 'Somente pagamentos vÃ¡lidos no filtro atual',
+            nota: 'Somente pagamentos válidos no filtro atual',
             itens: porPagamento,
             icone: 'financeiro'
         })}
         ${financeiroBreakdownCard({
             titulo: 'Por plano',
-            nota: 'Somente pagamentos vÃ¡lidos no filtro atual',
+            nota: 'Somente pagamentos válidos no filtro atual',
             itens: porPlano,
             icone: 'planos'
         })}
@@ -4539,10 +4544,10 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
         <input type="date" name="dataFim" value="${escapar(filtros.dataFim || '')}" title="Data final">
         <select name="status" onchange="this.form.submit()">
             ${[
-                ['validos', 'VÃ¡lidos'],
+                ['validos', 'Válidos'],
                 ['removidos', 'Removidos'],
                 ['todos', 'Todos']
-            ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtros.status ? 'selected' : ''}>${texto}</option>`).join('')}
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtros.status ?'selected' : ''}>${texto}</option>`).join('')}
         </select>
         <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
         <a class="button secondary" href="${escapar(urlExportar)}">${icon('planos')} Exportar CSV</a>
@@ -4561,7 +4566,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
                     <th>Pagamento</th>
                     <th>Vencimento</th>
                     <th>Status</th>
-                    <th>AÃ§Ãµes</th>
+                    <th>Ações</th>
                 </tr>
             </thead>
             <tbody>${linhas}</tbody>
@@ -4582,7 +4587,7 @@ function planoCard(plano) {
         <span class="device-icon">${icon('planos')}</span>
         <div>
             <div class="device-name">${escapar(plano.nome)}</div>
-            <div class="helper">${escapar(plano.dias)} dias${plano.valor ? ` - R$ ${escapar(plano.valor)}` : ''}</div>
+            <div class="helper">${escapar(plano.dias)} dias${plano.valor ?` - R$ ${escapar(plano.valor)}` : ''}</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/planos/${plano.id}/editar" title="Editar plano">${icon('edit')}</a>
@@ -4604,18 +4609,18 @@ function telaPlanos(planos) {
         </div>
     </section>
     <section class="device-grid">
-        ${planos.length ? planos.map(planoCard).join('') : '<div class="empty">Nenhum tipo de plano cadastrado.</div>'}
+        ${planos.length ?planos.map(planoCard).join('') : '<div class="empty">Nenhum tipo de plano cadastrado.</div>'}
     </section>`;
 }
 
 function formularioPlano(plano = {}) {
     return `<section class="page-title">
-        <h1>${plano.id ? 'Editar Tipo de Plano' : 'Novo Tipo de Plano'}</h1>
-        <div class="subtitle">Exemplo: Mensal com 30 dias de duraÃ§Ã£o</div>
+        <h1>${plano.id ?'Editar Tipo de Plano' : 'Novo Tipo de Plano'}</h1>
+        <div class="subtitle">Exemplo: Mensal com 30 dias de duração</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/planos/salvar">
-            ${plano.id ? `<input type="hidden" name="id" value="${escapar(plano.id)}">` : ''}
+            ${plano.id ?`<input type="hidden" name="id" value="${escapar(plano.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do plano', valor: plano.nome })}
             ${campo({ nome: 'dias', label: 'Quantidade de dias', valor: plano.dias, tipo: 'number' })}
             ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
@@ -4647,14 +4652,14 @@ function variaveisDisponiveis() {
 
     return `<section class="panel" style="margin-bottom: 24px;">
         <div class="vars">
-            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} VariÃ¡veis disponÃ­veis</strong>
+            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variáveis disponíveis</strong>
             ${variaveis.map(([token, descricao]) => `<span><span class="var-token">${escapar(token)}</span> <span class="helper">- ${escapar(descricao)}</span></span>`).join('')}
         </div>
     </section>`;
 }
 
 function chipPlano(modelo) {
-    const label = modelo.plano === 'padrao' ? 'PadrÃ£o (todos os planos)' : modelo.plano;
+    const label = modelo.plano === 'padrao' ?'Padrão (todos os planos)' : modelo.plano;
     return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
 }
 
@@ -4698,7 +4703,7 @@ function telaModelos({ modelos, config }) {
             <div class="logo-preview">
                 <label class="logo-click" title="Clique para trocar a logo">
                     <button type="button" onclick="this.parentElement.querySelector('input[type=file]').click()">
-                        ${config.logoUrl ? `<img class="brand-logo" src="${escapar(config.logoUrl)}" alt="Logo atual">` : `<span class="brand-icon">${icon('image')}</span>`}
+                        ${config.logoUrl ?`<img class="brand-logo" src="${escapar(config.logoUrl)}" alt="Logo atual">` : `<span class="brand-icon">${icon('image')}</span>`}
                     </button>
                     <span class="helper">Clique na logo para substituir</span>
                     <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
@@ -4719,32 +4724,32 @@ function telaModelos({ modelos, config }) {
         </form>
     </section>
     <section class="model-grid">
-        ${modelos.length ? modelos.map(cardModelo).join('') : '<div class="empty">Nenhum modelo cadastrado.</div>'}
+        ${modelos.length ?modelos.map(cardModelo).join('') : '<div class="empty">Nenhum modelo cadastrado.</div>'}
     </section>`;
 }
 
 function formularioModelo(modelo = {}) {
     return `<section class="page-title">
-        <h1>${modelo.id ? 'Editar Modelo' : 'Novo Modelo'}</h1>
-        <div class="subtitle">Use variÃ¡veis para personalizar cada mensagem enviada</div>
+        <h1>${modelo.id ?'Editar Modelo' : 'Novo Modelo'}</h1>
+        <div class="subtitle">Use variáveis para personalizar cada mensagem enviada</div>
     </section>
     ${variaveisDisponiveis()}
     <section class="panel">
         <form class="fields" method="post" action="/modelos/salvar">
-            ${modelo.id ? `<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
-            ${campo({ nome: 'titulo', label: 'TÃ­tulo', valor: modelo.titulo })}
+            ${modelo.id ?`<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
+            ${campo({ nome: 'titulo', label: 'Título', valor: modelo.titulo })}
             ${campo({
                 nome: 'plano',
                 label: 'Plano',
                 valor: modelo.plano || 'padrao',
                 opcoes: [
-                    { valor: 'padrao', texto: 'PadrÃ£o (todos os planos)' },
+                    { valor: 'padrao', texto: 'Padrão (todos os planos)' },
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
                     { valor: 'anual', texto: 'Anual' },
-                    { valor: 'aniversario', texto: 'AniversÃ¡rio' },
-                    { valor: 'cobranca', texto: 'CobranÃ§a' }
+                    { valor: 'aniversario', texto: 'Aniversário' },
+                    { valor: 'cobranca', texto: 'Cobrança' }
                 ]
             })}
             ${campo({
@@ -4798,24 +4803,24 @@ function telaApps(apps) {
         <div class="toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Aplicativos</h1>
-                <div class="subtitle">Gerencie os apps disponÃ­veis para cadastro de clientes</div>
+                <div class="subtitle">Gerencie os apps disponíveis para cadastro de clientes</div>
             </div>
             <a class="button" href="/apps/novo">${icon('plus')} Novo App</a>
         </div>
     </section>
     <section class="panel catalog-panel">
-        ${apps.length ? apps.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
+        ${apps.length ?apps.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
     </section>`;
 }
 
 function formularioApp(app = {}) {
     return `<section class="page-title">
-        <h1>${app.id ? 'Editar App' : 'Novo App'}</h1>
+        <h1>${app.id ?'Editar App' : 'Novo App'}</h1>
         <div class="subtitle">Informe o app e onde ele pode ser usado</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/apps/salvar">
-            ${app.id ? `<input type="hidden" name="id" value="${escapar(app.id)}">` : ''}
+            ${app.id ?`<input type="hidden" name="id" value="${escapar(app.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do app', valor: app.nome })}
             ${campo({
                 nome: 'ativo',
@@ -4826,7 +4831,7 @@ function formularioApp(app = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
-            ${areaTexto({ nome: 'descricao', label: 'DescriÃ§Ã£o / painÃ©is e dispositivos compatÃ­veis', valor: app.descricao })}
+            ${areaTexto({ nome: 'descricao', label: 'Descrição / painéis e dispositivos compatíveis', valor: app.descricao })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar app</button>
                 <a class="button secondary" href="/apps">Cancelar</a>
@@ -4859,18 +4864,18 @@ function telaDispositivos(dispositivos) {
         </div>
     </section>
     <section class="device-grid">
-        ${dispositivos.length ? dispositivos.map(deviceCard).join('') : '<div class="empty">Nenhum dispositivo cadastrado.</div>'}
+        ${dispositivos.length ?dispositivos.map(deviceCard).join('') : '<div class="empty">Nenhum dispositivo cadastrado.</div>'}
     </section>`;
 }
 
 function formularioDispositivo(dispositivo = {}) {
     return `<section class="page-title">
-        <h1>${dispositivo.id ? 'Editar Dispositivo' : 'Novo Dispositivo'}</h1>
+        <h1>${dispositivo.id ?'Editar Dispositivo' : 'Novo Dispositivo'}</h1>
         <div class="subtitle">Cadastre os aparelhos usados pelos clientes</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/dispositivos/salvar">
-            ${dispositivo.id ? `<input type="hidden" name="id" value="${escapar(dispositivo.id)}">` : ''}
+            ${dispositivo.id ?`<input type="hidden" name="id" value="${escapar(dispositivo.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do dispositivo', valor: dispositivo.nome })}
             ${campo({
                 nome: 'ativo',
@@ -4908,14 +4913,14 @@ function telaPaineis(paineis) {
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
-                <h1>PainÃ©is</h1>
-                <div class="subtitle">${paineis.length} painÃ©is cadastrados</div>
+                <h1>Painéis</h1>
+                <div class="subtitle">${paineis.length} painéis cadastrados</div>
             </div>
             <a class="button" href="/paineis/novo">${icon('plus')} Novo Painel</a>
         </div>
     </section>
     <section class="device-grid">
-        ${paineis.length ? paineis.map(panelCard).join('') : '<div class="empty">Nenhum painel cadastrado.</div>'}
+        ${paineis.length ?paineis.map(panelCard).join('') : '<div class="empty">Nenhum painel cadastrado.</div>'}
     </section>`;
 }
 
@@ -4942,20 +4947,20 @@ function resumoImportacaoClientes(importacao = {}) {
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">PrÃ©-visualizaÃ§Ã£o da importaÃ§Ã£o</h2>
+                <h2 class="panel-title">Pré-visualização da importação</h2>
                 <div class="subtitle">${preview.total} linha(s): ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar</div>
             </div>
-            ${podeConfirmar ? `<form method="post" action="/manutencao/importar-clientes/confirmar" onsubmit="return confirm('Confirmar importaÃ§Ã£o? Um backup automÃ¡tico serÃ¡ criado antes de gravar.');">
+            ${podeConfirmar ?`<form method="post" action="/manutencao/importar-clientes/confirmar" onsubmit="return confirm('Confirmar importação?Um backup automático será criado antes de gravar.');">
                 <input type="hidden" name="token" value="${escapar(token)}">
-                <button class="button green" type="submit">${icon('check')} Confirmar importaÃ§Ã£o</button>
+                <button class="button green" type="submit">${icon('check')} Confirmar importação</button>
             </form>` : ''}
         </div>
-        ${preview.ignorar ? '<div class="notice">Corrija as linhas com erro e envie o CSV novamente antes de confirmar.</div>' : '<div class="notice">Tudo certo para importar. O sistema criarÃ¡ um backup antes de gravar.</div>'}
+        ${preview.ignorar ?'<div class="notice">Corrija as linhas com erro e envie o CSV novamente antes de confirmar.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
         <table>
             <thead>
                 <tr>
                     <th>Linha</th>
-                    <th>AÃ§Ã£o</th>
+                    <th>Ação</th>
                     <th>Cliente</th>
                     <th>WhatsApp</th>
                     <th>Plano</th>
@@ -4965,7 +4970,7 @@ function resumoImportacaoClientes(importacao = {}) {
             <tbody>
                 ${amostra.map(item => `<tr>
                     <td>${escapar(item.linha)}</td>
-                    <td><span class="badge ${item.acao === 'ignorar' ? 'red' : item.acao === 'atualizar' ? 'orange' : 'green'}">${escapar(item.acao)}</span></td>
+                    <td><span class="badge ${item.acao === 'ignorar' ?'red' : item.acao === 'atualizar' ?'orange' : 'green'}">${escapar(item.acao)}</span></td>
                     <td>${escapar(item.dados.nome || '-')}</td>
                     <td>${escapar(item.dados.telefone || '-')}</td>
                     <td>${escapar(item.dados.plano || '-')}</td>
@@ -4973,7 +4978,7 @@ function resumoImportacaoClientes(importacao = {}) {
                 </tr>`).join('')}
             </tbody>
         </table>
-        ${itens.length > amostra.length ? `<div class="subtitle" style="padding:12px 0 0;">Mostrando ${amostra.length} de ${itens.length} linha(s).</div>` : ''}
+        ${itens.length > amostra.length ?`<div class="subtitle" style="padding:12px 0 0;">Mostrando ${amostra.length} de ${itens.length} linha(s).</div>` : ''}
     </section>`;
 }
 
@@ -4984,69 +4989,69 @@ function telaManutencao(status = {}, opcoes = {}) {
     const licenca = status.licenca || {};
     const diagnostico = status.diagnostico || null;
     const ultimoBackup = status.ultimoBackup
-        ? `${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
+        ?`${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
     const notaLicenca = licenca.vitalicia && licenca.status === 'ativa'
-        ? 'LicenÃ§a vitalÃ­cia, sem data de vencimento'
+        ?'Licença vitalícia, sem data de vencimento'
         : licenca.status === 'ativa'
-            ? `${licenca.diasRestantes} dia(s) restantes`
+            ?`${licenca.diasRestantes} dia(s) restantes`
         : licenca.status === 'vencendo'
-            ? `Vence em ${licenca.diasRestantes} dia(s)`
+            ?`Vence em ${licenca.diasRestantes} dia(s)`
             : licenca.status === 'vencida'
-                ? `Vencida hÃ¡ ${Math.abs(licenca.diasRestantes)} dia(s)`
-                : 'Informe a licenÃ§a';
+                ?`Vencida há ${Math.abs(licenca.diasRestantes)} dia(s)`
+                : 'Informe a licença';
 
     const modoClienteComercial = instalacaoComercialCliente();
 
     return `<section class="page-title">
-        <h1>ManutenÃ§Ã£o</h1>
-        <div class="subtitle">Status, backup e preparaÃ§Ã£o para instalaÃ§Ã£o comercial individual</div>
+        <h1>Manutenção</h1>
+        <div class="subtitle">Status, backup e preparação para instalação comercial individual</div>
     </section>
 
     <section class="metrics" style="margin-bottom:24px;">
-        ${metricCard({ label: 'VersÃ£o', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
-        ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ? 'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ? 'green' : 'red', icone: 'whats' })}
-        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ? 'Encontrado' : 'NÃ£o encontrado', tipo: status.bancoExiste ? 'green' : 'red', icone: 'planos' })}
-        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o Ãºltimo inÃ­cio', tipo: 'orange', icone: 'refresh' })}
+        ${metricCard({ label: 'Versão', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
+        ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ?'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ?'green' : 'red', icone: 'whats' })}
+        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ?'Encontrado' : 'Não encontrado', tipo: status.bancoExiste ?'green' : 'red', icone: 'planos' })}
+        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
     </section>
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">DiagnÃ³stico do sistema</h2>
-                <div class="subtitle">Verifique os serviÃ§os essenciais antes de abrir um chamado de suporte</div>
+                <h2 class="panel-title">Diagnóstico do sistema</h2>
+                <div class="subtitle">Verifique os serviços essenciais antes de abrir um chamado de suporte</div>
             </div>
             <form method="post" action="/manutencao/diagnostico">
-                <button class="button" type="submit">${icon('manutencao')} Executar diagnÃ³stico</button>
+                <button class="button" type="submit">${icon('manutencao')} Executar diagnóstico</button>
             </form>
         </div>
-        ${diagnostico?.verificacoes?.length ? `<table>
+        ${diagnostico?.verificacoes?.length ?`<table>
             <thead>
-                <tr><th>VerificaÃ§Ã£o</th><th>Resultado</th><th>Detalhes</th></tr>
+                <tr><th>Verificação</th><th>Resultado</th><th>Detalhes</th></tr>
             </thead>
             <tbody>
                 ${diagnostico.verificacoes.map(item => `<tr>
                     <td>${escapar(item.nome)}</td>
-                    <td><span class="badge ${item.status === 'ok' ? 'ok' : item.status === 'atencao' ? 'warn' : 'error'}">${item.status === 'ok' ? 'SaudÃ¡vel' : item.status === 'atencao' ? 'AtenÃ§Ã£o' : 'Erro'}</span></td>
+                    <td><span class="badge ${item.status === 'ok' ?'ok' : item.status === 'atencao' ?'warn' : 'error'}">${item.status === 'ok' ?'Saudável' : item.status === 'atencao' ?'Atenção' : 'Erro'}</span></td>
                     <td>${escapar(item.mensagem)}</td>
                 </tr>`).join('')}
             </tbody>
         </table>
-        <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnÃ³stico ainda nÃ£o foi executado.</div>'}
+        <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnóstico ainda não foi executado.</div>'}
     </section>`}
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Acesso ao painel</h2>
-                <div class="subtitle">Salve o usuÃ¡rio e a senha no banco para nÃ£o perder ao reiniciar o PM2</div>
+                <div class="subtitle">Salve o usuário e a senha no banco para não perder ao reiniciar o PM2</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/acesso" style="padding-top:0;">
-            ${campo({ nome: 'painelUsuario', label: 'UsuÃ¡rio do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
+            ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
             ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Deixe em branco para manter a atual"' })}
             ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Repita a nova senha"' })}
-            <div class="notice full">Depois de alterar, faÃ§a login novamente com o novo acesso.</div>
+            <div class="notice full">Depois de alterar, faça login novamente com o novo acesso.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar acesso</button>
             </div>
@@ -5056,25 +5061,25 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">ConfiguraÃ§Ã£o do robÃ´</h2>
-                <div class="subtitle">Nome da empresa e imagens usadas nas respostas automÃ¡ticas desta instalaÃ§Ã£o</div>
+                <h2 class="panel-title">Configuração do robô</h2>
+                <div class="subtitle">Nome da empresa e imagens usadas nas respostas automáticas desta instalação</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
-            <div class="notice full">O robÃ´ usa este nome nas boas-vindas, menus, planos, renovaÃ§Ãµes e encerramentos.</div>
+            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos.</div>
             <div class="actions full">
-                <button class="button" type="submit">${icon('check')} Salvar nome do robÃ´</button>
+                <button class="button" type="submit">${icon('check')} Salvar nome do robô</button>
             </div>
         </form>
         <div class="cards-grid" style="display:grid;gap:12px;padding:0 20px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
             ${campoImagemRobo(status.config, 'imagemRoboMenu', 'Boas-vindas / menu')}
             ${campoImagemRobo(status.config, 'imagemRoboPlanos', 'Planos e valores')}
-            ${campoImagemRobo(status.config, 'imagemRoboTeste', 'Teste grÃ¡tis')}
+            ${campoImagemRobo(status.config, 'imagemRoboTeste', 'Teste grátis')}
             ${campoImagemRobo(status.config, 'imagemRoboTesteLiberado', 'Teste liberado')}
-            ${campoImagemRobo(status.config, 'imagemRoboRenovacao', 'RenovaÃ§Ã£o')}
-            ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'AtivaÃ§Ã£o')}
-            ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opÃ§Ãµes invÃ¡lidas')}
+            ${campoImagemRobo(status.config, 'imagemRoboRenovacao', 'Renovação')}
+            ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'Ativação')}
+            ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opções inválidas')}
             ${campoImagemRobo(status.config, 'imagemRoboEncerramento', 'Encerramento')}
         </div>
     </section>
@@ -5082,21 +5087,21 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">LicenÃ§a da instalaÃ§Ã£o</h2>
-                <div class="subtitle">Controle comercial da instalaÃ§Ã£o individual deste cliente</div>
+                <h2 class="panel-title">Licença da instalação</h2>
+                <div class="subtitle">Controle comercial da instalação individual deste cliente</div>
             </div>
-            <span class="badge ${licenca.status === 'vencida' ? 'red' : licenca.status === 'vencendo' ? 'orange' : licenca.status === 'ativa' ? 'green' : ''}">${escapar(licenca.rotulo || 'NÃ£o configurada')}</span>
+            <span class="badge ${licenca.status === 'vencida' ?'red' : licenca.status === 'vencendo' ?'orange' : licenca.status === 'ativa' ?'green' : ''}">${escapar(licenca.rotulo || 'Não configurada')}</span>
         </div>
         <table><tbody>
             <tr><th>Cliente / Empresa</th><td>${escapar(licenca.cliente || '-')}</td></tr>
             <tr><th>Tipo</th><td>${escapar(licenca.rotulo || '-')}</td></tr>
-            <tr><th>AtivaÃ§Ã£o</th><td>${escapar(licenca.ativacao || '-')}</td></tr>
-            <tr><th>Vencimento</th><td>${escapar(licenca.vitalicia ? 'Sem vencimento' : licenca.vencimento || '-')}</td></tr>
-            <tr><th>InstalaÃ§Ã£o</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
+            <tr><th>Ativação</th><td>${escapar(licenca.ativacao || '-')}</td></tr>
+            <tr><th>Vencimento</th><td>${escapar(licenca.vitalicia ?'Sem vencimento' : licenca.vencimento || '-')}</td></tr>
+            <tr><th>Instalação</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
         </tbody></table>
         <div class="actions" style="padding:18px 20px;">
             ${instalacaoAdministrador()
-                ? `<a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>`
+                ?`<a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>`
                 : `<a class="button secondary" href="/licenca">${icon('check')} Ver licença</a>`}
             <span class="notice">${escapar(notaLicenca)}</span>
         </div>
@@ -5106,38 +5111,38 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">PIX de recebimento</h2>
-                <div class="subtitle">Dados usados para gerar o QR Code bancÃ¡rio enviado aos clientes</div>
+                <div class="subtitle">Dados usados para gerar o QR Code bancário enviado aos clientes</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/pix" style="padding-top:0;">
-            ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatÃ³ria"' })}
+            ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"' })}
             ${campo({ nome: 'pixNome', label: 'Nome do recebedor', valor: status.config?.pixNome || '', attrs: 'required maxlength="25" placeholder="Nome que aparece no banco"' })}
             ${campo({ nome: 'pixCidade', label: 'Cidade do recebedor', valor: status.config?.pixCidade || '', attrs: 'required maxlength="15" placeholder="Cidade"' })}
-            ${campo({ nome: 'pixTxid', label: 'IdentificaÃ§Ã£o do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
-            <div class="notice full">O QR Code serÃ¡ gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
+            ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
+            <div class="notice full">O QR Code será gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>
             </div>
         </form>
     </section>
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Monitoramento comercial</h2>
-                <div class="subtitle">Backup automÃ¡tico, retenÃ§Ã£o e alerta quando o WhatsApp ficar desconectado</div>
+                <div class="subtitle">Backup automático, retenção e alerta quando o WhatsApp ficar desconectado</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/monitoramento" style="padding-top:0;">
             <label class="toggle-line">
-                <input type="checkbox" name="backupAutomaticoAtivo" value="1" ${String(status.config?.backupAutomaticoAtivo) === '1' ? 'checked' : ''}>
-                <span>Ativar backup automÃ¡tico diÃ¡rio</span>
+                <input type="checkbox" name="backupAutomaticoAtivo" value="1" ${String(status.config?.backupAutomaticoAtivo) === '1' ?'checked' : ''}>
+                <span>Ativar backup automático diário</span>
             </label>
-            ${campo({ nome: 'backupAutomaticoHora', label: 'HorÃ¡rio do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
-            ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automÃ¡ticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
-            ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar apÃ³s desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
+            ${campo({ nome: 'backupAutomaticoHora', label: 'Horário do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
+            ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
+            ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
-            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca sÃ£o apagados pela retenÃ§Ã£o automÃ¡tica.</div>
+            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca são apagados pela retenção automática.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -5145,11 +5150,11 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>`}
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backup dos dados</h2>
-                <div class="subtitle">Gere uma cÃ³pia do banco antes de atualizar ou fazer manutenÃ§Ã£o</div>
+                <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
             </div>
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
@@ -5160,16 +5165,16 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Pasta dos dados</th><td>${escapar(status.dataDir || '-')}</td></tr>
                 <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
-                <tr><th>Ãšltimo backup</th><td>${escapar(ultimoBackup)}</td></tr>
+                <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
             </tbody>
         </table>
     </section>`}
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Importar clientes CSV</h2>
-                <div class="subtitle">Baixe o modelo, envie a planilha para validar e confirme somente depois da prÃ©-visualizaÃ§Ã£o</div>
+                <div class="subtitle">Baixe o modelo, envie a planilha para validar e confirme somente depois da pré-visualização</div>
             </div>
             <a class="button secondary" href="/manutencao/clientes-modelo.csv">${icon('planos')} Baixar modelo CSV</a>
         </div>
@@ -5177,7 +5182,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             <label class="full">Arquivo CSV
                 <input type="file" name="arquivo" accept=".csv,text/csv" required>
             </label>
-            <div class="notice full">A importaÃ§Ã£o atualiza clientes com o mesmo WhatsApp e cria os que ainda nÃ£o existem. Antes de gravar, o sistema mostra uma prÃ©via e cria backup automÃ¡tico.</div>
+            <div class="notice full">A importação atualiza clientes com o mesmo WhatsApp e cria os que ainda não existem. Antes de gravar, o sistema mostra uma prévia e cria backup automático.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('search')} Validar CSV</button>
             </div>
@@ -5186,20 +5191,20 @@ function telaManutencao(status = {}, opcoes = {}) {
 
     ${resumoImportacaoClientes(opcoes.importacao)}`}
 
-    ${modoClienteComercial ? '' : `<section class="panel" style="margin-bottom:24px;">
+    ${modoClienteComercial ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backups recentes</h2>
                 <div class="subtitle">${status.totalBackups || 0} backup(s) encontrado(s)</div>
             </div>
         </div>
-        ${backups.length ? `<table>
+        ${backups.length ?`<table>
             <thead>
                 <tr>
                     <th>Arquivo</th>
                     <th>Tamanho</th>
                     <th>Data</th>
-                    ${modoClienteComercial ? '' : '<th>AÃ§Ãµes</th>'}
+                    ${modoClienteComercial ?'' : '<th>Ações</th>'}
                 </tr>
             </thead>
             <tbody>
@@ -5207,8 +5212,8 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <td>${escapar(backup.nome)}</td>
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
-                    ${modoClienteComercial ? '' : `<td>
-                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup? O sistema criarÃ¡ uma cÃ³pia do banco atual antes de restaurar. Depois reinicie o PM2.');">
+                    ${modoClienteComercial ?'' : `<td>
+                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
@@ -5222,15 +5227,15 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Eventos do sistema</h2>
-                <div class="subtitle">Ãšltimos backups, alertas e recuperaÃ§Ãµes registrados</div>
+                <div class="subtitle">Últimos backups, alertas e recuperações registrados</div>
             </div>
         </div>
-        ${eventos.length ? `<table>
+        ${eventos.length ?`<table>
             <thead>
                 <tr>
                     <th>Data</th>
                     <th>Tipo</th>
-                    <th>NÃ­vel</th>
+                    <th>Nível</th>
                     <th>Mensagem</th>
                 </tr>
             </thead>
@@ -5238,7 +5243,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 ${eventos.map(evento => `<tr>
                     <td>${escapar(formatarDataHoraCurta(evento.criadoEm))}</td>
                     <td>${escapar(evento.tipo)}</td>
-                    <td><span class="badge ${evento.nivel === 'erro' ? 'red' : evento.nivel === 'alerta' ? 'orange' : 'green'}">${escapar(evento.nivel)}</span></td>
+                    <td><span class="badge ${evento.nivel === 'erro' ?'red' : evento.nivel === 'alerta' ?'orange' : 'green'}">${escapar(evento.nivel)}</span></td>
                     <td>${escapar(evento.mensagem)}</td>
                 </tr>`).join('')}
             </tbody>
@@ -5248,12 +5253,12 @@ function telaManutencao(status = {}, opcoes = {}) {
 
 function formularioPainel(painel = {}) {
     return `<section class="page-title">
-        <h1>${painel.id ? 'Editar Painel' : 'Novo Painel'}</h1>
-        <div class="subtitle">Cadastre os painÃ©is usados no controle dos clientes</div>
+        <h1>${painel.id ?'Editar Painel' : 'Novo Painel'}</h1>
+        <div class="subtitle">Cadastre os painéis usados no controle dos clientes</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/paineis/salvar">
-            ${painel.id ? `<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
+            ${painel.id ?`<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
             ${campo({
                 nome: 'ativo',
@@ -5384,7 +5389,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes?mensagem=Cliente nÃ£o encontrado');
+        return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
     const [listas, notas, pagamentos, alertas] = await Promise.all([
@@ -5409,7 +5414,7 @@ router.get('/clientes/:id/pagamentos/:pagamentoId/editar', async (req, res) => {
     ]);
 
     if (!cliente || !pagamento) {
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento nÃ£o encontrado para ediÃ§Ã£o.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento não encontrado para edição.'));
     }
 
     await renderizar(res, {
@@ -5435,7 +5440,7 @@ router.post('/clientes/salvar', async (req, res) => {
             });
         }
 
-        logControleClientes(req.body.id ? 'Cliente editado' : 'Cliente cadastrado', {
+        logControleClientes(req.body.id ?'Cliente editado' : 'Cliente cadastrado', {
             id: clienteSalvo?.id,
             nome: clienteSalvo?.nome,
             telefone: clienteSalvo?.telefone,
@@ -5444,18 +5449,18 @@ router.post('/clientes/salvar', async (req, res) => {
         });
 
         const mensagemAlerta = alertas.length
-            ? 'Cliente salvo. AtenÃ§Ã£o: existe histÃ³rico problemÃ¡tico para nome ou telefone parecido.'
+            ?'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
             : 'Cliente salvo com sucesso';
 
         if (adicionandoNota && clienteSalvo?.id) {
             return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, novaNota
-                ? 'Nota adicionada ao histÃ³rico e cliente salvo'
+                ?'Nota adicionada ao histórico e cliente salvo'
                 : 'Cliente salvo. Nenhuma nota foi informada.'));
         }
 
         if (clienteEhTeste(clienteSalvo) && clienteSalvo?.id) {
             return res.redirect(montarUrlListaClientesMensagem(alertas.length
-                ? mensagemAlerta
+                ?mensagemAlerta
                 : 'Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
         }
 
@@ -5487,7 +5492,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
         });
         const clienteAtualizado = resultado.cliente;
         const deveEnviar = Boolean(req.body.enviarMensagem);
-        let mensagemRetorno = 'RenovaÃ§Ã£o registrada com sucesso';
+        let mensagemRetorno = 'Renovação registrada com sucesso';
 
         logControleClientes('Renovacao registrada', {
             clienteId: clienteAtualizado?.id,
@@ -5503,7 +5508,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
 
             if (!client || !status.conectado) {
                 await marcarPagamentoMensagem(resultado.pagamentoId, false, 'WhatsApp desconectado');
-                mensagemRetorno = 'RenovaÃ§Ã£o registrada, mas o WhatsApp nÃ£o estÃ¡ conectado para enviar a confirmaÃ§Ã£o.';
+                mensagemRetorno = 'Renovação registrada, mas o WhatsApp não está conectado para enviar a confirmação.';
             } else {
                 try {
                     const mensagem = montarMensagemRenovacaoConfirmada(clienteAtualizado, resultado);
@@ -5521,14 +5526,14 @@ router.post('/clientes/:id/renovar', async (req, res) => {
 
                     registrarMensagemDoRobo(envio);
                     await marcarPagamentoMensagem(resultado.pagamentoId, true);
-                    mensagemRetorno = 'RenovaÃ§Ã£o registrada e confirmaÃ§Ã£o enviada ao cliente.';
+                    mensagemRetorno = 'Renovação registrada e confirmação enviada ao cliente.';
                     logControleClientes('Renovacao enviada ao cliente', {
                         clienteId: clienteAtualizado.id,
                         destino
                     });
                 } catch (erroEnvio) {
                     await marcarPagamentoMensagem(resultado.pagamentoId, false, erroEnvio.message);
-                    mensagemRetorno = `RenovaÃ§Ã£o registrada, mas nÃ£o foi possÃ­vel enviar a confirmaÃ§Ã£o: ${erroEnvio.message}`;
+                    mensagemRetorno = `Renovação registrada, mas não foi possível enviar a confirmação: ${erroEnvio.message}`;
                     logControleClientes('Erro ao enviar renovacao', {
                         clienteId: clienteAtualizado.id,
                         erro: erroEnvio.message
@@ -5552,17 +5557,17 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         const cliente = await buscarClientePorId(req.params.id);
 
         if (!cliente) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente nÃ£o encontrado.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente não encontrado.')}`);
         }
 
         if (!clientePodeReceberReativacao(cliente)) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Este cliente nÃ£o estÃ¡ vencido para receber reativaÃ§Ã£o.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Este cliente não está vencido para receber reativação.')}`);
         }
 
         const planoPix = buscarPlanoPorNome(cliente.plano);
 
         if (!planoPix) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente nÃ£o possui QR Code configurado para reativaÃ§Ã£o.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente não possui QR Code configurado para reativação.')}`);
         }
 
         const pixCliente = prepararPlanoPixCliente(cliente, planoPix);
@@ -5570,7 +5575,7 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         const client = getClient();
 
         if (!client || !status.conectado) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp nÃ£o estÃ¡ conectado para enviar a reativaÃ§Ã£o.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp não está conectado para enviar a reativação.')}`);
         }
 
         const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
@@ -5578,7 +5583,7 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         const mensagemEnviada = await enviarMensagem(client, destino, mensagem);
 
         if (!mensagemEnviada) {
-            throw new Error('NÃ£o foi possÃ­vel enviar a mensagem de reativaÃ§Ã£o.');
+            throw new Error('Não foi possível enviar a mensagem de reativação.');
         }
 
         const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, pixCliente.plano, {
@@ -5587,10 +5592,10 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         });
 
         if (!qrEnviado) {
-            throw new Error('A mensagem foi enviada, mas nÃ£o foi possÃ­vel enviar o QR Code PIX.');
+            throw new Error('A mensagem foi enviada, mas não foi possível enviar o QR Code PIX.');
         }
 
-        await adicionarNotaCliente(cliente.id, `Mensagem de reativaÃ§Ã£o com QR Code enviada para o plano ${cliente.plano}.`);
+        await adicionarNotaCliente(cliente.id, `Mensagem de reativação com QR Code enviada para o plano ${cliente.plano}.`);
         logControleClientes('Reativacao enviada ao cliente', {
             clienteId: cliente.id,
             nome: cliente.nome,
@@ -5598,13 +5603,13 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
             destino
         });
 
-        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativaÃ§Ã£o com QR Code enviada ao cliente.')}`);
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativação com QR Code enviada ao cliente.')}`);
     } catch (err) {
         logControleClientes('Erro ao enviar reativacao', {
             clienteId: req.params.id,
             erro: err.message
         });
-        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(`Erro ao enviar reativaÃ§Ã£o: ${err.message}`)}`);
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(`Erro ao enviar reativação: ${err.message}`)}`);
     }
 });
 
@@ -5617,7 +5622,7 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) =>
             valor: pagamento.valorTotal
         });
 
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histÃ³rico financeiro.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histórico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao remover pagamento', {
             clienteId: req.params.id,
@@ -5637,7 +5642,7 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => 
             valor: pagamento.valorTotal
         });
 
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histÃ³rico financeiro.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histórico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao editar pagamento', {
             clienteId: req.params.id,
@@ -5652,7 +5657,7 @@ router.post('/clientes/:id/notas', async (req, res) => {
     try {
         await adicionarNotaCliente(req.params.id, req.body.texto || req.body.notaPadrao);
         logControleClientes('Nota adicionada', { clienteId: req.params.id });
-        res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histÃ³rico do cliente'));
+        res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histórico do cliente'));
     } catch (err) {
         logControleClientes('Erro ao adicionar nota', {
             clienteId: req.params.id,
@@ -5666,14 +5671,14 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
+        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
     }
 
     const status = getStatusWhatsApp();
     const client = getClient();
 
     if (!client || !status.conectado) {
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado. BÃ´nus nÃ£o aplicado.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. Bônus não aplicado.'));
     }
 
     try {
@@ -5681,7 +5686,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         const clienteAtualizado = resultado.cliente;
 
         if (String(req.body.observacaoBonus || '').trim()) {
-            await adicionarNotaCliente(cliente.id, `ObservaÃ§Ã£o da bonificaÃ§Ã£o: ${req.body.observacaoBonus}`);
+            await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
         }
 
         const mensagem = montarMensagemBonusAplicado(clienteAtualizado, resultado);
@@ -5706,7 +5711,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             vencimento: resultado.dataVencimento
         });
 
-        return res.redirect(montarUrlClienteMensagem(cliente.id, `BÃ´nus aplicado: ${resultado.meses} mÃªs(es). Mensagem enviada ao cliente.`));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Bônus aplicado: ${resultado.meses} mês(es). Mensagem enviada ao cliente.`));
     } catch (err) {
         logControleClientes('Erro ao aplicar bonus', {
             clienteId: cliente.id,
@@ -5740,7 +5745,7 @@ router.get('/planos/:id/editar', async (req, res) => {
     const plano = await buscarTipoPlanoPorId(req.params.id);
 
     if (!plano) {
-        return res.redirect('/planos?mensagem=Plano nÃ£o encontrado');
+        return res.redirect('/planos?mensagem=Plano não encontrado');
     }
 
     await renderizar(res, {
@@ -5766,7 +5771,7 @@ router.post('/planos/salvar', async (req, res) => {
 
 router.post('/planos/:id/excluir', async (req, res) => {
     await removerTipoPlano(req.params.id);
-    res.redirect('/planos?mensagem=Plano excluÃ­do');
+    res.redirect('/planos?mensagem=Plano excluído');
 });
 
 router.get('/apps', async (req, res) => {
@@ -5793,7 +5798,7 @@ router.get('/apps/:id/editar', async (req, res) => {
     const app = await buscarAppPorId(req.params.id);
 
     if (!app) {
-        return res.redirect('/apps?mensagem=App nÃ£o encontrado');
+        return res.redirect('/apps?mensagem=App não encontrado');
     }
 
     await renderizar(res, {
@@ -5819,7 +5824,7 @@ router.post('/apps/salvar', async (req, res) => {
 
 router.post('/apps/:id/excluir', async (req, res) => {
     await removerApp(req.params.id);
-    res.redirect('/apps?mensagem=App excluÃ­do');
+    res.redirect('/apps?mensagem=App excluído');
 });
 
 router.get('/dispositivos', async (req, res) => {
@@ -5846,7 +5851,7 @@ router.get('/dispositivos/:id/editar', async (req, res) => {
     const dispositivo = await buscarDispositivoPorId(req.params.id);
 
     if (!dispositivo) {
-        return res.redirect('/dispositivos?mensagem=Dispositivo nÃ£o encontrado');
+        return res.redirect('/dispositivos?mensagem=Dispositivo não encontrado');
     }
 
     await renderizar(res, {
@@ -5872,7 +5877,7 @@ router.post('/dispositivos/salvar', async (req, res) => {
 
 router.post('/dispositivos/:id/excluir', async (req, res) => {
     await removerDispositivo(req.params.id);
-    res.redirect('/dispositivos?mensagem=Dispositivo excluÃ­do');
+    res.redirect('/dispositivos?mensagem=Dispositivo excluído');
 });
 
 router.get('/paineis', async (req, res) => {
@@ -5880,7 +5885,7 @@ router.get('/paineis', async (req, res) => {
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
-        titulo: 'PainÃ©is',
+        titulo: 'Painéis',
         conteudo: telaPaineis(paineis),
         mensagem,
         ativo: 'paineis'
@@ -5899,7 +5904,7 @@ router.get('/paineis/:id/editar', async (req, res) => {
     const painel = await buscarPainelPorId(req.params.id);
 
     if (!painel) {
-        return res.redirect('/paineis?mensagem=Painel nÃ£o encontrado');
+        return res.redirect('/paineis?mensagem=Painel não encontrado');
     }
 
     await renderizar(res, {
@@ -5925,14 +5930,14 @@ router.post('/paineis/salvar', async (req, res) => {
 
 router.post('/paineis/:id/excluir', async (req, res) => {
     await removerPainel(req.params.id);
-    res.redirect('/paineis?mensagem=Painel excluÃ­do');
+    res.redirect('/paineis?mensagem=Painel excluído');
 });
 
 router.get('/manutencao', async (req, res) => {
     const status = await obterStatusSistema(getStatusWhatsApp());
 
     await renderizar(res, {
-        titulo: 'ManutenÃ§Ã£o',
+        titulo: 'Manutenção',
         conteudo: telaManutencao(status),
         mensagem: req.query.mensagem || '',
         ativo: 'manutencao'
@@ -5961,7 +5966,7 @@ router.post('/manutencao/diagnostico', async (req, res) => {
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(resultado.mensagem)}`);
     } catch (err) {
         logControleClientes('Erro ao executar diagnostico do sistema', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnÃ³stico: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
     }
 });
 
@@ -5980,7 +5985,7 @@ router.post('/manutencao/importar-clientes', bloquearManutencaoRestritaCliente, 
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
-            titulo: 'ManutenÃ§Ã£o',
+            titulo: 'Manutenção',
             conteudo: telaManutencao(status, { importacao: { preview, token } }),
             mensagem: `CSV validado: ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar`,
             ativo: 'manutencao'
@@ -5989,9 +5994,9 @@ router.post('/manutencao/importar-clientes', bloquearManutencaoRestritaCliente, 
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
-            titulo: 'ManutenÃ§Ã£o',
+            titulo: 'Manutenção',
             conteudo: telaManutencao(status),
-            mensagem: err.message || 'NÃ£o foi possÃ­vel validar o CSV.',
+            mensagem: err.message || 'Não foi possível validar o CSV.',
             ativo: 'manutencao'
         });
     }
@@ -6004,11 +6009,11 @@ router.post('/manutencao/importar-clientes/confirmar', bloquearManutencaoRestrit
         const itensValidos = itens.filter(item => item.acao !== 'ignorar');
 
         if (!itensValidos.length) {
-            throw new Error('NÃ£o hÃ¡ clientes vÃ¡lidos para importar.');
+            throw new Error('Não há clientes válidos para importar.');
         }
 
         if (itens.some(item => item.acao === 'ignorar')) {
-            throw new Error('A importaÃ§Ã£o possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
+            throw new Error('A importação possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
         }
 
         const backup = await criarBackupManual();
@@ -6017,7 +6022,7 @@ router.post('/manutencao/importar-clientes/confirmar', bloquearManutencaoRestrit
 
         for (const item of itensValidos) {
             const dados = item.acao === 'atualizar' && item.existenteId
-                ? { ...item.dados, id: item.existenteId }
+                ?{ ...item.dados, id: item.existenteId }
                 : item.dados;
 
             await salvarCliente(dados);
@@ -6032,12 +6037,12 @@ router.post('/manutencao/importar-clientes/confirmar', bloquearManutencaoRestrit
             backup: backup.nome
         });
 
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`ImportaÃ§Ã£o concluÃ­da: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Importação concluída: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
     } catch (err) {
         logControleClientes('Erro ao importar clientes via CSV', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'NÃ£o foi possÃ­vel importar os clientes.')}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'Não foi possível importar os clientes.')}`);
     }
 });
 
@@ -6048,7 +6053,7 @@ router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (r
             backup: resultado.restaurado,
             backupAnterior: resultado.backupAnterior
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma cÃ³pia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma cópia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
     } catch (err) {
         logControleClientes('Erro ao restaurar backup', {
             backup: req.body.backup,
@@ -6066,12 +6071,12 @@ router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req
             vencimento: req.body.licencaVencimento,
             tipo: req.body.licencaTipo
         });
-        res.redirect('/manutencao?mensagem=LicenÃ§a salva com sucesso');
+        res.redirect('/manutencao?mensagem=Licença salva com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar licenca da instalacao', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licenÃ§a: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
     }
 });
 
@@ -6081,10 +6086,10 @@ router.post('/manutencao/robo', async (req, res) => {
         logControleClientes('Configuracao do robo atualizada', {
             nomeEmpresa: req.body.nomeEmpresaRobo
         });
-        res.redirect('/manutencao?mensagem=ConfiguraÃ§Ã£o do robÃ´ salva com sucesso');
+        res.redirect('/manutencao?mensagem=Configuração do robô salva com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar configuracao do robo', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuraÃ§Ã£o do robÃ´: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuração do robô: ${err.message}`)}`);
     }
 });
 
@@ -6110,10 +6115,10 @@ router.post('/manutencao/robo/imagem/:chave', async (req, res) => {
             chave,
             arquivo: nomeArquivo
         });
-        res.redirect('/manutencao?mensagem=Imagem do robÃ´ atualizada com sucesso');
+        res.redirect('/manutencao?mensagem=Imagem do robô atualizada com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar imagem do robo', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robÃ´: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robô: ${err.message}`)}`);
     }
 });
 
@@ -6195,7 +6200,7 @@ router.get('/modelos/novo', async (req, res) => {
             plano: 'padrao',
             cor: 'blue',
             ativo: 1,
-            texto: 'OlÃ¡, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
+            texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
         }),
         ativo: 'modelos'
     });
@@ -6205,7 +6210,7 @@ router.get('/modelos/:id/editar', async (req, res) => {
     const modelo = await buscarModeloPorId(req.params.id);
 
     if (!modelo) {
-        return res.redirect('/modelos?mensagem=Modelo nÃ£o encontrado');
+        return res.redirect('/modelos?mensagem=Modelo não encontrado');
     }
 
     await renderizar(res, {
@@ -6231,7 +6236,7 @@ router.post('/modelos/salvar', async (req, res) => {
 
 router.post('/modelos/:id/excluir', async (req, res) => {
     await removerModelo(req.params.id);
-    res.redirect('/modelos?mensagem=Modelo excluÃ­do');
+    res.redirect('/modelos?mensagem=Modelo excluído');
 });
 
 router.post('/configuracoes/painel', async (req, res) => {
@@ -6271,7 +6276,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
+        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
     }
 
     const status = getStatusWhatsApp();
@@ -6282,7 +6287,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             clienteId: cliente.id,
             motivo: 'WhatsApp desconectado'
         });
-        return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp nÃ£o estÃ¡ conectado`);
+        return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp não está conectado`);
     }
 
     const acesso = primeiroAcessoApp(cliente);
@@ -6381,7 +6386,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
 
 router.post('/clientes/:id/excluir', async (req, res) => {
     await removerCliente(req.params.id);
-    res.redirect('/clientes/todos?mensagem=Cliente excluÃ­do');
+    res.redirect('/clientes/todos?mensagem=Cliente excluído');
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {
@@ -6410,8 +6415,8 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         const totalEnviados = enviados + aniversarios + enviadosUmaHora + enviadosVencidosDias;
         const totalIgnorados = ignorados + ignoradosUmaHora + ignoradosVencidosDias;
         const mensagem = totalEnviados
-            ? `${enviados} aviso(s) de renovaÃ§Ã£o, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversÃ¡rio(s) enviado(s).`
-            : 'Nenhum aviso novo para enviar agora. Os avisos podem jÃ¡ ter sido enviados para este vencimento.';
+            ?`${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversário(s) enviado(s).`
+            : 'Nenhum aviso novo para enviar agora. Os avisos podem já ter sido enviados para este vencimento.';
 
         console.log(`[dashboard] Disparo manual concluido: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
         logControleClientes('Disparo manual de avisos concluido', {
@@ -6435,7 +6440,7 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
     const client = getClient();
 
     if (!client || !status.conectado) {
-        return res.redirect(`/financeiro?mensagem=${encodeURIComponent('WhatsApp nÃ£o estÃ¡ conectado.')}`);
+        return res.redirect(`/financeiro?mensagem=${encodeURIComponent('WhatsApp não está conectado.')}`);
     }
 
     const clientes = await listarClientesVencidosParaCobranca(CODIGO_COBRANCA_VENCIDO);
@@ -6458,13 +6463,13 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
         if (enviado) {
             enviados += 1;
             await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_COBRANCA_VENCIDO);
-            await adicionarNotaCliente(cliente.id, `CobranÃ§a de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
+            await adicionarNotaCliente(cliente.id, `Cobrança de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
         } else {
             ignorados += 1;
         }
     }
 
-    res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobranÃ§a(s) enviada(s), ${ignorados} ignorada(s).`)}`);
+    res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobrança(s) enviada(s), ${ignorados} ignorada(s).`)}`);
 });
 
 module.exports = router;

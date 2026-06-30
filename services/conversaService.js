@@ -22,7 +22,7 @@ const {
 } = require('./mensagensPropriasService');
 
 const conversas = new Map();
-const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
+const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path.join(__dirname, '..'));
 const ARQUIVO_CONVERSAS = path.join(DATA_DIR, 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 3500);
 const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
@@ -54,14 +54,14 @@ async function obterPerfilRobo() {
     return {
         nomeEmpresa,
         imagens: {
-            menu: config.imagemRoboMenu || (usarImagensPadrao ? imagensRespostas.menu : ''),
-            planos: config.imagemRoboPlanos || (usarImagensPadrao ? imagensRespostas.planos : ''),
-            teste: config.imagemRoboTeste || (usarImagensPadrao ? imagensRespostas.teste : ''),
-            testeLiberado: config.imagemRoboTesteLiberado || (usarImagensPadrao ? imagensRespostas.testeLiberado : ''),
-            renovacao: config.imagemRoboRenovacao || (usarImagensPadrao ? imagensRespostas.renovacao : ''),
-            ativacao: config.imagemRoboAtivacao || (usarImagensPadrao ? imagensRespostas.ativacao : ''),
-            erro: config.imagemRoboErro || (usarImagensPadrao ? imagensRespostas.erro : ''),
-            encerramento: config.imagemRoboEncerramento || (usarImagensPadrao ? imagensRespostas.encerramento : '')
+            menu: config.imagemRoboMenu || (usarImagensPadrao ?imagensRespostas.menu : ''),
+            planos: config.imagemRoboPlanos || (usarImagensPadrao ?imagensRespostas.planos : ''),
+            teste: config.imagemRoboTeste || (usarImagensPadrao ?imagensRespostas.teste : ''),
+            testeLiberado: config.imagemRoboTesteLiberado || (usarImagensPadrao ?imagensRespostas.testeLiberado : ''),
+            renovacao: config.imagemRoboRenovacao || (usarImagensPadrao ?imagensRespostas.renovacao : ''),
+            ativacao: config.imagemRoboAtivacao || (usarImagensPadrao ?imagensRespostas.ativacao : ''),
+            erro: config.imagemRoboErro || (usarImagensPadrao ?imagensRespostas.erro : ''),
+            encerramento: config.imagemRoboEncerramento || (usarImagensPadrao ?imagensRespostas.encerramento : '')
         },
         planos: await listarPlanosComerciais()
     };
@@ -285,7 +285,7 @@ function normalizar(texto) {
 }
 
 function obterDestinoMensagem(message) {
-    return message?.fromMe && message?.to ? message.to : message.from;
+    return message?.fromMe && message?.to ?message.to : message.from;
 }
 
 async function obterTelefoneClienteMensagem(message) {
@@ -559,7 +559,7 @@ Digite apenas o número do dispositivo.`;
 }
 
 function mensagemBoasVindas(nome, nomeEmpresa = 'JULIAN PLAY') {
-    const saudacao = menuPrincipal.getSaudacao ? menuPrincipal.getSaudacao() : 'Olá';
+    const saudacao = menuPrincipal.getSaudacao ?menuPrincipal.getSaudacao() : 'Olá';
 
     return `*BEM-VINDO À ${String(nomeEmpresa).toUpperCase()}*
 --------------------
@@ -637,7 +637,7 @@ async function responderMensagem(message) {
 
     if (!conversa && String(telefone || '').endsWith('@lid')) {
         const telefoneReal = await obterTelefoneClienteMensagem(message);
-        const conversaTelefoneReal = telefoneReal ? conversas.get(telefoneReal) : null;
+        const conversaTelefoneReal = telefoneReal ?conversas.get(telefoneReal) : null;
 
         if (conversaTelefoneReal) {
             telefone = telefoneReal;
