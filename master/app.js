@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const { verificarSenha } = require('../services/passwordService');
 const {
     baseDomain,
@@ -18,6 +19,9 @@ const {
 const app = express();
 const PORT = Number(process.env.MASTER_PORT || 9000);
 const HOST = process.env.MASTER_HOST || '127.0.0.1';
+const COOKIE_SESSAO = 'julian_master_session';
+const DURACAO_SESSAO_MS = 8 * 60 * 60 * 1000;
+const sessoes = new Map();
 
 app.use(express.urlencoded({ extended: false }));
 app.disable('x-powered-by');
@@ -26,6 +30,81 @@ function escapar(valor) {
     return String(valor ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function lerCookies(req) {
+    return String(req.headers.cookie || '')
+        .split(';')
+        .map(parte => parte.trim())
+        .filter(Boolean)
+        .reduce((cookies, parte) => {
+            const indice = parte.indexOf('=');
+            if (indice > -1) cookies[parte.slice(0, indice)] = decodeURIComponent(parte.slice(indice + 1));
+            return cookies;
+        }, {});
+}
+
+function cookieSeguro(req) {
+    return req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+}
+
+function montarCookieSessao(token, req) {
+    const partes = [
+        `${COOKIE_SESSAO}=${encodeURIComponent(token)}`,
+        'HttpOnly',
+        'SameSite=Lax',
+        'Path=/',
+        `Max-Age=${Math.floor(DURACAO_SESSAO_MS / 1000)}`
+    ];
+    if (cookieSeguro(req)) partes.push('Secure');
+    return partes.join('; ');
+}
+
+function montarCookieLogout() {
+    return `${COOKIE_SESSAO}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`;
+}
+
+function criarSessao(usuario) {
+    const token = crypto.randomBytes(32).toString('hex');
+    sessoes.set(token, { usuario, expiraEm: Date.now() + DURACAO_SESSAO_MS });
+    return token;
+}
+
+function sessaoValida(req) {
+    const token = lerCookies(req)[COOKIE_SESSAO];
+    if (!token) return false;
+    const sessao = sessoes.get(token);
+    if (!sessao) return false;
+    if (sessao.expiraEm < Date.now()) {
+        sessoes.delete(token);
+        return false;
+    }
+    sessao.expiraEm = Date.now() + DURACAO_SESSAO_MS;
+    return true;
+}
+
+function destinoSeguro(destino) {
+    const texto = String(destino || '/');
+    if (!texto.startsWith('/') || texto.startsWith('//')) return '/';
+    if (texto.startsWith('/login') || texto.startsWith('/logout')) return '/';
+    return texto;
+}
+
+function paginaLogin(opcoes = {}) {
+    const destino = destinoSeguro(opcoes.destino || '/');
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login - Painel Mestre</title><style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif;display:grid;place-items:center}.login{width:min(460px,calc(100% - 30px));background:#fff;border:1px solid #e2e6ed;border-radius:10px;box-shadow:0 20px 50px rgba(15,23,42,.12);padding:30px}.brand{font-weight:900;font-size:20px;margin-bottom:28px}h1{font-size:38px;margin:0 0 8px}.sub{color:#697386;font-size:18px;line-height:1.35;margin-bottom:24px}.erro{padding:13px;border-radius:8px;background:#ffe5e7;color:#c52e35;font-weight:800;margin-bottom:16px}label{display:grid;gap:7px;font-weight:800;margin-top:16px}input{border:1px solid #dfe3ea;border-radius:8px;padding:13px;font:inherit;font-weight:700}button{width:100%;border:0;border-radius:8px;padding:14px;margin-top:24px;background:#4368e8;color:#fff;font:inherit;font-weight:900;cursor:pointer}.small{margin-top:18px;color:#697386;font-size:14px}
+    </style></head><body><form class="login" method="post" action="/login">
+      <div class="brand">Painel Mestre - Julian Play</div>
+      <h1>Entrar</h1>
+      <div class="sub">Informe o usu&aacute;rio e a senha para acessar o painel.</div>
+      ${opcoes.erro ? `<div class="erro">${escapar(opcoes.erro)}</div>` : ''}
+      <input type="hidden" name="destino" value="${escapar(destino)}">
+      <label>Usu&aacute;rio<input name="usuario" autocomplete="username" autofocus required></label>
+      <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
+      <button type="submit">Acessar painel</button>
+      <div class="small">Depois do login, sua sess&atilde;o fica ativa neste navegador.</div>
+    </form></body></html>`;
 }
 
 function autenticar(req, res, next) {
@@ -49,6 +128,19 @@ function autenticar(req, res, next) {
     return res.status(401).send('Autenticação necessária.');
 }
 
+function autenticarSessao(req, res, next) {
+    const usuarioEsperado = process.env.MASTER_USER || '';
+    const hashEsperado = process.env.MASTER_PASSWORD_HASH || '';
+
+    if (!usuarioEsperado || !hashEsperado) {
+        return res.status(503).send('Painel Mestre sem credenciais. Execute install-master-windows.ps1.');
+    }
+
+    if (sessaoValida(req)) return next();
+
+    return res.redirect(`/login?destino=${encodeURIComponent(req.originalUrl || '/')}`);
+}
+
 function statusClasse(status) {
     if (status === 'ativo') return 'ok';
     if (status === 'suspenso' || status === 'erro') return 'error';
@@ -58,9 +150,10 @@ function statusClasse(status) {
 function pagina(instalacoes, opcoes = {}) {
     const criado = opcoes.criado;
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.sub{color:#697386}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
     </style></head><body><main>
     <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
+    <form method="post" action="/logout" style="margin-top:12px"><button class="secondary" type="submit">Sair</button></form>
     ${opcoes.mensagem ? `<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ? `<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${criado ? `<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
@@ -102,7 +195,42 @@ function paginaLogs(instalacao, logs) {
 }
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
-app.use(autenticar);
+
+app.get('/login', (req, res) => {
+    if (sessaoValida(req)) return res.redirect(destinoSeguro(req.query.destino || '/'));
+    return res.send(paginaLogin({ destino: req.query.destino, erro: req.query.erro }));
+});
+
+app.post('/login', (req, res) => {
+    const usuarioEsperado = process.env.MASTER_USER || '';
+    const hashEsperado = process.env.MASTER_PASSWORD_HASH || '';
+    const usuario = String(req.body.usuario || '').trim();
+    const senha = String(req.body.senha || '');
+
+    if (!usuarioEsperado || !hashEsperado) {
+        return res.status(503).send('Painel Mestre sem credenciais. Execute install-master-windows.ps1.');
+    }
+
+    if (usuario === usuarioEsperado && verificarSenha(senha, hashEsperado)) {
+        const token = criarSessao(usuario);
+        res.setHeader('Set-Cookie', montarCookieSessao(token, req));
+        return res.redirect(destinoSeguro(req.body.destino || '/'));
+    }
+
+    return res.status(401).send(paginaLogin({
+        destino: req.body.destino,
+        erro: 'Usuario ou senha invalidos.'
+    }));
+});
+
+app.post('/logout', (req, res) => {
+    const token = lerCookies(req)[COOKIE_SESSAO];
+    if (token) sessoes.delete(token);
+    res.setHeader('Set-Cookie', montarCookieLogout());
+    res.redirect('/login');
+});
+
+app.use(autenticarSessao);
 
 app.get('/', async (req, res) => {
     res.send(pagina(await listarInstalacoes(), { mensagem: req.query.mensagem, erro: req.query.erro }));
