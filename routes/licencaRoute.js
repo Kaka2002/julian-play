@@ -2,7 +2,8 @@ const express = require('express');
 const { obterConfiguracoes } = require('../services/configuracoesPainel');
 const {
     obterEstadoLicenca,
-    atualizarLicencaComercial
+    atualizarLicencaComercial,
+    instalacaoAdministrador
 } = require('../services/licencaService');
 
 const router = express.Router();
@@ -27,9 +28,44 @@ function formatarDataBrasileira(dataIso) {
     return String(dataIso || '').slice(0, 10).split('-').reverse().join('/');
 }
 
+function painelGerenciamento({ licenca, tipoAtual }) {
+    return `<section class="panel">
+        <h2>Gerenciar licença</h2>
+        <div class="sub">Esta alteração exige o código exclusivo do fornecedor.</div>
+        <form class="fields" method="post" action="/licenca">
+            <label>Tipo de licença
+                <select name="licencaTipo" id="licencaTipo">
+                    <option value="avaliacao_15" ${tipoAtual === 'avaliacao_15' ? 'selected' : ''}>Avaliação por 15 dias</option>
+                    <option value="avaliacao_30" ${tipoAtual === 'avaliacao_30' ? 'selected' : ''}>Avaliação por 30 dias</option>
+                    <option value="mensal" ${tipoAtual === 'mensal' ? 'selected' : ''}>Licença mensal</option>
+                    <option value="semestral" ${tipoAtual === 'semestral' ? 'selected' : ''}>Licença semestral</option>
+                    <option value="anual" ${tipoAtual === 'anual' ? 'selected' : ''}>Licença anual</option>
+                    <option value="assinatura" ${tipoAtual === 'assinatura' ? 'selected' : ''}>Licença com vencimento</option>
+                    <option value="vitalicia" ${tipoAtual === 'vitalicia' ? 'selected' : ''}>Licença vitalícia</option>
+                </select>
+            </label>
+            <label>Cliente / Empresa<input name="licencaCliente" required value="${escapar(licenca.cliente)}"></label>
+            <label>Telefone do responsável<input name="licencaTelefone" value="${escapar(licenca.telefone)}"></label>
+            <label>Data de ativação<input type="date" name="licencaAtivacao" value="${escapar(licenca.ativacao)}"></label>
+            <label>Data de vencimento<input type="date" name="licencaVencimento" value="${escapar(licenca.vencimento)}"></label>
+            <label>Código do fornecedor<input type="password" name="codigoFornecedor" required autocomplete="off"></label>
+            <label class="full">Observações<textarea name="licencaObservacoes">${escapar(licenca.observacoes)}</textarea></label>
+            <div class="full"><button type="submit">Salvar e ativar licença</button></div>
+        </form>
+    </section>`;
+}
+
+function painelSomenteLeitura() {
+    return `<section class="panel">
+        <h2>Licença gerenciada pelo fornecedor</h2>
+        <div class="sub">Esta instalação pode consultar a licença, mas alterações de avaliação, pagamento ou licença vitalícia são feitas somente pelo Painel Mestre.</div>
+    </section>`;
+}
+
 function pagina({ licenca, config, mensagem = '', erro = '' }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const tipoAtual = tipoSelecionado(licenca);
+    const podeGerenciarLicenca = instalacaoAdministrador();
     const classe = licenca.permitida ? (licenca.status === 'vencendo' ? 'warn' : 'ok') : 'error';
     const detalhe = licenca.vitalicia
         ? 'Sem data de vencimento'
@@ -60,30 +96,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
         </div>
         ${!licenca.permitida ? '<p>O período de avaliação terminou. Entre em contato com o fornecedor para renovar ou ativar esta instalação.</p>' : ''}
     </section>
-    <section class="panel">
-        <h2>Gerenciar licença</h2>
-        <div class="sub">Esta alteração exige o código exclusivo do fornecedor.</div>
-        <form class="fields" method="post" action="/licenca">
-            <label>Tipo de licença
-                <select name="licencaTipo" id="licencaTipo">
-                    <option value="avaliacao_15" ${tipoAtual === 'avaliacao_15' ? 'selected' : ''}>Avaliação por 15 dias</option>
-                    <option value="avaliacao_30" ${tipoAtual === 'avaliacao_30' ? 'selected' : ''}>Avaliação por 30 dias</option>
-                    <option value="mensal" ${tipoAtual === 'mensal' ? 'selected' : ''}>Licença mensal</option>
-                    <option value="semestral" ${tipoAtual === 'semestral' ? 'selected' : ''}>Licença semestral</option>
-                    <option value="anual" ${tipoAtual === 'anual' ? 'selected' : ''}>Licença anual</option>
-                    <option value="assinatura" ${tipoAtual === 'assinatura' ? 'selected' : ''}>Licença com vencimento</option>
-                    <option value="vitalicia" ${tipoAtual === 'vitalicia' ? 'selected' : ''}>Licença vitalícia</option>
-                </select>
-            </label>
-            <label>Cliente / Empresa<input name="licencaCliente" required value="${escapar(licenca.cliente)}"></label>
-            <label>Telefone do responsável<input name="licencaTelefone" value="${escapar(licenca.telefone)}"></label>
-            <label>Data de ativação<input type="date" name="licencaAtivacao" value="${escapar(licenca.ativacao)}"></label>
-            <label>Data de vencimento<input type="date" name="licencaVencimento" value="${escapar(licenca.vencimento)}"></label>
-            <label>Código do fornecedor<input type="password" name="codigoFornecedor" required autocomplete="off"></label>
-            <label class="full">Observações<textarea name="licencaObservacoes">${escapar(licenca.observacoes)}</textarea></label>
-            <div class="full"><button type="submit">Salvar e ativar licença</button></div>
-        </form>
-    </section>
+    ${podeGerenciarLicenca ? painelGerenciamento({ licenca, tipoAtual }) : painelSomenteLeitura()}
 </main>
 </body>
 </html>`;
@@ -100,6 +113,9 @@ router.get('/', async (req, res, next) => {
 
 router.post('/', async (req, res) => {
     try {
+        if (!instalacaoAdministrador()) {
+            return res.redirect(`/licenca?erro=${encodeURIComponent('Esta opção é restrita ao fornecedor.')}`);
+        }
         await atualizarLicencaComercial(req.body);
         res.redirect(`/licenca?mensagem=${encodeURIComponent('Licença atualizada com sucesso.')}`);
     } catch (err) {

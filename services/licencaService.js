@@ -11,6 +11,16 @@ function compararSeguro(a, b) {
     return bufferA.length === bufferB.length && crypto.timingSafeEqual(bufferA, bufferB);
 }
 
+function instalacaoAdministrador() {
+    const perfil = String(process.env.LICENSE_ROLE || '').trim().toLowerCase();
+    const cliente = String(process.env.LICENSE_CUSTOMER_NAME || '').trim().toLowerCase();
+
+    if (['admin', 'administrador', 'fornecedor'].includes(perfil)) return true;
+    if (['cliente', 'customer'].includes(perfil)) return false;
+
+    return !cliente || cliente === 'julianplay' || cliente === 'julian play';
+}
+
 async function garantirIdentificadorInstalacao(config) {
     if (config.instalacaoId) return config;
     const instalacaoId = crypto.randomUUID();
@@ -143,6 +153,7 @@ module.exports = {
     calcularEstadoLicenca,
     obterEstadoLicenca,
     atualizarLicencaComercial,
+    instalacaoAdministrador,
     licencaPermiteUso,
     protegerLicenca
 };

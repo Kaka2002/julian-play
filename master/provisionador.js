@@ -128,6 +128,7 @@ function configuracaoPm2(instalacao, senhaHash) {
                 LICENSE_DEFAULT_TRIAL_DAYS: String(dias),
                 LICENSE_DEFAULT_MODE: dias ? 'avaliacao' : 'vitalicia',
                 LICENSE_CUSTOMER_NAME: instalacao.nome,
+                LICENSE_ROLE: instalacao.perfilLicenca || 'cliente',
                 RENOVACAO_HORA_ENVIO: String(instalacao.horaEnvio),
                 RENOVACAO_MINUTO_ENVIO: String(instalacao.minutoEnvio)
             }
@@ -163,6 +164,9 @@ async function criarInstalacao(dados = {}) {
     const senha = String(dados.senhaPainel || '');
     const whatsappEsperado = String(dados.whatsappEsperado || '').replace(/\D/g, '');
     const tipo = String(dados.tipoLicenca || 'avaliacao_15');
+    const perfilLicenca = ['admin', 'administrador', 'fornecedor'].includes(String(dados.perfilLicenca || '').trim().toLowerCase())
+        ? 'admin'
+        : 'cliente';
     const diasAvaliacao = tipo === 'avaliacao_30' ? 30 : tipo === 'avaliacao_15' ? 15 : 0;
     const horaEnvio = Number(dados.horaEnvio ?? 9);
     const minutoEnvio = Number(dados.minutoEnvio ?? 0);
@@ -188,10 +192,10 @@ async function criarInstalacao(dados = {}) {
         resultado = await masterDb.executar(
             `INSERT INTO instalacoes
             (nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipoLicenca, diasAvaliacao,
-             codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio, perfilLicenca)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipo, diasAvaliacao,
-                codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio]
+                codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio, perfilLicenca]
         );
     } catch (err) {
         if (String(err.message || '').includes('SQLITE_CONSTRAINT')) {
