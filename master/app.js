@@ -187,12 +187,32 @@ function resumoDiagnostico(item) {
     `;
 }
 
-function paginaSaude(instalacao, saude) {
+function resumirOcorrenciasLog(logs = '') {
+    const linhas = String(logs || '')
+        .split(/\r?\n/)
+        .map(linha => linha.trim())
+        .filter(Boolean)
+        .filter(linha => /erro|error|falha|desconect|chrome|timeout|atendimento humano|n[aã]o conectado|qr code/i.test(linha));
+
+    return linhas.slice(-12);
+}
+
+function paginaSaude(instalacao, saude, logs = '') {
     const classe = saude.online ? (saude.whatsapp ? 'ok' : 'warn') : 'error';
     const rotulo = saude.online ? (saude.whatsapp ? 'WhatsApp conectado' : 'Aguardando WhatsApp') : 'Processo indisponível';
+    const ocorrencias = resumirOcorrenciasLog(logs);
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saúde - ${escapar(instalacao.nome)}</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(960px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:22px}.badge{display:inline-flex;padding:6px 11px;border-radius:999px;font-weight:800}.ok{background:#dff8ee;color:#047446}.warn{background:#fff2dc;color:#a76100}.error{background:#ffe5e7;color:#c52e35}.row{display:grid;grid-template-columns:220px 1fr;border-top:1px solid #e8ebf0;padding:12px 0}.row:first-of-type{border-top:0}.label{font-weight:800;color:#697386}
-    </style></head><body><main><a class="button" href="/">Voltar</a><h1>Saúde de ${escapar(instalacao.nome)}</h1><div class="sub">${escapar(instalacao.processoPm2)} · porta ${escapar(instalacao.porta)}</div><section class="panel">
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1060px,calc(100% - 30px));margin:34px auto}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.secondary{background:#eef1f5;color:#263247}.warning{background:#e98a13}.danger{background:#dc3545}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:22px;margin-top:18px}.badge{display:inline-flex;padding:6px 11px;border-radius:999px;font-weight:800}.ok{background:#dff8ee;color:#047446}.warn{background:#fff2dc;color:#a76100}.error{background:#ffe5e7;color:#c52e35}.row{display:grid;grid-template-columns:220px 1fr;border-top:1px solid #e8ebf0;padding:12px 0}.row:first-of-type{border-top:0}.label{font-weight:800;color:#697386}.actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}.inline{display:inline}.logbox{background:#081225;color:#dfe7ff;border-radius:8px;padding:14px;line-height:1.45;white-space:pre-wrap;max-height:360px;overflow:auto}.empty{color:#697386;text-align:center;padding:18px}
+    </style></head><body><main><a class="button" href="/">Voltar</a><h1>Saúde de ${escapar(instalacao.nome)}</h1><div class="sub">${escapar(instalacao.processoPm2)} · porta ${escapar(instalacao.porta)}</div>
+    <div class="actions">
+        <a class="button secondary" href="https://${escapar(instalacao.dominio)}/clientes" target="_blank">Abrir painel</a>
+        <a class="button secondary" href="https://${escapar(instalacao.dominio)}/qr" target="_blank">QR Code</a>
+        <a class="button secondary" href="/instalacoes/${instalacao.id}/logs">Logs completos</a>
+        ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="secondary" type="submit">Liberar atendimento</button></form>` : ''}
+        ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/backup"><button class="secondary" type="submit">Gerar backup</button></form>` : ''}
+        ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button type="submit">Reiniciar robô</button></form>` : ''}
+    </div>
+    <section class="panel">
         <p><span class="badge ${classe}">${escapar(rotulo)}</span></p>
         <div class="row"><div class="label">WhatsApp esperado</div><div>${escapar(instalacao.whatsappEsperado || 'Não informado')}</div></div>
         <div class="row"><div class="label">WhatsApp conectado</div><div>${escapar(saude.numero || 'Não conectado')}</div></div>
@@ -200,6 +220,11 @@ function paginaSaude(instalacao, saude) {
         <div class="row"><div class="label">Tempo online</div><div>${escapar(formatarTempoOnline(saude.uptime))}</div></div>
         <div class="row"><div class="label">Última checagem</div><div>${escapar(saude.timestamp || new Date().toISOString())}</div></div>
         ${saude.erro ?`<div class="row"><div class="label">Detalhe</div><div>${escapar(saude.erro)}</div></div>` : ''}
+    </section>
+    <section class="panel">
+        <h2>Ocorrências recentes</h2>
+        <div class="sub">Resumo dos últimos logs com erros, QR Code, desconexões ou atendimento humano</div>
+        ${ocorrencias.length ?`<div class="logbox">${escapar(ocorrencias.join('\n'))}</div>` : '<div class="empty">Nenhuma ocorrência importante encontrada nos logs recentes.</div>'}
     </section></main></body></html>`;
 }
 
@@ -364,8 +389,11 @@ app.get('/instalacoes/:id/logs', async (req, res) => {
 });
 app.get('/instalacoes/:id/saude', async (req, res) => {
     try {
-        const resultado = await obterDiagnosticoInstalacao(req.params.id);
-        res.send(paginaSaude(resultado.instalacao, resultado.saude));
+        const [resultado, logs] = await Promise.all([
+            obterDiagnosticoInstalacao(req.params.id),
+            obterLogsInstalacao(req.params.id, 80).catch(() => ({ logs: '' }))
+        ]);
+        res.send(paginaSaude(resultado.instalacao, resultado.saude, logs.logs));
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
     }
