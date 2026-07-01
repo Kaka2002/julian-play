@@ -175,7 +175,35 @@ function normalizarPlano(plano) {
     return valor || 'padrao';
 }
 
+async function marcarSeedModelosProcessado() {
+    await executar(
+        `INSERT INTO configuracoes (chave, valor)
+        VALUES (?, ?)
+        ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor`,
+        ['seed_catalogo_modelos', '1']
+    );
+}
+
+async function seedModelosJaProcessado() {
+    const marcado = await buscarUm(
+        'SELECT valor FROM configuracoes WHERE chave = ?',
+        ['seed_catalogo_modelos']
+    );
+
+    if (marcado) return true;
+
+    const existente = await buscarUm('SELECT COUNT(*) AS total FROM modelos_mensagem');
+    if (Number(existente?.total || 0) > 0) {
+        await marcarSeedModelosProcessado();
+        return true;
+    }
+
+    return false;
+}
+
 async function garantirModelosPadrao() {
+    if (await seedModelosJaProcessado()) return;
+
     for (const modelo of modelosPadrao) {
         await executar(
             `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor)
@@ -218,6 +246,8 @@ async function garantirModelosPadrao() {
             );
         }
     }
+
+    await marcarSeedModelosProcessado();
 }
 
 async function listarModelos() {
