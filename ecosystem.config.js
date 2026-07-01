@@ -29,6 +29,7 @@ module.exports = {
             max_memory_restart: '500M',
             env: {
                 NODE_ENV: 'production',
+                JULIAN_PLAY_APP_NAME: appName,
                 PORT: String(process.env.JULIAN_PLAY_PORT || process.env.PORT || settings.port || 10000),
                 DATA_DIR: dataDir,
                 LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',

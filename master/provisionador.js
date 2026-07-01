@@ -160,6 +160,7 @@ function configuracaoPm2(instalacao, senhaHash) {
             max_memory_restart: '500M',
             env: {
                 NODE_ENV: 'production',
+                JULIAN_PLAY_APP_NAME: instalacao.processoPm2,
                 PORT: String(instalacao.porta),
                 DATA_DIR: instalacao.pastaDados,
                 PANEL_USER: instalacao.usuarioPainel,

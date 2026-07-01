@@ -41,7 +41,13 @@ if (process.env.TRUST_PROXY === '1' || process.env.RENDER) {
     app.set('trust proxy', 1);
 }
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : __dirname);
-const PROCESS_LOCK_PATH = path.join(DATA_DIR, '.julian-play.pid');
+const INSTANCE_NAME = String(
+    process.env.JULIAN_PLAY_APP_NAME
+    || process.env.JULIAN_INSTANCE_NAME
+    || path.basename(path.resolve(DATA_DIR))
+    || 'julian-play'
+).replace(/[^a-zA-Z0-9_-]/g, '-');
+const PROCESS_LOCK_PATH = path.join(DATA_DIR, `.${INSTANCE_NAME}.pid`);
 
 function processoExiste(pid) {
     if (!pid || Number(pid) === process.pid) return false;
@@ -61,7 +67,7 @@ function adquirirTravaProcesso() {
         const pidAtual = Number(fs.readFileSync(PROCESS_LOCK_PATH, 'utf8'));
 
         if (processoExiste(pidAtual)) {
-            console.error(`julian-play ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
+            console.error(`${INSTANCE_NAME} ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
             process.exit(1);
         }
     }
