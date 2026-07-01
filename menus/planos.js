@@ -1,6 +1,9 @@
 function menuPlanos(planos = [], nomeEmpresa = 'Nossa empresa') {
     const linhasPlanos = planos.length
-        ? planos.map((plano, index) => `*${index + 1}* - ${plano.nome}\nR$ ${plano.valor}`).join('\n\n')
+        ? planos.map((plano, index) => {
+            const valor = plano.valorConfigurado === false ? 'Valor a consultar' : `R$ ${plano.valor}`;
+            return `*${index + 1}* - ${plano.nome}\n${valor}`;
+        }).join('\n\n')
         : 'Nenhum plano disponível no momento.';
 
     return `*PLANOS ${String(nomeEmpresa || '').toUpperCase()}*

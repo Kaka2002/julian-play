@@ -67,9 +67,19 @@ function valorPlanoParaNumero(valor) {
     return Number.isFinite(numero) ? numero : 0;
 }
 
+function formatarValorPlano(valor) {
+    const numero = valorPlanoParaNumero(valor);
+    if (numero <= 0) return '';
+
+    return numero.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+
 function planoEhTesteGratis(plano = {}) {
     const nome = normalizarNomePlano(plano.nome);
-    return nome.includes('teste') || valorPlanoParaNumero(plano.valor) <= 0;
+    return nome.includes('teste');
 }
 
 async function listarPlanosComerciais() {
@@ -78,14 +88,21 @@ async function listarPlanosComerciais() {
         return planosBanco
             .filter(plano => Number(plano.ativo ?? 1) !== 0)
             .filter(plano => !planoEhTesteGratis(plano))
-            .map((plano, index) => ({
-                id: plano.id,
-                opcao: String(index + 1),
-                nome: plano.nome,
-                valor: plano.valor || '0,00',
-                dias: Number(plano.dias || 0),
-                arquivoQr: `pix_${normalizarNomePlano(plano.nome).replace(/[^a-z0-9]+/g, '_') || index + 1}.png`
-            }));
+            .map((plano, index) => {
+                const valorNumero = valorPlanoParaNumero(plano.valor);
+                const valorFormatado = formatarValorPlano(plano.valor);
+
+                return {
+                    id: plano.id,
+                    opcao: String(index + 1),
+                    nome: plano.nome,
+                    valor: valorFormatado || 'valor a consultar',
+                    valorNumero,
+                    valorConfigurado: valorNumero > 0,
+                    dias: Number(plano.dias || 0),
+                    arquivoQr: `pix_${normalizarNomePlano(plano.nome).replace(/[^a-z0-9]+/g, '_') || index + 1}.png`
+                };
+            });
     } catch (err) {
         console.log(`PIX: usando planos padrao porque nao foi possivel ler os planos cadastrados: ${err.message}`);
         return Object.entries(planos).map(([opcao, plano]) => ({
@@ -259,6 +276,10 @@ async function enviarQRCodePIX(message, plano, options = {}) {
 
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     try {
+        if (valorPlanoParaNumero(plano?.valor) <= 0 && valorPlanoParaNumero(plano?.valorNumero) <= 0) {
+            throw new Error(`O plano ${plano?.nome || ''} esta sem valor de cobranca configurado.`);
+        }
+
         const configPix = await obterConfiguracaoPix();
         const media = await gerarQRCodeAutomatico(plano, configPix);
         const caption = legendaPixPorContexto(plano, options, configPix);

@@ -341,6 +341,21 @@ function isPedidoPreco(texto) {
     ].some((termo) => textoNormalizado.includes(termo));
 }
 
+function isSaudacaoOuInicio(texto) {
+    const textoNormalizado = normalizar(texto);
+    if (!textoNormalizado) return false;
+
+    return [
+        'oi',
+        'ola',
+        'bom dia',
+        'boa tarde',
+        'boa noite',
+        'inicio',
+        'iniciar'
+    ].includes(textoNormalizado);
+}
+
 function obterDestinoMensagem(message) {
     return message?.fromMe && message?.to ?message.to : message.from;
 }
@@ -741,6 +756,12 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagens.encerramento);
         }
     }
 
+    if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+        apagarConversa(telefone);
+        await iniciarBoasVindas(message, telefone, perfil);
+        return;
+    }
+
     if (conversa?.etapa === 'boas_vindas_opcao') {
         if (texto === '1') {
             definirConversa(telefone, {
@@ -835,7 +856,17 @@ Para liberar seu plano após o pagamento, envie aqui:
 *Data de nascimento*
 *Dispositivo que vai usar*
 
-Agora vou te enviar o PIX do plano escolhido.`, imagens.planos);
+Se o valor estiver configurado, vou te enviar o PIX do plano escolhido.`, imagens.planos);
+        if (!plano.valorConfigurado) {
+            pausarParaAtendente(telefone, conversa?.nome || '', 'plano_sem_valor');
+            await responderComDigitacao(message, `*PLANO SELECIONADO*
+--------------------
+O plano *${plano.nome}* ainda está sem valor de cobrança configurado.
+
+Seu atendimento será encaminhado para um atendente finalizar a ativação.`, imagens.planos);
+            return;
+        }
+
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano);
         return;
@@ -970,6 +1001,16 @@ ${menuRenovacao(planos)}`, imagens.renovacao);
         }
 
         apagarConversa(telefone);
+        if (!plano.valorConfigurado) {
+            pausarParaAtendente(telefone, conversa?.usuarioPainel || '', 'renovacao_plano_sem_valor');
+            await responderComDigitacao(message, `*PLANO SELECIONADO*
+--------------------
+O plano *${plano.nome}* ainda está sem valor de cobrança configurado.
+
+Seu atendimento será encaminhado para um atendente finalizar a renovação.`, imagens.renovacao);
+            return;
+        }
+
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano, {
             tipo: 'renovacao',
