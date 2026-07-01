@@ -32,6 +32,11 @@ const mensagensProcessadas = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+function estaNoHorarioIndisponivel(data = new Date()) {
+    const hora = data.getHours();
+    return hora >= 22 || hora < 8;
+}
+
 class LocalAuthControlado extends LocalAuth {
     async logout() {
         // A exclusao ocorre depois que o Chrome for encerrado para evitar EBUSY no Windows.
@@ -215,6 +220,22 @@ function ehRespostaAutomaticaWhatsapp(texto) {
         normalizado.includes('nao estamos disponiveis no momento');
 }
 
+async function removerRespostaAutomaticaForaDoHorario(message) {
+    if (estaNoHorarioIndisponivel()) return;
+
+    try {
+        if (typeof message?.delete === 'function') {
+            await message.delete(true);
+            console.log('Resposta automática de indisponibilidade removida fora do horário permitido:', obterTelefoneMensagem(message));
+            return;
+        }
+
+        console.log('Resposta automática de indisponibilidade detectada fora do horário, mas não foi possível remover:', obterTelefoneMensagem(message));
+    } catch (err) {
+        console.log('Falha ao remover resposta automática de indisponibilidade fora do horário:', err.message);
+    }
+}
+
 function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
@@ -238,6 +259,7 @@ function processarMensagemEmFila(message, options = {}) {
         }
 
         if (ehRespostaAutomaticaWhatsapp(textoMensagem)) {
+            removerRespostaAutomaticaForaDoHorario(message);
             console.log('Resposta automática do WhatsApp ignorada sem pausar atendimento:', obterTelefoneMensagem(message));
             return;
         }
