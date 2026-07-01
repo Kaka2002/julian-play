@@ -94,6 +94,39 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     return @($nomes)
 }
 
+function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
+    $raizesValidas = @($raizes |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
+        ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') } |
+        Select-Object -Unique)
+
+    if ($raizesValidas.Count -eq 0) {
+        return
+    }
+
+    $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $linhaComando = $_.CommandLine
+            $_.ProcessId -ne $PID -and
+            $_.Name -in @('node.exe', 'chrome.exe') -and
+            $linhaComando -and
+            ($raizesValidas | Where-Object { $linhaComando -like "*$_*" })
+        })
+
+    foreach ($processo in $processos) {
+        try {
+            Write-Host "Encerrando processo residual $($processo.Name) PID $($processo.ProcessId)." -ForegroundColor Yellow
+            Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
+        } catch {
+            Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
+        }
+    }
+
+    if ($processos.Count -gt 0) {
+        Start-Sleep -Seconds 3
+    }
+}
+
 if (-not (Test-Path -LiteralPath (Join-Path $diretorioProjeto 'package.json'))) {
     throw 'Execute este instalador dentro da pasta completa do julian-play.'
 }
@@ -184,6 +217,22 @@ if ($pm2) {
     }
     Start-Sleep -Seconds 4
 }
+
+$raizesProcessos = [System.Collections.Generic.List[string]]::new()
+$raizesProcessos.Add($diretorioProjeto)
+$raizesProcessos.Add($PastaDados)
+$arquivoMasterProcessos = Join-Path $diretorioProjeto '.julian-master-install.json'
+if (Test-Path -LiteralPath $arquivoMasterProcessos) {
+    try {
+        $configMasterProcessos = Get-Content -LiteralPath $arquivoMasterProcessos -Raw | ConvertFrom-Json
+        if ($configMasterProcessos.clientsDir) {
+            $raizesProcessos.Add([string]$configMasterProcessos.clientsDir)
+        }
+    } catch {
+        Write-Warning 'Nao foi possivel ler a pasta das instalacoes comerciais para limpeza de processos.'
+    }
+}
+EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
 
 $ocupantes = @(Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)
 if ($ocupantes.Count -gt 0) {

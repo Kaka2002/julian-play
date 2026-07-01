@@ -77,6 +77,39 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     return @($nomes)
 }
 
+function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
+    $raizesValidas = @($raizes |
+        Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
+        ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') } |
+        Select-Object -Unique)
+
+    if ($raizesValidas.Count -eq 0) {
+        return
+    }
+
+    $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $linhaComando = $_.CommandLine
+            $_.ProcessId -ne $PID -and
+            $_.Name -in @('node.exe', 'chrome.exe') -and
+            $linhaComando -and
+            ($raizesValidas | Where-Object { $linhaComando -like "*$_*" })
+        })
+
+    foreach ($processo in $processos) {
+        try {
+            Write-Host "Encerrando processo residual $($processo.Name) PID $($processo.ProcessId)." -ForegroundColor Yellow
+            Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
+        } catch {
+            Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
+        }
+    }
+
+    if ($processos.Count -gt 0) {
+        Start-Sleep -Seconds 3
+    }
+}
+
 if (-not $PastaDados) {
     $PastaDados = if ($env:JULIAN_PLAY_DATA_DIR) { $env:JULIAN_PLAY_DATA_DIR } else { $diretorioProjeto }
 }
@@ -106,6 +139,22 @@ foreach ($processo in $processosJulian) {
     }
 }
 Start-Sleep -Seconds 4
+
+$raizesProcessos = [System.Collections.Generic.List[string]]::new()
+$raizesProcessos.Add($diretorioProjeto)
+$raizesProcessos.Add($PastaDados)
+$arquivoMasterProcessos = Join-Path $diretorioProjeto '.julian-master-install.json'
+if (Test-Path -LiteralPath $arquivoMasterProcessos) {
+    try {
+        $configMasterProcessos = Get-Content -LiteralPath $arquivoMasterProcessos -Raw | ConvertFrom-Json
+        if ($configMasterProcessos.clientsDir) {
+            $raizesProcessos.Add([string]$configMasterProcessos.clientsDir)
+        }
+    } catch {
+        Write-Warning 'Nao foi possivel ler a pasta das instalacoes comerciais para limpeza de processos.'
+    }
+}
+EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
 
 try {
     Etapa 'Criando backup antes da atualizacao'
