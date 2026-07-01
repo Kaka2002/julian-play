@@ -756,13 +756,12 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagens.encerramento);
         }
     }
 
-    if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
-        apagarConversa(telefone);
-        await iniciarBoasVindas(message, telefone, perfil);
-        return;
-    }
-
     if (conversa?.etapa === 'boas_vindas_opcao') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, mensagemBoasVindas(conversa.nome || await obterNomeContato(message), perfil.nomeEmpresa), imagens.menu);
+            return;
+        }
+
         if (texto === '1') {
             definirConversa(telefone, {
                 etapa: 'cliente_opcoes',
@@ -795,6 +794,11 @@ Escolha uma das opções:
     }
 
     if (conversa?.etapa === 'cliente_opcoes') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, mensagemClienteOpcoes(conversa.nome || await obterNomeContato(message), perfil.nomeEmpresa), imagens.menu);
+            return;
+        }
+
         if (texto === '1') {
             definirConversa(telefone, { etapa: 'renovacao_nome' });
 
@@ -835,6 +839,15 @@ Escolha uma das opções:
     }
 
     if (conversa?.etapa === 'planos_escolha') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, `Você está na escolha de planos.
+
+Digite apenas o número do plano desejado:
+
+${menuPlanos(planos, perfil.nomeEmpresa)}`, imagens.planos);
+            return;
+        }
+
         const plano = await buscarPlano(texto);
 
         if (!plano) {
@@ -893,6 +906,11 @@ Digite apenas o número do dispositivo.`, imagens.teste);
     }
 
     if (conversa?.etapa === 'teste_aparelho') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, mensagemEscolhaAparelhoTeste(conversa.nome || await obterNomeContato(message)), imagens.teste);
+            return;
+        }
+
         const aparelho = aparelhoTeste(texto);
 
         if (!aparelho) {
@@ -941,6 +959,11 @@ Escolha um dispositivo da lista:
     }
 
     if (conversa?.etapa === 'teste_marca_smarttv') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, menuMarcasSmartTV(), imagens.teste);
+            return;
+        }
+
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = marca;
         const telefoneCliente = await obterTelefoneClienteMensagem(message);
@@ -989,6 +1012,15 @@ Digite apenas o número do plano que deseja renovar.`, imagens.renovacao);
     }
 
     if (conversa?.etapa === 'renovacao_plano') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, `Você está na renovação de assinatura.
+
+Digite apenas o número do plano desejado:
+
+${menuRenovacao(planos)}`, imagens.renovacao);
+            return;
+        }
+
         const plano = await buscarPlano(texto);
 
         if (!plano) {
@@ -1048,6 +1080,11 @@ Depois do pagamento, envie o comprovante aqui.`, imagens.renovacao);
     }
 
     if (conversa?.etapa === 'ativacao_dispositivo') {
+        if (textoCurto(textoOriginal) && isSaudacaoOuInicio(textoOriginal)) {
+            await responderComDigitacao(message, menuDispositivos(), imagens.ativacao);
+            return;
+        }
+
         const tutorial = tutorialDispositivo(texto);
 
         if (!tutorial) {
