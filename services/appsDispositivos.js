@@ -63,31 +63,65 @@ function limparTexto(valor) {
     return String(valor || '').trim();
 }
 
+async function seedJaProcessado(chave, tabela) {
+    const marcado = await buscarUm('SELECT valor FROM configuracoes WHERE chave = ?', [chave]);
+    if (marcado) return true;
+
+    const resultado = await buscarUm(`SELECT COUNT(*) AS total FROM ${tabela}`);
+    if (Number(resultado?.total || 0) > 0) {
+        await marcarSeedProcessado(chave);
+        return true;
+    }
+
+    return false;
+}
+
+function marcarSeedProcessado(chave) {
+    return executar(
+        `INSERT INTO configuracoes (chave, valor, atualizadoEm)
+         VALUES (?, '1', CURRENT_TIMESTAMP)
+         ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizadoEm = CURRENT_TIMESTAMP`,
+        [chave]
+    );
+}
+
 async function garantirAppsPadrao() {
+    if (await seedJaProcessado('seed_catalogo_apps', 'apps')) return;
+
     for (const [nome, descricao] of appsPadrao) {
         await executar(
             'INSERT OR IGNORE INTO apps (nome, descricao) VALUES (?, ?)',
             [nome, descricao]
         );
     }
+
+    await marcarSeedProcessado('seed_catalogo_apps');
 }
 
 async function garantirDispositivosPadrao() {
+    if (await seedJaProcessado('seed_catalogo_dispositivos', 'dispositivos')) return;
+
     for (const nome of dispositivosPadrao) {
         await executar(
             'INSERT OR IGNORE INTO dispositivos (nome) VALUES (?)',
             [nome]
         );
     }
+
+    await marcarSeedProcessado('seed_catalogo_dispositivos');
 }
 
 async function garantirPaineisPadrao() {
+    if (await seedJaProcessado('seed_catalogo_paineis', 'paineis')) return;
+
     for (const nome of paineisPadrao) {
         await executar(
             'INSERT OR IGNORE INTO paineis (nome) VALUES (?)',
             [nome]
         );
     }
+
+    await marcarSeedProcessado('seed_catalogo_paineis');
 }
 
 async function listarApps() {

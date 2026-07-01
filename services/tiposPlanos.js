@@ -39,13 +39,38 @@ function limparTexto(valor) {
     return String(valor || '').trim();
 }
 
+async function seedPlanosJaProcessado() {
+    const marcado = await buscarUm('SELECT valor FROM configuracoes WHERE chave = ?', ['seed_catalogo_planos']);
+    if (marcado) return true;
+
+    const resultado = await buscarUm('SELECT COUNT(*) AS total FROM tipos_planos');
+    if (Number(resultado?.total || 0) > 0) {
+        await marcarSeedPlanosProcessado();
+        return true;
+    }
+
+    return false;
+}
+
+function marcarSeedPlanosProcessado() {
+    return executar(
+        `INSERT INTO configuracoes (chave, valor, atualizadoEm)
+         VALUES ('seed_catalogo_planos', '1', CURRENT_TIMESTAMP)
+         ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor, atualizadoEm = CURRENT_TIMESTAMP`
+    );
+}
+
 async function garantirPlanosPadrao() {
+    if (await seedPlanosJaProcessado()) return;
+
     for (const [nome, dias, valor] of planosPadrao) {
         await executar(
             'INSERT OR IGNORE INTO tipos_planos (nome, dias, valor) VALUES (?, ?, ?)',
             [nome, dias, valor]
         );
     }
+
+    await marcarSeedPlanosProcessado();
 }
 
 async function listarTiposPlanos() {

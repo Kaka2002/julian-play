@@ -247,7 +247,33 @@ function adicionarColunaSeNaoExiste(tabela, coluna, definicao, done) {
 }
 
 function migrarCatalogos(done) {
-    done();
+    const tarefas = [
+        ['apps', 'ativo', 'INTEGER DEFAULT 1'],
+        ['apps', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['apps', 'atualizadoEm', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['dispositivos', 'ativo', 'INTEGER DEFAULT 1'],
+        ['dispositivos', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['dispositivos', 'atualizadoEm', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['paineis', 'ativo', 'INTEGER DEFAULT 1'],
+        ['paineis', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['paineis', 'atualizadoEm', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['tipos_planos', 'valor', 'TEXT'],
+        ['tipos_planos', 'ativo', 'INTEGER DEFAULT 1'],
+        ['tipos_planos', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['tipos_planos', 'atualizadoEm', 'DATETIME DEFAULT CURRENT_TIMESTAMP']
+    ];
+
+    function proxima(indice = 0) {
+        if (indice >= tarefas.length) {
+            done();
+            return;
+        }
+
+        const [tabela, coluna, definicao] = tarefas[indice];
+        adicionarColunaSeNaoExiste(tabela, coluna, definicao, () => proxima(indice + 1));
+    }
+
+    proxima();
 }
 
 function migrarPagamentos(done) {

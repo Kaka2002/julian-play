@@ -5777,8 +5777,12 @@ router.post('/planos/salvar', async (req, res) => {
 });
 
 router.post('/planos/:id/excluir', async (req, res) => {
-    await removerTipoPlano(req.params.id);
-    res.redirect('/planos?mensagem=Plano excluído');
+    try {
+        await removerTipoPlano(req.params.id);
+        res.redirect('/planos?mensagem=Plano excluído');
+    } catch (err) {
+        res.redirect(`/planos?mensagem=${encodeURIComponent(`Erro ao excluir plano: ${err.message}`)}`);
+    }
 });
 
 router.get('/apps', async (req, res) => {
@@ -5830,8 +5834,12 @@ router.post('/apps/salvar', async (req, res) => {
 });
 
 router.post('/apps/:id/excluir', async (req, res) => {
-    await removerApp(req.params.id);
-    res.redirect('/apps?mensagem=App excluído');
+    try {
+        await removerApp(req.params.id);
+        res.redirect('/apps?mensagem=App excluído');
+    } catch (err) {
+        res.redirect(`/apps?mensagem=${encodeURIComponent(`Erro ao excluir app: ${err.message}`)}`);
+    }
 });
 
 router.get('/dispositivos', async (req, res) => {
@@ -5883,8 +5891,12 @@ router.post('/dispositivos/salvar', async (req, res) => {
 });
 
 router.post('/dispositivos/:id/excluir', async (req, res) => {
-    await removerDispositivo(req.params.id);
-    res.redirect('/dispositivos?mensagem=Dispositivo excluído');
+    try {
+        await removerDispositivo(req.params.id);
+        res.redirect('/dispositivos?mensagem=Dispositivo excluído');
+    } catch (err) {
+        res.redirect(`/dispositivos?mensagem=${encodeURIComponent(`Erro ao excluir dispositivo: ${err.message}`)}`);
+    }
 });
 
 router.get('/paineis', async (req, res) => {
@@ -5936,8 +5948,12 @@ router.post('/paineis/salvar', async (req, res) => {
 });
 
 router.post('/paineis/:id/excluir', async (req, res) => {
-    await removerPainel(req.params.id);
-    res.redirect('/paineis?mensagem=Painel excluído');
+    try {
+        await removerPainel(req.params.id);
+        res.redirect('/paineis?mensagem=Painel excluído');
+    } catch (err) {
+        res.redirect(`/paineis?mensagem=${encodeURIComponent(`Erro ao excluir painel: ${err.message}`)}`);
+    }
 });
 
 router.get('/manutencao', async (req, res) => {
