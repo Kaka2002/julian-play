@@ -17,6 +17,12 @@ $commitDepoisAtualizacao = (& $git.Source rev-parse HEAD).Trim()
 $arquivosDependencia = @()
 if ($commitAntesAtualizacao -and $commitDepoisAtualizacao) {
     $arquivosDependencia = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitDepoisAtualizacao -- package.json package-lock.json)
+    $arquivosDeploy = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitDepoisAtualizacao -- deploy.ps1 update-windows.ps1)
+    if ($arquivosDeploy.Count -gt 0 -and $env:JULIAN_DEPLOY_REEXECUTADO -ne '1') {
+        $env:JULIAN_DEPLOY_REEXECUTADO = '1'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath
+        exit $LASTEXITCODE
+    }
 }
 
 $atualizador = Join-Path $PSScriptRoot 'update-windows.ps1'
