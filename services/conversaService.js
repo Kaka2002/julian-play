@@ -859,18 +859,8 @@ ${menuPlanos(planos, perfil.nomeEmpresa)}`, imagens.planos);
             return;
         }
 
-        apagarConversa(telefone);
-        await responderComDigitacao(message, `*DADOS NECESSÁRIOS PARA ATIVAÇÃO*
---------------------
-Para liberar seu plano após o pagamento, envie aqui:
-
-*Nome completo*
-*WhatsApp*
-*Data de nascimento*
-*Dispositivo que vai usar*
-
-Se o valor estiver configurado, vou te enviar o PIX do plano escolhido.`, imagens.planos);
         if (!plano.valorConfigurado) {
+            apagarConversa(telefone);
             pausarParaAtendente(telefone, conversa?.nome || '', 'plano_sem_valor');
             await responderComDigitacao(message, `*PLANO SELECIONADO*
 --------------------
@@ -880,6 +870,7 @@ Seu atendimento será encaminhado para um atendente finalizar a ativação.`, im
             return;
         }
 
+        apagarConversa(telefone);
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano);
         return;
