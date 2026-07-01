@@ -1,7 +1,8 @@
 param(
     [string]$NomeProcesso = 'julian-play',
     [string]$PastaDados = '',
-    [switch]$PularGit
+    [switch]$PularGit,
+    [switch]$PularDependencias
 )
 
 $ErrorActionPreference = 'Stop'
@@ -120,6 +121,8 @@ $pm2 = ExigirComando 'pm2.cmd'
 $processosJulian = ObterProcessosJulian $pm2 $NomeProcesso
 
 $git = $null
+$commitAntesAtualizacao = $null
+$dependenciasAlteradas = -not $PularDependencias
 if (-not $PularGit) {
     $git = ExigirComando 'git.exe'
     $alteracoes = & $git.Source status --porcelain --untracked-files=no
@@ -129,6 +132,7 @@ if (-not $PularGit) {
     if ($alteracoes) {
         throw 'Existem alteracoes locais no codigo. Salve-as no Git antes de atualizar para evitar perda.'
     }
+    $commitAntesAtualizacao = (& $git.Source rev-parse HEAD).Trim()
 }
 
 Etapa 'Parando as instalacoes Julian Play com seguranca'
@@ -194,14 +198,25 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "git pull terminou com codigo $LASTEXITCODE."
         }
+
+        $commitDepoisAtualizacao = (& $git.Source rev-parse HEAD).Trim()
+        if ($commitAntesAtualizacao -and $commitDepoisAtualizacao) {
+            $arquivosDependencia = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitDepoisAtualizacao -- package.json package-lock.json)
+            $dependenciasAlteradas = $arquivosDependencia.Count -gt 0
+        }
     }
 
-    Etapa 'Atualizando dependencias'
-    $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
-    $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
-    & $npm.Source ci --omit=dev
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm ci terminou com codigo $LASTEXITCODE."
+    if ($dependenciasAlteradas) {
+        Etapa 'Atualizando dependencias'
+        $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
+        $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
+        & $npm.Source ci --omit=dev
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm ci terminou com codigo $LASTEXITCODE."
+        }
+    } else {
+        Etapa 'Dependencias sem alteracao'
+        Write-Host 'package.json e package-lock.json nao mudaram; npm ci foi pulado para evitar bloqueio do sqlite no Windows.' -ForegroundColor Green
     }
 
     Etapa 'Validando arquivos principais'
