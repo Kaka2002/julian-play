@@ -53,7 +53,7 @@ async function obterPerfilRobo() {
 
     return {
         nomeEmpresa,
-        palavrasChave: String(config.roboPalavrasChave || 'oi, ola, olá, menu, planos, teste, grátis, gratis')
+        palavrasChave: String(config.roboPalavrasChave || 'oi, ola, olá, menu, planos, preço, preco, teste, grátis, gratis')
             .split(',')
             .map(item => item.trim())
             .filter(Boolean),
@@ -324,6 +324,21 @@ function isPalavraChaveConfigurada(texto, perfil = {}) {
 
         return new RegExp(`\\b${chave.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(textoNormalizado);
     });
+}
+
+function isPedidoPreco(texto) {
+    const textoNormalizado = normalizar(texto);
+    if (!textoNormalizado) return false;
+
+    return [
+        'preco',
+        'precos',
+        'valor',
+        'valores',
+        'mensalidade',
+        'quanto custa',
+        'quanto e'
+    ].some((termo) => textoNormalizado.includes(termo));
 }
 
 function obterDestinoMensagem(message) {
@@ -1013,7 +1028,7 @@ Escolha um dispositivo da lista:
         return;
     }
 
-    if (texto === '1' || (textoCurto(textoOriginal) && texto.includes('plano'))) {
+    if (texto === '1' || (textoCurto(textoOriginal) && texto.includes('plano')) || isPedidoPreco(textoOriginal)) {
         definirConversa(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(planos, perfil.nomeEmpresa), imagens.planos);
         return;
