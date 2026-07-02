@@ -306,7 +306,7 @@ A *${perfil.nomeEmpresa}* agradece sua mensagem.
 No momento estamos fora do horário de atendimento.
 Responderemos assim que possível.
 
-Nosso atendimento pelo robô fica disponível das *08:00 às 20:00*.
+Nosso atendimento fica disponível das *08:00 às 20:00*.
 
 Digite *sair* para encerrar o atendimento.`);
 }
