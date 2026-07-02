@@ -25,6 +25,8 @@ const PORT = Number(process.env.MASTER_PORT || 9000);
 const HOST = process.env.MASTER_HOST || '127.0.0.1';
 const COOKIE_SESSAO = 'julian_master_session';
 const DURACAO_SESSAO_MS = 8 * 60 * 60 * 1000;
+const LIMITE_RECONEXAO_WHATSAPP_SEGUNDOS = 5 * 60;
+const MENSAGEM_RECONEXAO_WHATSAPP = 'O rob\u00f4 n\u00e3o reconectou ao WhatsApp. Fa\u00e7a a reconex\u00e3o para retornar ao funcionamento normal.';
 const sessoes = new Map();
 
 app.use(express.urlencoded({ extended: false }));
@@ -162,10 +164,37 @@ function formatarTempoOnline(segundos) {
     return `${Math.max(1, minutos)}min`;
 }
 
+function normalizarTelefone(valor) {
+    return String(valor || '').replace(/\D/g, '');
+}
+
+function precisaAvisoReconexaoWhatsapp(item) {
+    const saude = item.saude || {};
+    return item.status !== 'arquivado'
+        && Boolean(saude.online)
+        && !saude.whatsapp
+        && Number(saude.uptime || 0) >= LIMITE_RECONEXAO_WHATSAPP_SEGUNDOS;
+}
+
+function linkAvisoReconexaoWhatsapp(item) {
+    const telefone = normalizarTelefone(item.whatsappEsperado);
+    if (telefone.length < 10) return '';
+    return `https://wa.me/${telefone}?text=${encodeURIComponent(MENSAGEM_RECONEXAO_WHATSAPP)}`;
+}
+
+function botaoAvisoReconexaoWhatsapp(item, classe = 'smallbtn secondary') {
+    if (!precisaAvisoReconexaoWhatsapp(item)) return '';
+    const link = linkAvisoReconexaoWhatsapp(item);
+    if (!link) {
+        return '<div class="small dangertext">WhatsApp n&atilde;o informado para avisar o cliente.</div>';
+    }
+    return `<a class="button ${classe}" href="${escapar(link)}" target="_blank" rel="noopener">Avisar cliente</a>`;
+}
+
 function resumoDiagnostico(item) {
     const saude = item.saude || {};
-    const numeroEsperado = String(item.whatsappEsperado || '').replace(/\D/g, '');
-    const numeroConectado = String(saude.numero || '').replace(/\D/g, '');
+    const numeroEsperado = normalizarTelefone(item.whatsappEsperado);
+    const numeroConectado = normalizarTelefone(saude.numero);
     const processoOnline = Boolean(saude.online);
     const whatsappOnline = Boolean(saude.whatsapp);
     const numeroDivergente = whatsappOnline && numeroEsperado && numeroConectado && numeroEsperado !== numeroConectado;
@@ -185,6 +214,7 @@ function resumoDiagnostico(item) {
             ${detalhes.map(detalhe => `<span>${escapar(detalhe)}</span>`).join('')}
         </div>
         ${numeroDivergente ? '<div class="small dangertext">O número conectado não é o WhatsApp cadastrado para esta instalação.</div>' : ''}
+        ${precisaAvisoReconexaoWhatsapp(item) ? '<div class="small dangertext">WhatsApp sem reconectar há mais de 5 minutos. Avise o cliente para refazer a conexão.</div>' : ''}
     `;
 }
 
@@ -192,6 +222,7 @@ function calcularStatusGeral(instalacoes = []) {
     const ativos = instalacoes.filter(item => item.status !== 'arquivado');
     const whatsappConectado = ativos.filter(item => Boolean(item.saude?.whatsapp));
     const aguardandoWhatsapp = ativos.filter(item => Boolean(item.saude?.online) && !item.saude?.whatsapp);
+    const reconexaoPendente = aguardandoWhatsapp.filter(precisaAvisoReconexaoWhatsapp);
     const processosIndisponiveis = ativos.filter(item => !item.saude?.online);
     const emAvaliacao = ativos.filter(item => String(item.tipoLicenca || '').startsWith('avaliacao'));
     const licencasVencidas = ativos.filter(item => item.estadoLicenca && !item.estadoLicenca.permitida);
@@ -209,6 +240,7 @@ function calcularStatusGeral(instalacoes = []) {
         arquivadas: instalacoes.length - ativos.length,
         whatsappConectado: whatsappConectado.length,
         aguardandoWhatsapp: aguardandoWhatsapp.length,
+        reconexaoPendente: reconexaoPendente.length,
         processosIndisponiveis: processosIndisponiveis.length,
         emAvaliacao: emAvaliacao.length,
         licencasVencidas: licencasVencidas.length,
@@ -246,6 +278,7 @@ function paginaSaude(instalacao, saude, logs = '') {
         <a class="button secondary" href="https://${escapar(instalacao.dominio)}/clientes" target="_blank">Abrir painel</a>
         <a class="button secondary" href="https://${escapar(instalacao.dominio)}/qr" target="_blank">QR Code</a>
         <a class="button secondary" href="/instalacoes/${instalacao.id}/logs">Logs completos</a>
+        ${botaoAvisoReconexaoWhatsapp({ ...instalacao, saude }, 'secondary')}
         ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="secondary" type="submit">Liberar atendimento</button></form>` : ''}
         ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/backup"><button class="secondary" type="submit">Gerar backup</button></form>` : ''}
         ${instalacao.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${instalacao.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button type="submit">Reiniciar robô</button></form>` : ''}
@@ -288,7 +321,7 @@ function pagina(instalacoes, opcoes = {}) {
     ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
     <section class="status-grid" aria-label="Status geral das instalações">
         ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.ativas} ativa(s), ${statusGeral.arquivadas} arquivada(s)`)}
-        ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conexão`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
+        ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
         ${cardStatusGeral('Em avaliação', statusGeral.emAvaliacao, 'Instalações em período de teste', statusGeral.emAvaliacao ? 'warn' : '')}
         ${cardStatusGeral('Com atenção', statusGeral.comAtencao, 'Erro, licença vencida ou WhatsApp pendente', statusGeral.comAtencao ? 'error' : 'ok')}
         ${cardStatusGeral('Processos off-line', statusGeral.processosIndisponiveis, 'Sem resposta na porta local', statusGeral.processosIndisponiveis ? 'error' : 'ok')}
@@ -319,6 +352,7 @@ function pagina(instalacoes, opcoes = {}) {
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/saude">Saúde</a>
           <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
+          ${botaoAvisoReconexaoWhatsapp(item)}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/backup"><button class="smallbtn secondary" type="submit">Backup</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="smallbtn secondary" type="submit">Liberar atendimento</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
