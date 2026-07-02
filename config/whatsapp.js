@@ -34,7 +34,7 @@ const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function estaNoHorarioIndisponivel(data = new Date()) {
     const hora = data.getHours();
-    return hora >= 22 || hora < 8;
+    return hora >= 20 || hora < 8;
 }
 
 class LocalAuthControlado extends LocalAuth {
