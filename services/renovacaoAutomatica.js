@@ -16,13 +16,14 @@ const {
 } = require('./modelosMensagem');
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
-const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('./pixService');
+const { buscarPlanoPorNome, enviarQRCodePIXParaDestino, listarPlanosComerciais } = require('./pixService');
 const { licencaPermiteUso } = require('./licencaService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const TESTE_AVISO_MINUTOS = 30;
 const TESTE_AVISO_PLANO = -30;
 const TESTE_AVISO_EXPIRADO_FORA_HORARIO = -31;
+const TESTE_AVISO_EXPIRADO_PLANOS = -32;
 const AVISO_CLIENTE_UMA_HORA = -60;
 const AVISOS_CLIENTES_VENCIDOS_DIAS = [
     { dias: 2, codigo: -102 },
@@ -74,14 +75,35 @@ function nomeCliente(cliente = {}) {
     return String(cliente.nome || 'cliente').trim() || 'cliente';
 }
 
-function montarMensagemTesteVencendo(cliente) {
+async function obterPlanosRenovacao() {
+    try {
+        return await listarPlanosComerciais();
+    } catch (err) {
+        console.log(`Renovação automática: não foi possível carregar os planos comerciais: ${err.message}`);
+        return [];
+    }
+}
+
+function montarMensagemTesteVencendo(cliente, planos = []) {
     return `⚠️ *TESTE GRÁTIS VENCENDO*
 ━━━━━━━━━━━━━━━━━━━━
 Olá, *${nomeCliente(cliente)}*! Seu teste grátis vence em aproximadamente 30 minutos.
 
 Para continuar usando sem interrupção, escolha um plano fixo:
 
-${menuRenovacao()}
+${menuRenovacao(planos)}
+
+Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
+}
+
+function montarMensagemTesteExpiradoComPlanos(cliente, planos = []) {
+    return `⚠️ *TESTE GRÁTIS EXPIRADO*
+━━━━━━━━━━━━━━━━━━━━
+Olá, *${nomeCliente(cliente)}*! Seu teste grátis expirou.
+
+Para reativar seu acesso, escolha um plano fixo:
+
+${menuRenovacao(planos)}
 
 Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
 }
@@ -210,18 +232,50 @@ async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = 
         const agoraRelogio = obterAgoraSaoPaulo();
         const dentroHorario = estaNoHorarioDeTeste(agoraRelogio);
         const agoraIso = formatarDataHoraSaoPaulo();
-        const codigoAviso = dentroHorario ? TESTE_AVISO_PLANO : TESTE_AVISO_EXPIRADO_FORA_HORARIO;
-        const clientes = dentroHorario
-            ? await listarTestesGratisParaAvisoPorHorario(
+        const planos = dentroHorario ? await obterPlanosRenovacao() : [];
+        const clientes = [];
+
+        if (dentroHorario) {
+            const testesVencendo = await listarTestesGratisParaAvisoPorHorario(
                 agoraIso,
                 formatarDataHoraSaoPaulo(new Date(Date.now() + TESTE_AVISO_MINUTOS * 60 * 1000)),
-                codigoAviso
-            )
-            : await listarTestesGratisExpiradosParaAviso(agoraIso, codigoAviso);
+                TESTE_AVISO_PLANO
+            );
+            const testesExpirados = await listarTestesGratisExpiradosParaAviso(
+                agoraIso,
+                TESTE_AVISO_EXPIRADO_PLANOS
+            );
+
+            clientes.push(
+                ...testesVencendo.map(cliente => ({
+                    cliente,
+                    codigoAviso: TESTE_AVISO_PLANO,
+                    tipo: 'vencendo'
+                })),
+                ...testesExpirados.map(cliente => ({
+                    cliente,
+                    codigoAviso: TESTE_AVISO_EXPIRADO_PLANOS,
+                    tipo: 'expirado_planos'
+                }))
+            );
+        } else {
+            const testesExpirados = await listarTestesGratisExpiradosParaAviso(
+                agoraIso,
+                TESTE_AVISO_EXPIRADO_FORA_HORARIO
+            );
+
+            clientes.push(...testesExpirados.map(cliente => ({
+                cliente,
+                codigoAviso: TESTE_AVISO_EXPIRADO_FORA_HORARIO,
+                tipo: 'expirado_fora_horario'
+            })));
+        }
+
         let enviados = 0;
         let ignorados = 0;
 
-        for (const cliente of clientes) {
+        for (const item of clientes) {
+            const { cliente, codigoAviso, tipo } = item;
             const destino = montarDestinoWhatsApp(cliente.telefone);
 
             if (!normalizarTelefone(cliente.telefone)) {
@@ -229,9 +283,11 @@ async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = 
                 continue;
             }
 
-            const mensagem = dentroHorario
-                ? montarMensagemTesteVencendo(cliente)
-                : montarMensagemTesteExpirado(cliente);
+            const mensagem = tipo === 'vencendo'
+                ? montarMensagemTesteVencendo(cliente, planos)
+                : tipo === 'expirado_planos'
+                    ? montarMensagemTesteExpiradoComPlanos(cliente, planos)
+                    : montarMensagemTesteExpirado(cliente);
             const enviado = await enviarMensagem(client, destino, mensagem);
 
             if (enviado) {

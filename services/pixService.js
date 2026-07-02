@@ -82,10 +82,25 @@ function planoEhTesteGratis(plano = {}) {
     return nome.includes('teste');
 }
 
+function montarPlanosPadraoComerciais() {
+    return Object.entries(planos).map(([opcao, plano]) => {
+        const valorNumero = valorPlanoParaNumero(plano.valor);
+        const valorFormatado = formatarValorPlano(plano.valor);
+
+        return {
+            ...plano,
+            opcao,
+            valor: valorFormatado || 'valor a consultar',
+            valorNumero,
+            valorConfigurado: valorNumero > 0
+        };
+    });
+}
+
 async function listarPlanosComerciais() {
     try {
         const planosBanco = await listarTiposPlanos();
-        return planosBanco
+        const planosComerciais = planosBanco
             .filter(plano => Number(plano.ativo ?? 1) !== 0)
             .filter(plano => !planoEhTesteGratis(plano))
             .map((plano, index) => {
@@ -103,12 +118,11 @@ async function listarPlanosComerciais() {
                     arquivoQr: `pix_${normalizarNomePlano(plano.nome).replace(/[^a-z0-9]+/g, '_') || index + 1}.png`
                 };
             });
+
+        return planosComerciais.length ? planosComerciais : montarPlanosPadraoComerciais();
     } catch (err) {
         console.log(`PIX: usando planos padrao porque nao foi possivel ler os planos cadastrados: ${err.message}`);
-        return Object.entries(planos).map(([opcao, plano]) => ({
-            ...plano,
-            opcao
-        }));
+        return montarPlanosPadraoComerciais();
     }
 }
 
