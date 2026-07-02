@@ -6,6 +6,7 @@ const {
     pausarParaAtendente,
     responderMensagem,
     responderEncerramentoRapido,
+    responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
     normalizar
 } = require('../services/conversaService');
@@ -32,8 +33,18 @@ const mensagensProcessadas = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+function obterHoraSaoPaulo(data = new Date()) {
+    const partes = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        hour: '2-digit',
+        hour12: false
+    }).formatToParts(data);
+
+    return Number(partes.find(parte => parte.type === 'hour')?.value || '0');
+}
+
 function estaNoHorarioIndisponivel(data = new Date()) {
-    const hora = data.getHours();
+    const hora = obterHoraSaoPaulo(data);
     return hora >= 20 || hora < 8;
 }
 
@@ -304,6 +315,11 @@ function processarMensagemEmFila(message, options = {}) {
 
             if (texto === 'sair' || texto === 'encerrar') {
                 return responderEncerramentoRapido(message);
+            }
+
+            if (estaNoHorarioIndisponivel()) {
+                console.log('Mensagem recebida fora do horário de atendimento:', telefone);
+                return responderIndisponibilidade(message);
             }
 
             return responderMensagem(message);

@@ -294,6 +294,23 @@ Caso queira retornar ao atendimento, digite *menu*.`;
     }
 }
 
+async function responderIndisponibilidade(message) {
+    const perfil = await obterPerfilRobo();
+    const destino = obterDestinoMensagem(message);
+    apagarConversa(destino);
+
+    await responderComDigitacao(message, `*ATENDIMENTO FORA DO HORÁRIO*
+--------------------
+A *${perfil.nomeEmpresa}* agradece sua mensagem.
+
+No momento estamos fora do horário de atendimento.
+Responderemos assim que possível.
+
+Nosso atendimento pelo robô fica disponível das *08:00 às 20:00*.
+
+Digite *sair* para encerrar o atendimento.`);
+}
+
 function adicionarOpcaoSair(texto) {
     if (!texto) return RODAPE_ATENDIMENTO;
     if (texto.toLowerCase().includes('atendimento encerrado')) return texto;
@@ -1139,6 +1156,7 @@ module.exports = {
     prepararRenovacaoTesteGratis,
     responderMensagem,
     responderEncerramentoRapido,
+    responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
     normalizar
 };
