@@ -318,7 +318,7 @@ function processarMensagemEmFila(message, options = {}) {
             }
 
             if (estaNoHorarioIndisponivel()) {
-                console.log('Mensagem recebida fora do horário de atendimento:', telefone);
+                console.log(`Mensagem recebida fora do horário de atendimento: ${telefone} hora=${obterHoraSaoPaulo()}`);
                 return responderIndisponibilidade(message);
             }
 
