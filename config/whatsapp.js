@@ -19,6 +19,7 @@ const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
 const SESSION_DATA_PATH = path.join(AUTH_DATA_PATH, 'session-julianplay');
+const ARQUIVO_AVISOS_FORA_HORARIO = path.join(DATA_DIR, 'database', 'avisos-fora-horario.json');
 
 let client;
 let qrAtual = '';
@@ -30,6 +31,7 @@ let ultimoQrEm = null;
 let limpandoCliente = false;
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
+const avisosForaHorario = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -47,6 +49,59 @@ function estaNoHorarioIndisponivel(data = new Date()) {
     const hora = obterHoraSaoPaulo(data);
     return hora >= 20 || hora < 8;
 }
+
+function obterJanelaForaHorario(data = new Date()) {
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        hour12: false
+    }).formatToParts(data);
+    const valores = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    const hora = Number(valores.hour || 0);
+    const dia = Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day));
+    const inicioDaJanela = hora < 8 ? dia - 24 * 60 * 60 * 1000 : dia;
+
+    return new Date(inicioDaJanela).toISOString().slice(0, 10);
+}
+
+function carregarAvisosForaHorario() {
+    try {
+        if (!fs.existsSync(ARQUIVO_AVISOS_FORA_HORARIO)) return;
+        const dados = JSON.parse(fs.readFileSync(ARQUIVO_AVISOS_FORA_HORARIO, 'utf8'));
+        const janelaAtual = obterJanelaForaHorario();
+
+        for (const chave of Array.isArray(dados) ? dados : []) {
+            if (String(chave).startsWith(`${janelaAtual}:`)) avisosForaHorario.add(String(chave));
+        }
+    } catch (err) {
+        console.log('Nao foi possivel carregar os avisos fora do horario:', err.message);
+    }
+}
+
+function registrarPrimeiroAvisoForaHorario(telefone) {
+    const janelaAtual = obterJanelaForaHorario();
+    const chave = `${janelaAtual}:${telefone}`;
+    if (avisosForaHorario.has(chave)) return false;
+
+    for (const chaveSalva of avisosForaHorario) {
+        if (!chaveSalva.startsWith(`${janelaAtual}:`)) avisosForaHorario.delete(chaveSalva);
+    }
+    avisosForaHorario.add(chave);
+
+    try {
+        fs.mkdirSync(path.dirname(ARQUIVO_AVISOS_FORA_HORARIO), { recursive: true });
+        fs.writeFileSync(ARQUIVO_AVISOS_FORA_HORARIO, JSON.stringify([...avisosForaHorario], null, 2));
+    } catch (err) {
+        console.log('Nao foi possivel salvar o aviso fora do horario:', err.message);
+    }
+
+    return true;
+}
+
+carregarAvisosForaHorario();
 
 class LocalAuthControlado extends LocalAuth {
     async logout() {
@@ -319,6 +374,10 @@ function processarMensagemEmFila(message, options = {}) {
 
             if (estaNoHorarioIndisponivel()) {
                 console.log(`Mensagem recebida fora do horário de atendimento: ${telefone} hora=${obterHoraSaoPaulo()}`);
+                if (!registrarPrimeiroAvisoForaHorario(telefone)) {
+                    console.log(`Aviso fora do horario ja enviado nesta noite para: ${telefone}`);
+                    return;
+                }
                 return responderIndisponibilidade(message);
             }
 
