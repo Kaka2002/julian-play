@@ -16,7 +16,12 @@ const {
 } = require('./modelosMensagem');
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
-const { buscarPlanoPorNome, enviarQRCodePIXParaDestino, listarPlanosComerciais } = require('./pixService');
+const {
+    buscarPlanoPorNome,
+    enviarQRCodePIXParaDestino,
+    listarPlanosComerciais,
+    montarPlanosPadraoComerciais
+} = require('./pixService');
 const { licencaPermiteUso } = require('./licencaService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
@@ -77,10 +82,11 @@ function nomeCliente(cliente = {}) {
 
 async function obterPlanosRenovacao() {
     try {
-        return await listarPlanosComerciais();
+        const planos = await listarPlanosComerciais();
+        return planos.length ? planos : montarPlanosPadraoComerciais();
     } catch (err) {
         console.log(`Renovação automática: não foi possível carregar os planos comerciais: ${err.message}`);
-        return [];
+        return montarPlanosPadraoComerciais();
     }
 }
 

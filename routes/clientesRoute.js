@@ -21,7 +21,8 @@ const {
     adicionarNotaCliente,
     buscarAlertasCadastroCliente,
     listarClientesVencidosParaCobranca,
-    registrarAvisoRenovacaoProgramado
+    registrarAvisoRenovacaoProgramado,
+    avisoRenovacaoProgramadoExiste
 } = require('../services/clientes');
 const {
     verificarRenovacoes,
@@ -75,12 +76,19 @@ const {
 } = require('../services/appsDispositivos');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const { enviarMensagem } = require('../services/mensagemService');
-const { buscarPlanoPorNome, enviarQRCodePIXParaDestino } = require('../services/pixService');
+const {
+    buscarPlanoPorNome,
+    enviarQRCodePIXParaDestino,
+    listarPlanosComerciais,
+    montarPlanosPadraoComerciais
+} = require('../services/pixService');
 const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
+const menuRenovacao = require('../menus/renovacao');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
 const CODIGO_COBRANCA_VENCIDO = -90;
+const CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL = -33;
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path.join(__dirname, '..'));
 const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
@@ -3172,6 +3180,34 @@ function clienteEhTeste(cliente = {}) {
     return status === 'teste' || plano.includes('teste');
 }
 
+function clienteTesteExpirado(cliente = {}) {
+    const vencimento = cliente.dataVencimento || cliente.vencimento;
+
+    return clienteEhTeste(cliente) && vencimentoExpirou(vencimento);
+}
+
+async function obterPlanosRenovacaoManual() {
+    try {
+        const planos = await listarPlanosComerciais();
+        return planos.length ? planos : montarPlanosPadraoComerciais();
+    } catch (err) {
+        logControleClientes('Falha ao carregar planos para teste expirado', { erro: err.message });
+        return montarPlanosPadraoComerciais();
+    }
+}
+
+function montarMensagemPlanosTesteExpiradoManual(cliente = {}, planos = []) {
+    return `⚠️ *TESTE GRÁTIS EXPIRADO*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*! Seu teste grátis expirou.
+
+Para reativar seu acesso, escolha um plano fixo:
+
+${menuRenovacao(planos)}
+
+Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
+}
+
 function clientePodeReceberReativacao(cliente = {}) {
     if (clienteEhTeste(cliente)) return false;
 
@@ -4121,6 +4157,9 @@ function tabelaClientes(clientes) {
         <td data-label="Ações">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                ${clienteTesteExpirado(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-planos-teste-expirado" onsubmit="return confirm('Enviar a tela de planos para este teste expirado? Esta acao so deve ser usada uma vez.');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar planos do teste expirado">${icon('planos')}</button>
+                </form>` : ''}
                 ${clientePodeReceberReativacao(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativação com QR Code para este cliente?');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar reativação com QR Code">${icon('financeiro')}</button>
                 </form>` : ''}
@@ -5067,7 +5106,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
-            ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, planos, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, planos, preço, teste"' })}
+            ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preço, teste"' })}
             ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
             <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento.</div>
@@ -6404,6 +6443,73 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     } catch (err) {
         console.error(`[clientes] Falha ao enviar teste liberado para cliente ${cliente.id}: ${err.message}`);
         return res.redirect(montarUrlClienteMensagem(cliente.id, `Erro ao enviar teste: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect('/clientes/todos?mensagem=Cliente nao encontrado');
+    }
+
+    if (!clienteTesteExpirado(cliente)) {
+        return res.redirect(montarUrlListaClientesMensagem('Este cliente nao e um teste gratis expirado.'));
+    }
+
+    const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+    const jaEnviado = await avisoRenovacaoProgramadoExiste(
+        cliente.id,
+        vencimento,
+        CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL
+    );
+
+    if (jaEnviado) {
+        return res.redirect(montarUrlListaClientesMensagem('A tela de planos deste teste expirado ja foi enviada uma vez.'));
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        logControleClientes('Planos de teste expirado nao enviados', {
+            clienteId: cliente.id,
+            motivo: 'WhatsApp desconectado'
+        });
+        return res.redirect(montarUrlListaClientesMensagem('WhatsApp nao esta conectado.'));
+    }
+
+    try {
+        const planos = await obterPlanosRenovacaoManual();
+        const mensagem = montarMensagemPlanosTesteExpiradoManual(cliente, planos);
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+
+        registrarEnvioDoRobo(destino, mensagem);
+        const envio = await aguardarComTimeout(
+            client.sendMessage(destino, mensagem),
+            90000,
+            'Envio dos planos do teste expirado'
+        );
+
+        if (!envio) {
+            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+        }
+
+        registrarMensagemDoRobo(envio);
+        await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL);
+        await adicionarNotaCliente(cliente.id, 'Tela de planos para teste expirado enviada manualmente pelo WhatsApp.');
+        logControleClientes('Planos de teste expirado enviados', {
+            clienteId: cliente.id,
+            destino
+        });
+
+        return res.redirect(montarUrlListaClientesMensagem('Tela de planos enviada para o teste expirado.'));
+    } catch (err) {
+        logControleClientes('Erro ao enviar planos de teste expirado', {
+            clienteId: cliente.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar planos: ${err.message}`));
     }
 });
 

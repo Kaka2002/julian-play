@@ -10,11 +10,13 @@ const { agendarEncerramentoTeste } = require('./encerramentoTesteService');
 const { buscarPlano, enviarQRCodePIX, listarPlanosComerciais } = require('./pixService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const {
+    adicionarNotaCliente,
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV,
     cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente
 } = require('./clientes');
+const { registrarSolicitacaoTesteGratis } = require('./testesGratisHistorico');
 const {
     registrarMensagemDoRobo,
     registrarEnvioDoRobo,
@@ -358,6 +360,13 @@ function isPedidoPreco(texto) {
     ].some((termo) => textoNormalizado.includes(termo));
 }
 
+function isPedidoPlanos(texto) {
+    const textoNormalizado = normalizar(texto);
+    if (!textoNormalizado) return false;
+
+    return /\bplanos?\b/.test(textoNormalizado) || isPedidoPreco(texto);
+}
+
 function isSaudacaoOuInicio(texto) {
     const textoNormalizado = normalizar(texto);
     if (!textoNormalizado) return false;
@@ -570,6 +579,21 @@ Aguarde o atendente informar os procedimentos corretos para configurar seu teste
 Se aparecer alguma dúvida na tela, envie uma foto aqui.`;
 }
 
+function mensagemTesteGratisRepetido(nome, aparelho) {
+    return `⚠️ *TESTE GRÁTIS JÁ SOLICITADO*
+--------------------
+Identificamos que este WhatsApp já solicitou um teste grátis anteriormente.
+
+Seu pedido foi enviado para análise do atendente.
+Aguarde a aprovação para liberar um segundo teste.
+
+*Dados informados:*
+*Nome:* ${nome}
+*Dispositivo:* ${aparelho}
+
+Digite *sair* para encerrar o atendimento.`;
+}
+
 function extrairCampoTeste(texto, nomes) {
     const linhas = String(texto || '').split(/\r?\n/);
     const nomesNormalizados = nomes.map(nome => normalizar(nome));
@@ -715,6 +739,54 @@ async function iniciarBoasVindas(message, telefone, perfil = null) {
     });
 
     await responderComDigitacao(message, mensagemBoasVindas(nome, perfilRobo.nomeEmpresa), imagens.menu);
+}
+
+async function registrarTesteParcialETransferir(message, telefone, conversa, aparelho, imagens) {
+    const telefoneCliente = await obterTelefoneClienteMensagem(message);
+    const nome = conversa?.nome || await obterNomeContato(message) || 'Cliente';
+
+    if (!telefoneCliente) {
+        console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
+        return;
+    }
+
+    const historico = await registrarSolicitacaoTesteGratis({
+        telefone: telefoneCliente,
+        nome,
+        dispositivo: aparelho,
+        origem: 'robo'
+    }).catch((erro) => {
+        console.log('Teste grátis: não foi possível registrar histórico:', erro.message);
+        return { repetido: false, ignorado: true };
+    });
+
+    const cliente = await cadastrarClienteTesteParcial({
+        telefone: telefoneCliente,
+        nome,
+        aparelho
+    });
+
+    if (historico?.repetido) {
+        console.log(`[teste-gratis] WhatsApp já solicitou teste anteriormente: ${telefoneCliente}. Aguardando aprovação do atendente.`);
+
+        if (cliente?.id) {
+            await adicionarNotaCliente(
+                cliente.id,
+                'Atenção: este WhatsApp já solicitou teste grátis anteriormente. Avaliar antes de liberar novo teste.'
+            ).catch((erro) => {
+                console.log('Teste grátis: não foi possível adicionar nota de reincidência:', erro.message);
+            });
+        }
+    }
+
+    pausarParaAtendente(telefone, nome, historico?.repetido ? 'teste_repetido' : 'bot');
+    await responderComDigitacao(
+        message,
+        historico?.repetido
+            ? mensagemTesteGratisRepetido(nome, aparelho)
+            : mensagemTransferenciaTesteSmartTV(nome, aparelho),
+        imagens.testeLiberado
+    );
 }
 
 async function responderMensagem(message) {
@@ -944,25 +1016,7 @@ Escolha um dispositivo da lista:
             return;
         }
 
-        const telefoneCliente = await obterTelefoneClienteMensagem(message);
-
-        if (!telefoneCliente) {
-            console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
-            return;
-        }
-
-        await cadastrarClienteTesteParcial({
-            telefone: telefoneCliente,
-            nome: conversa.nome,
-            aparelho
-        });
-
-        pausarParaAtendente(telefone, conversa.nome);
-        await responderComDigitacao(
-            message,
-            mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
-            imagens.testeLiberado
-        );
+        await registrarTesteParcialETransferir(message, telefone, conversa, aparelho, imagens);
         return;
     }
 
@@ -974,25 +1028,7 @@ Escolha um dispositivo da lista:
 
         const marca = marcaSmartTV(texto) || textoOriginal.trim();
         const aparelho = marca;
-        const telefoneCliente = await obterTelefoneClienteMensagem(message);
-
-        if (!telefoneCliente) {
-            console.log('Teste grátis parcial não cadastrado: telefone do cliente não identificado.');
-            return;
-        }
-
-        await cadastrarClienteTesteParcial({
-            telefone: telefoneCliente,
-            nome: conversa.nome,
-            aparelho
-        });
-
-        pausarParaAtendente(telefone, conversa.nome);
-        await responderComDigitacao(
-            message,
-            mensagemTransferenciaTesteSmartTV(conversa.nome, aparelho),
-            imagens.testeLiberado
-        );
+        await registrarTesteParcialETransferir(message, telefone, conversa, aparelho, imagens);
         return;
     }
 
@@ -1114,7 +1150,7 @@ Escolha um dispositivo da lista:
         return;
     }
 
-    if (texto === '1' || (textoCurto(textoOriginal) && texto.includes('plano')) || isPedidoPreco(textoOriginal)) {
+    if (texto === '1' || (textoCurto(textoOriginal) && isPedidoPlanos(textoOriginal))) {
         definirConversa(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(planos, perfil.nomeEmpresa), imagens.planos);
         return;

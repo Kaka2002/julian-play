@@ -415,6 +415,33 @@ async function cadastrarClienteTesteParcial({ telefone, nome, aparelho }) {
 
     if (!telefoneNormalizado || !dispositivo) return null;
 
+    const clienteExistente = await buscarClienteTestePorTelefone(telefoneNormalizado);
+
+    if (clienteExistente?.id) {
+        await executar(
+            `UPDATE clientes SET
+                nome = ?,
+                telefone = ?,
+                plano = ?,
+                aparelho = ?,
+                dispositivosSelecionados = ?,
+                status = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+            WHERE id = ?`,
+            [
+                nomeCliente,
+                telefoneNormalizado,
+                'Teste grátis',
+                dispositivo,
+                dispositivosSelecionados,
+                'teste',
+                clienteExistente.id
+            ]
+        );
+
+        return buscarClientePorId(clienteExistente.id);
+    }
+
     const resultado = await executar(
         `INSERT INTO clientes (
             nome, telefone, plano, aparelho, dispositivosSelecionados, status
@@ -1459,6 +1486,18 @@ async function registrarAvisoRenovacaoProgramado(id, vencimento, diasAntes) {
     return registrarAvisoRenovacao(id, `${vencimento}:${diasAntes}`);
 }
 
+async function avisoRenovacaoProgramadoExiste(id, vencimento, diasAntes) {
+    const aviso = await buscarUm(
+        `SELECT id
+        FROM avisos_renovacao
+        WHERE clienteId = ? AND vencimento = ? AND diasAntes = ?
+        LIMIT 1`,
+        [id, vencimento, Number(diasAntes)]
+    );
+
+    return Boolean(aviso);
+}
+
 function registrarAvisoAniversario(id, ano) {
     return registrarBonusAniversario(id, ano);
 }
@@ -1496,6 +1535,7 @@ module.exports = {
     listarClientesAniversarioHoje,
     registrarAvisoRenovacao,
     registrarAvisoRenovacaoProgramado,
+    avisoRenovacaoProgramadoExiste,
     registrarAvisoAniversario,
     registrarBonusAniversario,
     atualizarStatusAutomaticoClientes,

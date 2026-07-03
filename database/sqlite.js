@@ -140,6 +140,20 @@ db.serialize(() => {
     `);
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS testes_gratis_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            telefone TEXT NOT NULL UNIQUE,
+            nome TEXT,
+            dispositivo TEXT,
+            origem TEXT,
+            clienteId INTEGER,
+            dataPrimeiroTeste DATETIME DEFAULT CURRENT_TIMESTAMP,
+            dataUltimaSolicitacao DATETIME DEFAULT CURRENT_TIMESTAMP,
+            totalSolicitacoes INTEGER DEFAULT 1
+        )
+    `);
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS cliente_pagamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             clienteId INTEGER NOT NULL,

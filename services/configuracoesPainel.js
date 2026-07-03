@@ -55,7 +55,7 @@ async function obterConfiguracoes() {
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
         ultimoBackupAutomatico: '',
-        roboPalavrasChave: 'oi, ola, olá, menu, planos, preço, preco, teste, grátis, gratis',
+        roboPalavrasChave: 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis',
         roboMensagemDesconhecida: 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
         roboAtendimentoHumanoMinutos: '30',
         painelUsuario: '',
@@ -124,7 +124,7 @@ async function salvarConfiguracoesRobo(dados = {}) {
     }
 
     await salvarConfiguracao('nomeEmpresaRobo', nomeEmpresa);
-    await salvarConfiguracao('roboPalavrasChave', palavrasChave || 'oi, ola, olá, menu, planos, preço, preco, teste, grátis, gratis');
+    await salvarConfiguracao('roboPalavrasChave', palavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis');
     await salvarConfiguracao('roboMensagemDesconhecida', mensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.');
     await salvarConfiguracao('roboAtendimentoHumanoMinutos', String(minutosAtendimento));
 

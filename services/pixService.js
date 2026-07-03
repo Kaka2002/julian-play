@@ -339,6 +339,7 @@ module.exports = {
     buscarPlano,
     buscarPlanoPorNome,
     listarPlanosComerciais,
+    montarPlanosPadraoComerciais,
     enviarQRCodePIX,
     enviarQRCodePIXParaDestino,
     gerarPixCopiaECola,
