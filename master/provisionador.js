@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const os = require('os');
 const { execFile } = require('child_process');
 const sqlite3 = require('sqlite3').verbose();
 const { criarHashSenha } = require('../services/passwordService');
@@ -26,11 +27,12 @@ function slugificar(valor) {
         .slice(0, 40);
 }
 
-function executarComando(arquivo, args = []) {
+function executarComando(arquivo, args = [], timeout = 0) {
     return new Promise((resolve, reject) => {
         const extensao = path.extname(arquivo).toLowerCase();
         const executarViaCmd = process.platform === 'win32' && (extensao === '.cmd' || extensao === '.bat');
         const opcoes = { windowsHide: true, shell: executarViaCmd };
+        if (timeout > 0) opcoes.timeout = timeout;
 
         execFile(arquivo, args, opcoes, (err, stdout, stderr) => {
             if (err) {
@@ -404,6 +406,81 @@ async function reiniciarInstalacao(id) {
     await atualizarStatus(id, 'ativo', 'Robô reiniciado pelo Painel Mestre.');
 }
 
+async function pararInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem ser paradas.');
+
+    await executarComando('pm2.cmd', ['stop', instalacao.processoPm2]);
+    await executarComando('pm2.cmd', ['save', '--force']);
+    await atualizarStatus(id, 'parado', 'Robô parado com segurança pelo Painel Mestre.');
+}
+
+async function iniciarInstalacao(id) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem ser iniciadas.');
+
+    await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
+    await executarComando('pm2.cmd', ['save', '--force']);
+    await atualizarStatus(id, 'ativo', 'Robô iniciado pelo Painel Mestre. Aguardando conexão do WhatsApp.');
+}
+
+async function trocarWhatsappInstalacao(id, novoNumero = '') {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+    if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem trocar o WhatsApp.');
+
+    const whatsappEsperado = String(novoNumero || '').replace(/\D/g, '');
+    if (whatsappEsperado.length < 10 || whatsappEsperado.length > 15) {
+        throw new Error('Informe o novo WhatsApp com código do país, DDD e número.');
+    }
+
+    await executarComando('pm2.cmd', ['stop', instalacao.processoPm2]);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    const pastaAuth = path.join(instalacao.pastaDados, '.wwebjs_auth');
+    const sessaoAtual = path.join(pastaAuth, 'session-julianplay');
+    let backupSessao = '';
+    if (fs.existsSync(sessaoAtual)) {
+        backupSessao = path.join(pastaAuth, `session-julianplay-backup-${Date.now()}`);
+        fs.renameSync(sessaoAtual, backupSessao);
+    }
+
+    await masterDb.executar(
+        `UPDATE instalacoes SET whatsappEsperado = ?, status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
+        [whatsappEsperado, 'WhatsApp alterado. Aguardando leitura do novo QR Code.', id]
+    );
+
+    try {
+        await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
+        await executarComando('pm2.cmd', ['save', '--force']);
+    } catch (err) {
+        await atualizarStatus(id, 'erro', `WhatsApp atualizado, mas o robô não iniciou: ${err.detalhes || err.message}`);
+        throw err;
+    }
+
+    return { whatsappEsperado, backupSessao };
+}
+
+async function obterRecursosServidor() {
+    let processosChrome = null;
+    if (process.platform === 'win32') {
+        try {
+            const saida = await executarComando('tasklist.exe', ['/FI', 'IMAGENAME eq chrome.exe', '/FO', 'CSV', '/NH'], 3000);
+            processosChrome = saida.split(/\r?\n/).filter(linha => /^"chrome\.exe"/i.test(linha.trim())).length;
+        } catch (_) {
+            processosChrome = null;
+        }
+    }
+
+    return {
+        memoriaLivreMb: Math.round(os.freemem() / 1024 / 1024),
+        memoriaTotalMb: Math.round(os.totalmem() / 1024 / 1024),
+        processosChrome
+    };
+}
+
 async function resetarSenhaPainel(id, senha = '') {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -510,6 +587,10 @@ module.exports = {
     ativarLicencaComercial,
     prorrogarAvaliacao,
     reiniciarInstalacao,
+    pararInstalacao,
+    iniciarInstalacao,
+    trocarWhatsappInstalacao,
+    obterRecursosServidor,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     liberarAtendimentoInstalacao,

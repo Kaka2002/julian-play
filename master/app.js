@@ -11,6 +11,10 @@ const {
     ativarLicencaComercial,
     prorrogarAvaliacao,
     reiniciarInstalacao,
+    pararInstalacao,
+    iniciarInstalacao,
+    trocarWhatsappInstalacao,
+    obterRecursosServidor,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     liberarAtendimentoInstalacao,
@@ -302,6 +306,7 @@ function paginaSaude(instalacao, saude, logs = '') {
 function pagina(instalacoes, opcoes = {}) {
     const criado = opcoes.criado;
     const statusGeral = calcularStatusGeral(instalacoes);
+    const recursos = opcoes.recursos || {};
     const versaoSistema = packageInfo.version || '1.0.0';
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}table{min-width:1200px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
@@ -326,6 +331,8 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Com atenção', statusGeral.comAtencao, 'Erro, licença vencida ou WhatsApp pendente', statusGeral.comAtencao ? 'error' : 'ok')}
         ${cardStatusGeral('Processos off-line', statusGeral.processosIndisponiveis, 'Sem resposta na porta local', statusGeral.processosIndisponiveis ? 'error' : 'ok')}
         ${cardStatusGeral('Licenças vencidas', statusGeral.licencasVencidas, `${statusGeral.suspensas} instalação(ões) suspensa(s)`, statusGeral.licencasVencidas || statusGeral.suspensas ? 'error' : 'ok')}
+        ${cardStatusGeral('RAM livre', `${recursos.memoriaLivreMb ?? '-'} MB`, `de ${recursos.memoriaTotalMb ?? '-'} MB`, Number(recursos.memoriaLivreMb || 0) < 512 ? 'error' : Number(recursos.memoriaLivreMb || 0) < 1024 ? 'warn' : 'ok')}
+        ${cardStatusGeral('Processos Chrome', recursos.processosChrome ?? '-', 'Navegadores usados pelos robôs', Number(recursos.processosChrome || 0) > 30 ? 'warn' : '')}
     </section>
     <section class="panel"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
       <form class="fields" method="post" action="/instalacoes">
@@ -355,8 +362,10 @@ function pagina(instalacoes, opcoes = {}) {
           ${botaoAvisoReconexaoWhatsapp(item)}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/backup"><button class="smallbtn secondary" type="submit">Backup</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="smallbtn secondary" type="submit">Liberar atendimento</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form>` : ''}
+          ${item.status !== 'arquivado' && item.status !== 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/parar" onsubmit="return confirm('Parar somente este robô com segurança?');"><button class="smallbtn warning" type="submit">Parar robô</button></form>` : ''}
+          ${item.status === 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/iniciar"><button class="smallbtn" type="submit">Iniciar robô</button></form>` : ''}
         </div><div class="actions">
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/whatsapp" onsubmit="return confirm('Trocar o WhatsApp encerrará a conexão atual deste robô e gerará um novo QR Code. Continuar?');"><input name="whatsappEsperado" inputmode="numeric" value="${escapar(item.whatsappEsperado || '')}" minlength="10" maxlength="15" placeholder="55 + DDD + número" required style="width:185px;padding:9px"><button class="warning" type="submit">Trocar WhatsApp</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÒO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
         </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
@@ -407,16 +416,24 @@ app.post('/logout', (req, res) => {
 
 app.use(autenticarSessao);
 
+async function renderizarPainel(opcoes = {}) {
+    const [instalacoes, recursos] = await Promise.all([
+        listarInstalacoes(),
+        obterRecursosServidor().catch(() => ({}))
+    ]);
+    return pagina(instalacoes, { ...opcoes, recursos });
+}
+
 app.get('/', async (req, res) => {
-    res.send(pagina(await listarInstalacoes(), { mensagem: req.query.mensagem, erro: req.query.erro }));
+    res.send(await renderizarPainel({ mensagem: req.query.mensagem, erro: req.query.erro }));
 });
 
 app.post('/instalacoes', async (req, res) => {
     try {
         const criado = await criarInstalacao(req.body);
-        res.send(pagina(await listarInstalacoes(), { criado }));
+        res.send(await renderizarPainel({ criado }));
     } catch (err) {
-        res.status(400).send(pagina(await listarInstalacoes(), { erro: err.detalhes || err.message }));
+        res.status(400).send(await renderizarPainel({ erro: err.detalhes || err.message }));
     }
 });
 
@@ -445,6 +462,17 @@ app.post('/instalacoes/:id/licenca', async (req, res) => {
     }
 });
 app.post('/instalacoes/:id/reiniciar', acao(reiniciarInstalacao, 'Robô reiniciado.'));
+app.post('/instalacoes/:id/parar', acao(pararInstalacao, 'Robô parado com segurança.'));
+app.post('/instalacoes/:id/iniciar', acao(iniciarInstalacao, 'Robô iniciado. Aguarde o WhatsApp conectar.'));
+app.post('/instalacoes/:id/whatsapp', async (req, res) => {
+    try {
+        const resultado = await trocarWhatsappInstalacao(req.params.id, req.body.whatsappEsperado);
+        const mensagem = `WhatsApp atualizado para ${resultado.whatsappEsperado}. Abra o QR Code para conectar o novo aparelho.`;
+        res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.detalhes || err.message)}`);
+    }
+});
 app.post('/instalacoes/:id/backup', async (req, res) => {
     try {
         const nomeBackup = await gerarBackupInstalacao(req.params.id);
