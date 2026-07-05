@@ -118,13 +118,22 @@ async function listarInstalacoes() {
         const usoDiscoBytes = tamanhoDiretorio(instalacao.pastaDados);
         if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes };
         try {
-            const [config, saude] = await Promise.all([
+            const [config, saude, resumoComercial] = await Promise.all([
                 lerConfiguracoesTenant(dbPath),
-                consultarSaude(instalacao.porta)
+                consultarSaude(instalacao.porta),
+                lerResumoComercialTenant(dbPath)
             ]);
-            return { ...instalacao, usoDiscoBytes, estadoLicenca: calcularEstadoLicenca(config), saude };
+            return {
+                ...instalacao,
+                usoDiscoBytes,
+                bancoEncontrado: true,
+                configuracoesTenant: config,
+                resumoComercial,
+                estadoLicenca: calcularEstadoLicenca(config),
+                saude
+            };
         } catch (_) {
-            return { ...instalacao, usoDiscoBytes };
+            return { ...instalacao, usoDiscoBytes, bancoEncontrado: fs.existsSync(dbPath) };
         }
     }));
 }
@@ -308,6 +317,26 @@ function lerConfiguracoesTenant(dbPath) {
                 config[row.chave] = row.valor || '';
                 return config;
             }, {}));
+        });
+    });
+}
+
+function lerResumoComercialTenant(dbPath) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
+        const resumo = {};
+        db.serialize(() => {
+            db.get(`SELECT COUNT(*) AS total FROM tipos_planos
+                WHERE ativo = 1 AND TRIM(COALESCE(valor, '')) <> '' AND CAST(REPLACE(valor, ',', '.') AS REAL) > 0`, (err, row) => {
+                if (err) return db.close(() => reject(err));
+                resumo.planosComValor = Number(row?.total || 0);
+                db.get('SELECT COUNT(*) AS total FROM paineis WHERE ativo = 1', (painelErr, painelRow) => {
+                    db.close();
+                    if (painelErr) return reject(painelErr);
+                    resumo.paineisAtivos = Number(painelRow?.total || 0);
+                    resolve(resumo);
+                });
+            });
         });
     });
 }

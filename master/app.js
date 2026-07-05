@@ -1,5 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const packageInfo = require('../package.json');
 const { verificarSenha } = require('../services/passwordService');
 const {
@@ -230,6 +232,41 @@ function resumoDiagnostico(item) {
     `;
 }
 
+function avaliarProntidaoComercial(item) {
+    const pendencias = [];
+    const config = item.configuracoesTenant || {};
+    const resumo = item.resumoComercial || {};
+    const numeroEsperado = normalizarTelefone(item.whatsappEsperado);
+    const numeroConectado = normalizarTelefone(item.saude?.numero);
+
+    if (item.status === 'arquivado') pendencias.push('Instalação arquivada');
+    else if (item.status === 'suspenso') pendencias.push('Instalação suspensa');
+    else if (item.status !== 'ativo') pendencias.push('Status da instalação precisa ser revisado');
+    if (!item.bancoEncontrado) pendencias.push('Banco de dados não encontrado');
+    if (!item.saude?.online) pendencias.push('Processo do sistema está off-line');
+    if (!item.saude?.whatsapp) pendencias.push('WhatsApp não está conectado');
+    if (numeroEsperado && numeroConectado && numeroEsperado !== numeroConectado) pendencias.push('WhatsApp conectado é diferente do cadastrado');
+    if (!numeroEsperado) pendencias.push('WhatsApp do robô não informado');
+    if (item.estadoLicenca && !item.estadoLicenca.permitida) pendencias.push('Licença vencida ou bloqueada');
+    if (!String(item.usuarioPainel || '').trim() || !item.pastaDados || !fs.existsSync(path.join(item.pastaDados, 'ecosystem.config.cjs'))) pendencias.push('Acesso administrativo incompleto');
+    if (!String(config.nomeEmpresaRobo || '').trim()) pendencias.push('Nome da empresa do robô não configurado');
+    if (!String(config.imagemRoboMenu || '').trim()) pendencias.push('Imagem principal do robô não cadastrada');
+    if (!String(config.pixChave || '').trim() || !String(config.pixNome || '').trim() || !String(config.pixCidade || '').trim()) pendencias.push('PIX de recebimento incompleto');
+    if (Number(resumo.planosComValor || 0) < 1) pendencias.push('Nenhum plano ativo com valor');
+    if (Number(resumo.paineisAtivos || 0) < 1) pendencias.push('Nenhum painel ativo cadastrado');
+
+    return { pronta: pendencias.length === 0, pendencias };
+}
+
+function resumoProntidaoComercial(item) {
+    const auditoria = avaliarProntidaoComercial(item);
+    if (auditoria.pronta) {
+        return '<span class="badge ok">Pronta para venda</span><div class="small">Configuração comercial completa</div>';
+    }
+    return `<span class="badge warn">${auditoria.pendencias.length} pendência(s)</span>
+        <ul class="readiness-list">${auditoria.pendencias.map(pendencia => `<li>${escapar(pendencia)}</li>`).join('')}</ul>`;
+}
+
 function calcularStatusGeral(instalacoes = []) {
     const ativos = instalacoes.filter(item => item.status !== 'arquivado');
     const whatsappConectado = ativos.filter(item => Boolean(item.saude?.whatsapp));
@@ -239,6 +276,7 @@ function calcularStatusGeral(instalacoes = []) {
     const emAvaliacao = ativos.filter(item => String(item.tipoLicenca || '').startsWith('avaliacao'));
     const licencasVencidas = ativos.filter(item => item.estadoLicenca && !item.estadoLicenca.permitida);
     const suspensas = ativos.filter(item => item.status === 'suspenso');
+    const prontasParaVenda = ativos.filter(item => avaliarProntidaoComercial(item).pronta);
     const comAtencao = new Set([
         ...aguardandoWhatsapp.map(item => item.id),
         ...processosIndisponiveis.map(item => item.id),
@@ -257,6 +295,7 @@ function calcularStatusGeral(instalacoes = []) {
         emAvaliacao: emAvaliacao.length,
         licencasVencidas: licencasVencidas.length,
         suspensas: suspensas.length,
+        prontasParaVenda: prontasParaVenda.length,
         comAtencao: comAtencao.size
     };
 }
@@ -317,7 +356,7 @@ function pagina(instalacoes, opcoes = {}) {
     const recursos = opcoes.recursos || {};
     const versaoSistema = packageInfo.version || '1.0.0';
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}table{min-width:1200px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.readiness-list{margin:7px 0 0;padding-left:18px;color:#697386;font-size:12px;line-height:1.45}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
     </style></head><body><main>
     <div class="topbar">
       <div>
@@ -336,6 +375,7 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.ativas} ativa(s), ${statusGeral.arquivadas} arquivada(s)`)}
         ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
         ${cardStatusGeral('Em avaliação', statusGeral.emAvaliacao, 'Instalações em período de teste', statusGeral.emAvaliacao ? 'warn' : '')}
+        ${cardStatusGeral('Prontas para venda', statusGeral.prontasParaVenda, `de ${statusGeral.ativas} instalação(ões) ativa(s)`, statusGeral.prontasParaVenda === statusGeral.ativas && statusGeral.ativas ? 'ok' : 'warn')}
         ${cardStatusGeral('Com atenção', statusGeral.comAtencao, 'Erro, licença vencida ou WhatsApp pendente', statusGeral.comAtencao ? 'error' : 'ok')}
         ${cardStatusGeral('Processos off-line', statusGeral.processosIndisponiveis, 'Sem resposta na porta local', statusGeral.processosIndisponiveis ? 'error' : 'ok')}
         ${cardStatusGeral('Licenças vencidas', statusGeral.licencasVencidas, `${statusGeral.suspensas} instalação(ões) suspensa(s)`, statusGeral.licencasVencidas || statusGeral.suspensas ? 'error' : 'ok')}
@@ -364,10 +404,10 @@ function pagina(instalacoes, opcoes = {}) {
       </form>
     </section>
     <section class="panel"><h2>Instalações</h2><div class="sub">${instalacoes.length} instalação(ões) cadastrada(s)</div><div class="table-wrap">
-      ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
+      ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Prontidão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
         <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div><div class="small"><strong>Uso: ${escapar(formatarBytes(item.usoDiscoBytes))}</strong></div></td>
-        <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
+        <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td><td>${resumoProntidaoComercial(item)}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="support-actions">
           <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/clientes" target="_blank">Painel</a>
