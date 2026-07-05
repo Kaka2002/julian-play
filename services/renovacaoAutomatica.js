@@ -5,14 +5,11 @@ const {
     listarClientesVencidosPorDiasParaAviso,
     listarTestesGratisParaAvisoPorHorario,
     listarTestesGratisExpiradosParaAviso,
-    listarClientesAniversarioHoje,
     registrarAvisoRenovacaoProgramado,
-    registrarAvisoAniversario,
     normalizarTelefone
 } = require('./clientes');
 const {
-    montarMensagemAvisoProgramado,
-    montarMensagemAniversario
+    montarMensagemAvisoProgramado
 } = require('./modelosMensagem');
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
@@ -138,10 +135,9 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
         }
 
         const clientes = await listarClientesParaAvisosProgramados();
-        const aniversariantes = await listarClientesAniversarioHoje(new Date().getFullYear());
         let enviados = 0;
         let ignorados = 0;
-        let aniversarios = 0;
+        const aniversarios = 0;
 
         for (const cliente of clientes) {
             const destino = montarDestinoWhatsApp(cliente.telefone);
@@ -152,19 +148,6 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
             if (enviado) {
                 enviados += 1;
                 await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimento, diasAntes);
-            } else {
-                ignorados += 1;
-            }
-        }
-
-        for (const cliente of aniversariantes) {
-            const destino = montarDestinoWhatsApp(cliente.telefone);
-            const mensagem = await montarMensagemAniversario(cliente);
-            const enviado = await enviarMensagem(client, destino, mensagem);
-
-            if (enviado) {
-                aniversarios += 1;
-                await registrarAvisoAniversario(cliente.id, new Date().getFullYear());
             } else {
                 ignorados += 1;
             }

@@ -7,6 +7,8 @@ const {
     buscarClientePorId,
     buscarClientePorTelefone,
     aplicarBonusCliente,
+    listarClientesAniversarioHoje,
+    registrarBonusAniversario,
     listarPagamentosCliente,
     buscarPagamentoCliente,
     listarReceitaMensalFinanceira,
@@ -3152,7 +3154,7 @@ Olá, *${cliente.nome || 'cliente'}*!
 
 Foi aplicado em seu cadastro um bônus de *${textoMeses}* no seu plano.
 
-*Novo vencimento:* ${formatarDataHoraMensagem(resultado.dataVencimento)}
+    *Vencimento:* ${formatarDataHoraMensagem(resultado.dataVencimento)}
 *Saldo de bônus restante:* ${saldo}
 
 Obrigado pela preferência.`;
@@ -3539,32 +3541,46 @@ function secaoBonusCliente(cliente = {}) {
     if (!cliente.id) return '';
 
     const saldo = Number.parseInt(cliente.bonusMeses || 0, 10) || 0;
-    const opcoes = Array.from({ length: Math.max(1, Math.min(12, saldo || 1)) }, (_, index) => index + 1)
+    const aniversarioPendente = clienteAniversarioPendente(cliente);
+    const saldoAplicavel = saldo + (aniversarioPendente ? 1 : 0);
+    const opcoes = Array.from({ length: Math.max(1, Math.min(12, saldoAplicavel || 1)) }, (_, index) => index + 1)
         .map(valor => `<option value="${valor}">${valor} ${valor === 1 ?'mês' : 'meses'}</option>`)
         .join('');
 
-    return `<section class="panel" style="margin-top:24px;">
+    return `<section class="panel" id="bonus" style="margin-top:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Bônus do cliente</h2>
-                <div class="subtitle">Cada bônus equivale a 1 mês grátis de plano. Ao aplicar, o vencimento é prorrogado e o saldo é descontado.</div>
+                <div class="subtitle">Ajuste e salve primeiro a data de vencimento. Este botão apenas aplica o saldo e envia ao cliente a data já cadastrada.</div>
             </div>
-            <span class="badge green">${escapar(saldo)} disponível(is)</span>
+            <span class="badge green">${escapar(saldoAplicavel)} disponível(is)</span>
         </div>
+        ${aniversarioPendente ?'<div class="notice">🎂 Aniversário hoje: 1 bônus está aguardando sua aprovação manual.</div>' : ''}
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/aplicar-bonus">
             <label>Quantidade de bônus para aplicar
-                <select name="quantidade" ${saldo <= 0 ?'disabled' : ''}>
-                    ${saldo > 0 ?opcoes : '<option value="">Sem bônus disponível</option>'}
+                <select name="quantidade" ${saldoAplicavel <= 0 ?'disabled' : ''}>
+                    ${saldoAplicavel > 0 ?opcoes : '<option value="">Sem bônus disponível</option>'}
                 </select>
             </label>
             <label class="full">Observação da bonificação
                 <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicação, aniversário ou detalhe da bonificação"></textarea>
             </label>
             <div class="actions full">
-                <button class="button green" type="submit" ${saldo <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
+                <button class="button green" type="submit" ${saldoAplicavel <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
             </div>
         </form>
     </section>`;
+}
+
+function clienteAniversarioPendente(cliente = {}) {
+    const nascimento = String(cliente.nascimento || '');
+    if (nascimento.length < 10) return false;
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const valores = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    return nascimento.slice(5, 10) === `${valores.month}-${valores.day}`
+        && String(cliente.ultimoAvisoAniversario || '') !== String(valores.year);
 }
 
 function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
@@ -4077,7 +4093,7 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes, pagina = 1, receitaBase = clientes) {
+function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = []) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
@@ -4095,6 +4111,22 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes) {
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
     </section>
     ${receitaMensalCard(receita)}
+    ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Aniversariantes com bônus pendente</h2>
+                <div class="subtitle">Revise e salve o vencimento antes de aplicar e avisar o cliente.</div>
+            </div>
+            <span class="badge orange">${aniversariantes.length} pendente(s)</span>
+        </div>
+        ${aniversariantes.map(cliente => `<div class="client-row">
+            <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
+            <div><div class="client-name">${escapar(cliente.nome)}</div><div class="helper">${escapar(cliente.telefone || '')}</div></div>
+            <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
+            <span class="badge orange">Bônus aguardando aprovação</span>
+            <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
+        </div>`).join('')}
+    </section>` : ''}
     <section class="panel">
         <div class="panel-head">
             <div>
@@ -5325,16 +5357,20 @@ function formularioPainel(painel = {}) {
 
 router.get('/clientes', async (req, res) => {
     desativarCache(res);
-    const [clientes, receitaBase] = await Promise.all([
+    const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo', year: 'numeric'
+    }).format(new Date()));
+    const [clientes, receitaBase, aniversariantes] = await Promise.all([
         listarClientes(),
-        listarReceitaMensalFinanceira()
+        listarReceitaMensalFinanceira(),
+        listarClientesAniversarioHoje(anoAtual)
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, receitaBase),
+        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes),
         mensagem,
         ativo: 'painel'
     });
@@ -5728,15 +5764,20 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
     }
 
     try {
-        const resultado = await aplicarBonusCliente(cliente.id, req.body.quantidade);
-        const clienteAtualizado = resultado.cliente;
-
-        if (String(req.body.observacaoBonus || '').trim()) {
-            await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
+        const meses = Number.parseInt(req.body.quantidade || 1, 10);
+        const aniversarioPendente = clienteAniversarioPendente(cliente);
+        const saldoAplicavel = (Number.parseInt(cliente.bonusMeses || 0, 10) || 0) + (aniversarioPendente ? 1 : 0);
+        if (!Number.isInteger(meses) || meses < 1 || meses > saldoAplicavel) {
+            throw new Error(`Saldo de bônus insuficiente. Disponível: ${saldoAplicavel}.`);
         }
 
-        const mensagem = montarMensagemBonusAplicado(clienteAtualizado, resultado);
-        const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
+        const resultadoEnvio = {
+            meses,
+            saldoRestante: saldoAplicavel - meses,
+            dataVencimento: cliente.dataVencimento || cliente.vencimento
+        };
+        const mensagem = montarMensagemBonusAplicado(cliente, resultadoEnvio);
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
         registrarEnvioDoRobo(destino, mensagem);
         const envio = await aguardarComTimeout(
             client.sendMessage(destino, mensagem),
@@ -5749,6 +5790,20 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         }
 
         registrarMensagemDoRobo(envio);
+        if (aniversarioPendente) {
+            const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Sao_Paulo', year: 'numeric'
+            }).format(new Date()));
+            await registrarBonusAniversario(cliente.id, anoAtual);
+        }
+
+        const resultado = await aplicarBonusCliente(cliente.id, meses);
+        const clienteAtualizado = resultado.cliente;
+
+        if (String(req.body.observacaoBonus || '').trim()) {
+            await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
+        }
+
         logControleClientes('Bonus aplicado e enviado ao cliente', {
             clienteId: clienteAtualizado.id,
             nome: clienteAtualizado.nome,
@@ -6496,6 +6551,7 @@ router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
         }
 
         registrarMensagemDoRobo(envio);
+
         await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL);
         await adicionarNotaCliente(cliente.id, 'Tela de planos para teste expirado enviada manualmente pelo WhatsApp.');
         logControleClientes('Planos de teste expirado enviados', {

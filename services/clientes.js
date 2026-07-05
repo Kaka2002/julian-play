@@ -823,23 +823,19 @@ async function aplicarBonusCliente(id, quantidade = 1) {
         throw new Error(`Saldo de bonus insuficiente. Disponivel: ${saldo}.`);
     }
 
-    const vencimentoAtualizado = adicionarMesesData(dataBaseBonus(cliente), meses);
     const saldoRestante = saldo - meses;
 
     await executar(
         `UPDATE clientes SET
             bonusMeses = ?,
-            vencimento = ?,
-            dataVencimento = ?,
-            status = CASE WHEN status = 'expirado' THEN 'ativo' ELSE status END,
             atualizadoEm = CURRENT_TIMESTAMP
         WHERE id = ?`,
-        [saldoRestante, vencimentoAtualizado.vencimento, vencimentoAtualizado.dataVencimento, id]
+        [saldoRestante, id]
     );
 
     await adicionarNotaCliente(
         id,
-        `Bonus aplicado: ${meses} mes(es). Novo vencimento: ${vencimentoAtualizado.dataVencimento}. Saldo restante: ${saldoRestante}.`
+        `Bonus aplicado manualmente: ${meses} mes(es). Vencimento informado: ${cliente.dataVencimento || cliente.vencimento || 'não informado'}. Saldo restante: ${saldoRestante}.`
     );
 
     return {
@@ -847,7 +843,8 @@ async function aplicarBonusCliente(id, quantidade = 1) {
         meses,
         saldoAnterior: saldo,
         saldoRestante,
-        ...vencimentoAtualizado
+        vencimento: cliente.vencimento,
+        dataVencimento: cliente.dataVencimento || cliente.vencimento
     };
 }
 
@@ -861,7 +858,7 @@ async function registrarBonusAniversario(id, ano) {
         [String(ano), id]
     );
 
-    await adicionarNotaCliente(id, `Bonus de aniversario adicionado automaticamente: 1 mes (${ano}).`);
+    await adicionarNotaCliente(id, `Bonus de aniversario liberado manualmente: 1 mes (${ano}).`);
     return buscarClientePorId(id);
 }
 
@@ -1448,8 +1445,11 @@ function listarClientesParaAvisoAntigo(dataLimite) {
 }
 
 function listarClientesAniversarioHoje(ano) {
-    const hoje = new Date();
-    const mesDia = hoje.toISOString().slice(5, 10);
+    const partes = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Sao_Paulo', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const valores = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
+    const mesDia = `${valores.month}-${valores.day}`;
 
     return buscarTodos(
         `SELECT * FROM clientes
