@@ -115,15 +115,16 @@ async function listarInstalacoes() {
     const instalacoes = await masterDb.buscarTodos('SELECT * FROM instalacoes ORDER BY datetime(criadoEm) DESC, id DESC');
     return Promise.all(instalacoes.map(async (instalacao) => {
         const dbPath = path.join(instalacao.pastaDados, 'clientes.db');
-        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return instalacao;
+        const usoDiscoBytes = tamanhoDiretorio(instalacao.pastaDados);
+        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes };
         try {
             const [config, saude] = await Promise.all([
                 lerConfiguracoesTenant(dbPath),
                 consultarSaude(instalacao.porta)
             ]);
-            return { ...instalacao, estadoLicenca: calcularEstadoLicenca(config), saude };
+            return { ...instalacao, usoDiscoBytes, estadoLicenca: calcularEstadoLicenca(config), saude };
         } catch (_) {
-            return instalacao;
+            return { ...instalacao, usoDiscoBytes };
         }
     }));
 }
@@ -145,6 +146,18 @@ async function slugEmUso(slug) {
 function escreverArquivoSeguro(caminho, conteudo) {
     fs.mkdirSync(path.dirname(caminho), { recursive: true });
     fs.writeFileSync(caminho, conteudo, { encoding: 'utf8', mode: 0o600 });
+}
+
+function tamanhoDiretorio(caminho) {
+    if (!fs.existsSync(caminho)) return 0;
+    let total = 0;
+    for (const item of fs.readdirSync(caminho, { withFileTypes: true })) {
+        const alvo = path.join(caminho, item.name);
+        try {
+            total += item.isDirectory() ? tamanhoDiretorio(alvo) : fs.statSync(alvo).size;
+        } catch (_) { /* Arquivo pode estar em uso durante a leitura. */ }
+    }
+    return total;
 }
 
 function configuracaoPm2(instalacao, senhaHash) {
@@ -474,11 +487,63 @@ async function obterRecursosServidor() {
         }
     }
 
+    let discoLivreGb = null;
+    let discoTotalGb = null;
+    try {
+        const disco = fs.statfsSync(sourceDir);
+        discoLivreGb = Math.round((Number(disco.bavail) * Number(disco.bsize) / 1024 ** 3) * 100) / 100;
+        discoTotalGb = Math.round((Number(disco.blocks) * Number(disco.bsize) / 1024 ** 3) * 100) / 100;
+    } catch (_) { /* Métrica indisponível. */ }
+
     return {
         memoriaLivreMb: Math.round(os.freemem() / 1024 / 1024),
         memoriaTotalMb: Math.round(os.totalmem() / 1024 / 1024),
-        processosChrome
+        processosChrome,
+        discoLivreGb,
+        discoTotalGb
     };
+}
+
+async function limparServidorSeguro(retencao = 10) {
+    const quantidade = Math.max(3, Math.min(100, Number.parseInt(retencao, 10) || 10));
+    const instalacoes = await masterDb.buscarTodos("SELECT * FROM instalacoes WHERE status <> 'arquivado'");
+    let backupsRemovidos = 0;
+    let bytesLiberados = 0;
+    let sessoesArquivadasRemovidas = 0;
+
+    for (const instalacao of instalacoes) {
+        const pastaBackups = path.join(instalacao.pastaDados, 'backups');
+        if (!fs.existsSync(pastaBackups) || !caminhoDentro(pastaBackups, instalacao.pastaDados)) continue;
+        const backups = fs.readdirSync(pastaBackups, { withFileTypes: true })
+            .filter(item => item.isFile() && item.name.toLowerCase().endsWith('.db'))
+            .map(item => {
+                const arquivo = path.join(pastaBackups, item.name);
+                return { arquivo, stat: fs.statSync(arquivo) };
+            })
+            .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+
+        for (const backup of backups.slice(quantidade)) {
+            bytesLiberados += backup.stat.size;
+            fs.unlinkSync(backup.arquivo);
+            backupsRemovidos += 1;
+        }
+    }
+
+    if (fs.existsSync(arquivadosDir)) {
+        for (const item of fs.readdirSync(arquivadosDir, { withFileTypes: true })) {
+            if (!item.isDirectory()) continue;
+            const pastaArquivada = path.join(arquivadosDir, item.name);
+            for (const nome of ['.wwebjs_auth', '.wwebjs_cache']) {
+                const alvo = path.join(pastaArquivada, nome);
+                if (!fs.existsSync(alvo) || !caminhoDentro(alvo, arquivadosDir)) continue;
+                bytesLiberados += tamanhoDiretorio(alvo);
+                fs.rmSync(alvo, { recursive: true, force: true });
+                sessoesArquivadasRemovidas += 1;
+            }
+        }
+    }
+
+    return { retencao: quantidade, backupsRemovidos, sessoesArquivadasRemovidas, bytesLiberados };
 }
 
 async function resetarSenhaPainel(id, senha = '') {
@@ -591,6 +656,7 @@ module.exports = {
     iniciarInstalacao,
     trocarWhatsappInstalacao,
     obterRecursosServidor,
+    limparServidorSeguro,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     liberarAtendimentoInstalacao,

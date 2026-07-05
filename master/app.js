@@ -15,6 +15,7 @@ const {
     iniciarInstalacao,
     trocarWhatsappInstalacao,
     obterRecursosServidor,
+    limparServidorSeguro,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     liberarAtendimentoInstalacao,
@@ -170,6 +171,13 @@ function formatarTempoOnline(segundos) {
 
 function normalizarTelefone(valor) {
     return String(valor || '').replace(/\D/g, '');
+}
+
+function formatarBytes(bytes) {
+    const total = Math.max(0, Number(bytes || 0));
+    if (total >= 1024 ** 3) return `${(total / 1024 ** 3).toFixed(2)} GB`;
+    if (total >= 1024 ** 2) return `${(total / 1024 ** 2).toFixed(1)} MB`;
+    return `${Math.round(total / 1024)} KB`;
 }
 
 function precisaAvisoReconexaoWhatsapp(item) {
@@ -333,6 +341,13 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Licenças vencidas', statusGeral.licencasVencidas, `${statusGeral.suspensas} instalação(ões) suspensa(s)`, statusGeral.licencasVencidas || statusGeral.suspensas ? 'error' : 'ok')}
         ${cardStatusGeral('RAM livre', `${recursos.memoriaLivreMb ?? '-'} MB`, `de ${recursos.memoriaTotalMb ?? '-'} MB`, Number(recursos.memoriaLivreMb || 0) < 512 ? 'error' : Number(recursos.memoriaLivreMb || 0) < 1024 ? 'warn' : 'ok')}
         ${cardStatusGeral('Processos Chrome', recursos.processosChrome ?? '-', 'Navegadores usados pelos robôs', Number(recursos.processosChrome || 0) > 30 ? 'warn' : '')}
+        ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, recursos.discoTotalGb == null ? 'Métrica indisponível' : `de ${recursos.discoTotalGb} GB`, Number(recursos.discoLivreGb || 0) < 5 ? 'error' : 'ok')}
+    </section>
+    <section class="panel"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
+      <form class="actions" method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura? Bancos e sessões dos robôs ativos serão preservados.');">
+        <label>Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
+        <div style="align-self:end"><button type="submit">Executar limpeza segura</button></div>
+      </form>
     </section>
     <section class="panel"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
       <form class="fields" method="post" action="/instalacoes">
@@ -351,7 +366,7 @@ function pagina(instalacoes, opcoes = {}) {
     <section class="panel"><h2>Instalações</h2><div class="sub">${instalacoes.length} instalação(ões) cadastrada(s)</div><div class="table-wrap">
       ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr>
         <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
-        <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div></td>
+        <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div><div class="small"><strong>Uso: ${escapar(formatarBytes(item.usoDiscoBytes))}</strong></div></td>
         <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
         <td><div class="support-actions">
@@ -426,6 +441,17 @@ async function renderizarPainel(opcoes = {}) {
 
 app.get('/', async (req, res) => {
     res.send(await renderizarPainel({ mensagem: req.query.mensagem, erro: req.query.erro }));
+});
+
+app.post('/manutencao/limpar', async (req, res) => {
+    try {
+        const resultado = await limparServidorSeguro(req.body.retencao);
+        const liberado = formatarBytes(resultado.bytesLiberados);
+        const mensagem = `Limpeza concluída: ${resultado.backupsRemovidos} backup(s) e ${resultado.sessoesArquivadasRemovidas} sessão(ões) arquivada(s) removidos. Espaço liberado: ${liberado}.`;
+        res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
+    }
 });
 
 app.post('/instalacoes', async (req, res) => {
