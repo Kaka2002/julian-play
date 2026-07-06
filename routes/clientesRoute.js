@@ -316,7 +316,22 @@ function campoImagemRobo(config = {}, chave, descricao) {
                 <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar</span>
             </label>
         </form>
+        ${arquivo ? `<form method="post" action="/manutencao/robo/imagem/${escapar(chave)}/limpar" style="margin-top:8px;" onsubmit="return confirm('Remover esta imagem das mensagens do robô?');">
+            <button class="button secondary" type="submit">${icon('trash')} Limpar imagem</button>
+        </form>` : ''}
     </div>`;
+}
+
+function removerArquivoImagemTenant(nomeArquivo) {
+    const arquivoSeguro = path.basename(String(nomeArquivo || '').split('?')[0]);
+    if (!arquivoSeguro) return false;
+
+    const raizAssets = path.resolve(ASSETS_DIR);
+    const arquivo = path.resolve(raizAssets, arquivoSeguro);
+    if (!arquivo.startsWith(`${raizAssets}${path.sep}`) || !fs.existsSync(arquivo)) return false;
+
+    fs.unlinkSync(arquivo);
+    return true;
 }
 
 function formatarData(dataISO) {
@@ -6222,11 +6237,16 @@ router.post('/manutencao/robo/imagem/:chave', async (req, res) => {
 
         const extensao = path.extname(upload.filename).toLowerCase();
         const chave = String(req.params.chave || '');
+        const configAnterior = await obterConfiguracoes();
+        const arquivoAnterior = configAnterior[chave] || '';
         const nomeArquivo = `${chave}-${Date.now()}${extensao}`;
         const destino = path.join(ASSETS_DIR, nomeArquivo);
 
         fs.writeFileSync(destino, upload.buffer);
         await salvarImagemRobo(chave, nomeArquivo);
+        if (arquivoAnterior && arquivoAnterior !== nomeArquivo) {
+            removerArquivoImagemTenant(arquivoAnterior);
+        }
 
         logControleClientes('Imagem do robo atualizada', {
             chave,
@@ -6236,6 +6256,27 @@ router.post('/manutencao/robo/imagem/:chave', async (req, res) => {
     } catch (err) {
         logControleClientes('Erro ao salvar imagem do robo', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robô: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/robo/imagem/:chave/limpar', async (req, res) => {
+    try {
+        const chave = String(req.params.chave || '');
+        const config = await obterConfiguracoes();
+        const arquivoAnterior = config[chave] || '';
+
+        await salvarImagemRobo(chave, '');
+        const arquivoRemovido = removerArquivoImagemTenant(arquivoAnterior);
+
+        logControleClientes('Imagem do robo removida', {
+            chave,
+            arquivo: arquivoAnterior,
+            arquivoRemovido
+        });
+        res.redirect('/manutencao?mensagem=Imagem removida das mensagens do robô');
+    } catch (err) {
+        logControleClientes('Erro ao remover imagem do robo', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao remover imagem do robô: ${err.message}`)}`);
     }
 });
 

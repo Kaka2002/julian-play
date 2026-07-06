@@ -148,6 +148,7 @@ async function salvarImagemRobo(chave, nomeArquivo) {
     }
 
     await salvarConfiguracao(chave, nomeArquivo || '');
+    await salvarConfiguracao(`${chave}Desativada`, nomeArquivo ? '0' : '1');
 
     return obterConfiguracoes();
 }

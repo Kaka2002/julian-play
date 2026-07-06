@@ -52,6 +52,10 @@ async function obterPerfilRobo() {
         config.nomeSistema ||
         'JULIAN PLAY'
     ).trim();
+    const imagemConfigurada = (chave, padrao = '') => {
+        if (String(config[`${chave}Desativada`] || '') === '1') return '';
+        return config[chave] || (usarImagensPadrao ? padrao : '');
+    };
 
     return {
         nomeEmpresa,
@@ -62,14 +66,14 @@ async function obterPerfilRobo() {
         mensagemDesconhecida: config.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
         atendimentoHumanoMs: Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000,
         imagens: {
-            menu: config.imagemRoboMenu || (usarImagensPadrao ?imagensRespostas.menu : ''),
-            planos: config.imagemRoboPlanos || (usarImagensPadrao ?imagensRespostas.planos : ''),
-            teste: config.imagemRoboTeste || (usarImagensPadrao ?imagensRespostas.teste : ''),
-            testeLiberado: config.imagemRoboTesteLiberado || (usarImagensPadrao ?imagensRespostas.testeLiberado : ''),
-            renovacao: config.imagemRoboRenovacao || (usarImagensPadrao ?imagensRespostas.renovacao : ''),
-            ativacao: config.imagemRoboAtivacao || (usarImagensPadrao ?imagensRespostas.ativacao : ''),
-            erro: config.imagemRoboErro || (usarImagensPadrao ?imagensRespostas.erro : ''),
-            encerramento: config.imagemRoboEncerramento || (usarImagensPadrao ?imagensRespostas.encerramento : '')
+            menu: imagemConfigurada('imagemRoboMenu', imagensRespostas.menu),
+            planos: imagemConfigurada('imagemRoboPlanos', imagensRespostas.planos),
+            teste: imagemConfigurada('imagemRoboTeste', imagensRespostas.teste),
+            testeLiberado: imagemConfigurada('imagemRoboTesteLiberado', imagensRespostas.testeLiberado),
+            renovacao: imagemConfigurada('imagemRoboRenovacao', imagensRespostas.renovacao),
+            ativacao: imagemConfigurada('imagemRoboAtivacao', imagensRespostas.ativacao),
+            erro: imagemConfigurada('imagemRoboErro', imagensRespostas.erro),
+            encerramento: imagemConfigurada('imagemRoboEncerramento', imagensRespostas.encerramento)
         },
         planos: await listarPlanosComerciais()
     };
