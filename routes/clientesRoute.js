@@ -3190,6 +3190,22 @@ Sua renovação foi registrada com sucesso.
 Obrigado pela preferência.`;
 }
 
+function montarMensagemAssinaturaConfirmada(cliente = {}) {
+    const inicio = formatarDataHoraMensagem(cliente.dataInicio);
+    const vencimento = formatarDataHoraMensagem(cliente.dataVencimento || cliente.vencimento);
+
+    return `*ASSINATURA ATIVADA*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*!
+
+Sua assinatura foi cadastrada com sucesso.
+
+*Plano:* ${cliente.plano || '-'}
+${inicio ? `*Início:* ${inicio}\n` : ''}*Válida até:* ${vencimento || '-'}
+
+Obrigado pela preferência.`;
+}
+
 function clienteEhTeste(cliente = {}) {
     const status = String(cliente.status || '').toLowerCase();
     const plano = String(cliente.plano || '').toLowerCase();
@@ -3584,6 +3600,30 @@ function secaoBonusCliente(cliente = {}) {
                 <button class="button green" type="submit" ${saldoAplicavel <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
             </div>
         </form>
+    </section>`;
+}
+
+function secaoConfirmacaoAssinatura(cliente = {}) {
+    if (!cliente.id || clienteEhTeste(cliente)) return '';
+
+    const vencimento = formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento) || 'Não informado';
+
+    return `<section class="panel" id="confirmacao-assinatura" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Confirmação da assinatura</h2>
+                <div class="subtitle">Envie manualmente ao cliente a confirmação do plano cadastrado.</div>
+            </div>
+        </div>
+        <div style="padding:28px;">
+            <div class="notice success" style="margin-bottom:16px;">
+                Plano: <strong>${escapar(cliente.plano || '-')}</strong> &middot;
+                Válido até: <strong>${escapar(vencimento)}</strong>
+            </div>
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-confirmacao-assinatura">
+                <button class="button green" type="submit">${icon('whats')} Enviar confirmação da assinatura</button>
+            </form>
+        </div>
     </section>`;
 }
 
@@ -4014,6 +4054,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     </script>`;
 
     const extras = [
+        secaoConfirmacaoAssinatura(cliente),
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
@@ -5524,6 +5565,7 @@ router.get('/clientes/:id/pagamentos/:pagamentoId/editar', async (req, res) => {
 
 router.post('/clientes/salvar', async (req, res) => {
     try {
+        const novoCadastro = !req.body.id;
         const alertas = await buscarAlertasCadastroCliente(req.body);
         const clienteSalvo = await salvarCliente(req.body);
         const novaNota = String(req.body.novaNotaTexto || req.body.novaNotaPadrao || '').trim();
@@ -5561,6 +5603,13 @@ router.post('/clientes/salvar', async (req, res) => {
                 : 'Cliente teste salvo com sucesso. O teste liberado nao foi reenviado.'));
         }
 
+        if (novoCadastro && clienteSalvo?.id) {
+            const mensagemNovoCliente = alertas.length
+                ? `${mensagemAlerta} Use o botão abaixo para enviar a confirmação da assinatura.`
+                : 'Cliente cadastrado com sucesso. Use o botão abaixo para enviar a confirmação da assinatura.';
+            return res.redirect(`${montarUrlClienteMensagem(clienteSalvo.id, mensagemNovoCliente)}#confirmacao-assinatura`);
+        }
+
         if (alertas.length && clienteSalvo?.id) {
             return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, mensagemAlerta));
         }
@@ -5578,6 +5627,72 @@ router.post('/clientes/salvar', async (req, res) => {
             conteudo: `${formularioCliente(req.body, listas)}<div class="notice">${escapar(err.message)}</div>`,
             ativo: 'clientes'
         });
+    }
+});
+
+router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect(montarUrlListaClientesMensagem('Cliente não encontrado.'));
+    }
+
+    if (clienteEhTeste(cliente)) {
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'A confirmação de assinatura não é usada para clientes de teste grátis.'));
+    }
+
+    const faltando = [];
+    if (!String(cliente.nome || '').trim()) faltando.push('nome');
+    if (!String(cliente.telefone || '').trim()) faltando.push('WhatsApp');
+    if (!String(cliente.plano || '').trim()) faltando.push('plano');
+    if (!String(cliente.dataVencimento || cliente.vencimento || '').trim()) faltando.push('data de vencimento');
+
+    if (faltando.length) {
+        return res.redirect(montarUrlClienteMensagem(
+            cliente.id,
+            `Preencha antes de enviar a confirmação: ${faltando.join(', ')}.`
+        ));
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        logControleClientes('Confirmacao de assinatura nao enviada', {
+            clienteId: cliente.id,
+            motivo: 'WhatsApp desconectado'
+        });
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. A confirmação não foi enviada.'));
+    }
+
+    try {
+        const mensagem = montarMensagemAssinaturaConfirmada(cliente);
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+        registrarEnvioDoRobo(destino, mensagem);
+        const envio = await aguardarComTimeout(
+            client.sendMessage(destino, mensagem),
+            90000,
+            'Envio da confirmacao da assinatura'
+        );
+
+        if (!envio) {
+            throw new Error('O WhatsApp não confirmou o envio da mensagem.');
+        }
+
+        registrarMensagemDoRobo(envio);
+        logControleClientes('Confirmacao de assinatura enviada', {
+            clienteId: cliente.id,
+            nome: cliente.nome,
+            plano: cliente.plano,
+            destino
+        });
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Confirmação da assinatura enviada ao cliente com sucesso.'));
+    } catch (err) {
+        logControleClientes('Erro ao enviar confirmacao de assinatura', {
+            clienteId: cliente.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Não foi possível enviar a confirmação: ${err.message}`));
     }
 });
 
