@@ -14,6 +14,7 @@ const {
     listarReceitaMensalFinanceira,
     listarPagamentosFinanceiro,
     renovarCliente,
+    registrarPagamentoAssinaturaInicial,
     marcarPagamentoMensagem,
     atualizarPagamentoCliente,
     removerPagamentoCliente,
@@ -5654,6 +5655,14 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
         ));
     }
 
+    const valorAssinatura = numeroMoeda(cliente.valorPlano) + numeroMoeda(cliente.assinaturaApp);
+    if (valorAssinatura <= 0) {
+        return res.redirect(montarUrlClienteMensagem(
+            cliente.id,
+            'Informe o valor do plano ou da assinatura app antes de enviar a confirmacao e registrar no financeiro.'
+        ));
+    }
+
     const status = getStatusWhatsApp();
     const client = getClient();
 
@@ -5680,11 +5689,27 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
         }
 
         registrarMensagemDoRobo(envio);
+
+        let pagamentoFinanceiro = null;
+        try {
+            pagamentoFinanceiro = await registrarPagamentoAssinaturaInicial(cliente.id);
+        } catch (erroFinanceiro) {
+            logControleClientes('Confirmacao enviada sem registrar financeiro', {
+                clienteId: cliente.id,
+                erro: erroFinanceiro.message
+            });
+            return res.redirect(montarUrlClienteMensagem(
+                cliente.id,
+                `Confirmacao enviada, mas nao foi possivel registrar no financeiro: ${erroFinanceiro.message}`
+            ));
+        }
         logControleClientes('Confirmacao de assinatura enviada', {
             clienteId: cliente.id,
             nome: cliente.nome,
             plano: cliente.plano,
-            destino
+            destino,
+            pagamentoId: pagamentoFinanceiro?.pagamentoId,
+            financeiroCriado: pagamentoFinanceiro?.criado
         });
         return res.redirect(montarUrlClienteMensagem(cliente.id, 'Confirmação da assinatura enviada ao cliente com sucesso.'));
     } catch (err) {

@@ -1097,6 +1097,98 @@ async function renovarCliente(dados = {}) {
     };
 }
 
+async function registrarPagamentoAssinaturaInicial(clienteId) {
+    const id = Number.parseInt(clienteId, 10);
+    if (!id) {
+        throw new Error('Cliente invalido para registrar pagamento.');
+    }
+
+    const cliente = await buscarClientePorId(id);
+    if (!cliente) {
+        throw new Error('Cliente nao encontrado.');
+    }
+
+    const pagamentoExistente = await buscarUm(
+        `SELECT id
+        FROM cliente_pagamentos
+        WHERE clienteId = ?
+            AND (excluidoEm IS NULL OR excluidoEm = '')
+        ORDER BY datetime(COALESCE(NULLIF(dataPagamento, ''), criadoEm)) DESC, id DESC
+        LIMIT 1`,
+        [id]
+    );
+
+    if (pagamentoExistente) {
+        return {
+            pagamentoId: pagamentoExistente.id,
+            criado: false,
+            cliente
+        };
+    }
+
+    const plano = limparTexto(cliente.plano);
+    const tipoPlanoId = limparTexto(cliente.tipoPlanoId);
+    const diasContrato = Number.parseInt(cliente.diasContrato || 0, 10);
+    const valorPlano = normalizarMoeda(cliente.valorPlano);
+    const assinaturaApp = normalizarMoeda(cliente.assinaturaApp);
+    const total = moedaParaNumero(valorPlano) + moedaParaNumero(assinaturaApp);
+    const valorTotal = normalizarMoeda(total.toFixed(2));
+    const vencimentoNovo = limparTexto(cliente.dataVencimento || cliente.vencimento);
+
+    if (!plano) {
+        throw new Error('Informe o plano antes de registrar no financeiro.');
+    }
+
+    if (total <= 0) {
+        throw new Error('Informe o valor do plano ou da assinatura app antes de registrar no financeiro.');
+    }
+
+    if (!vencimentoNovo) {
+        throw new Error('Informe a data de vencimento antes de registrar no financeiro.');
+    }
+
+    const pagamento = await executar(
+        `INSERT INTO cliente_pagamentos (
+            clienteId, tipoPlanoId, plano, diasContrato, valorPlano, assinaturaApp,
+            valorTotal, formaPagamento, dataPagamento, vencimentoAnterior,
+            vencimentoNovo, observacoes, mensagemEnviada
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            id,
+            tipoPlanoId,
+            plano,
+            diasContrato || 0,
+            valorPlano,
+            assinaturaApp,
+            valorTotal,
+            'Cadastro inicial',
+            agoraLocalInput(),
+            '',
+            vencimentoNovo,
+            'Assinatura inicial registrada ao enviar a confirmacao para o cliente.',
+            1
+        ]
+    );
+
+    await adicionarNotaCliente(
+        id,
+        `Assinatura inicial registrada no financeiro: ${plano}, R$ ${valorTotal}. Vencimento: ${vencimentoNovo}.`
+    );
+
+    return {
+        pagamentoId: pagamento.id,
+        criado: true,
+        cliente,
+        plano,
+        diasContrato,
+        valorPlano,
+        assinaturaApp,
+        valorTotal,
+        formaPagamento: 'Cadastro inicial',
+        vencimentoNovo
+    };
+}
+
 function marcarPagamentoMensagem(pagamentoId, enviado, erro = '') {
     return executar(
         `UPDATE cliente_pagamentos SET
@@ -1518,6 +1610,7 @@ module.exports = {
     listarReceitaMensalFinanceira,
     listarPagamentosFinanceiro,
     renovarCliente,
+    registrarPagamentoAssinaturaInicial,
     marcarPagamentoMensagem,
     atualizarPagamentoCliente,
     removerPagamentoCliente,
