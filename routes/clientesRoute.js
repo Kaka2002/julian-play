@@ -78,7 +78,6 @@ const {
     removerPainel
 } = require('../services/appsDispositivos');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
-const { enviarMensagem } = require('../services/mensagemService');
 const {
     buscarPlanoPorNome,
     enviarQRCodePIXParaDestino,
@@ -3097,34 +3096,85 @@ function aguardarComTimeout(promessa, ms, descricao) {
     ]);
 }
 
-async function resolverDestinoWhatsApp(client, telefone) {
+async function resolverDestinosWhatsApp(client, telefone) {
     const numero = normalizarTelefone(telefone);
-    const destinoNumero = `${numero}@c.us`;
 
     if (!numero || numero.length < 12) {
         throw new Error('Telefone do cliente invalido. Confira o DDD e o numero.');
     }
 
+    const destinoNumero = `${numero}@c.us`;
+    const destinos = [];
+    const adicionarDestino = (destino) => {
+        const valor = String(destino || '').trim();
+        if (valor && !destinos.includes(valor)) {
+            destinos.push(valor);
+        }
+    };
+
+    adicionarDestino(destinoNumero);
+
     if (typeof client.getNumberId === 'function') {
-        const contato = await aguardarComTimeout(
-            client.getNumberId(numero),
-            15000,
-            'Validacao do numero no WhatsApp'
-        );
+        try {
+            const contato = await aguardarComTimeout(
+                client.getNumberId(numero),
+                15000,
+                'Validacao do numero no WhatsApp'
+            );
 
-        if (!contato || !contato._serialized) {
-            throw new Error(`O numero ${numero} nao foi localizado no WhatsApp.`);
+            if (!contato || !contato._serialized) {
+                throw new Error(`O numero ${numero} nao foi localizado no WhatsApp.`);
+            }
+
+            adicionarDestino(contato._serialized);
+
+            if (String(contato._serialized).endsWith('@lid')) {
+                console.log(`[clientes] WhatsApp retornou LID ${contato._serialized}; telefone cadastrado tambem sera tentado ${destinoNumero}.`);
+            }
+        } catch (err) {
+            console.warn(`[clientes] Nao foi possivel validar ${numero} no WhatsApp: ${err.message}. Tentando telefone cadastrado.`);
         }
-
-        if (String(contato._serialized).endsWith('@lid')) {
-            console.log(`[clientes] WhatsApp retornou LID ${contato._serialized}; usando telefone cadastrado ${destinoNumero}.`);
-            return destinoNumero;
-        }
-
-        return contato._serialized;
     }
 
-    return destinoNumero;
+    return destinos;
+}
+
+async function resolverDestinoWhatsApp(client, telefone) {
+    const destinos = await resolverDestinosWhatsApp(client, telefone);
+    return destinos[0];
+}
+
+async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, descricao = 'Envio pelo WhatsApp') {
+    const destinos = await resolverDestinosWhatsApp(client, telefone);
+    let ultimoErro = null;
+
+    for (const destino of destinos) {
+        try {
+            registrarEnvioDoRobo(destino, mensagem);
+            const envio = await aguardarComTimeout(
+                client.sendMessage(destino, mensagem),
+                90000,
+                descricao
+            );
+
+            if (!envio) {
+                throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+            }
+
+            registrarMensagemDoRobo(envio);
+
+            return {
+                destino,
+                mensagemId: envio.id?._serialized || '',
+                ack: envio.ack
+            };
+        } catch (err) {
+            ultimoErro = err;
+            console.warn(`[clientes] ${descricao} falhou para ${destino}: ${err.message}`);
+        }
+    }
+
+    throw ultimoErro || new Error('Nao foi possivel enviar a mensagem pelo WhatsApp.');
 }
 
 function formatarDataHoraMensagem(valor) {
@@ -5676,10 +5726,11 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
 
     try {
         const mensagem = montarMensagemAssinaturaConfirmada(cliente);
-        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
-        registrarEnvioDoRobo(destino, mensagem);
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(client, cliente.telefone, mensagem, 'Envio da confirmacao da assinatura');
+        const destino = envioWhatsApp.destino;
+        // Envio registrado pelo fallback de WhatsApp.
         const envio = await aguardarComTimeout(
-            client.sendMessage(destino, mensagem),
+            Promise.resolve({ id: { _serialized: envioWhatsApp.mensagemId }, ack: envioWhatsApp.ack }),
             90000,
             'Envio da confirmacao da assinatura'
         );
@@ -5688,7 +5739,7 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
             throw new Error('O WhatsApp não confirmou o envio da mensagem.');
         }
 
-        registrarMensagemDoRobo(envio);
+        // Mensagem registrada pelo fallback de WhatsApp.
 
         let pagamentoFinanceiro = null;
         try {
@@ -5708,6 +5759,8 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
             nome: cliente.nome,
             plano: cliente.plano,
             destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack,
             pagamentoId: pagamentoFinanceiro?.pagamentoId,
             financeiroCriado: pagamentoFinanceiro?.criado
         });
@@ -5749,24 +5802,20 @@ router.post('/clientes/:id/renovar', async (req, res) => {
             } else {
                 try {
                     const mensagem = montarMensagemRenovacaoConfirmada(clienteAtualizado, resultado);
-                    const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
-                    registrarEnvioDoRobo(destino, mensagem);
-                    const envio = await aguardarComTimeout(
-                        client.sendMessage(destino, mensagem),
-                        90000,
+                    const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+                        client,
+                        clienteAtualizado.telefone,
+                        mensagem,
                         'Envio de renovacao confirmada'
                     );
 
-                    if (!envio) {
-                        throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
-                    }
-
-                    registrarMensagemDoRobo(envio);
                     await marcarPagamentoMensagem(resultado.pagamentoId, true);
                     mensagemRetorno = 'Renovação registrada e confirmação enviada ao cliente.';
                     logControleClientes('Renovacao enviada ao cliente', {
                         clienteId: clienteAtualizado.id,
-                        destino
+                        destino: envioWhatsApp.destino,
+                        mensagemId: envioWhatsApp.mensagemId,
+                        ack: envioWhatsApp.ack
                     });
                 } catch (erroEnvio) {
                     await marcarPagamentoMensagem(resultado.pagamentoId, false, erroEnvio.message);
@@ -5815,13 +5864,14 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
             return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp não está conectado para enviar a reativação.')}`);
         }
 
-        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
         const mensagem = montarMensagemReativacaoCliente(cliente, pixCliente);
-        const mensagemEnviada = await enviarMensagem(client, destino, mensagem);
-
-        if (!mensagemEnviada) {
-            throw new Error('Não foi possível enviar a mensagem de reativação.');
-        }
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
+            'Envio de reativacao'
+        );
+        const destino = envioWhatsApp.destino;
 
         const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, pixCliente.plano, {
             tipo: 'renovacao',
@@ -5837,7 +5887,9 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
             clienteId: cliente.id,
             nome: cliente.nome,
             plano: cliente.plano,
-            destino
+            destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack
         });
 
         return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativação com QR Code enviada ao cliente.')}`);
@@ -5932,19 +5984,13 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             dataVencimento: cliente.dataVencimento || cliente.vencimento
         };
         const mensagem = montarMensagemBonusAplicado(cliente, resultadoEnvio);
-        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
-        registrarEnvioDoRobo(destino, mensagem);
-        const envio = await aguardarComTimeout(
-            client.sendMessage(destino, mensagem),
-            90000,
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
             'Envio de bonus aplicado'
         );
-
-        if (!envio) {
-            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
-        }
-
-        registrarMensagemDoRobo(envio);
+        const destino = envioWhatsApp.destino;
         if (aniversarioPendente) {
             const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
                 timeZone: 'America/Sao_Paulo', year: 'numeric'
@@ -5962,6 +6008,9 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         logControleClientes('Bonus aplicado e enviado ao cliente', {
             clienteId: clienteAtualizado.id,
             nome: clienteAtualizado.nome,
+            destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack,
             meses: resultado.meses,
             saldoRestante: resultado.saldoRestante,
             vencimento: resultado.dataVencimento
@@ -6656,23 +6705,19 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
         });
         const dadosAtualizados = dadosTesteLiberadoDoCliente(clienteAtualizado);
         const mensagem = montarMensagemTesteLiberado(dadosAtualizados);
-        const destino = await resolverDestinoWhatsApp(client, clienteAtualizado.telefone);
-        registrarEnvioDoRobo(destino, mensagem);
-        const envio = await aguardarComTimeout(
-            client.sendMessage(destino, mensagem),
-            90000,
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            clienteAtualizado.telefone,
+            mensagem,
             'Envio do teste liberado'
         );
-
-        if (!envio) {
-            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
-        }
-
-        registrarMensagemDoRobo(envio);
-        console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envio.id?._serialized || 'sem-id'}`);
+        const destino = envioWhatsApp.destino;
+        console.log(`[clientes] Teste liberado enviado para ${destino}. id=${envioWhatsApp.mensagemId || 'sem-id'}`);
         logControleClientes('Teste liberado enviado', {
             clienteId: clienteAtualizado.id,
-            destino
+            destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack
         });
         agendarEncerramentoTeste(client, destino);
         return res.redirect(montarUrlListaClientesMensagem('Teste gratis liberado enviado e cadastro atualizado'));
@@ -6718,26 +6763,21 @@ router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
     try {
         const planos = await obterPlanosRenovacaoManual();
         const mensagem = montarMensagemPlanosTesteExpiradoManual(cliente, planos);
-        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
-
-        registrarEnvioDoRobo(destino, mensagem);
-        const envio = await aguardarComTimeout(
-            client.sendMessage(destino, mensagem),
-            90000,
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
             'Envio dos planos do teste expirado'
         );
-
-        if (!envio) {
-            throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
-        }
-
-        registrarMensagemDoRobo(envio);
+        const destino = envioWhatsApp.destino;
 
         await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL);
         await adicionarNotaCliente(cliente.id, 'Tela de planos para teste expirado enviada manualmente pelo WhatsApp.');
         logControleClientes('Planos de teste expirado enviados', {
             clienteId: cliente.id,
-            destino
+            destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack
         });
 
         return res.redirect(montarUrlListaClientesMensagem('Tela de planos enviada para o teste expirado.'));
@@ -6822,16 +6862,29 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
             continue;
         }
 
-        const destino = await resolverDestinoWhatsApp(client, telefone);
         const mensagem = await montarMensagemCobrancaVencido(cliente);
-        const enviado = await enviarMensagem(client, destino, mensagem);
-
-        if (enviado) {
+        try {
+            const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+                client,
+                telefone,
+                mensagem,
+                'Envio de cobranca de vencido'
+            );
             enviados += 1;
             await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_COBRANCA_VENCIDO);
             await adicionarNotaCliente(cliente.id, `Cobrança de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
-        } else {
+            logControleClientes('Cobranca de vencido enviada', {
+                clienteId: cliente.id,
+                destino: envioWhatsApp.destino,
+                mensagemId: envioWhatsApp.mensagemId,
+                ack: envioWhatsApp.ack
+            });
+        } catch (erroEnvio) {
             ignorados += 1;
+            logControleClientes('Erro ao enviar cobranca de vencido', {
+                clienteId: cliente.id,
+                erro: erroEnvio.message
+            });
         }
     }
 
