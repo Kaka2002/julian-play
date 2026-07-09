@@ -3324,18 +3324,30 @@ function prepararPlanoPixCliente(cliente = {}, planoPix = {}) {
     const valorPlano = numeroMoeda(cliente.valorPlano || planoPix.valor);
     const valorApp = numeroMoeda(cliente.assinaturaApp);
     const incluirApp = appClienteVencido(cliente) && valorApp > 0;
-    const total = valorPlano + (incluirApp ?valorApp : 0);
+    const total = valorPlano + (incluirApp ? valorApp : 0);
+    const valorFinal = total || numeroMoeda(planoPix.valor);
+    const valorFinalFormatado = valorMoedaPix(valorFinal);
+    const valorPlanoFormatado = valorMoedaPix(valorPlano);
+    const valorAppFormatado = valorMoedaPix(valorApp);
 
     return {
         plano: {
             ...planoPix,
-            valor: valorMoedaPix(total || numeroMoeda(planoPix.valor)),
-            nome: incluirApp ?`${planoPix.nome} + APP` : planoPix.nome
+            valor: valorFinalFormatado,
+            valorNumero: valorFinal,
+            valorTotal: valorFinalFormatado,
+            total: valorFinalFormatado,
+            totalNumero: valorFinal,
+            valorPlano: valorPlanoFormatado,
+            valorPlanoNumero: valorPlano,
+            valorCobranca: valorFinalFormatado,
+            valorCobrado: valorFinalFormatado,
+            nome: incluirApp ? `${planoPix.nome} + APP` : planoPix.nome
         },
         incluirApp,
-        valorPlano: valorMoedaPix(valorPlano),
-        valorApp: valorMoedaPix(valorApp),
-        total: valorMoedaPix(total || numeroMoeda(planoPix.valor))
+        valorPlano: valorPlanoFormatado,
+        valorApp: valorAppFormatado,
+        total: valorFinalFormatado
     };
 }
 

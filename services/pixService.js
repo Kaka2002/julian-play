@@ -77,6 +77,40 @@ function formatarValorPlano(valor) {
     });
 }
 
+function obterValorPlanoPix(plano = {}) {
+    const candidatos = [
+        plano.valor,
+        plano.valorNumero,
+        plano.valorTotal,
+        plano.total,
+        plano.totalNumero,
+        plano.valorPlano,
+        plano.valorPlanoNumero,
+        plano.valorCobranca,
+        plano.valorCobrado,
+        plano.valorCalculado,
+        plano.pagamentoValor,
+        plano.pagamentoValorPlano
+    ];
+
+    for (const candidato of candidatos) {
+        const numero = valorPlanoParaNumero(candidato);
+        if (numero > 0) return numero;
+    }
+
+    return 0;
+}
+
+function normalizarPlanoPix(plano = {}) {
+    const valorNumero = obterValorPlanoPix(plano);
+
+    return {
+        ...plano,
+        valor: valorNumero > 0 ? formatarValorPlano(valorNumero) : (plano.valor || ''),
+        valorNumero
+    };
+}
+
 function planoEhTesteGratis(plano = {}) {
     const nome = normalizarNomePlano(plano.nome);
     return nome.includes('teste');
@@ -196,7 +230,8 @@ function crc16(payload) {
 
 function gerarPixCopiaECola(plano, configPix = configuracaoPixPadrao()) {
     validarConfiguracaoPix(configPix);
-    const identificacao = normalizarCampo(`${configPix.nome || PIX_NOME} ${plano.nome}`, 50);
+    const planoPix = normalizarPlanoPix(plano);
+    const identificacao = normalizarCampo(`${configPix.nome || PIX_NOME} ${planoPix.nome}`, 50);
     const merchantAccount = campo('00', 'br.gov.bcb.pix') +
         campo('01', configPix.chave) +
         campo('02', identificacao);
@@ -206,7 +241,7 @@ function gerarPixCopiaECola(plano, configPix = configuracaoPixPadrao()) {
         campo('26', merchantAccount) +
         campo('52', '0000') +
         campo('53', '986') +
-        campo('54', plano.valor.replace(',', '.')) +
+        campo('54', planoPix.valor.replace(',', '.')) +
         campo('58', 'BR') +
         campo('59', normalizarCampo(configPix.nome, 25)) +
         campo('60', normalizarCampo(configPix.cidade, 15)) +
@@ -268,7 +303,8 @@ function legendaPixPorContexto(plano, options = {}, configPix = configuracaoPixP
 }
 
 async function gerarQRCodeAutomatico(plano, configPix = configuracaoPixPadrao()) {
-    const pixCopiaECola = gerarPixCopiaECola(plano, configPix);
+    const planoPix = normalizarPlanoPix(plano);
+    const pixCopiaECola = gerarPixCopiaECola(planoPix, configPix);
     const qrCodeBuffer = await QRCode.toBuffer(pixCopiaECola, {
         width: 400,
         margin: 2,
@@ -279,7 +315,7 @@ async function gerarQRCodeAutomatico(plano, configPix = configuracaoPixPadrao())
     });
 
     const base64Image = qrCodeBuffer.toString('base64');
-    return new MessageMedia('image/png', base64Image, plano.arquivoQr);
+    return new MessageMedia('image/png', base64Image, planoPix.arquivoQr);
 }
 
 async function enviarQRCodePIX(message, plano, options = {}) {
@@ -290,14 +326,16 @@ async function enviarQRCodePIX(message, plano, options = {}) {
 
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     try {
-        if (valorPlanoParaNumero(plano?.valor) <= 0 && valorPlanoParaNumero(plano?.valorNumero) <= 0) {
+        const planoPix = normalizarPlanoPix(plano);
+
+        if (planoPix.valorNumero <= 0) {
             throw new Error(`O plano ${plano?.nome || ''} esta sem valor de cobranca configurado.`);
         }
 
         const configPix = await obterConfiguracaoPix();
-        const media = await gerarQRCodeAutomatico(plano, configPix);
-        const caption = legendaPixPorContexto(plano, options, configPix);
-        console.log(`Enviando QR Code PIX ${plano.nome} para:`, destino);
+        const media = await gerarQRCodeAutomatico(planoPix, configPix);
+        const caption = legendaPixPorContexto(planoPix, options, configPix);
+        console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destino);
         registrarEnvioDoRobo(destino, caption);
 
         const enviada = await comTimeout(
@@ -308,7 +346,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
             'Envio do QR Code PIX'
         );
 
-        console.log(`QR Code PIX ${plano.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+        console.log(`QR Code PIX ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);
         return true;
     } catch (error) {
