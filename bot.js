@@ -121,8 +121,8 @@ app.get('/health', (req, res) => {
 });
 
 app.use(protegerPainel);
-app.use('/licenca', licencaRoute);
 app.use(protegerLicenca);
+app.use('/licenca', licencaRoute);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);
 
