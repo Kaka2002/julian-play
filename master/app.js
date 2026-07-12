@@ -317,6 +317,81 @@ function calcularStatusGeral(instalacoes = []) {
     };
 }
 
+function painelChecklistComercial(instalacoes = []) {
+    const itens = instalacoes
+        .filter(item => String(item.status || '').toLowerCase() !== 'arquivado')
+        .map(item => ({ item, auditoria: avaliarProntidaoComercial(item) }))
+        .filter(({ auditoria }) => auditoria.pendencias && auditoria.pendencias.length)
+        .sort((a, b) => {
+            const diferenca = b.auditoria.pendencias.length - a.auditoria.pendencias.length;
+            if (diferenca !== 0) return diferenca;
+            return String(a.item.cliente || a.item.nome || '').localeCompare(String(b.item.cliente || b.item.nome || ''), 'pt-BR');
+        });
+
+    const estilos = `<style>
+        .commercial-checklist{margin-top:22px}
+        .commercial-checklist-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:14px}
+        .commercial-checklist-header p{margin:6px 0 0;color:#697386}
+        .commercial-checklist-badge{display:inline-flex;align-items:center;border-radius:999px;padding:7px 12px;font-weight:800;font-size:13px;white-space:nowrap}
+        .commercial-checklist-badge.ok{background:#dff7ea;color:#087a42}
+        .commercial-checklist-badge.warn{background:#fff3cd;color:#946200}
+        .commercial-checklist-list{display:grid;gap:12px}
+        .commercial-checklist-item{display:grid;grid-template-columns:minmax(170px,260px) 1fr;gap:18px;padding:14px 16px;border:1px solid #e5e7eb;border-radius:10px;background:#fff}
+        .commercial-checklist-item strong{display:block;font-size:16px;color:#081225}
+        .commercial-checklist-item small{display:block;margin-top:3px;color:#697386;font-weight:700}
+        .commercial-checklist-item .readiness-list{margin:0}
+        .commercial-checklist-more{margin-top:12px;color:#697386;font-weight:700}
+        @media (max-width:760px){.commercial-checklist-header,.commercial-checklist-item{display:block}.commercial-checklist-badge{margin-top:10px}.commercial-checklist-item .readiness-list{margin-top:10px}}
+    </style>`;
+
+    if (!itens.length) {
+        return `${estilos}<section class="panel commercial-checklist">
+        <div class="commercial-checklist-header">
+            <div>
+                <h2>Checklist comercial</h2>
+                <p>Todas as instalações ativas estão prontas para entrega ou venda.</p>
+            </div>
+            <span class="commercial-checklist-badge ok">Tudo pronto</span>
+        </div>
+    </section>`;
+    }
+
+    const visiveis = itens.slice(0, 6);
+    const restantes = itens.length - visiveis.length;
+
+    return `${estilos}<section class="panel commercial-checklist">
+        <div class="commercial-checklist-header">
+            <div>
+                <h2>Checklist comercial</h2>
+                <p>Confira os itens que ainda merecem atenção antes de entregar uma instalação.</p>
+            </div>
+            <span class="commercial-checklist-badge warn">${itens.length} instalação(ões) com pendência</span>
+        </div>
+        <div class="commercial-checklist-list">
+            ${visiveis.map(({ item, auditoria }) => {
+                const portaTexto = item.porta ? ' - porta ' + escapar(String(item.porta)) : '';
+                return `
+                <div class="commercial-checklist-item">
+                    <div>
+                        <strong>${escapar(item.cliente || item.nome || item.slug || 'Instalação')}</strong>
+                        <small>${escapar(item.slug || '')}${portaTexto}</small>
+                    </div>
+                    <ul class="readiness-list">
+                        ${auditoria.pendencias.map(pendencia => `
+                            <li>
+                                <span>${escapar(pendencia)}</span>
+                                ${acaoCorrecaoPendencia(item, pendencia)}
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+            `;
+            }).join('')}
+        </div>
+        ${restantes > 0 ? `<p class="commercial-checklist-more">Mais ${restantes} instalação(ões) com pendência.</p>` : ''}
+    </section>`;
+}
+
 function cardStatusGeral(rotulo, valor, detalhe, classe = '') {
     return `<div class="status-card ${classe}">
         <div class="status-label">${escapar(rotulo)}</div>
@@ -400,6 +475,7 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Processos Chrome', recursos.processosChrome ?? '-', 'Navegadores usados pelos robôs', Number(recursos.processosChrome || 0) > 30 ? 'warn' : '')}
         ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, recursos.discoTotalGb == null ? 'Métrica indisponível' : `de ${recursos.discoTotalGb} GB`, Number(recursos.discoLivreGb || 0) < 5 ? 'error' : 'ok')}
     </section>
+    ${painelChecklistComercial(instalacoes)}
     <section class="panel"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
       <form class="actions" method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura? Bancos e sessões dos robôs ativos serão preservados.');">
         <label>Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
