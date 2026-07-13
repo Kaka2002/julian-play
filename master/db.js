@@ -34,7 +34,8 @@ const ready = new Promise((resolve, reject) => {
                     ['whatsappEsperado', "TEXT NOT NULL DEFAULT ''"],
                     ['horaEnvio', 'INTEGER NOT NULL DEFAULT 9'],
                     ['minutoEnvio', 'INTEGER NOT NULL DEFAULT 0'],
-                    ['perfilLicenca', "TEXT NOT NULL DEFAULT 'cliente'"]
+                    ['perfilLicenca', "TEXT NOT NULL DEFAULT 'cliente'"],
+                    ['observacaoOperacional', "TEXT NOT NULL DEFAULT ''"]
                 ].filter(([nome]) => !existentes.has(nome));
                 if (!novas.length) return resolve();
 

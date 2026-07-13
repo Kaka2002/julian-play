@@ -16,6 +16,7 @@ const {
     pararInstalacao,
     iniciarInstalacao,
     trocarWhatsappInstalacao,
+    atualizarObservacaoOperacional,
     obterRecursosServidor,
     limparServidorSeguro,
     resetarSenhaPainel,
@@ -225,9 +226,10 @@ function resumoDiagnostico(item) {
     return `
         <span class="badge ${classe}">${escapar(rotulo)}</span>
         <div class="diagnostic">
-            ${detalhes.map(detalhe => `<span>${escapar(detalhe)}</span>`).join('')}
+        ${detalhes.map(detalhe => `<span>${escapar(detalhe)}</span>`).join('')}
         </div>
         ${numeroDivergente ? '<div class="small dangertext">O número conectado não é o WhatsApp cadastrado para esta instalação.</div>' : ''}
+        ${item.observacaoOperacional ?`<div class="small"><strong>Obs. operacional:</strong> ${escapar(item.observacaoOperacional)}</div>` : ''}
         ${precisaAvisoReconexaoWhatsapp(item) ? '<div class="small dangertext">WhatsApp sem reconectar há mais de 5 minutos. Avise o cliente para refazer a conexão.</div>' : ''}
     `;
 }
@@ -498,7 +500,7 @@ function pagina(instalacoes, opcoes = {}) {
     </section>
     <section class="panel"><div class="topbar"><div><h2>Instalações</h2><div class="sub">${instalacoes.length} instalação(ões) cadastrada(s)</div></div><a class="button secondary" href="/?mensagem=${encodeURIComponent('Prontidão de todas as instalações revalidada.')}#instalacoes">Revalidar todas</a></div><div class="table-wrap" id="instalacoes">
       ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Prontidão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr id="instalacao-${item.id}">
-        <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div></td>
+        <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div>${item.observacaoOperacional ?`<div class="small"><strong>Obs. operacional:</strong> ${escapar(item.observacaoOperacional)}</div>` : ''}</td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div><div class="small"><strong>Uso: ${escapar(formatarBytes(item.usoDiscoBytes))}</strong></div></td>
         <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td><td>${resumoProntidaoComercial(item)}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}</td>
@@ -514,6 +516,7 @@ function pagina(instalacoes, opcoes = {}) {
           ${item.status === 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/iniciar"><button class="smallbtn" type="submit">Iniciar robô</button></form>` : ''}
         </div><div class="actions">
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/whatsapp" onsubmit="return confirm('Trocar o WhatsApp encerrará a conexão atual deste robô e gerará um novo QR Code. Continuar?');"><input name="whatsappEsperado" inputmode="numeric" value="${escapar(item.whatsappEsperado || '')}" minlength="10" maxlength="15" placeholder="55 + DDD + número" required style="width:185px;padding:9px"><button class="warning" type="submit">Trocar WhatsApp</button></form>` : ''}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/observacao"><input name="observacaoOperacional" value="${escapar(item.observacaoOperacional || '')}" maxlength="500" placeholder="Obs. operacional" style="width:260px;padding:9px"><button class="secondary" type="submit">Salvar obs.</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÒO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
         </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
@@ -632,6 +635,17 @@ app.post('/instalacoes/:id/whatsapp', async (req, res) => {
         res.redirect(`/?erro=${encodeURIComponent(err.detalhes || err.message)}`);
     }
 });
+
+app.post('/instalacoes/:id/observacao', async (req, res) => {
+    try {
+        const texto = await atualizarObservacaoOperacional(req.params.id, req.body.observacaoOperacional);
+        const mensagem = texto ? 'Observação operacional salva.' : 'Observação operacional removida.';
+        res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}#instalacao-${req.params.id}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}#instalacao-${req.params.id}`);
+    }
+});
+
 app.post('/instalacoes/:id/backup', async (req, res) => {
     try {
         const nomeBackup = await gerarBackupInstalacao(req.params.id);

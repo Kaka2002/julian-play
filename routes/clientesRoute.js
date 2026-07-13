@@ -4139,7 +4139,7 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
     </div>`;
 }
 
-function itemPreparacao({ pronto, titulo, detalhe, acao, href }) {
+function itemPreparacao({ pronto, titulo, detalhe, acao, acaoPronto, href }) {
     return `<tr>
         <td data-label="Status"><span class="badge ${pronto ?'ok' : 'warn'}">${pronto ?'Pronto' : 'Pendente'}</span></td>
         <td data-label="Item">
@@ -4147,7 +4147,7 @@ function itemPreparacao({ pronto, titulo, detalhe, acao, href }) {
             <div class="cell-muted">${escapar(detalhe)}</div>
         </td>
         <td data-label="Ação">
-            <a class="button secondary" href="${escapar(href)}">${icon(pronto ?'check' : 'arrow')} ${escapar(acao)}</a>
+            <a class="button secondary" href="${escapar(href)}">${icon(pronto ?'check' : 'arrow')} ${escapar(pronto && acaoPronto ?acaoPronto : acao)}</a>
         </td>
     </tr>`;
 }
@@ -4170,6 +4170,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Marca da instalação',
             detalhe: temLogo ? `Nome exibido: ${nomeSistema || 'não informado'}` : 'Defina nome comercial e logo antes de apresentar.',
             acao: 'Ajustar marca',
+            acaoPronto: 'Revisar marca',
             href: '/modelos'
         },
         {
@@ -4177,6 +4178,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'WhatsApp conectado',
             detalhe: whatsapp.conectado ? `Conectado${whatsapp.numeroConectado ? ` em ${whatsapp.numeroConectado}` : ''}.` : 'Conecte pelo QR Code para demonstrar envio e atendimento.',
             acao: 'Abrir QR Code',
+            acaoPronto: 'Ver WhatsApp',
             href: '/qr'
         },
         {
@@ -4184,6 +4186,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'PIX de recebimento',
             detalhe: pixConfigurado ? `Recebedor: ${config.pixNome || '-'}` : 'Configure chave, nome e cidade para gerar cobranças.',
             acao: 'Configurar PIX',
+            acaoPronto: 'Ver PIX',
             href: '/manutencao'
         },
         {
@@ -4191,6 +4194,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Catálogo operacional',
             detalhe: `${planos.length} plano(s), ${apps.length} app(s), ${dispositivos.length} dispositivo(s), ${paineis.length} painel(is).`,
             acao: 'Revisar planos',
+            acaoPronto: 'Conferir catálogo',
             href: '/planos'
         },
         {
@@ -4198,6 +4202,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Mensagens automáticas',
             detalhe: `${modelosAtivos.length} modelo(s) ativo(s) para renovação, cobrança e aniversário.`,
             acao: 'Editar modelos',
+            acaoPronto: 'Conferir modelos',
             href: '/modelos'
         },
         {
@@ -4205,6 +4210,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Base para demonstração',
             detalhe: temClientes ? `${clientes.length} cliente(s) cadastrados para mostrar o painel.` : 'Use dados reais ou rode o modo demo para não vender com tela vazia.',
             acao: 'Cadastrar cliente',
+            acaoPronto: 'Ver clientes',
             href: '/clientes/novo'
         },
         {
@@ -4212,6 +4218,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Prova financeira',
             detalhe: temFinanceiro ? `${pagamentos.length} registro(s) financeiro(s) encontrados.` : 'Registre pagamentos para demonstrar receita e inadimplência.',
             acao: 'Abrir financeiro',
+            acaoPronto: 'Conferir financeiro',
             href: '/financeiro'
         },
         {
@@ -4219,6 +4226,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Backup automático',
             detalhe: backupAtivo ? `Ativo às ${config.backupAutomaticoHora || '03:00'}, retenção de ${config.backupRetencaoDias || 30} dia(s).` : 'Ative backup automático para reduzir risco na entrega.',
             acao: 'Ver manutenção',
+            acaoPronto: 'Conferir backup',
             href: '/manutencao'
         },
         {
@@ -4226,6 +4234,7 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
             titulo: 'Licença comercial',
             detalhe: licenca.rotulo ? `${licenca.rotulo}${licenca.vencimento ? ` até ${formatarData(licenca.vencimento)}` : ''}.` : 'Configure avaliação, assinatura ou licença vitalícia.',
             acao: 'Ver licença',
+            acaoPronto: 'Conferir licença',
             href: '/licenca'
         }
     ];

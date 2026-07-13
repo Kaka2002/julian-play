@@ -505,6 +505,21 @@ async function trocarWhatsappInstalacao(id, novoNumero = '') {
     return { whatsappEsperado, backupSessao };
 }
 
+async function atualizarObservacaoOperacional(id, observacao = '') {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalação não encontrada.');
+
+    const texto = String(observacao || '').trim().slice(0, 500);
+    await masterDb.executar(
+        `UPDATE instalacoes
+        SET observacaoOperacional = ?, atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [texto, id]
+    );
+
+    return texto;
+}
+
 async function obterRecursosServidor() {
     let processosChrome = null;
     if (process.platform === 'win32') {
@@ -684,6 +699,7 @@ module.exports = {
     pararInstalacao,
     iniciarInstalacao,
     trocarWhatsappInstalacao,
+    atualizarObservacaoOperacional,
     obterRecursosServidor,
     limparServidorSeguro,
     resetarSenhaPainel,
