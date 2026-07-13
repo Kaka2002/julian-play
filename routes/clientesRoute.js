@@ -95,7 +95,8 @@ const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path
 const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
-const CLIENTES_POR_PAGINA = 10;
+const CLIENTES_POR_PAGINA = 6;
+const FINANCEIRO_POR_PAGINA = 10;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
@@ -5687,7 +5688,7 @@ router.get('/financeiro', async (req, res) => {
         listarPagamentosFinanceiro(filtros),
         listarClientes()
     ]);
-    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, CLIENTES_POR_PAGINA);
+    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, FINANCEIRO_POR_PAGINA);
 
     await renderizar(res, {
         titulo: 'Financeiro',
