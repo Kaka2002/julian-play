@@ -2057,6 +2057,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'dispositivos' ?'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
                 <a class="navlink ${ativo === 'paineis' ?'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
                 <a class="navlink ${ativo === 'financeiro' ?'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
+                <a class="navlink ${ativo === 'preparacao' ?'active' : ''}" href="/preparacao-comercial">${icon('trend')} Preparação</a>
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
@@ -4138,6 +4139,157 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
     </div>`;
 }
 
+function itemPreparacao({ pronto, titulo, detalhe, acao, href }) {
+    return `<tr>
+        <td data-label="Status"><span class="badge ${pronto ?'ok' : 'warn'}">${pronto ?'Pronto' : 'Pendente'}</span></td>
+        <td data-label="Item">
+            <div class="cell-title">${escapar(titulo)}</div>
+            <div class="cell-muted">${escapar(detalhe)}</div>
+        </td>
+        <td data-label="Ação">
+            <a class="button secondary" href="${escapar(href)}">${icon(pronto ?'check' : 'arrow')} ${escapar(acao)}</a>
+        </td>
+    </tr>`;
+}
+
+function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], apps = [], dispositivos = [], paineis = [], modelos = [], pagamentos = [], whatsapp = {} }) {
+    const licenca = calcularEstadoLicenca(config);
+    const nomeSistema = String(config.nomeSistema || '').trim();
+    const pixConfigurado = Boolean(String(config.pixChave || '').trim() && String(config.pixNome || '').trim());
+    const temLogo = Boolean(String(config.logoUrl || '').trim());
+    const temClientes = clientes.length > 0;
+    const temClientesPagantes = clientes.some(cliente => !clienteEhTeste(cliente) && ['ativo', 'pendente'].includes(String(cliente.status || '').toLowerCase()));
+    const temFinanceiro = pagamentos.some(pagamento => !pagamento.excluidoEm);
+    const temCatalogo = planos.length > 0 && apps.length > 0 && dispositivos.length > 0 && paineis.length > 0;
+    const modelosAtivos = modelos.filter(modelo => Number(modelo.ativo) !== 0);
+    const backupAtivo = String(config.backupAutomaticoAtivo || '0') === '1';
+
+    const itens = [
+        {
+            pronto: Boolean(nomeSistema && nomeSistema !== 'Controle de Cliente IPTV e P2P' && temLogo),
+            titulo: 'Marca da instalação',
+            detalhe: temLogo ? `Nome exibido: ${nomeSistema || 'não informado'}` : 'Defina nome comercial e logo antes de apresentar.',
+            acao: 'Ajustar marca',
+            href: '/modelos'
+        },
+        {
+            pronto: Boolean(whatsapp.conectado),
+            titulo: 'WhatsApp conectado',
+            detalhe: whatsapp.conectado ? `Conectado${whatsapp.numeroConectado ? ` em ${whatsapp.numeroConectado}` : ''}.` : 'Conecte pelo QR Code para demonstrar envio e atendimento.',
+            acao: 'Abrir QR Code',
+            href: '/qr'
+        },
+        {
+            pronto: pixConfigurado,
+            titulo: 'PIX de recebimento',
+            detalhe: pixConfigurado ? `Recebedor: ${config.pixNome || '-'}` : 'Configure chave, nome e cidade para gerar cobranças.',
+            acao: 'Configurar PIX',
+            href: '/manutencao'
+        },
+        {
+            pronto: temCatalogo,
+            titulo: 'Catálogo operacional',
+            detalhe: `${planos.length} plano(s), ${apps.length} app(s), ${dispositivos.length} dispositivo(s), ${paineis.length} painel(is).`,
+            acao: 'Revisar planos',
+            href: '/planos'
+        },
+        {
+            pronto: modelosAtivos.length >= 5,
+            titulo: 'Mensagens automáticas',
+            detalhe: `${modelosAtivos.length} modelo(s) ativo(s) para renovação, cobrança e aniversário.`,
+            acao: 'Editar modelos',
+            href: '/modelos'
+        },
+        {
+            pronto: temClientes,
+            titulo: 'Base para demonstração',
+            detalhe: temClientes ? `${clientes.length} cliente(s) cadastrados para mostrar o painel.` : 'Use dados reais ou rode o modo demo para não vender com tela vazia.',
+            acao: 'Cadastrar cliente',
+            href: '/clientes/novo'
+        },
+        {
+            pronto: temClientesPagantes && temFinanceiro,
+            titulo: 'Prova financeira',
+            detalhe: temFinanceiro ? `${pagamentos.length} registro(s) financeiro(s) encontrados.` : 'Registre pagamentos para demonstrar receita e inadimplência.',
+            acao: 'Abrir financeiro',
+            href: '/financeiro'
+        },
+        {
+            pronto: backupAtivo,
+            titulo: 'Backup automático',
+            detalhe: backupAtivo ? `Ativo às ${config.backupAutomaticoHora || '03:00'}, retenção de ${config.backupRetencaoDias || 30} dia(s).` : 'Ative backup automático para reduzir risco na entrega.',
+            acao: 'Ver manutenção',
+            href: '/manutencao'
+        },
+        {
+            pronto: Boolean(licenca.bloqueioAtivo && licenca.permitida),
+            titulo: 'Licença comercial',
+            detalhe: licenca.rotulo ? `${licenca.rotulo}${licenca.vencimento ? ` até ${formatarData(licenca.vencimento)}` : ''}.` : 'Configure avaliação, assinatura ou licença vitalícia.',
+            acao: 'Ver licença',
+            href: '/licenca'
+        }
+    ];
+    const prontos = itens.filter(item => item.pronto).length;
+    const percentual = Math.round((prontos / itens.length) * 100);
+
+    return { itens, prontos, total: itens.length, percentual };
+}
+
+function telaPreparacaoComercial(dados = {}) {
+    const resumo = resumoPreparacaoComercial(dados);
+    const pendentes = resumo.total - resumo.prontos;
+    const classe = resumo.percentual >= 80 ? 'green' : resumo.percentual >= 55 ? 'orange' : 'red';
+    const linhas = resumo.itens.map(itemPreparacao).join('');
+
+    return `<section class="page-title">
+        <h1>Preparação comercial</h1>
+        <div class="subtitle">Checklist para deixar a instalação pronta para demonstração, venda e entrega</div>
+    </section>
+
+    <section class="metrics">
+        ${metricCard({ label: 'Prontidão', valor: `${resumo.percentual}%`, nota: `${resumo.prontos} de ${resumo.total} item(ns)`, tipo: classe, icone: 'trend' })}
+        ${metricCard({ label: 'Pendências', valor: pendentes, nota: pendentes ? 'Revise antes de vender' : 'Pronto para apresentar', tipo: pendentes ? 'orange' : 'green', icone: pendentes ? 'alert' : 'check' })}
+        ${metricCard({ label: 'Clientes', valor: dados.clientes.length, nota: 'Base atual do painel', tipo: 'info', icone: 'clientes' })}
+        ${metricCard({ label: 'Financeiro', valor: dados.pagamentos.length, nota: 'Pagamentos no histórico', tipo: 'green', icone: 'financeiro' })}
+    </section>
+
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Checklist de venda</h2>
+                <div class="subtitle">Complete os pontos abaixo antes de mostrar o sistema para um cliente novo</div>
+            </div>
+            <div class="actions">
+                <a class="button" href="/clientes">${icon('painel')} Ver painel</a>
+                <a class="button secondary" href="/manutencao">${icon('manutencao')} Manutenção</a>
+            </div>
+        </div>
+        <table>
+            <thead>
+                <tr><th>Status</th><th>Item</th><th>Ação</th></tr>
+            </thead>
+            <tbody>${linhas}</tbody>
+        </table>
+    </section>
+
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Modo demonstração</h2>
+                <div class="subtitle">Para uma reunião de venda, use dados fictícios e mostre fluxo completo: clientes, vencimentos, cobrança e financeiro</div>
+            </div>
+            <span class="badge info">Comando local</span>
+        </div>
+        <div style="padding:22px 28px;">
+            <div class="notice warn">Antes de apresentar uma instalação nova, rode <strong>npm run demo:seed</strong> para preencher exemplos sem apagar dados existentes.</div>
+            <div class="actions">
+                <a class="button secondary" href="/clientes/todos">${icon('clientes')} Conferir clientes</a>
+                <a class="button secondary" href="/financeiro">${icon('financeiro')} Conferir financeiro</a>
+            </div>
+        </div>
+    </section>`;
+}
+
 function pluralCliente(total) {
     return Number(total) === 1 ?'cliente' : 'clientes';
 }
@@ -5554,6 +5706,38 @@ router.get('/financeiro/exportar.csv', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="financeiro-${carimbo}.csv"`);
     res.send(`\uFEFF${csv}`);
+});
+
+router.get('/preparacao-comercial', async (req, res) => {
+    desativarCache(res);
+    const mes = mesAtualInput();
+    const [config, clientes, planos, apps, dispositivos, paineis, modelos, pagamentos] = await Promise.all([
+        obterConfiguracoes(),
+        listarClientes(),
+        listarTiposPlanos(),
+        listarApps(),
+        listarDispositivos(),
+        listarPaineis(),
+        listarModelos(),
+        listarPagamentosFinanceiro({ mes, status: 'validos' })
+    ]);
+
+    await renderizar(res, {
+        titulo: 'Preparação comercial',
+        conteudo: telaPreparacaoComercial({
+            config,
+            clientes,
+            planos,
+            apps,
+            dispositivos,
+            paineis,
+            modelos,
+            pagamentos,
+            whatsapp: getStatusWhatsApp()
+        }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'preparacao'
+    });
 });
 
 router.get('/clientes/exportar.csv', async (req, res) => {

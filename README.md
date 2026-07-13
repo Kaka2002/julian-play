@@ -6,6 +6,7 @@ Desenvolvimento Julian Play
 Com o servidor rodando, acesse:
 
 - `/clientes` para listar, buscar, cadastrar, editar e excluir clientes.
+- `/preparacao-comercial` para acompanhar o checklist de prontidao para demonstracao, venda e entrega.
 - `/planos` para cadastrar tipos de plano, como Mensal com 30 dias.
 - `/modelos` para cadastrar e editar os modelos de mensagens enviadas pelo WhatsApp.
 - `/apps` para cadastrar e editar aplicativos disponiveis.
@@ -28,6 +29,22 @@ Para producao, configure as variaveis:
 - `TRUST_PROXY`: use `1` somente quando o painel estiver atras de proxy reverso confiavel com HTTPS.
 
 Senhas antigas armazenadas em SHA-256 continuam funcionando e sao migradas automaticamente para `scrypt` depois de um login bem-sucedido.
+
+## Preparacao para venda
+
+Antes de demonstrar ou entregar uma instalacao nova, abra:
+
+`/preparacao-comercial`
+
+Essa tela mostra o que falta configurar: marca, WhatsApp, PIX, catalogo, mensagens, clientes, financeiro, backup e licenca.
+
+Para preencher uma instalacao de apresentacao com dados ficticios:
+
+```powershell
+npm run demo:seed
+```
+
+O comando adiciona exemplos de clientes, planos, apps, dispositivos, painel e pagamentos sem apagar dados existentes.
 
 ## Instalacao comercial no Windows
 

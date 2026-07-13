@@ -4,7 +4,8 @@
   "main": "bot.js",
   "scripts": {
     "start": "node supervisor.js",
-    "start:bot": "node bot.js"
+    "start:bot": "node bot.js",
+    "demo:seed": "node scripts/seed-demo.js"
   },
   "dependencies": {
     "@puppeteer/browsers": "^2.2.3",
