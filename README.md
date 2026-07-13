@@ -135,6 +135,16 @@ Variavel opcional:
 
 - `MONITOR_INTERVALO_MS`: intervalo do monitor em milissegundos. Padrao: `60000`.
 
+## Logs no Windows
+
+Se os logs aparecerem com acentos quebrados no PowerShell, mude a sessao para UTF-8 antes de abrir os logs:
+
+```powershell
+chcp 65001
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+pm2 logs
+```
+
 ## Modelos de mensagem e logo
 
 Na tela `/modelos`, use as variaveis abaixo nos textos:
