@@ -296,6 +296,7 @@ function calcularStatusGeral(instalacoes = []) {
     const licencasVencidas = ativos.filter(item => item.estadoLicenca && !item.estadoLicenca.permitida);
     const suspensas = ativos.filter(item => item.status === 'suspenso');
     const prontasParaVenda = ativos.filter(item => avaliarProntidaoComercial(item).pronta);
+    const comObservacao = instalacoes.filter(item => String(item.observacaoOperacional || '').trim());
     const comAtencao = new Set([
         ...aguardandoWhatsapp.map(item => item.id),
         ...processosIndisponiveis.map(item => item.id),
@@ -315,8 +316,72 @@ function calcularStatusGeral(instalacoes = []) {
         licencasVencidas: licencasVencidas.length,
         suspensas: suspensas.length,
         prontasParaVenda: prontasParaVenda.length,
+        comObservacao: comObservacao.length,
         comAtencao: comAtencao.size
     };
+}
+
+function instalacaoCombinaFiltro(item, filtro = 'todas') {
+    const auditoria = avaliarProntidaoComercial(item);
+    const ativo = String(item.status || '').toLowerCase() !== 'arquivado';
+
+    if (filtro === 'ativas') return ativo;
+    if (filtro === 'whatsapp_pendente') return ativo && Boolean(item.saude?.online) && !item.saude?.whatsapp;
+    if (filtro === 'reconexao') return ativo && precisaAvisoReconexaoWhatsapp(item);
+    if (filtro === 'avaliacao') return ativo && String(item.tipoLicenca || '').startsWith('avaliacao');
+    if (filtro === 'licenca_vencida') return ativo && Boolean(item.estadoLicenca && !item.estadoLicenca.permitida);
+    if (filtro === 'prontas') return ativo && auditoria.pronta;
+    if (filtro === 'pendencias') return ativo && !auditoria.pronta;
+    if (filtro === 'observacao') return Boolean(String(item.observacaoOperacional || '').trim());
+    if (filtro === 'arquivadas') return !ativo;
+
+    return true;
+}
+
+function instalacaoCombinaBusca(item, busca = '') {
+    const termo = String(busca || '').trim().toLowerCase();
+    if (!termo) return true;
+
+    return [
+        item.nome,
+        item.slug,
+        item.dominio,
+        item.whatsappEsperado,
+        item.processoPm2,
+        item.status,
+        item.detalheStatus,
+        item.observacaoOperacional
+    ].some(valor => String(valor || '').toLowerCase().includes(termo));
+}
+
+function filtrarInstalacoesPainel(instalacoes = [], filtros = {}) {
+    const filtro = String(filtros.filtro || 'todas');
+    const busca = String(filtros.busca || '');
+
+    return instalacoes.filter(item => instalacaoCombinaFiltro(item, filtro) && instalacaoCombinaBusca(item, busca));
+}
+
+function urlFiltroPainel(filtro, busca = '') {
+    const query = new URLSearchParams();
+    if (filtro && filtro !== 'todas') query.set('filtro', filtro);
+    if (String(busca || '').trim()) query.set('busca', String(busca || '').trim());
+    const texto = query.toString();
+    return texto ? `/?${texto}#instalacoes` : '/#instalacoes';
+}
+
+function opcoesFiltroInstalacoes(statusGeral = {}) {
+    return [
+        ['todas', 'Todas', statusGeral.total],
+        ['ativas', 'Ativas', statusGeral.ativas],
+        ['whatsapp_pendente', 'WhatsApp pendente', statusGeral.aguardandoWhatsapp],
+        ['reconexao', 'Reconexão acima de 5min', statusGeral.reconexaoPendente],
+        ['avaliacao', 'Em teste', statusGeral.emAvaliacao],
+        ['licenca_vencida', 'Licença vencida', statusGeral.licencasVencidas],
+        ['prontas', 'Prontas para venda', statusGeral.prontasParaVenda],
+        ['pendencias', 'Com pendências', Math.max(0, Number(statusGeral.ativas || 0) - Number(statusGeral.prontasParaVenda || 0))],
+        ['observacao', 'Com observação', statusGeral.comObservacao],
+        ['arquivadas', 'Arquivadas', statusGeral.arquivadas]
+    ];
 }
 
 function painelChecklistComercial(instalacoes = []) {
@@ -447,6 +512,12 @@ function paginaSaude(instalacao, saude, logs = '') {
 function pagina(instalacoes, opcoes = {}) {
     const criado = opcoes.criado;
     const statusGeral = calcularStatusGeral(instalacoes);
+    const filtrosInstalacoes = {
+        filtro: String(opcoes.filtro || 'todas'),
+        busca: String(opcoes.busca || '')
+    };
+    const instalacoesFiltradas = filtrarInstalacoesPainel(instalacoes, filtrosInstalacoes);
+    const opcoesFiltro = opcoesFiltroInstalacoes(statusGeral);
     const recursos = opcoes.recursos || {};
     const versaoSistema = packageInfo.version || '1.0.0';
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
@@ -498,8 +569,18 @@ function pagina(instalacoes, opcoes = {}) {
         <div style="align-self:end"><button type="submit">Criar instalação</button></div>
       </form>
     </section>
-    <section class="panel"><div class="topbar"><div><h2>Instalações</h2><div class="sub">${instalacoes.length} instalação(ões) cadastrada(s)</div></div><a class="button secondary" href="/?mensagem=${encodeURIComponent('Prontidão de todas as instalações revalidada.')}#instalacoes">Revalidar todas</a></div><div class="table-wrap" id="instalacoes">
-      ${instalacoes.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Prontidão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoes.map(item => `<tr id="instalacao-${item.id}">
+    <section class="panel"><div class="topbar"><div><h2>Instalações</h2><div class="sub">${instalacoesFiltradas.length} de ${instalacoes.length} instalação(ões) exibida(s)</div></div><a class="button secondary" href="/?mensagem=${encodeURIComponent('Prontidão de todas as instalações revalidada.')}#instalacoes">Revalidar todas</a></div>
+      <form method="get" action="/" style="display:grid;grid-template-columns:minmax(180px,260px) minmax(220px,1fr) auto;gap:10px;margin-top:16px;align-items:end">
+        <label>Filtro<select name="filtro">${opcoesFiltro.map(([valor, texto, total]) => `<option value="${escapar(valor)}" ${valor === filtrosInstalacoes.filtro ?'selected' : ''}>${escapar(texto)} (${escapar(total ?? 0)})</option>`).join('')}</select></label>
+        <label>Busca<input name="busca" value="${escapar(filtrosInstalacoes.busca)}" placeholder="Cliente, domínio, WhatsApp ou observação"></label>
+        <button type="submit">Filtrar</button>
+      </form>
+      <div class="actions" style="margin-top:12px">
+        ${opcoesFiltro.map(([valor, texto, total]) => `<a class="button smallbtn ${valor === filtrosInstalacoes.filtro ?'' : 'secondary'}" href="${escapar(urlFiltroPainel(valor, filtrosInstalacoes.busca))}">${escapar(texto)} (${escapar(total ?? 0)})</a>`).join('')}
+        ${(filtrosInstalacoes.filtro !== 'todas' || filtrosInstalacoes.busca) ?'<a class="button smallbtn secondary" href="/#instalacoes">Limpar filtros</a>' : ''}
+      </div>
+      <div class="table-wrap" id="instalacoes">
+      ${instalacoesFiltradas.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Prontidão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoesFiltradas.map(item => `<tr id="instalacao-${item.id}">
         <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div>${item.observacaoOperacional ?`<div class="small"><strong>Obs. operacional:</strong> ${escapar(item.observacaoOperacional)}</div>` : ''}</td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div><div class="small"><strong>Uso: ${escapar(formatarBytes(item.usoDiscoBytes))}</strong></div></td>
         <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td><td>${resumoProntidaoComercial(item)}</td>
@@ -519,7 +600,7 @@ function pagina(instalacoes, opcoes = {}) {
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/observacao"><input name="observacaoOperacional" value="${escapar(item.observacaoOperacional || '')}" maxlength="500" placeholder="Obs. operacional" style="width:260px;padding:9px"><button class="secondary" type="submit">Salvar obs.</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
-        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação criada.</div>'}
+        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação encontrada para este filtro.</div>'}
     </div></section></main></body></html>`;
 }
 
@@ -576,7 +657,12 @@ async function renderizarPainel(opcoes = {}) {
 }
 
 app.get('/', async (req, res) => {
-    res.send(await renderizarPainel({ mensagem: req.query.mensagem, erro: req.query.erro }));
+    res.send(await renderizarPainel({
+        mensagem: req.query.mensagem,
+        erro: req.query.erro,
+        filtro: req.query.filtro,
+        busca: req.query.busca
+    }));
 });
 
 app.post('/manutencao/limpar', async (req, res) => {
