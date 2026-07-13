@@ -6,9 +6,11 @@ const packageInfo = require('../package.json');
 const { verificarSenha } = require('../services/passwordService');
 const {
     baseDomain,
+    obterSugestaoInstalacaoAdministradoraAtual,
     listarInstalacoes,
     listarEventosInstalacao,
     buscarInstalacao,
+    vincularInstalacaoAdministradoraAtual,
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,
@@ -545,6 +547,7 @@ function pagina(instalacoes, opcoes = {}) {
     const opcoesFiltro = opcoesFiltroInstalacoes(statusGeral);
     const recursos = opcoes.recursos || {};
     const versaoSistema = packageInfo.version || '1.0.0';
+    const sugestaoAdmin = obterSugestaoInstalacaoAdministradoraAtual();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
     </style></head><body><main>
@@ -592,6 +595,20 @@ function pagina(instalacoes, opcoes = {}) {
         <label>Usuário do painel<input name="usuarioPainel" value="admin" required></label>
         <label>Senha inicial<input type="password" name="senhaPainel" minlength="8" required></label>
         <div style="align-self:end"><button type="submit">Criar instalação</button></div>
+      </form>
+    </section>
+    <section class="panel"><h2>Instalação administradora</h2><div class="sub">Vincule a instalação principal antiga ao Painel Mestre como administradora vitalícia.</div>
+      <form class="fields" method="post" action="/instalacoes/admin-atual">
+        <label>Nome da instalação<input name="nome" value="${escapar(sugestaoAdmin.nome)}" required></label>
+        <label>Identificador da URL<input name="slug" value="${escapar(sugestaoAdmin.slug)}" required></label>
+        <label>Domínio<input name="dominio" value="${escapar(sugestaoAdmin.dominio)}" required></label>
+        <label>Porta local<input type="number" name="porta" value="${escapar(sugestaoAdmin.porta)}" min="1" max="65535" required></label>
+        <label>Processo PM2<input name="processoPm2" value="${escapar(sugestaoAdmin.processoPm2)}" required></label>
+        <label>Pasta de dados<input name="pastaDados" value="${escapar(sugestaoAdmin.pastaDados)}" required></label>
+        <label>Usuário do painel<input name="usuarioPainel" value="${escapar(sugestaoAdmin.usuarioPainel)}" required></label>
+        <label>Token interno<input name="codigoFornecedor" value="${escapar(sugestaoAdmin.codigoFornecedor)}" placeholder="Gerado pelo instalador"></label>
+        <div class="notice full">Esta ação não recria o robô nem apaga dados. Ela apenas cadastra a instalação atual no Painel Mestre com perfil administrador.</div>
+        <div style="align-self:end"><button class="secondary" type="submit">Vincular administradora</button></div>
       </form>
     </section>
     <section class="panel"><div class="topbar"><div><h2>Instalações</h2><div class="sub">${instalacoesFiltradas.length} de ${instalacoes.length} instalação(ões) exibida(s)</div></div><a class="button secondary" href="/?mensagem=${encodeURIComponent('Prontidão de todas as instalações revalidada.')}#instalacoes">Revalidar todas</a></div>
@@ -719,6 +736,15 @@ app.post('/instalacoes', async (req, res) => {
     try {
         const criado = await criarInstalacao(req.body);
         res.send(await renderizarPainel({ criado }));
+    } catch (err) {
+        res.status(400).send(await renderizarPainel({ erro: err.detalhes || err.message }));
+    }
+});
+
+app.post('/instalacoes/admin-atual', async (req, res) => {
+    try {
+        const instalacao = await vincularInstalacaoAdministradoraAtual(req.body);
+        res.redirect(`/?mensagem=${encodeURIComponent(`Instalação administradora vinculada: ${instalacao.nome}.`)}#instalacao-${instalacao.id}`);
     } catch (err) {
         res.status(400).send(await renderizarPainel({ erro: err.detalhes || err.message }));
     }

@@ -17,6 +17,38 @@ const caddyConfig = process.env.CADDY_CONFIG || 'C:\\caddy\\Caddyfile';
 const baseDomain = String(process.env.MASTER_BASE_DOMAIN || 'julianplay.com.br').toLowerCase();
 const primeiraPorta = Number(process.env.MASTER_FIRST_PORT || 11001);
 
+function lerConfiguracaoInstalacaoAtual() {
+    const settingsPath = path.join(sourceDir, '.julian-play-install.json');
+    try {
+        return JSON.parse(fs.readFileSync(settingsPath, 'utf8').replace(/^\uFEFF/, ''));
+    } catch (_) {
+        return {};
+    }
+}
+
+function normalizarDominio(valor) {
+    return String(valor || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/\/.*$/, '');
+}
+
+function obterSugestaoInstalacaoAdministradoraAtual() {
+    const settings = lerConfiguracaoInstalacaoAtual();
+    const appName = process.env.JULIAN_PLAY_APP_NAME || settings.appName || 'julian-play';
+    return {
+        nome: settings.nomeSistema || 'Controle de Cliente',
+        slug: 'painel',
+        dominio: normalizarDominio(process.env.JULIAN_PLAY_DOMAIN || settings.domain || `painel.${baseDomain}`),
+        porta: Number(process.env.PORT || process.env.JULIAN_PLAY_PORT || settings.port || 10000),
+        pastaDados: path.resolve(process.env.DATA_DIR || process.env.JULIAN_PLAY_DATA_DIR || settings.dataDir || sourceDir),
+        processoPm2: appName,
+        usuarioPainel: process.env.PANEL_USER || settings.panelUser || 'admin',
+        codigoFornecedor: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || ''
+    };
+}
+
 function slugificar(valor) {
     return String(valor || '')
         .normalize('NFD')
@@ -344,6 +376,69 @@ async function criarInstalacao(dados = {}) {
         await registrarEventoInstalacao(instalacao.id, 'erro', 'Erro ao criar instalação.', err.detalhes || err.message);
         throw err;
     }
+}
+
+async function vincularInstalacaoAdministradoraAtual(dados = {}) {
+    const sugestao = obterSugestaoInstalacaoAdministradoraAtual();
+    const nome = String(dados.nome || sugestao.nome).trim();
+    const slug = slugificar(dados.slug || sugestao.slug);
+    const dominio = normalizarDominio(dados.dominio || sugestao.dominio);
+    const porta = Number(dados.porta || sugestao.porta);
+    const pastaDados = path.resolve(String(dados.pastaDados || sugestao.pastaDados));
+    const processoPm2 = String(dados.processoPm2 || sugestao.processoPm2).trim();
+    const usuarioPainel = String(dados.usuarioPainel || sugestao.usuarioPainel || 'admin').trim();
+    const codigoFornecedor = String(dados.codigoFornecedor || sugestao.codigoFornecedor || '').trim();
+
+    if (!nome) throw new Error('Informe o nome da instalação administradora.');
+    if (!slug) throw new Error('Informe um identificador válido para a URL.');
+    if (!dominio) throw new Error('Informe o domínio da instalação administradora.');
+    if (!Number.isInteger(porta) || porta < 1 || porta > 65535) throw new Error('Informe uma porta válida.');
+    if (!processoPm2) throw new Error('Informe o nome do processo PM2.');
+    if (!usuarioPainel) throw new Error('Informe o usuário do painel.');
+    if (!fs.existsSync(pastaDados)) throw new Error('A pasta de dados informada não foi encontrada.');
+    if (!fs.existsSync(path.join(pastaDados, 'clientes.db'))) throw new Error('O banco clientes.db não foi encontrado na pasta informada.');
+
+    const existente = await masterDb.buscarUm(
+        'SELECT * FROM instalacoes WHERE slug = ? OR pastaDados = ? OR processoPm2 = ? LIMIT 1',
+        [slug, pastaDados, processoPm2]
+    );
+
+    let id;
+    if (existente) {
+        id = existente.id;
+        await masterDb.executar(
+            `UPDATE instalacoes SET nome = ?, slug = ?, dominio = ?, porta = ?, pastaDados = ?, processoPm2 = ?,
+             usuarioPainel = ?, tipoLicenca = 'vitalicia', diasAvaliacao = 0, codigoFornecedor = ?,
+             status = 'ativo', detalheStatus = ?, perfilLicenca = 'admin', atualizadoEm = CURRENT_TIMESTAMP
+             WHERE id = ?`,
+            [nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, codigoFornecedor,
+                'Instalação administradora vinculada ao Painel Mestre.', id]
+        );
+    } else {
+        const resultado = await masterDb.executar(
+            `INSERT INTO instalacoes
+            (nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, tipoLicenca, diasAvaliacao,
+             codigoFornecedor, whatsappEsperado, horaEnvio, minutoEnvio, perfilLicenca, status, detalheStatus)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'vitalicia', 0, ?, '', 9, 0, 'admin', 'ativo', ?)`,
+            [nome, slug, dominio, porta, pastaDados, processoPm2, usuarioPainel, codigoFornecedor,
+                'Instalação administradora vinculada ao Painel Mestre.']
+        );
+        id = resultado.id;
+    }
+
+    await salvarConfiguracoesTenant(path.join(pastaDados, 'clientes.db'), {
+        licencaCliente: nome,
+        licencaAtivacao: dataHojeSaoPaulo(),
+        licencaTipo: 'vitalicia',
+        licencaVitalicia: '1',
+        licencaVencimento: '',
+        licencaPeriodoTesteDias: '0',
+        licencaBloqueioAtivo: '1',
+        licencaSuspensa: '0'
+    });
+    await registrarEventoInstalacao(id, 'admin', 'Instalação administradora vinculada ao Painel Mestre.', dominio);
+
+    return buscarInstalacao(id);
 }
 
 function salvarConfiguracoesTenant(dbPath, valores) {
@@ -764,9 +859,11 @@ module.exports = {
     arquivadosDir,
     caddyFragmentsDir,
     baseDomain,
+    obterSugestaoInstalacaoAdministradoraAtual,
     listarInstalacoes,
     listarEventosInstalacao,
     buscarInstalacao,
+    vincularInstalacaoAdministradoraAtual,
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,
