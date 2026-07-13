@@ -112,11 +112,15 @@ function chamarApiInstalacao(instalacao, metodo, caminho, corpo = null, timeout 
 }
 
 async function listarInstalacoes() {
-    const instalacoes = await masterDb.buscarTodos('SELECT * FROM instalacoes ORDER BY datetime(criadoEm) DESC, id DESC');
+    const [instalacoes, eventosRecentes] = await Promise.all([
+        masterDb.buscarTodos('SELECT * FROM instalacoes ORDER BY datetime(criadoEm) DESC, id DESC'),
+        listarEventosRecentesInstalacoes(3)
+    ]);
     return Promise.all(instalacoes.map(async (instalacao) => {
         const dbPath = path.join(instalacao.pastaDados, 'clientes.db');
         const usoDiscoBytes = tamanhoDiretorio(instalacao.pastaDados);
-        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes };
+        const eventosDaInstalacao = eventosRecentes.get(Number(instalacao.id)) || [];
+        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes, eventosRecentes: eventosDaInstalacao };
         try {
             const [config, saude, resumoComercial] = await Promise.all([
                 lerConfiguracoesTenant(dbPath),
@@ -130,16 +134,62 @@ async function listarInstalacoes() {
                 configuracoesTenant: config,
                 resumoComercial,
                 estadoLicenca: calcularEstadoLicenca(config),
-                saude
+                saude,
+                eventosRecentes: eventosDaInstalacao
             };
         } catch (_) {
-            return { ...instalacao, usoDiscoBytes, bancoEncontrado: fs.existsSync(dbPath) };
+            return { ...instalacao, usoDiscoBytes, bancoEncontrado: fs.existsSync(dbPath), eventosRecentes: eventosDaInstalacao };
         }
     }));
 }
 
 async function buscarInstalacao(id) {
     return masterDb.buscarUm('SELECT * FROM instalacoes WHERE id = ?', [id]);
+}
+
+async function registrarEventoInstalacao(instalacaoId, tipo, mensagem, detalhes = '') {
+    await masterDb.executar(
+        `INSERT INTO eventos_instalacao (instalacaoId, tipo, mensagem, detalhes)
+        VALUES (?, ?, ?, ?)`,
+        [
+            instalacaoId ? Number(instalacaoId) : null,
+            String(tipo || 'evento').trim().slice(0, 80),
+            String(mensagem || '').trim().slice(0, 500),
+            String(detalhes || '').trim().slice(0, 1000)
+        ]
+    );
+}
+
+async function listarEventosRecentesInstalacoes(limitePorInstalacao = 3) {
+    const limite = Math.max(1, Math.min(Number(limitePorInstalacao) || 3, 8));
+    const eventos = await masterDb.buscarTodos(
+        `SELECT * FROM eventos_instalacao
+        ORDER BY datetime(criadoEm) DESC, id DESC
+        LIMIT 300`
+    );
+    const porInstalacao = new Map();
+
+    for (const evento of eventos) {
+        const chave = Number(evento.instalacaoId || 0);
+        if (!chave) continue;
+        const lista = porInstalacao.get(chave) || [];
+        if (lista.length >= limite) continue;
+        lista.push(evento);
+        porInstalacao.set(chave, lista);
+    }
+
+    return porInstalacao;
+}
+
+function listarEventosInstalacao(id, limite = 80) {
+    const quantidade = Math.max(10, Math.min(Number(limite) || 80, 300));
+    return masterDb.buscarTodos(
+        `SELECT * FROM eventos_instalacao
+        WHERE instalacaoId = ?
+        ORDER BY datetime(criadoEm) DESC, id DESC
+        LIMIT ?`,
+        [id, quantidade]
+    );
 }
 
 async function proximaPorta() {
@@ -287,9 +337,11 @@ async function criarInstalacao(dados = {}) {
         await executarComando('pm2.cmd', ['save', '--force']);
         const avisoCaddy = await recarregarCaddy();
         await atualizarStatus(instalacao.id, 'ativo', avisoCaddy);
+        await registrarEventoInstalacao(instalacao.id, 'criacao', 'Instalação criada e robô iniciado.', `Domínio: ${dominio}. Porta: ${porta}.`);
         return { ...(await buscarInstalacao(instalacao.id)), senhaInicial: senha };
     } catch (err) {
         await atualizarStatus(instalacao.id, 'erro', err.detalhes || err.message);
+        await registrarEventoInstalacao(instalacao.id, 'erro', 'Erro ao criar instalação.', err.detalhes || err.message);
         throw err;
     }
 }
@@ -349,6 +401,7 @@ async function suspenderInstalacao(id) {
         licencaSuspensa: '1'
     });
     await atualizarStatus(id, 'suspenso', 'Licença suspensa pelo Painel Mestre.');
+    await registrarEventoInstalacao(id, 'licenca', 'Licença suspensa pelo Painel Mestre.');
 }
 
 async function tornarVitalicia(id) {
@@ -367,6 +420,7 @@ async function tornarVitalicia(id) {
          status = 'ativo', detalheStatus = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
         [id]
     );
+    await registrarEventoInstalacao(id, 'licenca', 'Instalação convertida em licença vitalícia.');
 }
 
 function obterPeriodoLicencaComercial(tipo) {
@@ -402,6 +456,11 @@ async function ativarLicencaComercial(id, tipoLicenca = 'mensal') {
          status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
         [periodo.tipo, vencimento ? `${periodo.rotulo} ativa até ${vencimento}.` : `${periodo.rotulo} ativa.`, id]
     );
+    await registrarEventoInstalacao(
+        id,
+        'licenca',
+        vencimento ? `${periodo.rotulo} ativada até ${vencimento}.` : `${periodo.rotulo} ativada.`
+    );
 
     return { ...periodo, vencimento };
 }
@@ -435,6 +494,7 @@ async function prorrogarAvaliacao(id, dias = 15) {
          status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
         [`avaliacao_${quantidadeDias}`, quantidadeDias, `Avaliação prorrogada até ${novoVencimento}.`, id]
     );
+    await registrarEventoInstalacao(id, 'licenca', `Avaliação prorrogada por ${quantidadeDias} dias, até ${novoVencimento}.`);
 
     return novoVencimento;
 }
@@ -446,6 +506,7 @@ async function reiniciarInstalacao(id) {
 
     await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
     await atualizarStatus(id, 'ativo', 'Robô reiniciado pelo Painel Mestre.');
+    await registrarEventoInstalacao(id, 'robo', 'Robô reiniciado pelo Painel Mestre.');
 }
 
 async function pararInstalacao(id) {
@@ -456,6 +517,7 @@ async function pararInstalacao(id) {
     await executarComando('pm2.cmd', ['stop', instalacao.processoPm2]);
     await executarComando('pm2.cmd', ['save', '--force']);
     await atualizarStatus(id, 'parado', 'Robô parado com segurança pelo Painel Mestre.');
+    await registrarEventoInstalacao(id, 'robo', 'Robô parado com segurança pelo Painel Mestre.');
 }
 
 async function iniciarInstalacao(id) {
@@ -466,6 +528,7 @@ async function iniciarInstalacao(id) {
     await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
     await executarComando('pm2.cmd', ['save', '--force']);
     await atualizarStatus(id, 'ativo', 'Robô iniciado pelo Painel Mestre. Aguardando conexão do WhatsApp.');
+    await registrarEventoInstalacao(id, 'robo', 'Robô iniciado pelo Painel Mestre.');
 }
 
 async function trocarWhatsappInstalacao(id, novoNumero = '') {
@@ -493,12 +556,14 @@ async function trocarWhatsappInstalacao(id, novoNumero = '') {
         `UPDATE instalacoes SET whatsappEsperado = ?, status = 'ativo', detalheStatus = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
         [whatsappEsperado, 'WhatsApp alterado. Aguardando leitura do novo QR Code.', id]
     );
+    await registrarEventoInstalacao(id, 'whatsapp', `WhatsApp alterado para ${whatsappEsperado}.`, backupSessao ? `Sessão anterior movida para ${backupSessao}.` : '');
 
     try {
         await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
         await executarComando('pm2.cmd', ['save', '--force']);
     } catch (err) {
         await atualizarStatus(id, 'erro', `WhatsApp atualizado, mas o robô não iniciou: ${err.detalhes || err.message}`);
+        await registrarEventoInstalacao(id, 'erro', 'WhatsApp atualizado, mas o robô não iniciou.', err.detalhes || err.message);
         throw err;
     }
 
@@ -515,6 +580,11 @@ async function atualizarObservacaoOperacional(id, observacao = '') {
         SET observacaoOperacional = ?, atualizadoEm = CURRENT_TIMESTAMP
         WHERE id = ?`,
         [texto, id]
+    );
+    await registrarEventoInstalacao(
+        id,
+        'observacao',
+        texto ? `Observação operacional salva: ${texto}` : 'Observação operacional removida.'
     );
 
     return texto;
@@ -604,6 +674,7 @@ async function resetarSenhaPainel(id, senha = '') {
     escreverArquivoSeguro(ecossistema, configuracaoPm2(instalacao, criarHashSenha(novaSenha)));
     await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
     await atualizarStatus(id, 'ativo', 'Senha do painel redefinida pelo Painel Mestre.');
+    await registrarEventoInstalacao(id, 'acesso', 'Senha do painel redefinida pelo Painel Mestre.');
 }
 
 async function gerarBackupInstalacao(id) {
@@ -614,6 +685,7 @@ async function gerarBackupInstalacao(id) {
     const resultado = await chamarApiInstalacao(instalacao, 'POST', '/api/admin/backup');
     const nomeBackup = resultado.backup?.nome || resultado.backup?.arquivo || 'backup criado';
     await atualizarStatus(id, 'ativo', `Backup solicitado pelo Painel Mestre: ${nomeBackup}.`);
+    await registrarEventoInstalacao(id, 'backup', `Backup solicitado pelo Painel Mestre: ${nomeBackup}.`);
     return nomeBackup;
 }
 
@@ -625,6 +697,7 @@ async function liberarAtendimentoInstalacao(id) {
     const resultado = await chamarApiInstalacao(instalacao, 'POST', '/api/admin/atendimentos/liberar');
     const liberados = Number(resultado.liberados || 0);
     await atualizarStatus(id, 'ativo', `${liberados} atendimento(s) humano(s) liberado(s) pelo Painel Mestre.`);
+    await registrarEventoInstalacao(id, 'atendimento', `${liberados} atendimento(s) humano(s) liberado(s) pelo Painel Mestre.`);
     return liberados;
 }
 
@@ -673,6 +746,7 @@ async function arquivarInstalacao(id) {
         `UPDATE instalacoes SET pastaDados = ?, status = 'arquivado', detalheStatus = 'Arquivado com segurança', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
         [destino, id]
     );
+    await registrarEventoInstalacao(id, 'arquivo', 'Instalação arquivada com segurança.', destino);
 }
 
 async function excluirDefinitivamente(id) {
@@ -680,6 +754,7 @@ async function excluirDefinitivamente(id) {
     if (!instalacao || instalacao.status !== 'arquivado') throw new Error('Somente instalações arquivadas podem ser excluídas.');
     if (!caminhoDentro(instalacao.pastaDados, arquivadosDir)) throw new Error('Pasta arquivada fora da área permitida.');
     if (fs.existsSync(instalacao.pastaDados)) fs.rmSync(instalacao.pastaDados, { recursive: true, force: true });
+    await registrarEventoInstalacao(id, 'exclusao', 'Instalação excluída definitivamente.', instalacao.pastaDados);
     await masterDb.executar('DELETE FROM instalacoes WHERE id = ?', [id]);
 }
 
@@ -690,6 +765,8 @@ module.exports = {
     caddyFragmentsDir,
     baseDomain,
     listarInstalacoes,
+    listarEventosInstalacao,
+    buscarInstalacao,
     criarInstalacao,
     suspenderInstalacao,
     tornarVitalicia,

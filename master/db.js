@@ -9,6 +9,24 @@ fs.mkdirSync(dataDir, { recursive: true });
 const db = new sqlite3.Database(dbPath);
 const ready = new Promise((resolve, reject) => {
     db.serialize(() => {
+        function finalizarMigracao() {
+            db.run(`CREATE TABLE IF NOT EXISTS eventos_instalacao (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                instalacaoId INTEGER,
+                tipo TEXT NOT NULL,
+                mensagem TEXT NOT NULL,
+                detalhes TEXT,
+                criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(instalacaoId) REFERENCES instalacoes(id) ON DELETE SET NULL
+            )`, (eventoErr) => {
+                if (eventoErr) return reject(eventoErr);
+                db.run('CREATE INDEX IF NOT EXISTS idx_eventos_instalacao_data ON eventos_instalacao(instalacaoId, criadoEm DESC)', (indiceErr) => {
+                    if (indiceErr) return reject(indiceErr);
+                    resolve();
+                });
+            });
+        }
+
         db.run(`CREATE TABLE IF NOT EXISTS instalacoes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
@@ -37,14 +55,14 @@ const ready = new Promise((resolve, reject) => {
                     ['perfilLicenca', "TEXT NOT NULL DEFAULT 'cliente'"],
                     ['observacaoOperacional', "TEXT NOT NULL DEFAULT ''"]
                 ].filter(([nome]) => !existentes.has(nome));
-                if (!novas.length) return resolve();
+                if (!novas.length) return finalizarMigracao();
 
                 let pendentes = novas.length;
                 novas.forEach(([nome, definicao]) => {
                     db.run(`ALTER TABLE instalacoes ADD COLUMN ${nome} ${definicao}`, (alterErr) => {
                         if (alterErr) return reject(alterErr);
                         pendentes -= 1;
-                        if (!pendentes) resolve();
+                        if (!pendentes) finalizarMigracao();
                     });
                 });
             });
