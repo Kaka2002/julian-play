@@ -27,6 +27,9 @@ Antes de instalar, esta pasta precisa conter:
 
 - `LEIA-PRIMEIRO.md`
 - `PASSO-A-PASSO-CLIENTE.md`
+- `1-VERIFICAR-COMPUTADOR.bat`
+- `2-INSTALAR-PAINEL.bat`
+- `3-ABRIR-PAINEL.bat`
 - `VERIFICAR-COMPUTADOR.ps1`
 - `INSTALAR-PAINEL.ps1`
 - `ABRIR-PAINEL.ps1`
@@ -38,11 +41,30 @@ Se o arquivo `julian-play-app.zip` nao estiver nesta pasta, solicite o pacote of
 
 ## Instalacao Rapida
 
-1. Clique com o botao direito em `VERIFICAR-COMPUTADOR.ps1`.
-2. Escolha **Executar com PowerShell**.
-3. Se estiver tudo certo, clique com o botao direito em `INSTALAR-PAINEL.ps1`.
-4. Escolha **Executar com PowerShell**.
-5. Ao terminar, abra:
+1. Dê dois cliques em `1-VERIFICAR-COMPUTADOR.bat`.
+2. Se estiver tudo certo, dê dois cliques em `2-INSTALAR-PAINEL.bat`.
+3. Se quiser abrir o painel depois, dê dois cliques em `3-ABRIR-PAINEL.bat`.
+4. Ao terminar, abra:
+   http://localhost:10000
+
+## Se For Executar Pelo PowerShell
+
+Se abrir o PowerShell manualmente, entre na pasta recebida e use sempre `.\` antes do nome do arquivo:
+
+```powershell
+.\VERIFICAR-COMPUTADOR.ps1
+.\INSTALAR-PAINEL.ps1
+.\ABRIR-PAINEL.ps1
+```
+
+Se digitar apenas `VERIFICAR-COMPUTADOR.ps1`, o PowerShell pode mostrar erro dizendo que o comando nao foi encontrado.
+
+## Abrir O Painel
+
+Depois da instalacao:
+
+1. Dê dois cliques em `3-ABRIR-PAINEL.bat`; ou
+2. Abra no navegador:
    http://localhost:10000
 
 ## Licenca E Numero Do WhatsApp Do Robo

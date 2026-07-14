@@ -20,6 +20,9 @@ Na pasta recebida, confira se existem estes arquivos:
 
 - `LEIA-PRIMEIRO.md`
 - `PASSO-A-PASSO-CLIENTE.md`
+- `1-VERIFICAR-COMPUTADOR.bat`
+- `2-INSTALAR-PAINEL.bat`
+- `3-ABRIR-PAINEL.bat`
 - `VERIFICAR-COMPUTADOR.ps1`
 - `INSTALAR-PAINEL.ps1`
 - `ABRIR-PAINEL.ps1`
@@ -29,17 +32,29 @@ Nao abra nem extraia o `julian-play-app.zip`. Ele sera usado automaticamente pel
 
 ## 3. Conferir O Computador
 
-Na pasta recebida, execute:
+Na pasta recebida, dê dois cliques em:
 
-`VERIFICAR-COMPUTADOR.ps1`
+`1-VERIFICAR-COMPUTADOR.bat`
+
+Se preferir executar pelo PowerShell, use:
+
+```powershell
+.\VERIFICAR-COMPUTADOR.ps1
+```
 
 Se aparecer alguma pendencia, instale o programa indicado e execute a verificacao novamente.
 
 ## 4. Instalar O Painel
 
-Na pasta recebida, execute:
+Na pasta recebida, dê dois cliques em:
 
-`INSTALAR-PAINEL.ps1`
+`2-INSTALAR-PAINEL.bat`
+
+Se preferir executar pelo PowerShell, use:
+
+```powershell
+.\INSTALAR-PAINEL.ps1
+```
 
 O instalador vai preparar o painel, instalar dependencias, configurar o servico e abrir o endereco local.
 
@@ -51,7 +66,15 @@ http://localhost:10000
 
 Se preferir, execute:
 
-`ABRIR-PAINEL.ps1`
+`3-ABRIR-PAINEL.bat`
+
+Se preferir executar pelo PowerShell, use:
+
+```powershell
+.\ABRIR-PAINEL.ps1
+```
+
+Importante: no PowerShell, sempre use `.\` antes do arquivo. Exemplo: `.\VERIFICAR-COMPUTADOR.ps1`.
 
 ## 6. Ativar A Licenca
 
