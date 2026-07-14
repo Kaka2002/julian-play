@@ -481,19 +481,49 @@ function lerConfiguracoesTenant(dbPath) {
 function lerResumoComercialTenant(dbPath) {
     return new Promise((resolve, reject) => {
         const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY);
-        const resumo = {};
-        db.serialize(() => {
-            db.get(`SELECT COUNT(*) AS total FROM tipos_planos
-                WHERE ativo = 1 AND TRIM(COALESCE(valor, '')) <> '' AND CAST(REPLACE(valor, ',', '.') AS REAL) > 0`, (err, row) => {
-                if (err) return db.close(() => reject(err));
-                resumo.planosComValor = Number(row?.total || 0);
-                db.get('SELECT COUNT(*) AS total FROM paineis WHERE ativo = 1', (painelErr, painelRow) => {
-                    db.close();
-                    if (painelErr) return reject(painelErr);
-                    resumo.paineisAtivos = Number(painelRow?.total || 0);
-                    resolve(resumo);
-                });
+        const buscarTodos = (sql, params = []) => new Promise((ok, falha) => {
+            db.all(sql, params, (err, rows) => err ? falha(err) : ok(rows || []));
+        });
+        const buscarUm = (sql, params = []) => new Promise((ok, falha) => {
+            db.get(sql, params, (err, row) => err ? falha(err) : ok(row || {}));
+        });
+        const hoje = dataHojeSaoPaulo();
+        const amanha = adicionarDias(hoje, 1);
+        const seteDias = adicionarDias(hoje, 7);
+        const vencimentoEfetivo = "COALESCE(NULLIF(dataVencimento, ''), CASE WHEN TRIM(COALESCE(vencimento, '')) <> '' THEN vencimento || 'T23:59:59' ELSE '' END)";
+        const whereVencimento = `TRIM(${vencimentoEfetivo}) <> ''
+            AND date(substr(replace(${vencimentoEfetivo}, 'T', ' '), 1, 10)) BETWEEN date(?) AND date(?)`;
+
+        Promise.all([
+            buscarUm(`SELECT COUNT(*) AS total FROM tipos_planos
+                WHERE ativo = 1 AND TRIM(COALESCE(valor, '')) <> '' AND CAST(REPLACE(valor, ',', '.') AS REAL) > 0`),
+            buscarUm('SELECT COUNT(*) AS total FROM paineis WHERE ativo = 1'),
+            buscarUm("SELECT COUNT(*) AS total FROM clientes WHERE lower(COALESCE(status, '')) = 'teste' AND " + whereVencimento, [hoje, amanha]),
+            buscarTodos(`SELECT nome, telefone, ${vencimentoEfetivo} AS vencimento
+                FROM clientes
+                WHERE lower(COALESCE(status, '')) = 'teste' AND ${whereVencimento}
+                ORDER BY datetime(replace(${vencimentoEfetivo}, 'T', ' ')) ASC
+                LIMIT 3`, [hoje, amanha]),
+            buscarUm("SELECT COUNT(*) AS total FROM clientes WHERE lower(COALESCE(status, '')) <> 'teste' AND " + whereVencimento, [hoje, seteDias]),
+            buscarTodos(`SELECT nome, telefone, ${vencimentoEfetivo} AS vencimento
+                FROM clientes
+                WHERE lower(COALESCE(status, '')) <> 'teste' AND ${whereVencimento}
+                ORDER BY datetime(replace(${vencimentoEfetivo}, 'T', ' ')) ASC
+                LIMIT 3`, [hoje, seteDias]),
+            buscarUm("SELECT COUNT(*) AS total FROM cliente_pagamentos WHERE COALESCE(excluidoEm, '') = ''")
+        ]).then(([planos, paineis, testes, testesLista, renovacoes, renovacoesLista, pagamentos]) => {
+            db.close();
+            resolve({
+                planosComValor: Number(planos?.total || 0),
+                paineisAtivos: Number(paineis?.total || 0),
+                testesVencendo: Number(testes?.total || 0),
+                testesVencendoLista: testesLista,
+                renovacoes7Dias: Number(renovacoes?.total || 0),
+                renovacoes7DiasLista: renovacoesLista,
+                pagamentosRegistrados: Number(pagamentos?.total || 0)
             });
+        }).catch((err) => {
+            db.close(() => reject(err));
         });
     });
 }

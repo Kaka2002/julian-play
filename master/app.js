@@ -503,6 +503,137 @@ function painelChecklistComercial(instalacoes = []) {
     </section>`;
 }
 
+function nomesResumoClientes(lista = []) {
+    const itens = Array.isArray(lista) ? lista : [];
+    if (!itens.length) return '';
+    return `<div class="small">${itens.map(item => {
+        const vencimento = item.vencimento ? ` (${formatarDataHoraPainel(item.vencimento)})` : '';
+        return escapar(`${item.nome || item.telefone || 'Cliente'}${vencimento}`);
+    }).join(', ')}</div>`;
+}
+
+function itemPrioridade(titulo, detalhe, tipo, acoes = [], extra = '') {
+    return `<article class="priority-item ${tipo}">
+        <div>
+            <strong>${escapar(titulo)}</strong>
+            <div class="small">${escapar(detalhe)}</div>
+            ${extra}
+        </div>
+        <div class="actions">${acoes.map(acao => `<a class="button smallbtn ${acao.destaque ? '' : 'secondary'}" href="${escapar(acao.href)}" ${acao.externo ? 'target="_blank"' : ''}>${escapar(acao.texto)}</a>`).join('')}</div>
+    </article>`;
+}
+
+function secaoPrioridades(instalacoes = []) {
+    const clientes = instalacoes.filter(item => String(item.status || '').toLowerCase() !== 'arquivado' && !instalacaoAdministradora(item));
+    const venda = [];
+    const renovacao = [];
+    const whatsapp = [];
+    const financeiro = [];
+
+    for (const item of clientes) {
+        const resumo = item.resumoComercial || {};
+        const dominio = `https://${item.dominio}`;
+        const auditoria = avaliarProntidaoComercial(item);
+
+        if (!auditoria.pronta) {
+            venda.push(itemPrioridade(
+                item.nome,
+                `${auditoria.pendencias.length} pendência(s) antes de venda ou entrega`,
+                'warn',
+                [
+                    { texto: 'Abrir painel', href: `${dominio}/clientes`, externo: true },
+                    { texto: 'Manutenção', href: `${dominio}/manutencao`, externo: true }
+                ],
+                `<ul class="readiness-list">${auditoria.pendencias.slice(0, 3).map(p => `<li><span>${escapar(p)}</span></li>`).join('')}</ul>`
+            ));
+        }
+
+        if (Number(resumo.testesVencendo || 0) > 0) {
+            venda.push(itemPrioridade(
+                item.nome,
+                `${resumo.testesVencendo} teste(s) vencendo hoje ou amanhã`,
+                'warn',
+                [
+                    { texto: 'Clientes', href: `${dominio}/clientes/todos`, externo: true },
+                    { texto: 'Financeiro', href: `${dominio}/financeiro`, externo: true }
+                ],
+                nomesResumoClientes(resumo.testesVencendoLista)
+            ));
+        }
+
+        if (Number(resumo.renovacoes7Dias || 0) > 0) {
+            renovacao.push(itemPrioridade(
+                item.nome,
+                `${resumo.renovacoes7Dias} cliente(s) vencendo nos próximos 7 dias`,
+                'warn',
+                [
+                    { texto: 'Clientes', href: `${dominio}/clientes/todos`, externo: true },
+                    { texto: 'Enviar cobranças', href: `${dominio}/clientes`, externo: true }
+                ],
+                nomesResumoClientes(resumo.renovacoes7DiasLista)
+            ));
+        }
+
+        if (Boolean(item.saude?.online) && !item.saude?.whatsapp) {
+            whatsapp.push(itemPrioridade(
+                item.nome,
+                precisaAvisoReconexaoWhatsapp(item) ? 'WhatsApp desconectado há mais de 5 minutos' : 'WhatsApp aguardando conexão',
+                precisaAvisoReconexaoWhatsapp(item) ? 'error' : 'warn',
+                [
+                    { texto: 'Abrir QR Code', href: `${dominio}/qr`, externo: true, destaque: true },
+                    { texto: 'Saúde', href: `/instalacoes/${item.id}/saude` }
+                ]
+            ));
+        }
+
+        const pendenciasFinanceiras = [];
+        if (!String(item.configuracoesTenant?.pixChave || '').trim()
+            || !String(item.configuracoesTenant?.pixNome || '').trim()
+            || !String(item.configuracoesTenant?.pixCidade || '').trim()) {
+            pendenciasFinanceiras.push('PIX incompleto');
+        }
+        if (Number(resumo.planosComValor || 0) < 1) pendenciasFinanceiras.push('sem plano com valor');
+        if (Number(resumo.pagamentosRegistrados || 0) < 1) pendenciasFinanceiras.push('sem pagamentos registrados');
+
+        if (pendenciasFinanceiras.length) {
+            financeiro.push(itemPrioridade(
+                item.nome,
+                pendenciasFinanceiras.join(', '),
+                'warn',
+                [
+                    { texto: 'Manutenção', href: `${dominio}/manutencao`, externo: true },
+                    { texto: 'Financeiro', href: `${dominio}/financeiro`, externo: true }
+                ]
+            ));
+        }
+    }
+
+    const grupos = [
+        ['Venda', venda],
+        ['Renovação', renovacao],
+        ['WhatsApp', whatsapp],
+        ['Financeiro', financeiro]
+    ];
+    const total = grupos.reduce((soma, [, itens]) => soma + itens.length, 0);
+
+    return `<section class="panel priorities">
+        <div class="topbar">
+            <div>
+                <h2>Prioridades do dia</h2>
+                <div class="sub">${total ? `${total} ponto(s) de atenção nos clientes` : 'Nenhuma prioridade crítica nos clientes agora'}</div>
+            </div>
+            <a class="button secondary" href="/?filtro=pendencias#instalacoes">Ver pendências</a>
+        </div>
+        <div class="priority-grid">
+            ${grupos.map(([titulo, itens]) => `<div class="priority-group">
+                <h3>${escapar(titulo)}</h3>
+                ${itens.length ? itens.slice(0, 5).join('') : '<div class="empty compact">Tudo certo.</div>'}
+                ${itens.length > 5 ? `<div class="small">Mais ${itens.length - 5} item(ns) neste grupo.</div>` : ''}
+            </div>`).join('')}
+        </div>
+    </section>`;
+}
+
 function perfilInstalacaoHtml(item = {}) {
     if (!instalacaoAdministradora(item)) return '';
     return '<div class="small"><span class="badge ok">Administrador / fornecedor</span></div>';
@@ -602,7 +733,7 @@ function pagina(instalacoes, opcoes = {}) {
     const versaoSistema = packageInfo.version || '1.0.0';
     const sugestaoAdmin = obterSugestaoInstalacaoAdministradoraAtual();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.priority-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}.priority-group{border:1px solid #e8ebf0;border-radius:8px;padding:14px;background:#fafbfc}.priority-group h3{margin:0 0 10px;font-size:15px}.priority-item{display:grid;gap:10px;border-left:4px solid #dfe3ea;background:#fff;border-radius:8px;padding:12px;margin-top:10px}.priority-item.warn{border-left-color:#e98a13}.priority-item.error{border-left-color:#dc3545}.empty.compact{padding:16px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1200px){.priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.priority-grid{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
     </style></head><body><main>
     <div class="topbar">
       <div>
@@ -629,6 +760,7 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Processos Chrome', recursos.processosChrome ?? '-', 'Navegadores usados pelos robôs', Number(recursos.processosChrome || 0) > 30 ? 'warn' : '')}
         ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, recursos.discoTotalGb == null ? 'Métrica indisponível' : `de ${recursos.discoTotalGb} GB`, Number(recursos.discoLivreGb || 0) < 5 ? 'error' : 'ok')}
     </section>
+    ${secaoPrioridades(instalacoes)}
     ${painelChecklistComercial(instalacoes)}
     <section class="panel"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
       <form class="actions" method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura? Bancos e sessões dos robôs ativos serão preservados.');">
