@@ -19,8 +19,24 @@ jobs:
 
       - name: Deploy to Windows VPS
         run: |
-          ssh -i ~/.ssh/vps_key \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'powershell -ExecutionPolicy Bypass -File C:\bots\julian-play\deploy.ps1'
+          for attempt in 1 2 3; do
+            echo "Tentativa de deploy ${attempt}/3..."
+            if ssh -i ~/.ssh/vps_key \
+              -o BatchMode=yes \
+              -o ConnectTimeout=30 \
+              -o ConnectionAttempts=3 \
+              -o ServerAliveInterval=20 \
+              -o ServerAliveCountMax=3 \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+              'powershell -NoProfile -ExecutionPolicy Bypass -File C:\bots\julian-play\deploy.ps1'; then
+              exit 0
+            fi
+
+            echo "Falha na tentativa ${attempt}. Aguardando para tentar novamente..."
+            sleep 15
+          done
+
+          echo "Deploy falhou apos 3 tentativas. Verifique se o SSH do servidor esta ativo e se a porta 22 aceita conexoes do GitHub Actions."
+          exit 1
