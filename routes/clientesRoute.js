@@ -598,6 +598,7 @@ function icon(nome) {
         info: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
         image: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>'
         ,
+        licenca: '<svg viewBox="0 0 24 24"><path d="M15 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3"/><path d="M9 7a3 3 0 0 1 6 0"/><path d="M9 7v4h6V7"/><path d="M9 15h6"/></svg>',
         manutencao: '<svg viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/><circle cx="12" cy="12" r="3"/></svg>',
         planos: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/><path d="M7 15h4"/></svg>',
         trend: '<svg viewBox="0 0 24 24"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
@@ -2068,6 +2069,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'financeiro' ?'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
                 <a class="navlink ${ativo === 'preparacao' ?'active' : ''}" href="/preparacao-comercial">${icon('trend')} Preparação</a>
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
+                <a class="navlink" href="/licenca">${icon('licenca')} LicenÃ§a</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
