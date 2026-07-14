@@ -86,6 +86,7 @@ const {
 } = require('../services/pixService');
 const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
 const menuRenovacao = require('../menus/renovacao');
+const { agoraSaoPauloInput, formatarDataHoraBrasil, partesDataHora } = require('../utils/dataHora');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -2138,13 +2139,7 @@ function renderTagsCliente(tags) {
 
 function formatarDataNota(valor) {
     if (!valor) return '';
-    const data = new Date(String(valor).replace(' ', 'T'));
-    if (Number.isNaN(data.getTime())) return String(valor);
-
-    return new Intl.DateTimeFormat('pt-BR', {
-        dateStyle: 'short',
-        timeStyle: 'short'
-    }).format(data);
+    return formatarDataHoraBrasil(valor);
 }
 
 function alertaClienteHtml(alertas = []) {
@@ -2330,17 +2325,7 @@ function formatarAniversario(dataISO) {
 
 function formatarDataHoraCurta(valor) {
     if (!valor) return '-';
-
-    const data = new Date(String(valor).length <= 10 ?`${valor}T00:00:00` : valor);
-    if (Number.isNaN(data.getTime())) return valor;
-
-    const dia = String(data.getDate()).padStart(2, '0');
-    const mes = String(data.getMonth() + 1).padStart(2, '0');
-    const ano = String(data.getFullYear()).slice(-2);
-    const hora = String(data.getHours()).padStart(2, '0');
-    const minuto = String(data.getMinutes()).padStart(2, '0');
-
-    return `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+    return formatarDataHoraBrasil(valor);
 }
 
 function textoDiasRestantes(valor) {
@@ -2550,13 +2535,13 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
 }
 
 function inputDateTime(valor) {
-    return valor ?String(valor).slice(0, 16) : '';
+    const partes = partesDataHora(valor);
+    if (!partes) return '';
+    return `${partes.ano}-${partes.mes}-${partes.dia}T${partes.hora}:${partes.minuto}`;
 }
 
 function agoraLocalDateTime() {
-    const data = new Date();
-    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
-    return data.toISOString().slice(0, 16);
+    return agoraSaoPauloInput();
 }
 
 function valorPrimeiroItem(valor) {

@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { agoraSaoPauloInput } = require('../utils/dataHora');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -339,9 +340,7 @@ function dataBaseRenovacao(cliente = {}) {
 }
 
 function agoraLocalInput() {
-    const data = new Date();
-    data.setMinutes(data.getMinutes() - data.getTimezoneOffset());
-    return data.toISOString().slice(0, 16);
+    return agoraSaoPauloInput();
 }
 
 function calcularVencimentoTeste() {
