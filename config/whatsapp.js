@@ -31,6 +31,8 @@ let ultimoQrEm = null;
 let limpandoCliente = false;
 let eventosInternosIgnorados = 0;
 let ultimoResumoEventosInternos = 0;
+let conversasNaoIndividuaisIgnoradas = 0;
+let ultimoResumoConversasNaoIndividuais = 0;
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
 const avisosForaHorario = new Set();
@@ -297,6 +299,20 @@ function registrarEventoInternoIgnorado(message) {
     ultimoResumoEventosInternos = agora;
 }
 
+function registrarConversaNaoIndividualIgnorada(message) {
+    conversasNaoIndividuaisIgnoradas += 1;
+    const agora = Date.now();
+
+    if (agora - ultimoResumoConversasNaoIndividuais < 60000) return;
+
+    console.log(
+        `Conversas não individuais ignoradas: ${conversasNaoIndividuaisIgnoradas} ` +
+        `(ultima origem=${obterTelefoneMensagem(message) || '-'})`
+    );
+    conversasNaoIndividuaisIgnoradas = 0;
+    ultimoResumoConversasNaoIndividuais = agora;
+}
+
 function ehMidiaPropria(message) {
     if (message?.hasMedia) return true;
 
@@ -337,7 +353,7 @@ function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
     if (!ehConversaCliente(message)) {
-        console.log('Mensagem ignorada: conversa não individual:', obterTelefoneMensagem(message));
+        registrarConversaNaoIndividualIgnorada(message);
         return;
     }
 
@@ -538,6 +554,11 @@ async function iniciarWhatsApp() {
                 return;
             }
 
+            if (!ehConversaCliente(message)) {
+                registrarConversaNaoIndividualIgnorada(message);
+                return;
+            }
+
             console.log('Mensagem recebida de:', message.from);
             processarMensagemEmFila(message);
         });
@@ -545,6 +566,11 @@ async function iniciarWhatsApp() {
         client.on('message_create', async (message) => {
             if (ehEventoInternoWhatsapp(message)) {
                 registrarEventoInternoIgnorado(message);
+                return;
+            }
+
+            if (!ehConversaCliente(message)) {
+                registrarConversaNaoIndividualIgnorada(message);
                 return;
             }
 
