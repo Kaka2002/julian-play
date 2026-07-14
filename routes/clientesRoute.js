@@ -2069,7 +2069,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'financeiro' ?'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
                 <a class="navlink ${ativo === 'preparacao' ?'active' : ''}" href="/preparacao-comercial">${icon('trend')} Preparação</a>
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
-                <a class="navlink" href="/licenca">${icon('licenca')} LicenÃ§a</a>
+                <a class="navlink" href="/licenca">${icon('licenca')} Licença</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
