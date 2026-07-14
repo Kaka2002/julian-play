@@ -94,6 +94,19 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     return @($nomes)
 }
 
+function ExecutarPm2Opcional($pm2, [string[]]$argumentos) {
+    $acaoAnterior = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $pm2.Source @argumentos *> $null
+    } catch {
+        # Alguns comandos do PM2 retornam erro quando o processo ainda nao existe.
+    } finally {
+        $ErrorActionPreference = $acaoAnterior
+        $global:LASTEXITCODE = 0
+    }
+}
+
 function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
     $raizesValidas = @($raizes |
         Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
@@ -213,7 +226,7 @@ if ($pm2) {
     Etapa 'Parando as instalacoes Julian Play antes de atualizar dependencias'
     $processosPausados = ObterProcessosJulian $pm2 $NomeProcesso
     foreach ($processo in $processosPausados) {
-        & $pm2.Source stop $processo 2>$null | Out-Host
+        ExecutarPm2Opcional $pm2 @('stop', $processo)
     }
     Start-Sleep -Seconds 4
 }
@@ -267,7 +280,7 @@ if (-not $pm2) {
 }
 
 Etapa 'Configurando uma unica instancia no PM2'
-& $pm2.Source delete $NomeProcesso 2>$null | Out-Host
+ExecutarPm2Opcional $pm2 @('delete', $NomeProcesso)
 Start-Sleep -Seconds 2
 
 $ocupantes = @(Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)
