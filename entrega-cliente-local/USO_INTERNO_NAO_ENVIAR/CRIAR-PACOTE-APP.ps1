@@ -52,6 +52,24 @@ Get-ChildItem -LiteralPath $raizProjeto -Force -Recurse | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $destinoItem -Force
 }
 
+$configMestre = Join-Path $raizProjeto '.julian-master-install.json'
+if (Test-Path -LiteralPath $configMestre) {
+    try {
+        $dadosMestre = Get-Content -LiteralPath $configMestre -Raw | ConvertFrom-Json
+        if ($dadosMestre.licensePublicKey) {
+            $pastaConfigPacote = Join-Path $temporario 'config'
+            New-Item -ItemType Directory -Path $pastaConfigPacote -Force | Out-Null
+            [IO.File]::WriteAllText(
+                (Join-Path $pastaConfigPacote 'license-public-key.pem'),
+                [string]$dadosMestre.licensePublicKey,
+                (New-Object Text.UTF8Encoding($false))
+            )
+        }
+    } catch {
+        Write-Warning 'Nao foi possivel incluir a chave publica de licenca no pacote.'
+    }
+}
+
 if (Test-Path -LiteralPath $Destino) {
     Remove-Item -LiteralPath $Destino -Force
 }

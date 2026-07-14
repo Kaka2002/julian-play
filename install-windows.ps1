@@ -200,6 +200,14 @@ $codigoFornecedor = if ($null -ne $configAnterior -and $configAnterior.licenseAd
 } else {
     ([guid]::NewGuid().ToString('N').Substring(0, 20)).ToUpperInvariant()
 }
+$arquivoChavePublica = Join-Path $diretorioProjeto 'config\license-public-key.pem'
+$chavePublicaLicenca = if ($null -ne $configAnterior -and $configAnterior.licensePublicKey) {
+    [string]$configAnterior.licensePublicKey
+} elseif (Test-Path -LiteralPath $arquivoChavePublica) {
+    Get-Content -LiteralPath $arquivoChavePublica -Raw
+} else {
+    ''
+}
 
 $configInstalacao = [ordered]@{
     appName = $NomeProcesso
@@ -207,6 +215,7 @@ $configInstalacao = [ordered]@{
     dataDir = $PastaDados
     trialDays = $AvaliacaoDias
     licenseAdminToken = $codigoFornecedor
+    licensePublicKey = $chavePublicaLicenca
 }
 $jsonInstalacao = $configInstalacao | ConvertTo-Json
 $utf8SemBom = New-Object System.Text.UTF8Encoding($false)

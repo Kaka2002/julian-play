@@ -31,6 +31,9 @@ Remove-Item Env:JULIAN_MASTER_PASSWORD_TEMP -ErrorAction SilentlyContinue
 if ($LASTEXITCODE -ne 0 -or -not $hash) { throw 'Nao foi possivel gerar o hash da senha.' }
 $segredoLicenca = (& node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex').toUpperCase())")
 if ($LASTEXITCODE -ne 0 -or -not $segredoLicenca) { throw 'Nao foi possivel gerar o segredo de licenca.' }
+$chavesLicencaJson = (& node -e "const crypto=require('crypto'); const {publicKey, privateKey}=crypto.generateKeyPairSync('ed25519'); process.stdout.write(JSON.stringify({publicKey: publicKey.export({type:'spki', format:'pem'}), privateKey: privateKey.export({type:'pkcs8', format:'pem'})}));")
+if ($LASTEXITCODE -ne 0 -or -not $chavesLicencaJson) { throw 'Nao foi possivel gerar as chaves de licenca.' }
+$chavesLicenca = $chavesLicencaJson | ConvertFrom-Json
 
 $dadosMaster = 'C:\JulianPlayMaster'
 $clientes = 'C:\JulianPlayClientes'
@@ -53,6 +56,8 @@ $config = [ordered]@{
     caddyConfig = 'C:\caddy\Caddyfile'
     licenseSigningSecret = [string]$segredoLicenca
     licenseAdminToken = [string]$segredoLicenca
+    licenseSigningPrivateKey = [string]$chavesLicenca.privateKey
+    licensePublicKey = [string]$chavesLicenca.publicKey
 }
 $json = $config | ConvertTo-Json
 [IO.File]::WriteAllText($arquivoConfig, $json, (New-Object Text.UTF8Encoding($false)))

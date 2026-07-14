@@ -6,6 +6,10 @@ const {
     salvarConfiguracao
 } = require('./configuracoesPainel');
 const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('./licencaCalculo');
+const {
+    gerarCodigoAssinado,
+    lerCodigoAssinado
+} = require('./licencaAssinatura');
 
 const LICENCA_CODIGO_PREFIXO = 'JPLAY-LIC-';
 const INTERVALO_CONSULTA_REMOTA_MS = 15 * 60 * 1000;
@@ -81,31 +85,11 @@ function gerarCodigoLicenca(dados = {}) {
         emitidoEm: new Date().toISOString()
     };
 
-    const payloadBase64 = base64UrlEncode(JSON.stringify(payload));
-    return `${LICENCA_CODIGO_PREFIXO}${payloadBase64}.${assinarPayloadLicenca(payloadBase64)}`;
+    return gerarCodigoAssinado(payload);
 }
 
 function lerCodigoLicenca(codigo) {
-    const texto = String(codigo || '').trim();
-    const normalizado = texto.startsWith(LICENCA_CODIGO_PREFIXO)
-        ? texto.slice(LICENCA_CODIGO_PREFIXO.length)
-        : texto;
-    const [payloadBase64, assinatura] = normalizado.split('.');
-
-    if (!payloadBase64 || !assinatura) {
-        throw new Error('Código de licença inválido.');
-    }
-
-    const assinaturaEsperada = assinarPayloadLicenca(payloadBase64);
-    if (!compararSeguro(assinatura, assinaturaEsperada)) {
-        throw new Error('Código de licença não confere com a assinatura do fornecedor.');
-    }
-
-    const payload = JSON.parse(base64UrlDecode(payloadBase64));
-    if (Number(payload.v || 0) !== 1) {
-        throw new Error('Versão do código de licença não suportada.');
-    }
-    return payload;
+    return lerCodigoAssinado(codigo);
 }
 
 function compararSeguro(a, b) {

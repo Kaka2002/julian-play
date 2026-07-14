@@ -34,6 +34,8 @@ module.exports = {
             MASTER_FIRST_PORT: String(settings.firstPort || 11001),
             LICENSE_SIGNING_SECRET: process.env.LICENSE_SIGNING_SECRET || settings.licenseSigningSecret || settings.licenseAdminToken || '',
             LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || settings.licenseSigningSecret || '',
+            LICENSE_PRIVATE_KEY: process.env.LICENSE_PRIVATE_KEY || settings.licenseSigningPrivateKey || '',
+            LICENSE_PUBLIC_KEY: process.env.LICENSE_PUBLIC_KEY || settings.licensePublicKey || '',
             JULIAN_PLAY_SOURCE_DIR: projectDir,
             CADDY_EXE: settings.caddyExe || 'C:\\caddy\\caddy.exe',
             CADDY_CONFIG: settings.caddyConfig || 'C:\\caddy\\Caddyfile'
