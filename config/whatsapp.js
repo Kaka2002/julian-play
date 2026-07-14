@@ -29,6 +29,8 @@ let tentativaReconexao = null;
 let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
 let limpandoCliente = false;
+let eventosInternosIgnorados = 0;
+let ultimoResumoEventosInternos = 0;
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
 const avisosForaHorario = new Set();
@@ -266,6 +268,35 @@ function obterTipoMensagem(message) {
         'desconhecido';
 }
 
+function ehEventoInternoWhatsapp(message) {
+    const tipo = normalizar(obterTipoMensagem(message));
+    const subtipo = normalizar(message?._data?.subtype || '');
+    const texto = normalizar(obterTextoMensagem(message));
+    const tiposInternos = new Set([
+        'e2e_notification',
+        'notification_template',
+        'notification',
+        'protocol',
+        'ciphertext'
+    ]);
+
+    return !texto && !message?.hasMedia && (tiposInternos.has(tipo) || tiposInternos.has(subtipo));
+}
+
+function registrarEventoInternoIgnorado(message) {
+    eventosInternosIgnorados += 1;
+    const agora = Date.now();
+
+    if (agora - ultimoResumoEventosInternos < 60000) return;
+
+    console.log(
+        `Eventos internos do WhatsApp ignorados: ${eventosInternosIgnorados} ` +
+        `(ultimo tipo=${obterTipoMensagem(message)}, origem=${obterTelefoneMensagem(message) || '-'})`
+    );
+    eventosInternosIgnorados = 0;
+    ultimoResumoEventosInternos = agora;
+}
+
 function ehMidiaPropria(message) {
     if (message?.hasMedia) return true;
 
@@ -307,6 +338,11 @@ function processarMensagemEmFila(message, options = {}) {
 
     if (!ehConversaCliente(message)) {
         console.log('Mensagem ignorada: conversa não individual:', obterTelefoneMensagem(message));
+        return;
+    }
+
+    if (ehEventoInternoWhatsapp(message)) {
+        registrarEventoInternoIgnorado(message);
         return;
     }
 
@@ -497,11 +533,21 @@ async function iniciarWhatsApp() {
         });
 
         client.on('message', async (message) => {
+            if (ehEventoInternoWhatsapp(message)) {
+                registrarEventoInternoIgnorado(message);
+                return;
+            }
+
             console.log('Mensagem recebida de:', message.from);
             processarMensagemEmFila(message);
         });
 
         client.on('message_create', async (message) => {
+            if (ehEventoInternoWhatsapp(message)) {
+                registrarEventoInternoIgnorado(message);
+                return;
+            }
+
             console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}.`);
             processarMensagemEmFila(message);
         });
