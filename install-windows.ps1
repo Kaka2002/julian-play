@@ -201,10 +201,12 @@ $codigoFornecedor = if ($null -ne $configAnterior -and $configAnterior.licenseAd
     ([guid]::NewGuid().ToString('N').Substring(0, 20)).ToUpperInvariant()
 }
 $arquivoChavePublica = Join-Path $diretorioProjeto 'config\license-public-key.pem'
-$chavePublicaLicenca = if ($null -ne $configAnterior -and $configAnterior.licensePublicKey) {
-    [string]$configAnterior.licensePublicKey
-} elseif (Test-Path -LiteralPath $arquivoChavePublica) {
-    Get-Content -LiteralPath $arquivoChavePublica -Raw
+$chavePublicaAnterior = if ($null -ne $configAnterior -and $configAnterior.licensePublicKey) { [string]$configAnterior.licensePublicKey } else { '' }
+$chavePublicaPacote = if (Test-Path -LiteralPath $arquivoChavePublica) { Get-Content -LiteralPath $arquivoChavePublica -Raw } else { '' }
+$chavePublicaLicenca = if ($chavePublicaPacote -like '*-----BEGIN PUBLIC KEY-----*') {
+    $chavePublicaPacote
+} elseif ($chavePublicaAnterior -like '*-----BEGIN PUBLIC KEY-----*') {
+    $chavePublicaAnterior
 } else {
     ''
 }

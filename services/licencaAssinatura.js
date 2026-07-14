@@ -22,6 +22,10 @@ function normalizarPem(valor) {
     return String(valor || '').replace(/\\n/g, '\n').trim();
 }
 
+function pareceChavePublicaPem(valor) {
+    return normalizarPem(valor).includes('-----BEGIN PUBLIC KEY-----');
+}
+
 function lerConfiguracaoLocal() {
     const caminhos = [
         path.join(process.cwd(), '.julian-master-install.json'),
@@ -45,7 +49,25 @@ function obterChavePrivada() {
 
 function obterChavePublica() {
     const config = lerConfiguracaoLocal();
-    return normalizarPem(process.env.LICENSE_PUBLIC_KEY || config.licensePublicKey || '');
+    const fontes = [
+        process.env.LICENSE_PUBLIC_KEY,
+        config.licensePublicKey,
+        lerArquivoTexto(path.join(process.cwd(), 'config', 'license-public-key.pem'))
+    ];
+
+    for (const fonte of fontes) {
+        const chave = normalizarPem(fonte);
+        if (pareceChavePublicaPem(chave)) return chave;
+    }
+    return '';
+}
+
+function lerArquivoTexto(caminho) {
+    try {
+        return fs.readFileSync(caminho, 'utf8');
+    } catch (_) {
+        return '';
+    }
 }
 
 function obterSegredoLicenca() {
@@ -90,7 +112,12 @@ function validarAssinatura(payload, payloadBase64, assinatura) {
         if (!chavePublica) {
             throw new Error('Chave pública do fornecedor não configurada nesta instalação.');
         }
-        const valido = crypto.verify(null, Buffer.from(payloadBase64), chavePublica, Buffer.from(assinatura, 'base64url'));
+        let valido = false;
+        try {
+            valido = crypto.verify(null, Buffer.from(payloadBase64), chavePublica, Buffer.from(assinatura, 'base64url'));
+        } catch (_) {
+            throw new Error('Chave pública do fornecedor está inválida nesta instalação. Atualize o painel com o pacote mais recente.');
+        }
         if (!valido) {
             throw new Error('Código de licença não confere com a assinatura do fornecedor.');
         }
