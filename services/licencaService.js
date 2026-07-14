@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const {
     obterConfiguracoes,
     salvarConfiguracao
@@ -16,8 +18,27 @@ function base64UrlDecode(valor) {
     return Buffer.from(String(valor || ''), 'base64url').toString('utf8');
 }
 
+function lerSegredoDeArquivo() {
+    const caminhos = [
+        path.join(process.cwd(), '.julian-master-install.json'),
+        path.join(process.cwd(), '.julian-play-install.json')
+    ];
+
+    for (const caminho of caminhos) {
+        try {
+            const config = JSON.parse(fs.readFileSync(caminho, 'utf8').replace(/^\uFEFF/, ''));
+            const segredo = String(config.licenseSigningSecret || config.licenseAdminToken || '').trim();
+            if (segredo) return segredo;
+        } catch (_) {
+            // Arquivo opcional; segue para a proxima fonte.
+        }
+    }
+    return '';
+}
+
 function obterSegredoLicenca() {
-    const segredo = String(process.env.LICENSE_SIGNING_SECRET || process.env.LICENSE_ADMIN_TOKEN || '').trim();
+    const segredo = String(process.env.LICENSE_SIGNING_SECRET || process.env.LICENSE_ADMIN_TOKEN || '').trim()
+        || lerSegredoDeArquivo();
     if (!segredo) {
         throw new Error('Segredo de licença não configurado. Configure LICENSE_SIGNING_SECRET ou LICENSE_ADMIN_TOKEN.');
     }
