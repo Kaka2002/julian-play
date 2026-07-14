@@ -20,7 +20,9 @@ const router = express.Router();
 const tentativasLogin = new Map();
 const MAX_TENTATIVAS_LOGIN = Number(process.env.PANEL_LOGIN_MAX_ATTEMPTS || 5);
 const BLOQUEIO_LOGIN_MS = Number(process.env.PANEL_LOGIN_LOCK_MINUTES || 15) * 60 * 1000;
-const CODIGO_CONFIGURACAO = process.env.PANEL_SETUP_TOKEN || crypto.randomBytes(6).toString('hex').toUpperCase();
+const CODIGO_CONFIGURACAO = process.env.PANEL_SETUP_TOKEN
+    || process.env.LICENSE_ADMIN_TOKEN
+    || crypto.randomBytes(6).toString('hex').toUpperCase();
 
 acessoConfigurado()
     .then((configurado) => {
