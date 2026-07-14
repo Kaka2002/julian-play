@@ -5556,7 +5556,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </table>
     </section>`}
 
-    ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
+    <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Importar clientes CSV</h2>
@@ -5575,7 +5575,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>
 
-    ${resumoImportacaoClientes(opcoes.importacao)}`}
+    ${resumoImportacaoClientes(opcoes.importacao)}
 
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -6530,14 +6530,14 @@ router.post('/manutencao/diagnostico', bloquearManutencaoRestritaCliente, async 
     }
 });
 
-router.get('/manutencao/clientes-modelo.csv', bloquearManutencaoRestritaCliente, (req, res) => {
+router.get('/manutencao/clientes-modelo.csv', (req, res) => {
     desativarCache(res);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="modelo-clientes.csv"');
     res.send(`\uFEFF${csvModeloClientes()}`);
 });
 
-router.post('/manutencao/importar-clientes', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/importar-clientes', async (req, res) => {
     try {
         const upload = await lerUploadMultipart(req);
         const preview = await prepararImportacaoClientesCsv(upload.buffer.toString('utf8'));
@@ -6562,7 +6562,7 @@ router.post('/manutencao/importar-clientes', bloquearManutencaoRestritaCliente, 
     }
 });
 
-router.post('/manutencao/importar-clientes/confirmar', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
     try {
         const preview = lerPreviaImportacao(req.body.token);
         const itens = preview.itens || [];
