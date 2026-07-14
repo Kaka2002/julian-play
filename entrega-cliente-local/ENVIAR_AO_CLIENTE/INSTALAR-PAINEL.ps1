@@ -45,6 +45,19 @@ function ExecutarPm2Opcional([string[]]$argumentos) {
     }
 }
 
+function PararPm2Local {
+    $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+    if (-not $pm2) {
+        return
+    }
+
+    ExecutarPm2Opcional @('stop', 'julian-play-cliente')
+    ExecutarPm2Opcional @('delete', 'julian-play-cliente')
+    ExecutarPm2Opcional @('save', '--force')
+    ExecutarPm2Opcional @('kill')
+    Start-Sleep -Seconds 5
+}
+
 function EncerrarProcessosDaPasta([string]$pasta) {
     if (-not (Test-Path -LiteralPath $pasta)) {
         return
@@ -54,7 +67,7 @@ function EncerrarProcessosDaPasta([string]$pasta) {
     $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
             $_.ProcessId -ne $PID -and
-            $_.Name -in @('node.exe', 'chrome.exe') -and
+            $_.Name -in @('node.exe', 'chrome.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe') -and
             $_.CommandLine -and
             $_.CommandLine -like "*$pastaCompleta*"
         })
@@ -96,12 +109,15 @@ New-Item -ItemType Directory -Path $PastaInstalacao, $PastaDados -Force | Out-Nu
 
 if (Test-Path -LiteralPath (Join-Path $PastaInstalacao 'package.json')) {
     Etapa 'Parando instalacao anterior'
-    ExecutarPm2Opcional @('stop', 'julian-play-cliente')
-    ExecutarPm2Opcional @('delete', 'julian-play-cliente')
+    PararPm2Local
     EncerrarProcessosDaPasta $PastaInstalacao
 
     $backup = "C:\JulianPlay\app-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-    Move-Item -LiteralPath $PastaInstalacao -Destination $backup -Force
+    try {
+        Move-Item -LiteralPath $PastaInstalacao -Destination $backup -Force
+    } catch {
+        throw "Nao foi possivel mover a instalacao anterior porque o Windows ainda esta usando algum arquivo em C:\JulianPlay\app. Reinicie o computador e execute 2-INSTALAR-PAINEL.bat antes de abrir o painel. Detalhe: $($_.Exception.Message)"
+    }
     New-Item -ItemType Directory -Path $PastaInstalacao -Force | Out-Null
     Write-Host "Instalacao anterior movida para $backup" -ForegroundColor Yellow
 }
