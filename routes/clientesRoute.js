@@ -98,6 +98,7 @@ const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 const CLIENTES_POR_PAGINA = 6;
 const FINANCEIRO_POR_PAGINA = 10;
+const REGISTROS_POR_PAGINA = 6;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
@@ -200,14 +201,16 @@ function paginarItens(itens = [], pagina = 1, porPagina = 10) {
 
 function montarUrlPaginacao(base, params = {}, pagina = 1) {
     const query = new URLSearchParams();
+    const parametroPagina = String(params.parametroPagina || 'pagina');
 
     Object.entries(params).forEach(([chave, valor]) => {
+        if (chave === 'parametroPagina') return;
         if (valor !== undefined && valor !== null && String(valor) !== '') {
             query.set(chave, String(valor));
         }
     });
 
-    query.set('pagina', String(pagina));
+    query.set(parametroPagina, String(pagina));
     return `${base}?${query.toString()}`;
 }
 
@@ -2155,11 +2158,12 @@ function alertaClienteHtml(alertas = []) {
     <div class="client-alert-list">${itens}</div>`;
 }
 
-function secaoNotasCliente(cliente = {}, notas = []) {
+function secaoNotasCliente(cliente = {}, notas = [], paginacaoNotas = null) {
     if (!cliente.id) return '';
+    const notasVisiveis = paginacaoNotas?.itens || notas;
 
-    const listaNotas = notas.length
-        ?`<div class="notes-list">${notas.map(nota => `<div class="note-item">
+    const listaNotas = notasVisiveis.length
+        ?`<div class="notes-list">${notasVisiveis.map(nota => `<div class="note-item">
             <span class="note-date">${escapar(formatarDataNota(nota.criadoEm))}</span>
             <div>${escapar(nota.texto)}</div>
         </div>`).join('')}</div>`
@@ -2169,6 +2173,14 @@ function secaoNotasCliente(cliente = {}, notas = []) {
         <div class="fields">
             <div class="form-section full">Histórico de atendimento</div>
             <div class="full">${listaNotas}</div>
+            ${paginacaoNotas ?`<div class="full">${paginacao({
+                base: `/clientes/${cliente.id}/editar`,
+                params: { parametroPagina: 'historico' },
+                pagina: paginacaoNotas.pagina,
+                totalPaginas: paginacaoNotas.totalPaginas,
+                total: paginacaoNotas.total,
+                porPagina: paginacaoNotas.porPagina
+            })}</div>` : ''}
         </div>
     </section>`;
 }
@@ -3700,6 +3712,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const notas = opcoesFormulario.notas || [];
     const pagamentos = opcoesFormulario.pagamentos || [];
     const alertas = opcoesFormulario.alertas || [];
+    const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
+    const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
@@ -4112,7 +4126,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
-        secaoNotasCliente(cliente, notas)
+        secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
 
     return `${formulario}${extras}`;
@@ -5139,18 +5153,26 @@ function appRow(app) {
     </div>`;
 }
 
-function telaApps(apps) {
+function telaApps(apps, paginacaoApps = null) {
+    const appsVisiveis = paginacaoApps?.itens || apps;
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Aplicativos</h1>
-                <div class="subtitle">Gerencie os apps disponíveis para cadastro de clientes</div>
+                <div class="subtitle">${paginacaoApps?.total ?? apps.length} app(s) cadastrados para clientes</div>
             </div>
             <a class="button" href="/apps/novo">${icon('plus')} Novo App</a>
         </div>
     </section>
     <section class="panel catalog-panel">
-        ${apps.length ?apps.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
+        ${appsVisiveis.length ?appsVisiveis.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
+        ${paginacaoApps ?paginacao({
+            base: '/apps',
+            pagina: paginacaoApps.pagina,
+            totalPaginas: paginacaoApps.totalPaginas,
+            total: paginacaoApps.total,
+            porPagina: paginacaoApps.porPagina
+        }) : ''}
     </section>`;
 }
 
@@ -5194,19 +5216,27 @@ function deviceCard(dispositivo) {
     </article>`;
 }
 
-function telaDispositivos(dispositivos) {
+function telaDispositivos(dispositivos, paginacaoDispositivos = null) {
+    const dispositivosVisiveis = paginacaoDispositivos?.itens || dispositivos;
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Dispositivos</h1>
-                <div class="subtitle">${dispositivos.length} dispositivos cadastrados</div>
+                <div class="subtitle">${paginacaoDispositivos?.total ?? dispositivos.length} dispositivos cadastrados</div>
             </div>
             <a class="button" href="/dispositivos/novo">${icon('plus')} Novo Dispositivo</a>
         </div>
     </section>
     <section class="device-grid">
-        ${dispositivos.length ?dispositivos.map(deviceCard).join('') : '<div class="empty">Nenhum dispositivo cadastrado.</div>'}
-    </section>`;
+        ${dispositivosVisiveis.length ?dispositivosVisiveis.map(deviceCard).join('') : '<div class="empty">Nenhum dispositivo cadastrado.</div>'}
+    </section>
+    ${paginacaoDispositivos ?paginacao({
+        base: '/dispositivos',
+        pagina: paginacaoDispositivos.pagina,
+        totalPaginas: paginacaoDispositivos.totalPaginas,
+        total: paginacaoDispositivos.total,
+        porPagina: paginacaoDispositivos.porPagina
+    }) : ''}`;
 }
 
 function formularioDispositivo(dispositivo = {}) {
@@ -5250,19 +5280,27 @@ function panelCard(painel) {
     </article>`;
 }
 
-function telaPaineis(paineis) {
+function telaPaineis(paineis, paginacaoPaineis = null) {
+    const paineisVisiveis = paginacaoPaineis?.itens || paineis;
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
                 <h1>Painéis</h1>
-                <div class="subtitle">${paineis.length} painéis cadastrados</div>
+                <div class="subtitle">${paginacaoPaineis?.total ?? paineis.length} painéis cadastrados</div>
             </div>
             <a class="button" href="/paineis/novo">${icon('plus')} Novo Painel</a>
         </div>
     </section>
     <section class="device-grid">
-        ${paineis.length ?paineis.map(panelCard).join('') : '<div class="empty">Nenhum painel cadastrado.</div>'}
-    </section>`;
+        ${paineisVisiveis.length ?paineisVisiveis.map(panelCard).join('') : '<div class="empty">Nenhum painel cadastrado.</div>'}
+    </section>
+    ${paginacaoPaineis ?paginacao({
+        base: '/paineis',
+        pagina: paginacaoPaineis.pagina,
+        totalPaginas: paginacaoPaineis.totalPaginas,
+        total: paginacaoPaineis.total,
+        porPagina: paginacaoPaineis.porPagina
+    }) : ''}`;
 }
 
 function formatarUptime(segundos = 0) {
@@ -5785,7 +5823,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas }),
+        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, paginaHistorico: req.query.historico || req.query.pagina }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
@@ -6280,11 +6318,13 @@ router.post('/planos/:id/excluir', async (req, res) => {
 
 router.get('/apps', async (req, res) => {
     const apps = await listarApps();
+    const pagina = paginaAtual(req.query.pagina);
+    const paginacaoApps = paginarItens(apps, pagina, REGISTROS_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
         titulo: 'Apps',
-        conteudo: telaApps(apps),
+        conteudo: telaApps(apps, paginacaoApps),
         mensagem,
         ativo: 'apps'
     });
@@ -6337,11 +6377,13 @@ router.post('/apps/:id/excluir', async (req, res) => {
 
 router.get('/dispositivos', async (req, res) => {
     const dispositivos = await listarDispositivos();
+    const pagina = paginaAtual(req.query.pagina);
+    const paginacaoDispositivos = paginarItens(dispositivos, pagina, REGISTROS_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
         titulo: 'Dispositivos',
-        conteudo: telaDispositivos(dispositivos),
+        conteudo: telaDispositivos(dispositivos, paginacaoDispositivos),
         mensagem,
         ativo: 'dispositivos'
     });
@@ -6394,11 +6436,13 @@ router.post('/dispositivos/:id/excluir', async (req, res) => {
 
 router.get('/paineis', async (req, res) => {
     const paineis = await listarPaineis();
+    const pagina = paginaAtual(req.query.pagina);
+    const paginacaoPaineis = paginarItens(paineis, pagina, REGISTROS_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
         titulo: 'Painéis',
-        conteudo: telaPaineis(paineis),
+        conteudo: telaPaineis(paineis, paginacaoPaineis),
         mensagem,
         ativo: 'paineis'
     });
