@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const packageInfo = require('../package.json');
+const masterDb = require('./db');
 const { verificarSenha } = require('../services/passwordService');
 const { gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
 const { dataHojeSaoPaulo, adicionarDias } = require('../services/licencaCalculo');
@@ -854,7 +855,80 @@ function secaoCodigoLicencaLocal(opcoes = {}) {
     </section>`;
 }
 
+function urlPublicaMestre(req) {
+    const configurada = String(process.env.MASTER_PUBLIC_URL || '').trim();
+    if (configurada) return configurada.replace(/\/+$/, '');
+    const protocolo = req.secure || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https'
+        ? 'https'
+        : 'http';
+    return `${protocolo}://${req.headers.host}`;
+}
+
+async function salvarLicencaLocalGerada(dados = {}) {
+    await masterDb.executar(
+        `INSERT INTO licencas_locais (
+            instalacaoId, cliente, telefone, tipo, ativacao, vencimento, vitalicia,
+            suspensa, codigo, observacoes, atualizadoEm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(instalacaoId) DO UPDATE SET
+            cliente = excluded.cliente,
+            telefone = excluded.telefone,
+            tipo = excluded.tipo,
+            ativacao = excluded.ativacao,
+            vencimento = excluded.vencimento,
+            vitalicia = excluded.vitalicia,
+            suspensa = excluded.suspensa,
+            codigo = excluded.codigo,
+            observacoes = excluded.observacoes,
+            atualizadoEm = CURRENT_TIMESTAMP`,
+        [
+            dados.instalacaoId,
+            dados.cliente,
+            dados.telefone || '',
+            dados.tipo,
+            dados.ativacao || '',
+            dados.vencimento || '',
+            dados.vitalicia || '0',
+            dados.suspensa || '0',
+            dados.codigo || '',
+            dados.observacoes || ''
+        ]
+    );
+}
+
 app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
+
+app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
+    try {
+        const instalacaoId = String(req.params.instalacaoId || '').trim();
+        const licenca = await masterDb.buscarUm('SELECT * FROM licencas_locais WHERE instalacaoId = ? LIMIT 1', [instalacaoId]);
+        if (!licenca) {
+            return res.status(404).json({ ok: false, encontrada: false, mensagem: 'Licença não encontrada no Painel Mestre.' });
+        }
+
+        await masterDb.executar(
+            'UPDATE licencas_locais SET ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ?',
+            ['consultada', instalacaoId]
+        );
+
+        res.json({
+            ok: true,
+            encontrada: true,
+            instalacaoId: licenca.instalacaoId,
+            cliente: licenca.cliente,
+            telefone: licenca.telefone || '',
+            tipo: licenca.tipo,
+            ativacao: licenca.ativacao || '',
+            vencimento: licenca.vencimento || '',
+            vitalicia: licenca.vitalicia === '1',
+            suspensa: licenca.suspensa === '1',
+            observacoes: licenca.observacoes || '',
+            atualizadoEm: licenca.atualizadoEm
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, mensagem: err.message });
+    }
+});
 
 app.get('/login', (req, res) => {
     if (sessaoValida(req)) return res.redirect(destinoSeguro(req.query.destino || '/'));
@@ -958,6 +1032,7 @@ app.post('/licencas/codigo', async (req, res) => {
         const vencimento = tipo === 'vitalicia'
             ? ''
             : String(req.body.licencaVencimento || '').slice(0, 10) || adicionarDias(hoje, diasPorTipo[tipo] || 30);
+        const servidorUrl = urlPublicaMestre(req);
         const codigoLicenca = gerarCodigoLicencaAssinado({
             v: 1,
             instalacaoId,
@@ -970,7 +1045,20 @@ app.post('/licencas/codigo', async (req, res) => {
             periodoTesteDias: tipo === 'avaliacao_15' ? '15' : tipo === 'avaliacao_30' ? '30' : '0',
             suspensa: tipo === 'suspensa' ? '1' : '0',
             observacoes: String(req.body.licencaObservacoes || '').trim(),
+            servidorUrl,
             emitidoEm: new Date().toISOString()
+        });
+        await salvarLicencaLocalGerada({
+            instalacaoId,
+            cliente,
+            telefone: req.body.licencaTelefone,
+            tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+            ativacao: hoje,
+            vencimento,
+            vitalicia: tipo === 'vitalicia' ? '1' : '0',
+            suspensa: tipo === 'suspensa' ? '1' : '0',
+            codigo: codigoLicenca,
+            observacoes: req.body.licencaObservacoes
         });
 
         res.send(await renderizarPainel({

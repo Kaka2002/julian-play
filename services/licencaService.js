@@ -6,6 +6,7 @@ const {
 const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('./licencaCalculo');
 
 const LICENCA_CODIGO_PREFIXO = 'JPLAY-LIC-';
+const INTERVALO_CONSULTA_REMOTA_MS = 15 * 60 * 1000;
 
 function base64UrlEncode(valor) {
     return Buffer.from(String(valor), 'utf8').toString('base64url');
@@ -145,7 +146,70 @@ async function obterEstadoLicenca() {
     let config = await obterConfiguracoes();
     config = await garantirIdentificadorInstalacao(config);
     config = await inicializarAvaliacaoPadrao(config);
+    config = await sincronizarLicencaRemota(config);
     return calcularEstadoLicenca(config);
+}
+
+function consultaRemotaRecente(config = {}) {
+    const ultima = new Date(config.licencaUltimaConsultaRemota || 0).getTime();
+    return Number.isFinite(ultima) && ultima > 0 && Date.now() - ultima < INTERVALO_CONSULTA_REMOTA_MS;
+}
+
+async function sincronizarLicencaRemota(config = {}) {
+    const servidorUrl = String(config.licencaServidorUrl || '').trim().replace(/\/+$/, '');
+    const instalacaoId = String(config.instalacaoId || '').trim();
+
+    if (!servidorUrl || !instalacaoId || consultaRemotaRecente(config) || typeof fetch !== 'function') {
+        return config;
+    }
+
+    const agora = new Date().toISOString();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    try {
+        const resposta = await fetch(`${servidorUrl}/api/licencas/${encodeURIComponent(instalacaoId)}/status`, {
+            signal: controller.signal,
+            headers: { accept: 'application/json' }
+        });
+
+        if (!resposta.ok) {
+            await salvarConfiguracao('licencaUltimaConsultaRemota', agora);
+            return { ...config, licencaUltimaConsultaRemota: agora };
+        }
+
+        const dados = await resposta.json();
+        if (!dados || !dados.encontrada) {
+            await salvarConfiguracao('licencaUltimaConsultaRemota', agora);
+            return { ...config, licencaUltimaConsultaRemota: agora };
+        }
+
+        const atualizacoes = {
+            licencaCliente: dados.cliente || config.licencaCliente || '',
+            licencaTelefone: dados.telefone || config.licencaTelefone || '',
+            licencaTipo: dados.tipo || config.licencaTipo || 'assinatura',
+            licencaAtivacao: dados.ativacao || config.licencaAtivacao || '',
+            licencaVencimento: dados.vencimento || '',
+            licencaVitalicia: dados.vitalicia ? '1' : '0',
+            licencaSuspensa: dados.suspensa ? '1' : '0',
+            licencaBloqueioAtivo: '1',
+            licencaObservacoes: dados.observacoes || config.licencaObservacoes || '',
+            licencaUltimaConsultaRemota: agora
+        };
+
+        for (const [chave, valor] of Object.entries(atualizacoes)) {
+            if (String(config[chave] || '') !== String(valor || '')) {
+                await salvarConfiguracao(chave, valor);
+            }
+        }
+
+        return { ...config, ...atualizacoes };
+    } catch {
+        await salvarConfiguracao('licencaUltimaConsultaRemota', agora);
+        return { ...config, licencaUltimaConsultaRemota: agora };
+    } finally {
+        clearTimeout(timeout);
+    }
 }
 
 function validarCodigoFornecedor(codigo) {
@@ -229,6 +293,8 @@ async function aplicarCodigoLicenca(codigo) {
     await salvarConfiguracao('licencaSuspensa', payload.suspensa === '1' ? '1' : '0');
     await salvarConfiguracao('licencaObservacoes', payload.observacoes || '');
     await salvarConfiguracao('licencaCodigoAtivacao', codigo);
+    await salvarConfiguracao('licencaServidorUrl', payload.servidorUrl || '');
+    await salvarConfiguracao('licencaUltimaConsultaRemota', '');
 
     return obterEstadoLicenca();
 }

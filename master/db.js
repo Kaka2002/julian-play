@@ -22,7 +22,29 @@ const ready = new Promise((resolve, reject) => {
                 if (eventoErr) return reject(eventoErr);
                 db.run('CREATE INDEX IF NOT EXISTS idx_eventos_instalacao_data ON eventos_instalacao(instalacaoId, criadoEm DESC)', (indiceErr) => {
                     if (indiceErr) return reject(indiceErr);
-                    resolve();
+                    db.run(`CREATE TABLE IF NOT EXISTS licencas_locais (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        instalacaoId TEXT NOT NULL UNIQUE,
+                        cliente TEXT NOT NULL,
+                        telefone TEXT,
+                        tipo TEXT NOT NULL,
+                        ativacao TEXT,
+                        vencimento TEXT,
+                        vitalicia TEXT NOT NULL DEFAULT '0',
+                        suspensa TEXT NOT NULL DEFAULT '0',
+                        codigo TEXT,
+                        observacoes TEXT,
+                        ultimoStatus TEXT,
+                        ultimoPingEm DATETIME,
+                        criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )`, (licencaErr) => {
+                        if (licencaErr) return reject(licencaErr);
+                        db.run('CREATE INDEX IF NOT EXISTS idx_licencas_locais_instalacao ON licencas_locais(instalacaoId)', (licencaIndiceErr) => {
+                            if (licencaIndiceErr) return reject(licencaIndiceErr);
+                            resolve();
+                        });
+                    });
                 });
             });
         }
