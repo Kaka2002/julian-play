@@ -179,6 +179,16 @@ async function buscarInstalacao(id) {
     return masterDb.buscarUm('SELECT * FROM instalacoes WHERE id = ?', [id]);
 }
 
+function instalacaoAdministradora(instalacao = {}) {
+    return ['admin', 'administrador', 'fornecedor'].includes(String(instalacao.perfilLicenca || '').trim().toLowerCase());
+}
+
+function exigirInstalacaoCliente(instalacao) {
+    if (instalacaoAdministradora(instalacao)) {
+        throw new Error('Esta ação é permitida somente para instalações de clientes.');
+    }
+}
+
 async function registrarEventoInstalacao(instalacaoId, tipo, mensagem, detalhes = '') {
     await masterDb.executar(
         `INSERT INTO eventos_instalacao (instalacaoId, tipo, mensagem, detalhes)
@@ -491,6 +501,7 @@ function lerResumoComercialTenant(dbPath) {
 async function suspenderInstalacao(id) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
+    exigirInstalacaoCliente(instalacao);
     await salvarConfiguracoesTenant(path.join(instalacao.pastaDados, 'clientes.db'), {
         licencaBloqueioAtivo: '1',
         licencaSuspensa: '1'
@@ -502,6 +513,7 @@ async function suspenderInstalacao(id) {
 async function tornarVitalicia(id) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
+    exigirInstalacaoCliente(instalacao);
     await salvarConfiguracoesTenant(path.join(instalacao.pastaDados, 'clientes.db'), {
         licencaCliente: instalacao.nome,
         licencaTipo: 'vitalicia',
@@ -530,6 +542,7 @@ function obterPeriodoLicencaComercial(tipo) {
 async function ativarLicencaComercial(id, tipoLicenca = 'mensal') {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
+    exigirInstalacaoCliente(instalacao);
 
     const periodo = obterPeriodoLicencaComercial(tipoLicenca);
     const hoje = dataHojeSaoPaulo();
@@ -563,6 +576,7 @@ async function ativarLicencaComercial(id, tipoLicenca = 'mensal') {
 async function prorrogarAvaliacao(id, dias = 15) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
+    exigirInstalacaoCliente(instalacao);
     const quantidadeDias = Number(dias);
     if (![15, 30].includes(quantidadeDias)) throw new Error('Escolha uma prorrogação de 15 ou 30 dias.');
 
@@ -630,6 +644,7 @@ async function trocarWhatsappInstalacao(id, novoNumero = '') {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
     if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem trocar o WhatsApp.');
+    exigirInstalacaoCliente(instalacao);
 
     const whatsappEsperado = String(novoNumero || '').replace(/\D/g, '');
     if (whatsappEsperado.length < 10 || whatsappEsperado.length > 15) {
@@ -788,6 +803,7 @@ async function liberarAtendimentoInstalacao(id) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
     if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem liberar atendimento.');
+    exigirInstalacaoCliente(instalacao);
 
     const resultado = await chamarApiInstalacao(instalacao, 'POST', '/api/admin/atendimentos/liberar');
     const liberados = Number(resultado.liberados || 0);
@@ -827,6 +843,7 @@ async function arquivarInstalacao(id) {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
     if (!caminhoDentro(instalacao.pastaDados, clientesDir)) throw new Error('Pasta da instalação fora da área permitida.');
+    exigirInstalacaoCliente(instalacao);
 
     try { await executarComando('pm2.cmd', ['delete', instalacao.processoPm2]); } catch (_) { /* Processo já ausente. */ }
     await executarComando('pm2.cmd', ['save', '--force']);

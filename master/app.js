@@ -181,6 +181,10 @@ function normalizarTelefone(valor) {
     return String(valor || '').replace(/\D/g, '');
 }
 
+function instalacaoAdministradora(item = {}) {
+    return ['admin', 'administrador', 'fornecedor'].includes(String(item.perfilLicenca || '').trim().toLowerCase());
+}
+
 function formatarBytes(bytes) {
     const total = Math.max(0, Number(bytes || 0));
     if (total >= 1024 ** 3) return `${(total / 1024 ** 3).toFixed(2)} GB`;
@@ -260,6 +264,8 @@ function resumoDiagnostico(item) {
 }
 
 function avaliarProntidaoComercial(item) {
+    if (instalacaoAdministradora(item)) return { pronta: true, pendencias: [], administradora: true };
+
     const pendencias = [];
     const config = item.configuracoesTenant || {};
     const resumo = item.resumoComercial || {};
@@ -286,6 +292,10 @@ function avaliarProntidaoComercial(item) {
 }
 
 function resumoProntidaoComercial(item) {
+    if (instalacaoAdministradora(item)) {
+        return '<span class="badge ok">Administradora</span><div class="small">Instalação vitalícia do fornecedor</div>';
+    }
+
     const auditoria = avaliarProntidaoComercial(item);
     if (auditoria.pronta) {
         return `<span class="badge ok">Pronta para venda</span><div class="small">Configuração comercial completa</div>
@@ -313,14 +323,16 @@ function acaoCorrecaoPendencia(item, pendencia) {
 
 function calcularStatusGeral(instalacoes = []) {
     const ativos = instalacoes.filter(item => item.status !== 'arquivado');
-    const whatsappConectado = ativos.filter(item => Boolean(item.saude?.whatsapp));
-    const aguardandoWhatsapp = ativos.filter(item => Boolean(item.saude?.online) && !item.saude?.whatsapp);
+    const comerciais = ativos.filter(item => !instalacaoAdministradora(item));
+    const administradoras = ativos.filter(instalacaoAdministradora);
+    const whatsappConectado = comerciais.filter(item => Boolean(item.saude?.whatsapp));
+    const aguardandoWhatsapp = comerciais.filter(item => Boolean(item.saude?.online) && !item.saude?.whatsapp);
     const reconexaoPendente = aguardandoWhatsapp.filter(precisaAvisoReconexaoWhatsapp);
     const processosIndisponiveis = ativos.filter(item => !item.saude?.online);
-    const emAvaliacao = ativos.filter(item => String(item.tipoLicenca || '').startsWith('avaliacao'));
-    const licencasVencidas = ativos.filter(item => item.estadoLicenca && !item.estadoLicenca.permitida);
-    const suspensas = ativos.filter(item => item.status === 'suspenso');
-    const prontasParaVenda = ativos.filter(item => avaliarProntidaoComercial(item).pronta);
+    const emAvaliacao = comerciais.filter(item => String(item.tipoLicenca || '').startsWith('avaliacao'));
+    const licencasVencidas = comerciais.filter(item => item.estadoLicenca && !item.estadoLicenca.permitida);
+    const suspensas = comerciais.filter(item => item.status === 'suspenso');
+    const prontasParaVenda = comerciais.filter(item => avaliarProntidaoComercial(item).pronta);
     const comObservacao = instalacoes.filter(item => String(item.observacaoOperacional || '').trim());
     const comAtencao = new Set([
         ...aguardandoWhatsapp.map(item => item.id),
@@ -332,6 +344,8 @@ function calcularStatusGeral(instalacoes = []) {
     return {
         total: instalacoes.length,
         ativas: ativos.length,
+        comerciais: comerciais.length,
+        administradoras: administradoras.length,
         arquivadas: instalacoes.length - ativos.length,
         whatsappConectado: whatsappConectado.length,
         aguardandoWhatsapp: aguardandoWhatsapp.length,
@@ -349,14 +363,17 @@ function calcularStatusGeral(instalacoes = []) {
 function instalacaoCombinaFiltro(item, filtro = 'todas') {
     const auditoria = avaliarProntidaoComercial(item);
     const ativo = String(item.status || '').toLowerCase() !== 'arquivado';
+    const administradora = instalacaoAdministradora(item);
 
     if (filtro === 'ativas') return ativo;
-    if (filtro === 'whatsapp_pendente') return ativo && Boolean(item.saude?.online) && !item.saude?.whatsapp;
-    if (filtro === 'reconexao') return ativo && precisaAvisoReconexaoWhatsapp(item);
-    if (filtro === 'avaliacao') return ativo && String(item.tipoLicenca || '').startsWith('avaliacao');
-    if (filtro === 'licenca_vencida') return ativo && Boolean(item.estadoLicenca && !item.estadoLicenca.permitida);
-    if (filtro === 'prontas') return ativo && auditoria.pronta;
-    if (filtro === 'pendencias') return ativo && !auditoria.pronta;
+    if (filtro === 'admin') return ativo && administradora;
+    if (filtro === 'clientes') return ativo && !administradora;
+    if (filtro === 'whatsapp_pendente') return ativo && !administradora && Boolean(item.saude?.online) && !item.saude?.whatsapp;
+    if (filtro === 'reconexao') return ativo && !administradora && precisaAvisoReconexaoWhatsapp(item);
+    if (filtro === 'avaliacao') return ativo && !administradora && String(item.tipoLicenca || '').startsWith('avaliacao');
+    if (filtro === 'licenca_vencida') return ativo && !administradora && Boolean(item.estadoLicenca && !item.estadoLicenca.permitida);
+    if (filtro === 'prontas') return ativo && !administradora && auditoria.pronta;
+    if (filtro === 'pendencias') return ativo && !administradora && !auditoria.pronta;
     if (filtro === 'observacao') return Boolean(String(item.observacaoOperacional || '').trim());
     if (filtro === 'arquivadas') return !ativo;
 
@@ -398,12 +415,14 @@ function opcoesFiltroInstalacoes(statusGeral = {}) {
     return [
         ['todas', 'Todas', statusGeral.total],
         ['ativas', 'Ativas', statusGeral.ativas],
+        ['admin', 'Administradora', statusGeral.administradoras],
+        ['clientes', 'Clientes', statusGeral.comerciais],
         ['whatsapp_pendente', 'WhatsApp pendente', statusGeral.aguardandoWhatsapp],
         ['reconexao', 'Reconexão acima de 5min', statusGeral.reconexaoPendente],
         ['avaliacao', 'Em teste', statusGeral.emAvaliacao],
         ['licenca_vencida', 'Licença vencida', statusGeral.licencasVencidas],
         ['prontas', 'Prontas para venda', statusGeral.prontasParaVenda],
-        ['pendencias', 'Com pendências', Math.max(0, Number(statusGeral.ativas || 0) - Number(statusGeral.prontasParaVenda || 0))],
+        ['pendencias', 'Com pendências', Math.max(0, Number(statusGeral.comerciais || 0) - Number(statusGeral.prontasParaVenda || 0))],
         ['observacao', 'Com observação', statusGeral.comObservacao],
         ['arquivadas', 'Arquivadas', statusGeral.arquivadas]
     ];
@@ -411,7 +430,7 @@ function opcoesFiltroInstalacoes(statusGeral = {}) {
 
 function painelChecklistComercial(instalacoes = []) {
     const itens = instalacoes
-        .filter(item => String(item.status || '').toLowerCase() !== 'arquivado')
+        .filter(item => String(item.status || '').toLowerCase() !== 'arquivado' && !instalacaoAdministradora(item))
         .map(item => ({ item, auditoria: avaliarProntidaoComercial(item) }))
         .filter(({ auditoria }) => auditoria.pendencias && auditoria.pendencias.length)
         .sort((a, b) => {
@@ -482,6 +501,42 @@ function painelChecklistComercial(instalacoes = []) {
         </div>
         ${restantes > 0 ? `<p class="commercial-checklist-more">Mais ${restantes} instalação(ões) com pendência.</p>` : ''}
     </section>`;
+}
+
+function perfilInstalacaoHtml(item = {}) {
+    if (!instalacaoAdministradora(item)) return '';
+    return '<div class="small"><span class="badge ok">Administrador / fornecedor</span></div>';
+}
+
+function acoesInstalacaoHtml(item = {}) {
+    const admin = instalacaoAdministradora(item);
+    const botoesBase = `<div class="support-actions">
+          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/clientes" target="_blank">Painel</a>
+          ${admin ? '' : `<a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>`}
+          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/saude">Saúde</a>
+          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
+          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/historico">Histórico</a>
+          ${admin ? '' : botaoAvisoReconexaoWhatsapp(item)}
+          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/backup"><button class="smallbtn secondary" type="submit">Backup</button></form>` : ''}
+          ${!admin && item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="smallbtn secondary" type="submit">Liberar atendimento</button></form>` : ''}
+          ${item.status !== 'arquivado' && item.status !== 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/parar" onsubmit="return confirm('Parar somente este robô com segurança?');"><button class="smallbtn warning" type="submit">Parar robô</button></form>` : ''}
+          ${item.status === 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/iniciar"><button class="smallbtn" type="submit">Iniciar robô</button></form>` : ''}
+        </div>`;
+
+    if (item.status === 'arquivado') {
+        return `${botoesBase}<div class="actions"><form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form></div>`;
+    }
+
+    const suporte = `<form class="inline" method="post" action="/instalacoes/${item.id}/observacao"><input name="observacaoOperacional" value="${escapar(item.observacaoOperacional || '')}" maxlength="500" placeholder="Obs. operacional" style="width:260px;padding:9px"><button class="secondary" type="submit">Salvar obs.</button></form>
+          <form id="resetar-senha-${item.id}" class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel desta instalação?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>`;
+
+    if (admin) return `${botoesBase}<div class="actions">${suporte}</div>`;
+
+    return `${botoesBase}<div class="actions">
+          <form class="inline" method="post" action="/instalacoes/${item.id}/whatsapp" onsubmit="return confirm('Trocar o WhatsApp encerrará a conexão atual deste robô e gerará um novo QR Code. Continuar?');"><input name="whatsappEsperado" inputmode="numeric" value="${escapar(item.whatsappEsperado || '')}" minlength="10" maxlength="15" placeholder="55 + DDD + número" required style="width:185px;padding:9px"><button class="warning" type="submit">Trocar WhatsApp</button></form>
+          ${suporte}
+          <form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>
+        </div>`;
 }
 
 function cardStatusGeral(rotulo, valor, detalhe, classe = '') {
@@ -563,10 +618,10 @@ function pagina(instalacoes, opcoes = {}) {
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
     <section class="status-grid" aria-label="Status geral das instalações">
-        ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.ativas} ativa(s), ${statusGeral.arquivadas} arquivada(s)`)}
+        ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.comerciais} cliente(s), ${statusGeral.administradoras} administradora(s)`)}
         ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
         ${cardStatusGeral('Em avaliação', statusGeral.emAvaliacao, 'Instalações em período de teste', statusGeral.emAvaliacao ? 'warn' : '')}
-        ${cardStatusGeral('Prontas para venda', statusGeral.prontasParaVenda, `de ${statusGeral.ativas} instalação(ões) ativa(s)`, statusGeral.prontasParaVenda === statusGeral.ativas && statusGeral.ativas ? 'ok' : 'warn')}
+        ${cardStatusGeral('Prontas para venda', statusGeral.prontasParaVenda, `de ${statusGeral.comerciais} cliente(s) ativo(s)`, statusGeral.prontasParaVenda === statusGeral.comerciais && statusGeral.comerciais ? 'ok' : 'warn')}
         ${cardStatusGeral('Com atenção', statusGeral.comAtencao, 'Erro, licença vencida ou WhatsApp pendente', statusGeral.comAtencao ? 'error' : 'ok')}
         ${cardStatusGeral('Processos off-line', statusGeral.processosIndisponiveis, 'Sem resposta na porta local', statusGeral.processosIndisponiveis ? 'error' : 'ok')}
         ${cardStatusGeral('Licenças vencidas', statusGeral.licencasVencidas, `${statusGeral.suspensas} instalação(ões) suspensa(s)`, statusGeral.licencasVencidas || statusGeral.suspensas ? 'error' : 'ok')}
@@ -621,27 +676,11 @@ function pagina(instalacoes, opcoes = {}) {
       </div>
       <div class="table-wrap" id="instalacoes">
       ${instalacoesFiltradas.length ?`<table><thead><tr><th>Cliente</th><th>URL</th><th>Robô</th><th>Licença</th><th>Prontidão</th><th>Status</th><th>Ações</th></tr></thead><tbody>${instalacoesFiltradas.map(item => `<tr id="instalacao-${item.id}">
-        <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div>${item.observacaoOperacional ?`<div class="small"><strong>Obs. operacional:</strong> ${escapar(item.observacaoOperacional)}</div>` : ''}</td>
+        <td><strong>${escapar(item.nome)}</strong>${perfilInstalacaoHtml(item)}<div class="small">${escapar(item.whatsappEsperado || 'WhatsApp não informado')} · avisos ${String(item.horaEnvio ?? 9).padStart(2, '0')}:${String(item.minutoEnvio ?? 0).padStart(2, '0')}</div>${item.observacaoOperacional ?`<div class="small"><strong>Obs. operacional:</strong> ${escapar(item.observacaoOperacional)}</div>` : ''}</td>
         <td><a href="https://${escapar(item.dominio)}" target="_blank">${escapar(item.dominio)}</a><div class="small">${escapar(item.pastaDados)}</div><div class="small"><strong>Uso: ${escapar(formatarBytes(item.usoDiscoBytes))}</strong></div></td>
         <td>${resumoDiagnostico(item)}</td><td>${escapar(item.estadoLicenca?.rotulo || item.tipoLicenca)}${item.estadoLicenca?.vencimento ?`<div class="small">até ${escapar(item.estadoLicenca.vencimento.split('-').reverse().join('/'))}</div>` : item.diasAvaliacao ?` (${item.diasAvaliacao} dias)` : ''}</td><td>${resumoProntidaoComercial(item)}</td>
         <td><span class="badge ${item.estadoLicenca && !item.estadoLicenca.permitida ?'error' : statusClasse(item.status)}">${escapar(item.estadoLicenca && !item.estadoLicenca.permitida ?item.estadoLicenca.rotulo : item.status)}</span>${item.detalheStatus ?`<div class="small">${escapar(item.detalheStatus)}</div>` : ''}${eventosRecentesHtml(item)}</td>
-        <td id="acoes-${item.id}"><div class="support-actions">
-          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/clientes" target="_blank">Painel</a>
-          <a class="button smallbtn secondary" href="https://${escapar(item.dominio)}/qr" target="_blank">QR Code</a>
-          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/saude">Saúde</a>
-          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/logs">Logs</a>
-          <a class="button smallbtn secondary" href="/instalacoes/${item.id}/historico">Histórico</a>
-          ${botaoAvisoReconexaoWhatsapp(item)}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/backup"><button class="smallbtn secondary" type="submit">Backup</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/liberar-atendimento" onsubmit="return confirm('Liberar atendimentos humanos travados desta instalação?');"><button class="smallbtn secondary" type="submit">Liberar atendimento</button></form>` : ''}
-          ${item.status !== 'arquivado' && item.status !== 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação?');"><button class="smallbtn" type="submit">Reiniciar robô</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/parar" onsubmit="return confirm('Parar somente este robô com segurança?');"><button class="smallbtn warning" type="submit">Parar robô</button></form>` : ''}
-          ${item.status === 'parado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/iniciar"><button class="smallbtn" type="submit">Iniciar robô</button></form>` : ''}
-        </div><div class="actions">
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/whatsapp" onsubmit="return confirm('Trocar o WhatsApp encerrará a conexão atual deste robô e gerará um novo QR Code. Continuar?');"><input name="whatsappEsperado" inputmode="numeric" value="${escapar(item.whatsappEsperado || '')}" minlength="10" maxlength="15" placeholder="55 + DDD + número" required style="width:185px;padding:9px"><button class="warning" type="submit">Trocar WhatsApp</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/observacao"><input name="observacaoOperacional" value="${escapar(item.observacaoOperacional || '')}" maxlength="500" placeholder="Obs. operacional" style="width:260px;padding:9px"><button class="secondary" type="submit">Salvar obs.</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form id="resetar-senha-${item.id}" class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
-        </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação encontrada para este filtro.</div>'}
+        <td id="acoes-${item.id}">${acoesInstalacaoHtml(item)}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação encontrada para este filtro.</div>'}
     </div></section></main></body></html>`;
 }
 
