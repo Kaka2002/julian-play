@@ -6,32 +6,50 @@ $ErrorActionPreference = 'Stop'
 $raizProjeto = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $temporario = Join-Path $env:TEMP ("julian-play-app-{0}" -f ([guid]::NewGuid().ToString('N')))
 
-function CopiarItemSeguro($origem, $destino) {
-    $nome = Split-Path $origem -Leaf
-    $ignorar = @(
+function DeveIgnorarCaminho($item) {
+    $nome = $item.Name
+    $relativo = $item.FullName.Substring($raizProjeto.Length).TrimStart('\', '/')
+    $partes = $relativo -split '[\\/]'
+    $pastasIgnoradas = @(
         '.git',
         'node_modules',
         '.wwebjs_auth',
         '.wwebjs_cache',
         'backups',
-        'database',
         'entrega-cliente-local',
         '.agents',
-        '.codex'
+        '.codex',
+        'data'
     )
 
-    if ($ignorar -contains $nome) { return }
-    if ($nome -like '*.db') { return }
-    if ($nome -like '*.log') { return }
-    if ($nome -like '.julian-*-install.json') { return }
+    foreach ($parte in $partes) {
+        if ($pastasIgnoradas -contains $parte) { return $true }
+    }
 
-    Copy-Item -LiteralPath $origem -Destination $destino -Recurse -Force
+    if ($nome -like '*.db') { return $true }
+    if ($nome -like '*.sqlite') { return $true }
+    if ($nome -like '*.sqlite3') { return $true }
+    if ($nome -like '*.log') { return $true }
+    if ($nome -like '.julian-*-install.json') { return $true }
+
+    return $false
 }
 
 New-Item -ItemType Directory -Path $temporario -Force | Out-Null
 
-Get-ChildItem -LiteralPath $raizProjeto -Force | ForEach-Object {
-    CopiarItemSeguro $_.FullName $temporario
+Get-ChildItem -LiteralPath $raizProjeto -Force -Recurse | ForEach-Object {
+    if (DeveIgnorarCaminho $_) { return }
+
+    $relativo = $_.FullName.Substring($raizProjeto.Length).TrimStart('\', '/')
+    $destinoItem = Join-Path $temporario $relativo
+
+    if ($_.PSIsContainer) {
+        New-Item -ItemType Directory -Path $destinoItem -Force | Out-Null
+        return
+    }
+
+    New-Item -ItemType Directory -Path (Split-Path -Parent $destinoItem) -Force | Out-Null
+    Copy-Item -LiteralPath $_.FullName -Destination $destinoItem -Force
 }
 
 if (Test-Path -LiteralPath $Destino) {
