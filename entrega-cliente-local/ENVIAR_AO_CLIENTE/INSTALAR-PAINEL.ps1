@@ -27,6 +27,52 @@ function TestarAdministrador {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function ExecutarPm2Opcional([string[]]$argumentos) {
+    $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+    if (-not $pm2) {
+        return
+    }
+
+    $acaoAnterior = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $pm2.Source @argumentos *> $null
+    } catch {
+        # Em instalacao nova o processo pode nao existir ainda.
+    } finally {
+        $ErrorActionPreference = $acaoAnterior
+        $global:LASTEXITCODE = 0
+    }
+}
+
+function EncerrarProcessosDaPasta([string]$pasta) {
+    if (-not (Test-Path -LiteralPath $pasta)) {
+        return
+    }
+
+    $pastaCompleta = [IO.Path]::GetFullPath($pasta).TrimEnd('\')
+    $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProcessId -ne $PID -and
+            $_.Name -in @('node.exe', 'chrome.exe') -and
+            $_.CommandLine -and
+            $_.CommandLine -like "*$pastaCompleta*"
+        })
+
+    foreach ($processo in $processos) {
+        try {
+            Write-Host "Encerrando processo preso: $($processo.Name) PID $($processo.ProcessId)" -ForegroundColor Yellow
+            Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
+        } catch {
+            Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
+        }
+    }
+
+    if ($processos.Count -gt 0) {
+        Start-Sleep -Seconds 3
+    }
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote oficial ao fornecedor.'
@@ -49,6 +95,11 @@ Etapa 'Preparando pastas'
 New-Item -ItemType Directory -Path $PastaInstalacao, $PastaDados -Force | Out-Null
 
 if (Test-Path -LiteralPath (Join-Path $PastaInstalacao 'package.json')) {
+    Etapa 'Parando instalacao anterior'
+    ExecutarPm2Opcional @('stop', 'julian-play-cliente')
+    ExecutarPm2Opcional @('delete', 'julian-play-cliente')
+    EncerrarProcessosDaPasta $PastaInstalacao
+
     $backup = "C:\JulianPlay\app-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     Move-Item -LiteralPath $PastaInstalacao -Destination $backup -Force
     New-Item -ItemType Directory -Path $PastaInstalacao -Force | Out-Null
