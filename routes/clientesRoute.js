@@ -38,6 +38,7 @@ const {
     buscarModeloPorId,
     salvarModelo,
     removerModelo,
+    montarMensagemPorModelo,
     montarMensagemCobrancaVencido
 } = require('../services/modelosMensagem');
 const {
@@ -400,6 +401,38 @@ function vencimentoExpirou(valor) {
     return Boolean(data && data < new Date());
 }
 
+function infoTempoVencimento(valor, agora = new Date()) {
+    const data = dataHoraVencimento(valor);
+    if (!data) return null;
+
+    const minuto = 60 * 1000;
+    const hora = 60 * minuto;
+    const dia = 24 * hora;
+    const diff = data - agora;
+    const vencido = diff < 0;
+    const absoluto = Math.abs(diff);
+    const totalMinutos = Math.ceil(absoluto / minuto);
+    const diasInteiros = Math.floor(absoluto / dia);
+    const horasInteiras = Math.floor((absoluto % dia) / hora);
+    const minutosRestantes = Math.ceil((absoluto % hora) / minuto);
+
+    return {
+        data,
+        diff,
+        vencido,
+        totalMinutos,
+        diasInteiros,
+        horasInteiras,
+        minutosRestantes,
+        diasMensagem: vencido ?-diasInteiros : diasInteiros
+    };
+}
+
+function vencimentoNoIntervalo(valor, inicio, fim) {
+    const data = dataHoraVencimento(valor);
+    return Boolean(data && data >= inicio && data <= fim);
+}
+
 function numeroMoeda(valor) {
     if (valor === null || valor === undefined || valor === '') return 0;
 
@@ -492,21 +525,16 @@ function calcularReceitaMensal(clientes) {
 }
 
 function calcularDiasRestantes(vencimento) {
-    if (!vencimento) return null;
-
-    const hoje = new Date(`${hojeSaoPauloISO()}T00:00:00`);
-    const dataVencimento = new Date(`${String(vencimento).slice(0, 10)}T00:00:00`);
-    if (Number.isNaN(dataVencimento.getTime())) return null;
-
-    const umDia = 24 * 60 * 60 * 1000;
-
-    return Math.round((dataVencimento - hoje) / umDia);
+    const info = infoTempoVencimento(vencimento);
+    return info ?info.diasMensagem : null;
 }
 
 function calcularResumo(clientes) {
     const hoje = hojeISO();
-    const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
+    const agora = new Date();
+    const limite = new Date(agora.getTime() + (DIAS_DASHBOARD * 24 * 60 * 60 * 1000));
     const fimMesISO = fimMesSaoPauloISO();
+    const fimMes = new Date(`${fimMesISO}T23:59:59`);
 
     return {
         total: clientes.length,
@@ -518,26 +546,25 @@ function calcularResumo(clientes) {
         }).length,
         vencendo: clientes.filter(cliente => {
             const vencimento = vencimentoCliente(cliente);
-            const data = vencimento.slice(0, 10);
-            return vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= limiteISO;
+            return !clienteEhTeste(cliente) && vencimento && vencimentoNoIntervalo(vencimento, agora, limite);
         }).length,
         vencemMes: clientes.filter(cliente => {
             const vencimento = vencimentoCliente(cliente);
-            const data = vencimento.slice(0, 10);
-            return !clienteEhTeste(cliente) && vencimento && !vencimentoExpirou(vencimento) && data >= hoje && data <= fimMesISO;
+            return !clienteEhTeste(cliente) && vencimento && vencimentoNoIntervalo(vencimento, agora, fimMes);
         }).length
     };
 }
 
 function clientesComVencimentoProximo(clientes) {
-    const limiteISO = adicionarDiasISO(DIAS_DASHBOARD);
+    const agora = new Date();
+    const limite = new Date(agora.getTime() + (DIAS_DASHBOARD * 24 * 60 * 60 * 1000));
 
     return clientes
         .filter(cliente => {
-            const vencimento = vencimentoCliente(cliente).slice(0, 10);
-            return vencimento && vencimento <= limiteISO;
+            const vencimento = vencimentoCliente(cliente);
+            return !clienteEhTeste(cliente) && vencimento && vencimentoNoIntervalo(vencimento, agora, limite);
         })
-        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR', { sensitivity: 'base' }));
+        .sort((a, b) => dataHoraVencimento(vencimentoCliente(a)) - dataHoraVencimento(vencimentoCliente(b)));
 }
 
 function statusClasse(status) {
@@ -2351,45 +2378,35 @@ function plural(valor, singular, pluralTexto) {
 }
 
 function textoTempoRestante(valor) {
-    if (!valor) return '-';
+    const info = infoTempoVencimento(valor);
+    if (!info) return '-';
 
-    const hoje = new Date();
-    const data = new Date(String(valor).length <= 10 ?`${valor}T23:59:59` : valor);
-    if (Number.isNaN(data.getTime())) return '-';
+    if (info.totalMinutos <= 0) return info.vencido ?'vencido agora' : 'vence agora';
 
-    const minuto = 60 * 1000;
-    const hora = 60 * minuto;
-    const dia = 24 * hora;
-    const diff = data - hoje;
-    const vencido = diff < 0;
-    const totalMinutos = Math.ceil(Math.abs(diff) / minuto);
-
-    if (totalMinutos <= 0) return vencido ?'vencido agora' : 'vence agora';
-
-    if (totalMinutos < 60) {
-        const unidade = plural(totalMinutos, 'minuto', 'minutos');
-        const sufixo = plural(totalMinutos, 'restante', 'restantes');
-        return vencido ?`${totalMinutos} ${unidade} vencido` : `${totalMinutos} ${unidade} ${sufixo}`;
+    if (info.totalMinutos < 60) {
+        const unidade = plural(info.totalMinutos, 'minuto', 'minutos');
+        const sufixo = plural(info.totalMinutos, 'restante', 'restantes');
+        return info.vencido ?`${info.totalMinutos} ${unidade} vencido` : `${info.totalMinutos} ${unidade} ${sufixo}`;
     }
 
-    if (totalMinutos < 24 * 60) {
-        const horas = Math.floor(totalMinutos / 60);
-        const minutos = totalMinutos % 60;
+    if (info.totalMinutos < 24 * 60) {
+        const horas = Math.floor(info.totalMinutos / 60);
+        const minutos = info.totalMinutos % 60;
         const textoHoras = `${horas} ${plural(horas, 'hora', 'horas')}`;
 
         if (!minutos) {
             const sufixo = plural(horas, 'restante', 'restantes');
-            return vencido ?`${textoHoras} vencido` : `${textoHoras} ${sufixo}`;
+            return info.vencido ?`${textoHoras} vencido` : `${textoHoras} ${sufixo}`;
         }
 
         const textoMinutos = `${minutos} ${plural(minutos, 'minuto', 'minutos')}`;
-        return vencido ?`${textoHoras} e ${textoMinutos} vencido` : `${textoHoras} e ${textoMinutos} restantes`;
+        return info.vencido ?`${textoHoras} e ${textoMinutos} vencido` : `${textoHoras} e ${textoMinutos} restantes`;
     }
 
-    const dias = Math.ceil(Math.abs(diff) / dia);
-    const textoDias = `${dias} ${plural(dias, 'dia', 'dias')}`;
-    const sufixo = plural(dias, 'restante', 'restantes');
-    return vencido ?`${textoDias} vencido` : `${textoDias} ${sufixo}`;
+    const textoDias = `${info.diasInteiros} ${plural(info.diasInteiros, 'dia', 'dias')}`;
+    const textoHoras = info.horasInteiras ?` e ${info.horasInteiras} ${plural(info.horasInteiras, 'hora', 'horas')}` : '';
+    const sufixo = plural(info.diasInteiros, 'restante', 'restantes');
+    return info.vencido ?`${textoDias}${textoHoras} vencido` : `${textoDias}${textoHoras} ${sufixo}`;
 }
 
 function renderChips(valor, classe) {
@@ -4375,7 +4392,9 @@ function cardVencimento(cliente) {
             <div class="due-date">${escapar(formatarDataHoraCurta(vencimento))}</div>
         </div>
         <span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span>
-        <a class="button secondary icon-only" href="/clientes/${cliente.id}/editar" title="Editar cliente">${icon('whats')}</a>
+        <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
+            <button class="button secondary icon-only" type="submit" title="Enviar aviso de vencimento">${icon('whats')}</button>
+        </form>
     </div>`;
 }
 
@@ -4393,7 +4412,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grátis', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
-        ${metricCard({ label: `Vencem em ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: `Próximos ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
     </section>
     ${receitaMensalCard(receita)}
@@ -4417,7 +4436,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Clientes com Vencimento Próximo</h2>
-                <div class="subtitle">Clientes que vencem nos próximos ${DIAS_DASHBOARD} dias ou já venceram</div>
+                <div class="subtitle">Clientes que vencem nos próximos ${DIAS_DASHBOARD} dias corridos</div>
             </div>
             <div class="actions">
                 <form method="post" action="/clientes/verificar-renovacoes">
@@ -4475,6 +4494,9 @@ function tabelaClientes(clientes) {
         <td data-label="Ações">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar vencimento próximo">${icon('alert')}</button>
+                </form>
                 ${clienteTesteExpirado(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-planos-teste-expirado" onsubmit="return confirm('Enviar a tela de planos para este teste expirado? Esta acao so deve ser usada uma vez.');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar planos do teste expirado">${icon('planos')}</button>
                 </form>` : ''}
@@ -4568,10 +4590,12 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                         texto = vencido ?textoHoras + ' e ' + textoMinutos + ' vencido' : textoHoras + ' e ' + textoMinutos + ' restantes';
                     }
                 } else {
-                    const dias = Math.ceil(Math.abs(diff) / dia);
+                    const dias = Math.floor(Math.abs(diff) / dia);
+                    const horas = Math.floor((Math.abs(diff) % dia) / hora);
                     const textoDias = dias + ' ' + plural(dias, 'dia', 'dias');
+                    const textoHoras = horas ?' e ' + horas + ' ' + plural(horas, 'hora', 'horas') : '';
                     const sufixo = plural(dias, 'restante', 'restantes');
-                    texto = vencido ?textoDias + ' vencido' : textoDias + ' ' + sufixo;
+                    texto = vencido ?textoDias + textoHoras + ' vencido' : textoDias + textoHoras + ' ' + sufixo;
                 }
 
                 if (prefixo === 'dashboard' && !vencido && texto !== '-') {
@@ -7028,6 +7052,57 @@ router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar planos: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect(montarUrlListaClientesMensagem('Cliente nao encontrado.'));
+    }
+
+    const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+    if (!vencimento) {
+        return res.redirect(montarUrlListaClientesMensagem('Cliente sem data de vencimento cadastrada.'));
+    }
+
+    if (vencimentoExpirou(vencimento)) {
+        return res.redirect(montarUrlListaClientesMensagem('Este cliente ja esta vencido. Use a cobranca de vencido no financeiro.'));
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return res.redirect(montarUrlListaClientesMensagem('WhatsApp nao esta conectado.'));
+    }
+
+    try {
+        const dias = Math.max(0, calcularDiasRestantes(vencimento) || 0);
+        const mensagem = await montarMensagemPorModelo(cliente, dias);
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
+            'Envio manual de vencimento proximo'
+        );
+
+        await adicionarNotaCliente(cliente.id, `Aviso manual de vencimento proximo enviado pelo WhatsApp para ${vencimento}.`);
+        logControleClientes('Aviso manual de vencimento enviado', {
+            clienteId: cliente.id,
+            destino: envioWhatsApp.destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack
+        });
+
+        return res.redirect(montarUrlListaClientesMensagem(`Aviso de vencimento enviado para ${cliente.nome}.`));
+    } catch (err) {
+        logControleClientes('Erro ao enviar aviso manual de vencimento', {
+            clienteId: cliente.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar aviso: ${err.message}`));
     }
 });
 
