@@ -32,6 +32,8 @@ module.exports = {
             MASTER_CADDY_DIR: settings.caddyDir || 'C:\\JulianPlayMaster\\caddy',
             MASTER_BASE_DOMAIN: settings.baseDomain || 'julianplay.com.br',
             MASTER_FIRST_PORT: String(settings.firstPort || 11001),
+            LICENSE_SIGNING_SECRET: process.env.LICENSE_SIGNING_SECRET || settings.licenseSigningSecret || settings.licenseAdminToken || '',
+            LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || settings.licenseSigningSecret || '',
             JULIAN_PLAY_SOURCE_DIR: projectDir,
             CADDY_EXE: settings.caddyExe || 'C:\\caddy\\caddy.exe',
             CADDY_CONFIG: settings.caddyConfig || 'C:\\caddy\\Caddyfile'

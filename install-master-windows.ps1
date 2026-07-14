@@ -29,6 +29,8 @@ $env:JULIAN_MASTER_PASSWORD_TEMP = $Senha
 $hash = & node -e "const {criarHashSenha}=require('./services/passwordService'); process.stdout.write(criarHashSenha(process.env.JULIAN_MASTER_PASSWORD_TEMP));"
 Remove-Item Env:JULIAN_MASTER_PASSWORD_TEMP -ErrorAction SilentlyContinue
 if ($LASTEXITCODE -ne 0 -or -not $hash) { throw 'Nao foi possivel gerar o hash da senha.' }
+$segredoLicenca = (& node -e "process.stdout.write(require('crypto').randomBytes(32).toString('hex').toUpperCase())")
+if ($LASTEXITCODE -ne 0 -or -not $segredoLicenca) { throw 'Nao foi possivel gerar o segredo de licenca.' }
 
 $dadosMaster = 'C:\JulianPlayMaster'
 $clientes = 'C:\JulianPlayClientes'
@@ -49,6 +51,8 @@ $config = [ordered]@{
     caddyDir = $caddyDir
     caddyExe = 'C:\caddy\caddy.exe'
     caddyConfig = 'C:\caddy\Caddyfile'
+    licenseSigningSecret = [string]$segredoLicenca
+    licenseAdminToken = [string]$segredoLicenca
 }
 $json = $config | ConvertTo-Json
 [IO.File]::WriteAllText($arquivoConfig, $json, (New-Object Text.UTF8Encoding($false)))
