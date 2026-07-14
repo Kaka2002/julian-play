@@ -96,9 +96,11 @@ function compararSeguro(a, b) {
 function instalacaoAdministrador() {
     const perfil = String(process.env.LICENSE_ROLE || '').trim().toLowerCase();
     const cliente = String(process.env.LICENSE_CUSTOMER_NAME || '').trim().toLowerCase();
+    const appName = String(process.env.JULIAN_PLAY_APP_NAME || '').trim().toLowerCase();
 
     if (['admin', 'administrador', 'fornecedor'].includes(perfil)) return true;
     if (['cliente', 'customer'].includes(perfil)) return false;
+    if (appName === 'julian-play-cliente' || appName.endsWith('-cliente')) return false;
 
     return !cliente || cliente === 'julianplay' || cliente === 'julian play';
 }
