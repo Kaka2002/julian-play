@@ -30,9 +30,11 @@ Antes de instalar, esta pasta precisa conter:
 - `1-VERIFICAR-COMPUTADOR.bat`
 - `2-INSTALAR-PAINEL.bat`
 - `3-ABRIR-PAINEL.bat`
+- `4-ATUALIZAR-PAINEL.bat`
 - `VERIFICAR-COMPUTADOR.ps1`
 - `INSTALAR-PAINEL.ps1`
 - `ABRIR-PAINEL.ps1`
+- `ATUALIZAR-PAINEL.ps1`
 - `julian-play-app.zip`
 
 O arquivo `julian-play-app.zip` nao deve ser executado manualmente. O instalador usa esse arquivo automaticamente.
@@ -66,6 +68,23 @@ Depois da instalacao:
 1. Dê dois cliques em `3-ABRIR-PAINEL.bat`; ou
 2. Abra no navegador:
    http://localhost:10000
+
+## Atualizar O Painel
+
+Quando o fornecedor enviar uma versao nova:
+
+1. Coloque o novo `julian-play-app.zip` na mesma pasta destes arquivos.
+2. Dê dois cliques em `4-ATUALIZAR-PAINEL.bat`.
+3. Aguarde terminar.
+4. O painel sera aberto novamente no navegador.
+
+A atualizacao preserva clientes, financeiro, licenca e conexao do WhatsApp.
+
+Se for executar pelo PowerShell:
+
+```powershell
+.\ATUALIZAR-PAINEL.ps1
+```
 
 ## Licenca E Numero Do WhatsApp Do Robo
 

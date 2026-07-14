@@ -23,9 +23,11 @@ Na pasta recebida, confira se existem estes arquivos:
 - `1-VERIFICAR-COMPUTADOR.bat`
 - `2-INSTALAR-PAINEL.bat`
 - `3-ABRIR-PAINEL.bat`
+- `4-ATUALIZAR-PAINEL.bat`
 - `VERIFICAR-COMPUTADOR.ps1`
 - `INSTALAR-PAINEL.ps1`
 - `ABRIR-PAINEL.ps1`
+- `ATUALIZAR-PAINEL.ps1`
 - `julian-play-app.zip`
 
 Nao abra nem extraia o `julian-play-app.zip`. Ele sera usado automaticamente pelo instalador.
@@ -133,3 +135,29 @@ Envie ao fornecedor:
 - qual numero de WhatsApp esta sendo usado no robo
 
 Nao apague pastas do sistema antes de falar com o fornecedor.
+
+## 11. Atualizar O Painel Quando Receber Uma Nova Versao
+
+Quando o fornecedor enviar uma melhoria do sistema:
+
+1. Salve o novo pacote recebido na mesma pasta destes arquivos.
+2. Confira se o arquivo `julian-play-app.zip` foi substituido pelo pacote novo.
+3. Dê dois cliques em `4-ATUALIZAR-PAINEL.bat`.
+4. Aguarde a atualizacao terminar.
+5. Abra o painel em:
+
+http://localhost:10000
+
+A atualizacao preserva:
+
+- clientes cadastrados
+- historico financeiro
+- licenca
+- configuracoes locais
+- conexao do WhatsApp
+
+Se preferir executar pelo PowerShell, use:
+
+```powershell
+.\ATUALIZAR-PAINEL.ps1
+```
