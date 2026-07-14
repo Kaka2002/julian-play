@@ -244,9 +244,16 @@ if (-not $PularDependencias) {
     Etapa 'Instalando dependencias do projeto'
     $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
     $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
-    & $npm.Source ci --omit=dev
+    $lockfile = Join-Path $diretorioProjeto 'package-lock.json'
+    $shrinkwrap = Join-Path $diretorioProjeto 'npm-shrinkwrap.json'
+    if ((Test-Path -LiteralPath $lockfile) -or (Test-Path -LiteralPath $shrinkwrap)) {
+        & $npm.Source ci --omit=dev
+    } else {
+        Write-Warning 'package-lock.json nao encontrado; usando npm install para preparar as dependencias.'
+        & $npm.Source install --omit=dev
+    }
     if ($LASTEXITCODE -ne 0) {
-        throw "npm ci terminou com codigo $LASTEXITCODE."
+        throw "npm terminou com codigo $LASTEXITCODE."
     }
 }
 
