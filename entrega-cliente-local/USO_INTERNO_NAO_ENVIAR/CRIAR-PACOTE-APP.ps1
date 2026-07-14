@@ -26,6 +26,8 @@ function DeveIgnorarCaminho($item) {
 
     foreach ($parte in $partes) {
         if ($pastasIgnoradas -contains $parte) { return $true }
+        if ($parte -like '.wwebjs_auth*') { return $true }
+        if ($parte -like '.wwebjs_cache*') { return $true }
     }
 
     if ($nome -like '*.db') { return $true }
