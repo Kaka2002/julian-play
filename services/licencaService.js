@@ -5,6 +5,87 @@ const {
 } = require('./configuracoesPainel');
 const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('./licencaCalculo');
 
+const LICENCA_CODIGO_PREFIXO = 'JPLAY-LIC-';
+
+function base64UrlEncode(valor) {
+    return Buffer.from(String(valor), 'utf8').toString('base64url');
+}
+
+function base64UrlDecode(valor) {
+    return Buffer.from(String(valor || ''), 'base64url').toString('utf8');
+}
+
+function obterSegredoLicenca() {
+    const segredo = String(process.env.LICENSE_SIGNING_SECRET || process.env.LICENSE_ADMIN_TOKEN || '').trim();
+    if (!segredo) {
+        throw new Error('Segredo de licença não configurado. Configure LICENSE_SIGNING_SECRET ou LICENSE_ADMIN_TOKEN.');
+    }
+    return segredo;
+}
+
+function assinarPayloadLicenca(payloadBase64) {
+    return crypto
+        .createHmac('sha256', obterSegredoLicenca())
+        .update(payloadBase64)
+        .digest('base64url');
+}
+
+function gerarCodigoLicenca(dados = {}) {
+    const instalacaoId = String(dados.instalacaoId || '').trim();
+    const cliente = String(dados.licencaCliente || dados.cliente || '').trim();
+    const tipo = String(dados.licencaTipo || dados.tipo || '').trim();
+    const ativacao = String(dados.licencaAtivacao || dataHojeSaoPaulo()).slice(0, 10);
+    const vencimento = String(dados.licencaVencimento || dados.vencimento || '').slice(0, 10);
+    const vitalicia = String(dados.licencaVitalicia || '').trim() === '1' || tipo === 'vitalicia';
+    const suspensa = String(dados.licencaSuspensa || '').trim() === '1' || tipo === 'suspensa';
+
+    if (!instalacaoId) throw new Error('Informe o ID da instalação.');
+    if (!cliente) throw new Error('Informe o cliente ou empresa da licença.');
+    if (!tipo) throw new Error('Informe o tipo de licença.');
+    if (!vitalicia && !suspensa && !vencimento) throw new Error('Informe o vencimento da licença.');
+
+    const payload = {
+        v: 1,
+        instalacaoId,
+        cliente,
+        telefone: String(dados.licencaTelefone || dados.telefone || '').trim(),
+        tipo: vitalicia ? 'vitalicia' : suspensa ? 'assinatura' : tipo,
+        ativacao,
+        vencimento: vitalicia ? '' : vencimento,
+        vitalicia: vitalicia ? '1' : '0',
+        periodoTesteDias: String(dados.licencaPeriodoTesteDias || dados.periodoTesteDias || '0'),
+        suspensa: suspensa ? '1' : '0',
+        observacoes: String(dados.licencaObservacoes || dados.observacoes || '').trim(),
+        emitidoEm: new Date().toISOString()
+    };
+
+    const payloadBase64 = base64UrlEncode(JSON.stringify(payload));
+    return `${LICENCA_CODIGO_PREFIXO}${payloadBase64}.${assinarPayloadLicenca(payloadBase64)}`;
+}
+
+function lerCodigoLicenca(codigo) {
+    const texto = String(codigo || '').trim();
+    const normalizado = texto.startsWith(LICENCA_CODIGO_PREFIXO)
+        ? texto.slice(LICENCA_CODIGO_PREFIXO.length)
+        : texto;
+    const [payloadBase64, assinatura] = normalizado.split('.');
+
+    if (!payloadBase64 || !assinatura) {
+        throw new Error('Código de licença inválido.');
+    }
+
+    const assinaturaEsperada = assinarPayloadLicenca(payloadBase64);
+    if (!compararSeguro(assinatura, assinaturaEsperada)) {
+        throw new Error('Código de licença não confere com a assinatura do fornecedor.');
+    }
+
+    const payload = JSON.parse(base64UrlDecode(payloadBase64));
+    if (Number(payload.v || 0) !== 1) {
+        throw new Error('Versão do código de licença não suportada.');
+    }
+    return payload;
+}
+
 function compararSeguro(a, b) {
     const bufferA = Buffer.from(String(a || ''));
     const bufferB = Buffer.from(String(b || ''));
@@ -127,6 +208,31 @@ async function atualizarLicencaComercial(dados = {}) {
     return obterEstadoLicenca();
 }
 
+async function aplicarCodigoLicenca(codigo) {
+    const payload = lerCodigoLicenca(codigo);
+    const config = await garantirIdentificadorInstalacao(await obterConfiguracoes());
+    const instalacaoAtual = String(config.instalacaoId || '').trim();
+    const instalacaoCodigo = String(payload.instalacaoId || '').trim();
+
+    if (!instalacaoCodigo || instalacaoCodigo !== instalacaoAtual) {
+        throw new Error('Este código pertence a outra instalação. Confira o ID informado ao fornecedor.');
+    }
+
+    await salvarConfiguracao('licencaCliente', payload.cliente || '');
+    await salvarConfiguracao('licencaTelefone', payload.telefone || '');
+    await salvarConfiguracao('licencaAtivacao', payload.ativacao || dataHojeSaoPaulo());
+    await salvarConfiguracao('licencaVencimento', payload.vencimento || '');
+    await salvarConfiguracao('licencaVitalicia', payload.vitalicia === '1' ? '1' : '0');
+    await salvarConfiguracao('licencaTipo', payload.tipo || 'assinatura');
+    await salvarConfiguracao('licencaPeriodoTesteDias', payload.periodoTesteDias || '0');
+    await salvarConfiguracao('licencaBloqueioAtivo', '1');
+    await salvarConfiguracao('licencaSuspensa', payload.suspensa === '1' ? '1' : '0');
+    await salvarConfiguracao('licencaObservacoes', payload.observacoes || '');
+    await salvarConfiguracao('licencaCodigoAtivacao', codigo);
+
+    return obterEstadoLicenca();
+}
+
 async function licencaPermiteUso() {
     try {
         return (await obterEstadoLicenca()).permitida;
@@ -209,6 +315,7 @@ function responderPainelBloqueado(req, res, licenca) {
 
 async function protegerLicenca(req, res, next) {
     try {
+        if (String(req.path || '').startsWith('/licenca')) return next();
         const licenca = await obterEstadoLicenca();
         if (licenca.permitida) return next();
 
@@ -222,6 +329,8 @@ module.exports = {
     calcularEstadoLicenca,
     obterEstadoLicenca,
     atualizarLicencaComercial,
+    aplicarCodigoLicenca,
+    gerarCodigoLicenca,
     instalacaoAdministrador,
     licencaPermiteUso,
     protegerLicenca

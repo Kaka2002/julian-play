@@ -3,6 +3,7 @@ const { obterConfiguracoes } = require('../services/configuracoesPainel');
 const {
     obterEstadoLicenca,
     atualizarLicencaComercial,
+    aplicarCodigoLicenca,
     instalacaoAdministrador
 } = require('../services/licencaService');
 
@@ -58,7 +59,11 @@ function painelGerenciamento({ licenca, tipoAtual }) {
 function painelSomenteLeitura() {
     return `<section class="panel">
         <h2>Licença gerenciada pelo fornecedor</h2>
-        <div class="sub">Esta instalação pode consultar a licença, mas alterações de avaliação, pagamento ou licença vitalícia são feitas somente pelo Painel Mestre.</div>
+        <div class="sub">Esta instalação pode consultar a licença, mas alterações de avaliação, pagamento ou licença vitalícia são feitas somente pelo Painel Mestre ou por um código enviado pelo fornecedor.</div>
+        <form class="fields" method="post" action="/licenca/codigo">
+            <label class="full">Código de ativação<textarea name="codigoLicenca" required placeholder="Cole aqui o código enviado pelo fornecedor"></textarea></label>
+            <div class="full"><button type="submit">Aplicar código de ativação</button></div>
+        </form>
     </section>`;
 }
 
@@ -118,6 +123,15 @@ router.post('/', async (req, res) => {
         }
         await atualizarLicencaComercial(req.body);
         res.redirect(`/licenca?mensagem=${encodeURIComponent('Licença atualizada com sucesso.')}`);
+    } catch (err) {
+        res.redirect(`/licenca?erro=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/codigo', async (req, res) => {
+    try {
+        await aplicarCodigoLicenca(req.body.codigoLicenca);
+        res.redirect(`/licenca?mensagem=${encodeURIComponent('Licença ativada com sucesso pelo código do fornecedor.')}`);
     } catch (err) {
         res.redirect(`/licenca?erro=${encodeURIComponent(err.message)}`);
     }

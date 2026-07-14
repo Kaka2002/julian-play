@@ -4,6 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const packageInfo = require('../package.json');
 const { verificarSenha } = require('../services/passwordService');
+const { gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
+const { dataHojeSaoPaulo, adicionarDias } = require('../services/licencaCalculo');
 const { formatarDataHoraBrasil } = require('../utils/dataHora');
 const {
     baseDomain,
@@ -733,7 +735,7 @@ function pagina(instalacoes, opcoes = {}) {
     const versaoSistema = packageInfo.version || '1.0.0';
     const sugestaoAdmin = obterSugestaoInstalacaoAdministradoraAtual();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.priority-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}.priority-group{border:1px solid #e8ebf0;border-radius:8px;padding:14px;background:#fafbfc}.priority-group h3{margin:0 0 10px;font-size:15px}.priority-item{display:grid;gap:10px;border-left:4px solid #dfe3ea;background:#fff;border-radius:8px;padding:12px;margin-top:10px}.priority-item.warn{border-left-color:#e98a13}.priority-item.error{border-left-color:#dc3545}.empty.compact{padding:16px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1200px){.priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.priority-grid{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.priority-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}.priority-group{border:1px solid #e8ebf0;border-radius:8px;padding:14px;background:#fafbfc}.priority-group h3{margin:0 0 10px;font-size:15px}.priority-item{display:grid;gap:10px;border-left:4px solid #dfe3ea;background:#fff;border-radius:8px;padding:12px;margin-top:10px}.priority-item.warn{border-left-color:#e98a13}.priority-item.error{border-left-color:#dc3545}.empty.compact{padding:16px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1200px){.priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.priority-grid{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
     </style></head><body><main>
     <div class="topbar">
       <div>
@@ -748,6 +750,7 @@ function pagina(instalacoes, opcoes = {}) {
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
+    ${secaoCodigoLicencaLocal(opcoes.codigoLicenca || {})}
     <section class="status-grid" aria-label="Status geral das instalações">
         ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.comerciais} cliente(s), ${statusGeral.administradoras} administradora(s)`)}
         ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
@@ -835,6 +838,22 @@ function paginaHistorico(instalacao, eventos = []) {
     </section></main></body></html>`;
 }
 
+function secaoCodigoLicencaLocal(opcoes = {}) {
+    const codigoGerado = opcoes.codigoLicenca || '';
+    return `<section class="panel"><h2>Licença para instalação local</h2><div class="sub">Use quando o cliente instalar o sistema no próprio computador. Ele envia o ID da instalação, você gera o código e ele cola na tela de licença.</div>
+      ${codigoGerado ?`<div class="credentials"><strong>Código gerado.</strong><div class="small">Envie este código ao cliente aplicar em /licenca.</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
+      <form class="fields" method="post" action="/licencas/codigo">
+        <label>ID da instalação<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
+        <label>Cliente / Empresa<input name="licencaCliente" value="${escapar(opcoes.licencaCliente || '')}" required></label>
+        <label>Telefone<input name="licencaTelefone" value="${escapar(opcoes.licencaTelefone || '')}"></label>
+        <label>Tipo de licença<select name="licencaTipo"><option value="avaliacao_15">Avaliação 15 dias</option><option value="avaliacao_30">Avaliação 30 dias</option><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option><option value="suspensa">Suspensa</option></select></label>
+        <label>Vencimento manual<input type="date" name="licencaVencimento" value="${escapar(opcoes.licencaVencimento || '')}"></label>
+        <label>Observação<input name="licencaObservacoes" value="${escapar(opcoes.licencaObservacoes || '')}" placeholder="Opcional"></label>
+        <div style="align-self:end"><button type="submit">Gerar código</button></div>
+      </form>
+    </section>`;
+}
+
 app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
 
 app.get('/login', (req, res) => {
@@ -916,6 +935,53 @@ app.post('/instalacoes/admin-atual', async (req, res) => {
         res.redirect(`/?mensagem=${encodeURIComponent(`Instalação administradora vinculada: ${instalacao.nome}.`)}#instalacao-${instalacao.id}`);
     } catch (err) {
         res.status(400).send(await renderizarPainel({ erro: err.detalhes || err.message }));
+    }
+});
+
+app.post('/licencas/codigo', async (req, res) => {
+    try {
+        const tipo = String(req.body.licencaTipo || '').trim();
+        const instalacaoId = String(req.body.instalacaoId || '').trim();
+        const cliente = String(req.body.licencaCliente || '').trim();
+        const hoje = dataHojeSaoPaulo();
+        const diasPorTipo = {
+            avaliacao_15: 15,
+            avaliacao_30: 30,
+            mensal: 30,
+            semestral: 180,
+            anual: 365
+        };
+        if (!instalacaoId) throw new Error('Informe o ID da instalação.');
+        if (!cliente) throw new Error('Informe o cliente ou empresa.');
+        if (!tipo) throw new Error('Selecione o tipo de licença.');
+        const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
+        const vencimento = tipo === 'vitalicia'
+            ? ''
+            : String(req.body.licencaVencimento || '').slice(0, 10) || adicionarDias(hoje, diasPorTipo[tipo] || 30);
+        const codigoLicenca = gerarCodigoLicencaAssinado({
+            v: 1,
+            instalacaoId,
+            cliente,
+            telefone: String(req.body.licencaTelefone || '').trim(),
+            tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+            ativacao: hoje,
+            vencimento,
+            vitalicia: tipo === 'vitalicia' ? '1' : '0',
+            periodoTesteDias: tipo === 'avaliacao_15' ? '15' : tipo === 'avaliacao_30' ? '30' : '0',
+            suspensa: tipo === 'suspensa' ? '1' : '0',
+            observacoes: String(req.body.licencaObservacoes || '').trim(),
+            emitidoEm: new Date().toISOString()
+        });
+
+        res.send(await renderizarPainel({
+            mensagem: 'Código de licença gerado. Envie ao cliente para aplicar na tela de licença.',
+            codigoLicenca: { ...req.body, licencaTipo: tipo, licencaVencimento: vencimento, codigoLicenca }
+        }));
+    } catch (err) {
+        res.status(400).send(await renderizarPainel({
+            erro: err.message,
+            codigoLicenca: req.body
+        }));
     }
 });
 
