@@ -391,6 +391,7 @@ async function obterModeloParaCliente(cliente, dias) {
 
 async function obterModeloAvisoProgramado(diasAntes) {
     const chaves = {
+        5: 'padrao_vencimento',
         2: 'aviso_vencimento_2_dias',
         1: 'aviso_vencimento_1_dia',
         0: 'aviso_vencimento_hoje',

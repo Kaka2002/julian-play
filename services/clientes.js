@@ -1379,7 +1379,7 @@ function listarClientesParaAvisosProgramados() {
                 AND vencimento != ''
         )
         SELECT * FROM candidatos
-        WHERE diasAntes IN (0, 1, 2)
+        WHERE diasAntes IN (0, 1, 2, 5)
             AND NOT EXISTS (
                 SELECT 1 FROM avisos_renovacao
                 WHERE avisos_renovacao.clienteId = candidatos.id
