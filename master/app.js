@@ -187,6 +187,12 @@ function formatarBytes(bytes) {
     return `${Math.round(total / 1024)} KB`;
 }
 
+function possuiArquivoPm2Instalacao(item = {}) {
+    if (!item.pastaDados) return false;
+    return fs.existsSync(path.join(item.pastaDados, 'ecosystem.config.cjs'))
+        || fs.existsSync(path.join(item.pastaDados, 'ecosystem.config.js'));
+}
+
 function formatarDataHoraPainel(valor) {
     if (!valor) return '-';
     const data = new Date(String(valor).replace(' ', 'T'));
@@ -277,7 +283,7 @@ function avaliarProntidaoComercial(item) {
     if (numeroEsperado && numeroConectado && numeroEsperado !== numeroConectado) pendencias.push('WhatsApp conectado é diferente do cadastrado');
     if (!numeroEsperado) pendencias.push('WhatsApp do robô não informado');
     if (item.estadoLicenca && !item.estadoLicenca.permitida) pendencias.push('Licença vencida ou bloqueada');
-    if (!String(item.usuarioPainel || '').trim() || !item.pastaDados || !fs.existsSync(path.join(item.pastaDados, 'ecosystem.config.cjs'))) pendencias.push('Acesso administrativo incompleto');
+    if (!String(item.usuarioPainel || '').trim() || !possuiArquivoPm2Instalacao(item)) pendencias.push('Acesso administrativo incompleto');
     if (!String(config.nomeEmpresaRobo || '').trim()) pendencias.push('Nome da empresa do robô não configurado');
     if (!String(config.imagemRoboMenu || '').trim()) pendencias.push('Imagem principal do robô não cadastrada');
     if (!String(config.pixChave || '').trim() || !String(config.pixNome || '').trim() || !String(config.pixCidade || '').trim()) pendencias.push('PIX de recebimento incompleto');
@@ -307,7 +313,7 @@ function acaoCorrecaoPendencia(item, pendencia) {
     if (pendencia.includes('plano ativo')) return `<a href="${dominio}/planos" target="_blank">Cadastrar planos</a>`;
     if (pendencia.includes('painel ativo')) return `<a href="${dominio}/paineis" target="_blank">Cadastrar painéis</a>`;
     if (pendencia.includes('Licença')) return `<a href="#acoes-${item.id}">Regularizar licença</a>`;
-    if (pendencia.includes('Acesso administrativo')) return `<a href="#acoes-${item.id}">Revisar acesso</a>`;
+    if (pendencia.includes('Acesso administrativo')) return `<a href="#resetar-senha-${item.id}">Resetar senha</a>`;
     if (pendencia.includes('Processo') || pendencia.includes('Banco de dados')) return `<a href="/instalacoes/${item.id}/saude">Abrir diagnóstico</a>`;
     if (pendencia.includes('suspensa') || pendencia.includes('Status da instalação')) return `<a href="#acoes-${item.id}">Revisar status</a>`;
     return '';
@@ -641,7 +647,7 @@ function pagina(instalacoes, opcoes = {}) {
         </div><div class="actions">
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/whatsapp" onsubmit="return confirm('Trocar o WhatsApp encerrará a conexão atual deste robô e gerará um novo QR Code. Continuar?');"><input name="whatsappEsperado" inputmode="numeric" value="${escapar(item.whatsappEsperado || '')}" minlength="10" maxlength="15" placeholder="55 + DDD + número" required style="width:185px;padding:9px"><button class="warning" type="submit">Trocar WhatsApp</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/observacao"><input name="observacaoOperacional" value="${escapar(item.observacaoOperacional || '')}" maxlength="500" placeholder="Obs. operacional" style="width:260px;padding:9px"><button class="secondary" type="submit">Salvar obs.</button></form>` : ''}
-          ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
+          ${item.status !== 'arquivado' ?`<form id="resetar-senha-${item.id}" class="inline" method="post" action="/instalacoes/${item.id}/resetar-senha" onsubmit="return confirm('Redefinir a senha do painel deste cliente?');"><input name="senhaPainel" type="password" minlength="8" placeholder="Nova senha" required style="width:150px;padding:9px"><button class="secondary" type="submit">Resetar senha</button></form>` : ''}
           ${item.status !== 'arquivado' ?`<form class="inline" method="post" action="/instalacoes/${item.id}/licenca" onsubmit="return confirm('Ativar esta licença comercial para o cliente?');"><select name="tipoLicenca" aria-label="Tipo de licença comercial"><option value="mensal">Mensal</option><option value="semestral">Semestral</option><option value="anual">Anual</option><option value="vitalicia">Vitalícia</option></select><button type="submit">Ativar licença</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/prorrogar"><select name="dias" aria-label="Dias de prorrogação"><option value="15">15 dias</option><option value="30">30 dias</option></select><button class="secondary" type="submit">Prorrogar teste</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/suspender"><button class="warning" type="submit">Suspender</button></form><form class="inline" method="post" action="/instalacoes/${item.id}/arquivar" onsubmit="return confirm('Arquivar esta instalação e parar o robô?');"><button class="secondary" type="submit">Arquivar</button></form>` : `<form class="inline" method="post" action="/instalacoes/${item.id}/excluir" onsubmit="return confirm('EXCLUSÃO DEFINITIVA: apagar banco, sessão e todos os clientes desta instalação?');"><button class="danger" type="submit">Excluir definitivamente</button></form>`}
         </div></td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nenhuma instalação encontrada para este filtro.</div>'}
     </div></section></main></body></html>`;
