@@ -754,6 +754,11 @@ function paginaSaude(instalacao, saude, logs = '') {
         <div class="row"><div class="label">WhatsApp conectado</div><div>${escapar(saude.numero || 'Não conectado')}</div></div>
         <div class="row"><div class="label">Status interno</div><div>${escapar(saude.whatsappStatus || saude.estado || 'Não informado')}</div></div>
         <div class="row"><div class="label">Tempo online</div><div>${escapar(formatarTempoOnline(saude.uptime))}</div></div>
+        <div class="row"><div class="label">Ultima mensagem recebida</div><div>${saude.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraPainel(saude.ultimaMensagemRecebidaEm))}${saude.ultimaMensagemRecebidaDe ?` de ${escapar(saude.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</div></div>
+        <div class="row"><div class="label">Ultima resposta do robo</div><div>${saude.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraPainel(saude.ultimoEnvioRoboEm))}${saude.ultimoEnvioRoboPara ?` para ${escapar(saude.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</div></div>
+        <div class="row"><div class="label">Mensagens recebidas</div><div>${escapar(saude.mensagensRecebidasTotal || 0)} desde o ultimo inicio</div></div>
+        <div class="row"><div class="label">Eventos ignorados</div><div>${escapar(Number(saude.eventosInternosIgnoradosTotal || 0) + Number(saude.conversasNaoIndividuaisIgnoradasTotal || 0))} (${escapar(saude.eventosInternosIgnoradosTotal || 0)} internos, ${escapar(saude.conversasNaoIndividuaisIgnoradasTotal || 0)} grupos/newsletters)</div></div>
+        <div class="row"><div class="label">Memoria do processo</div><div>${escapar(formatarBytes(saude.memoriaRss || 0))} em uso, heap ${escapar(formatarBytes(saude.memoriaHeapUsado || 0))} de ${escapar(formatarBytes(saude.memoriaHeapTotal || 0))}</div></div>
         <div class="row"><div class="label">Última checagem</div><div>${escapar(saude.timestamp || new Date().toISOString())}</div></div>
         ${saude.erro ?`<div class="row"><div class="label">Detalhe</div><div>${escapar(saude.erro)}</div></div>` : ''}
     </section>

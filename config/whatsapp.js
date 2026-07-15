@@ -10,7 +10,7 @@ const {
     registrarTesteLiberadoPorMensagem,
     normalizar
 } = require('../services/conversaService');
-const { foiMensagemDoRobo } = require('../services/mensagensPropriasService');
+const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
 const { licencaPermiteUso } = require('../services/licencaService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
@@ -30,9 +30,16 @@ let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
 let limpandoCliente = false;
 let eventosInternosIgnorados = 0;
+let eventosInternosIgnoradosTotal = 0;
 let ultimoResumoEventosInternos = 0;
 let conversasNaoIndividuaisIgnoradas = 0;
+let conversasNaoIndividuaisIgnoradasTotal = 0;
 let ultimoResumoConversasNaoIndividuais = 0;
+let mensagensRecebidasTotal = 0;
+let ultimaMensagemRecebidaEm = null;
+let ultimaMensagemRecebidaDe = '';
+let ultimoEventoIgnoradoEm = null;
+const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
 const avisosForaHorario = new Set();
@@ -287,6 +294,8 @@ function ehEventoInternoWhatsapp(message) {
 
 function registrarEventoInternoIgnorado(message) {
     eventosInternosIgnorados += 1;
+    eventosInternosIgnoradosTotal += 1;
+    ultimoEventoIgnoradoEm = new Date().toISOString();
     const agora = Date.now();
 
     if (agora - ultimoResumoEventosInternos < 60000) return;
@@ -301,6 +310,8 @@ function registrarEventoInternoIgnorado(message) {
 
 function registrarConversaNaoIndividualIgnorada(message) {
     conversasNaoIndividuaisIgnoradas += 1;
+    conversasNaoIndividuaisIgnoradasTotal += 1;
+    ultimoEventoIgnoradoEm = new Date().toISOString();
     const agora = Date.now();
 
     if (agora - ultimoResumoConversasNaoIndividuais < 60000) return;
@@ -311,6 +322,24 @@ function registrarConversaNaoIndividualIgnorada(message) {
     );
     conversasNaoIndividuaisIgnoradas = 0;
     ultimoResumoConversasNaoIndividuais = agora;
+}
+
+function registrarMensagemRecebidaCliente(message) {
+    if (message?.fromMe) return;
+
+    const id = message?.id?._serialized || '';
+    if (id) {
+        if (mensagensRecebidasContabilizadas.has(id)) return;
+        mensagensRecebidasContabilizadas.add(id);
+        if (mensagensRecebidasContabilizadas.size > 500) {
+            const [primeiro] = mensagensRecebidasContabilizadas;
+            mensagensRecebidasContabilizadas.delete(primeiro);
+        }
+    }
+
+    mensagensRecebidasTotal += 1;
+    ultimaMensagemRecebidaEm = new Date().toISOString();
+    ultimaMensagemRecebidaDe = obterTelefoneMensagem(message) || '';
 }
 
 function ehMidiaPropria(message) {
@@ -559,6 +588,7 @@ async function iniciarWhatsApp() {
                 return;
             }
 
+            registrarMensagemRecebidaCliente(message);
             console.log('Mensagem recebida de:', message.from);
             processarMensagemEmFila(message);
         });
@@ -574,6 +604,7 @@ async function iniciarWhatsApp() {
                 return;
             }
 
+            registrarMensagemRecebidaCliente(message);
             console.log(`Mensagem recebida via reserva${message.fromMe ? ' (fromMe)' : ''}.`);
             processarMensagemEmFila(message);
         });
@@ -645,6 +676,8 @@ function getClient() {
 }
 
 function getStatusWhatsApp() {
+    const enviosRobo = obterResumoEnviosDoRobo();
+
     return {
         status: statusWhatsApp,
         conectado,
@@ -655,7 +688,15 @@ function getStatusWhatsApp() {
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
-        numeroConectado: client?.info?.wid?.user || ''
+        numeroConectado: client?.info?.wid?.user || '',
+        mensagensRecebidasTotal,
+        ultimaMensagemRecebidaEm,
+        ultimaMensagemRecebidaDe,
+        ultimoEnvioRoboEm: enviosRobo.ultimoEnvioEm,
+        ultimoEnvioRoboPara: enviosRobo.ultimoEnvioPara,
+        eventosInternosIgnoradosTotal,
+        conversasNaoIndividuaisIgnoradasTotal,
+        ultimoEventoIgnoradoEm
     };
 }
 

@@ -4,6 +4,8 @@ const textosDoRobo = new Map();
 const LIMITE_IDS = 500;
 const TEMPO_RETENCAO_MS = 10 * 60 * 1000;
 const TEMPO_ENVIO_MS = 60 * 1000;
+let ultimoEnvioDoRoboEm = null;
+let ultimoEnvioDoRoboPara = '';
 
 function obterId(message) {
     return message?.id?._serialized || '';
@@ -40,6 +42,9 @@ function registrarMensagemDoRobo(message) {
 
 function registrarEnvioDoRobo(destino, texto) {
     if (!destino || !texto) return;
+
+    ultimoEnvioDoRoboEm = new Date().toISOString();
+    ultimoEnvioDoRoboPara = destino;
 
     const chave = chaveEnvio(destino, texto);
     const textoNormalizado = normalizarTexto(texto);
@@ -95,9 +100,17 @@ function foiTextoEnviadoPeloRobo(texto) {
     return true;
 }
 
+function obterResumoEnviosDoRobo() {
+    return {
+        ultimoEnvioEm: ultimoEnvioDoRoboEm,
+        ultimoEnvioPara: ultimoEnvioDoRoboPara
+    };
+}
+
 module.exports = {
     registrarMensagemDoRobo,
     registrarEnvioDoRobo,
+    obterResumoEnviosDoRobo,
     foiMensagemDoRobo,
     foiTextoEnviadoPeloRobo
 };

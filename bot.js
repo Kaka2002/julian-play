@@ -106,6 +106,7 @@ app.use('/api/admin', adminInternoRoute);
 
 app.get('/health', (req, res) => {
     const whatsapp = getStatusWhatsApp();
+    const memoria = process.memoryUsage();
     res.status(200).json({
         ok: true,
         estado: whatsapp.conectado ? 'operacional' : 'degradado',
@@ -113,7 +114,20 @@ app.get('/health', (req, res) => {
         whatsapp: {
             conectado: Boolean(whatsapp.conectado),
             status: whatsapp.status,
-            numero: whatsapp.numeroConectado || ''
+            numero: whatsapp.numeroConectado || '',
+            mensagensRecebidasTotal: whatsapp.mensagensRecebidasTotal || 0,
+            ultimaMensagemRecebidaEm: whatsapp.ultimaMensagemRecebidaEm || null,
+            ultimaMensagemRecebidaDe: whatsapp.ultimaMensagemRecebidaDe || '',
+            ultimoEnvioRoboEm: whatsapp.ultimoEnvioRoboEm || null,
+            ultimoEnvioRoboPara: whatsapp.ultimoEnvioRoboPara || '',
+            eventosInternosIgnoradosTotal: whatsapp.eventosInternosIgnoradosTotal || 0,
+            conversasNaoIndividuaisIgnoradasTotal: whatsapp.conversasNaoIndividuaisIgnoradasTotal || 0,
+            ultimoEventoIgnoradoEm: whatsapp.ultimoEventoIgnoradoEm || null
+        },
+        memoria: {
+            rss: memoria.rss,
+            heapUsado: memoria.heapUsed,
+            heapTotal: memoria.heapTotal
         },
         uptime: process.uptime(),
         timestamp: new Date().toISOString()

@@ -239,6 +239,7 @@ async function restaurarBackup(nomeBackup) {
 async function obterStatusSistema(statusWhatsApp = {}) {
     await db.ready;
 
+    const memoria = process.memoryUsage();
     const bancoExiste = fs.existsSync(db.dbPath);
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
@@ -261,6 +262,14 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         versao: packageInfo.version || '1.0.0',
         nome: packageInfo.name || 'julian-play',
         uptimeSegundos: Math.floor(process.uptime()),
+        memoria: {
+            rss: memoria.rss,
+            rssFormatado: formatarBytes(memoria.rss),
+            heapUsado: memoria.heapUsed,
+            heapUsadoFormatado: formatarBytes(memoria.heapUsed),
+            heapTotal: memoria.heapTotal,
+            heapTotalFormatado: formatarBytes(memoria.heapTotal)
+        },
         dataDir: db.dataDir,
         dbPath: db.dbPath,
         bancoExiste,
@@ -274,7 +283,21 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         diagnostico,
         config,
         licenca: calcularLicenca(config),
-        whatsapp: statusWhatsApp
+        whatsapp: statusWhatsApp,
+        saudeRobo: {
+            whatsappConectado: Boolean(statusWhatsApp.conectado),
+            whatsappStatus: statusWhatsApp.status || '',
+            numeroConectado: statusWhatsApp.numeroConectado || '',
+            mensagensRecebidasTotal: statusWhatsApp.mensagensRecebidasTotal || 0,
+            ultimaMensagemRecebidaEm: statusWhatsApp.ultimaMensagemRecebidaEm || null,
+            ultimaMensagemRecebidaDe: statusWhatsApp.ultimaMensagemRecebidaDe || '',
+            ultimoEnvioRoboEm: statusWhatsApp.ultimoEnvioRoboEm || null,
+            ultimoEnvioRoboPara: statusWhatsApp.ultimoEnvioRoboPara || '',
+            eventosIgnoradosTotal: Number(statusWhatsApp.eventosInternosIgnoradosTotal || 0) + Number(statusWhatsApp.conversasNaoIndividuaisIgnoradasTotal || 0),
+            eventosInternosIgnoradosTotal: statusWhatsApp.eventosInternosIgnoradosTotal || 0,
+            conversasNaoIndividuaisIgnoradasTotal: statusWhatsApp.conversasNaoIndividuaisIgnoradasTotal || 0,
+            ultimoEventoIgnoradoEm: statusWhatsApp.ultimoEventoIgnoradoEm || null
+        }
     };
 }
 

@@ -5340,6 +5340,31 @@ function formatarUptime(segundos = 0) {
     return `${minutos}min`;
 }
 
+function painelSaudeRobo(status = {}) {
+    const whatsapp = status.whatsapp || {};
+    const saudeRobo = status.saudeRobo || {};
+
+    return `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Saude do robo</h2>
+                <div class="subtitle">Sinais rapidos para saber se o atendimento automatico esta recebendo e respondendo mensagens</div>
+            </div>
+            <a class="button secondary" href="/qr">${icon('whats')} WhatsApp</a>
+        </div>
+        <table>
+            <tbody>
+                <tr><td><strong>WhatsApp</strong></td><td>${whatsapp.conectado ?'Conectado' : 'Desconectado'}${saudeRobo.numeroConectado ?` em ${escapar(saudeRobo.numeroConectado)}` : ''}</td></tr>
+                <tr><td><strong>Ultima mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</td></tr>
+                <tr><td><strong>Ultima resposta do robo</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</td></tr>
+                <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o ultimo inicio</td></tr>
+                <tr><td><strong>Eventos ignorados</strong></td><td>${escapar(saudeRobo.eventosIgnoradosTotal || 0)} (${escapar(saudeRobo.eventosInternosIgnoradosTotal || 0)} internos, ${escapar(saudeRobo.conversasNaoIndividuaisIgnoradasTotal || 0)} grupos/newsletters)</td></tr>
+                <tr><td><strong>Memoria do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
+            </tbody>
+        </table>
+    </section>`;
+}
+
 function resumoImportacaoClientes(importacao = {}) {
     if (!importacao.preview) return '';
 
@@ -5398,6 +5423,7 @@ function telaManutencao(status = {}, opcoes = {}) {
     const eventos = status.eventos || [];
     const licenca = status.licenca || {};
     const diagnostico = status.diagnostico || null;
+    const saudeRobo = status.saudeRobo || {};
     const ultimoBackup = status.ultimoBackup
         ?`${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
@@ -5424,6 +5450,8 @@ function telaManutencao(status = {}, opcoes = {}) {
         ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ?'Encontrado' : 'Não encontrado', tipo: status.bancoExiste ?'green' : 'red', icone: 'planos' })}
         ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
     </section>
+
+    ${painelSaudeRobo(status)}
 
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">

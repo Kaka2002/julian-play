@@ -94,6 +94,17 @@ function consultarSaude(porta) {
                         whatsapp: Boolean(dados.whatsapp?.conectado),
                         whatsappStatus: String(dados.whatsapp?.status || ''),
                         numero: String(dados.whatsapp?.numero || '').replace(/\D/g, ''),
+                        mensagensRecebidasTotal: Number(dados.whatsapp?.mensagensRecebidasTotal || 0),
+                        ultimaMensagemRecebidaEm: dados.whatsapp?.ultimaMensagemRecebidaEm || '',
+                        ultimaMensagemRecebidaDe: String(dados.whatsapp?.ultimaMensagemRecebidaDe || ''),
+                        ultimoEnvioRoboEm: dados.whatsapp?.ultimoEnvioRoboEm || '',
+                        ultimoEnvioRoboPara: String(dados.whatsapp?.ultimoEnvioRoboPara || ''),
+                        eventosInternosIgnoradosTotal: Number(dados.whatsapp?.eventosInternosIgnoradosTotal || 0),
+                        conversasNaoIndividuaisIgnoradasTotal: Number(dados.whatsapp?.conversasNaoIndividuaisIgnoradasTotal || 0),
+                        ultimoEventoIgnoradoEm: dados.whatsapp?.ultimoEventoIgnoradoEm || '',
+                        memoriaRss: Number(dados.memoria?.rss || 0),
+                        memoriaHeapUsado: Number(dados.memoria?.heapUsado || 0),
+                        memoriaHeapTotal: Number(dados.memoria?.heapTotal || 0),
                         uptime: Number(dados.uptime || 0),
                         timestamp: String(dados.timestamp || new Date().toISOString())
                     });
