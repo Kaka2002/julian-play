@@ -1075,6 +1075,22 @@ async function buscarLicencaLocal(instalacaoId) {
     );
 }
 
+async function buscarLicencaAtivaPorMaquina(machineFingerprint, ignorarInstalacaoId = '') {
+    const fingerprint = String(machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!fingerprint) return null;
+
+    return masterDb.buscarUm(
+        `SELECT *
+           FROM licencas_locais
+          WHERE UPPER(REPLACE(REPLACE(COALESCE(machineFingerprint, ''), '-', ''), ' ', '')) = ?
+            AND COALESCE(apagada, '0') <> '1'
+            AND COALESCE(transferida, '0') <> '1'
+            AND instalacaoId <> ?
+          LIMIT 1`,
+        [fingerprint, String(ignorarInstalacaoId || '').trim()]
+    );
+}
+
 async function apagarLicencaLocal(instalacaoId) {
     const licenca = await buscarLicencaLocal(instalacaoId);
     if (!licenca) throw new Error('Licença local não encontrada.');
@@ -1360,6 +1376,10 @@ app.post('/licencas/codigo', async (req, res) => {
         if (!machineFingerprint) throw new Error('Informe a chave da máquina exibida na tela de licença do cliente.');
         if (!cliente) throw new Error('Informe o cliente ou empresa.');
         if (!tipo) throw new Error('Selecione o tipo de licença.');
+        const licencaMesmaMaquina = await buscarLicencaAtivaPorMaquina(machineFingerprint, instalacaoId);
+        if (licencaMesmaMaquina) {
+            throw new Error(`Esta máquina já possui licença ativa para ${licencaMesmaMaquina.cliente}. Use Transferir na licença existente ou apague/suspenda a licença antiga antes de gerar outra.`);
+        }
         const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
         const vencimento = tipo === 'vitalicia'
             ? ''
@@ -1434,6 +1454,10 @@ app.post('/licencas/:instalacaoId/transferir', async (req, res) => {
         const existente = await buscarLicencaLocal(instalacaoId);
         if (existente && String(existente.apagada || '0') !== '1') {
             throw new Error('Já existe uma licença ativa para o novo ID informado.');
+        }
+        const licencaMesmaMaquina = await buscarLicencaAtivaPorMaquina(machineFingerprint, licencaAtual.instalacaoId);
+        if (licencaMesmaMaquina) {
+            throw new Error(`Esta máquina já possui licença ativa para ${licencaMesmaMaquina.cliente}. Para liberar outra instalação neste mesmo computador, remova ou transfira a licença existente primeiro.`);
         }
 
         const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
