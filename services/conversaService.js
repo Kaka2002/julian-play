@@ -22,6 +22,7 @@ const {
     registrarEnvioDoRobo,
     foiTextoEnviadoPeloRobo
 } = require('./mensagensPropriasService');
+const { enfileirarEnvio } = require('./filaMensagensService');
 
 const conversas = new Map();
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path.join(__dirname, '..'));
@@ -246,7 +247,10 @@ async function responderComDigitacao(message, texto, imagem = null) {
         }
 
         const enviada = await comTimeout(
-            chat.sendMessage(resposta),
+            enfileirarEnvio(
+                () => chat.sendMessage(resposta),
+                'Envio de resposta do robo'
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de mensagem'
         );
@@ -265,7 +269,10 @@ async function responderComDigitacao(message, texto, imagem = null) {
         }
 
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, resposta),
+            enfileirarEnvio(
+                () => message.client.sendMessage(destino, resposta),
+                'Envio de resposta reserva do robo'
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de mensagem reserva'
         );
@@ -292,7 +299,10 @@ Caso queira retornar ao atendimento, digite *menu*.`;
     try {
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para encerramento');
         const enviada = await comTimeout(
-            chat.sendMessage(texto),
+            enfileirarEnvio(
+                () => chat.sendMessage(texto),
+                'Envio de encerramento do robo'
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de encerramento'
         );
@@ -307,7 +317,10 @@ Caso queira retornar ao atendimento, digite *menu*.`;
 
         console.log('Falha ao encerrar pelo chat. Tentando envio direto:', err.message);
         const enviada = await comTimeout(
-            message.client.sendMessage(destino, texto),
+            enfileirarEnvio(
+                () => message.client.sendMessage(destino, texto),
+                'Envio de encerramento reserva do robo'
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de encerramento reserva'
         );

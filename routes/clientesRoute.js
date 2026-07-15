@@ -109,6 +109,7 @@ const {
     resumoCrm,
     relatorioComercial
 } = require('../services/crmService');
+const { enfileirarEnvio } = require('../services/filaMensagensService');
 
 const router = express.Router();
 const WHATSAPP_ENVIO_DUPLICADO_MS = 45000;
@@ -3328,7 +3329,10 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
 
             registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
-                client.sendMessage(destino, mensagem),
+                enfileirarEnvio(
+                    () => client.sendMessage(destino, mensagem),
+                    descricao
+                ),
                 90000,
                 descricao
             );
@@ -6113,10 +6117,18 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <option value="0" ${String(status.config?.roboRespostaHumanizadaAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
                 </select>
             </label>
-            ${campo({ nome: 'roboRespostaTempoMinimoSegundos', label: 'Tempo minimo para responder (segundos)', valor: status.config?.roboRespostaTempoMinimoSegundos || '3', tipo: 'number', attrs: 'min="0" max="60" required' })}
-            ${campo({ nome: 'roboRespostaTempoMaximoSegundos', label: 'Tempo maximo para responder (segundos)', valor: status.config?.roboRespostaTempoMaximoSegundos || '8', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            ${campo({ nome: 'roboRespostaTempoMinimoSegundos', label: 'Tempo mínimo para responder (segundos)', valor: status.config?.roboRespostaTempoMinimoSegundos || '3', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            ${campo({ nome: 'roboRespostaTempoMaximoSegundos', label: 'Tempo máximo para responder (segundos)', valor: status.config?.roboRespostaTempoMaximoSegundos || '8', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            <label>Fila de mensagens do WhatsApp
+                <select name="roboFilaMensagensAtiva">
+                    <option value="1" ${String(status.config?.roboFilaMensagensAtiva ?? '1') === '1' ?'selected' : ''}>Ligada</option>
+                    <option value="0" ${String(status.config?.roboFilaMensagensAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
+                </select>
+            </label>
+            ${campo({ nome: 'roboFilaIntervaloMinimoSegundos', label: 'Intervalo mínimo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMinimoSegundos || '2', tipo: 'number', attrs: 'min="0" max="120" required' })}
+            ${campo({ nome: 'roboFilaIntervaloMaximoSegundos', label: 'Intervalo máximo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMaximoSegundos || '5', tipo: 'number', attrs: 'min="0" max="180" required' })}
             ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
-            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento.</div>
+            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar configuração do robô</button>
                 <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>

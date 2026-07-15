@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
+const { enfileirarEnvio } = require('./filaMensagensService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const tenantAssetsDir = path.join(DATA_DIR, 'assets');
@@ -60,7 +61,10 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
 
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
         const enviada = await comTimeout(
-            chat.sendMessage(media, { caption: legenda }),
+            enfileirarEnvio(
+                () => chat.sendMessage(media, { caption: legenda }),
+                `Envio de imagem ${nomeArquivo}`
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );
@@ -99,7 +103,10 @@ async function enviarImagem(message, nomeArquivo) {
 
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
         const enviada = await comTimeout(
-            chat.sendMessage(media),
+            enfileirarEnvio(
+                () => chat.sendMessage(media),
+                `Envio de imagem ${nomeArquivo}`
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );

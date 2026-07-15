@@ -65,6 +65,9 @@ async function obterConfiguracoes() {
         roboRespostaHumanizadaAtiva: '1',
         roboRespostaTempoMinimoSegundos: '3',
         roboRespostaTempoMaximoSegundos: '8',
+        roboFilaMensagensAtiva: '1',
+        roboFilaIntervaloMinimoSegundos: '2',
+        roboFilaIntervaloMaximoSegundos: '5',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -129,6 +132,10 @@ async function salvarConfiguracoesRobo(dados = {}) {
     const tempoMinimo = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMinimoSegundos || 3, 10) || 0));
     const tempoMaximoBruto = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMaximoSegundos || 8, 10) || 0));
     const tempoMaximo = Math.max(tempoMinimo, tempoMaximoBruto);
+    const filaMensagensAtiva = dados.roboFilaMensagensAtiva ? '1' : '0';
+    const filaMinimo = Math.max(0, Math.min(120, Number.parseInt(dados.roboFilaIntervaloMinimoSegundos || 2, 10) || 0));
+    const filaMaximoBruto = Math.max(0, Math.min(180, Number.parseInt(dados.roboFilaIntervaloMaximoSegundos || 5, 10) || 0));
+    const filaMaximo = Math.max(filaMinimo, filaMaximoBruto);
 
     if (!nomeEmpresa) {
         throw new Error('Informe o nome da empresa que aparecera nas mensagens.');
@@ -141,6 +148,9 @@ async function salvarConfiguracoesRobo(dados = {}) {
     await salvarConfiguracao('roboRespostaHumanizadaAtiva', respostaHumanizadaAtiva);
     await salvarConfiguracao('roboRespostaTempoMinimoSegundos', String(tempoMinimo));
     await salvarConfiguracao('roboRespostaTempoMaximoSegundos', String(tempoMaximo));
+    await salvarConfiguracao('roboFilaMensagensAtiva', filaMensagensAtiva);
+    await salvarConfiguracao('roboFilaIntervaloMinimoSegundos', String(filaMinimo));
+    await salvarConfiguracao('roboFilaIntervaloMaximoSegundos', String(filaMaximo));
 
     return obterConfiguracoes();
 }

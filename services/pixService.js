@@ -1,6 +1,7 @@
 const QRCode = require('qrcode');
 const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
+const { enfileirarEnvio } = require('./filaMensagensService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarTiposPlanos } = require('./tiposPlanos');
 
@@ -339,9 +340,10 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         registrarEnvioDoRobo(destino, caption);
 
         const enviada = await comTimeout(
-            client.sendMessage(destino, media, {
-                caption
-            }),
+            enfileirarEnvio(
+                () => client.sendMessage(destino, media, { caption }),
+                `Envio do QR Code PIX ${planoPix.nome}`
+            ),
             ENVIO_TIMEOUT_MS,
             'Envio do QR Code PIX'
         );
