@@ -271,7 +271,7 @@ function lerUploadMultipart(req) {
             const filenameMatch = conteudo.match(/filename="([^"]+)"/i);
 
             if (!filenameMatch || inicioCabecalho < 0) {
-                reject(new Error('Selecione um arquivo de logo.'));
+                reject(new Error('Selecione um arquivo CSV.'));
                 return;
             }
 
@@ -5348,6 +5348,9 @@ function resumoImportacaoClientes(importacao = {}) {
     const itens = preview.itens || [];
     const amostra = itens.slice(0, 12);
     const podeConfirmar = preview.ignorar === 0 && itens.length > 0;
+    const avisoConfirmacao = podeConfirmar
+        ? '<div class="notice" style="border-color:#fde68a;background:#fffbeb;color:#92400e;">Atenção: nesta etapa os clientes ainda não foram gravados. Clique em Confirmar importação para salvar no sistema.</div>'
+        : '';
 
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5361,6 +5364,7 @@ function resumoImportacaoClientes(importacao = {}) {
             </form>` : ''}
         </div>
         ${preview.ignorar ?'<div class="notice">Corrija as linhas com erro e envie o CSV novamente antes de confirmar.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
+        ${avisoConfirmacao}
         <table>
             <thead>
                 <tr>
@@ -6570,6 +6574,15 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
         const token = salvarPreviaImportacao(preview);
         const status = await obterStatusSistema(getStatusWhatsApp());
 
+        logControleClientes('CSV de clientes validado', {
+            arquivo: upload.filename,
+            linhas: preview.total,
+            criar: preview.criar,
+            atualizar: preview.atualizar,
+            ignorar: preview.ignorar,
+            token
+        });
+
         await renderizar(res, {
             titulo: 'Manutenção',
             conteudo: telaManutencao(status, { importacao: { preview, token } }),
@@ -6577,6 +6590,10 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
             ativo: 'manutencao'
         });
     } catch (err) {
+        logControleClientes('Erro ao validar CSV de clientes', {
+            erro: err.message
+        });
+
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
@@ -6593,6 +6610,13 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
         const preview = lerPreviaImportacao(req.body.token);
         const itens = preview.itens || [];
         const itensValidos = itens.filter(item => item.acao !== 'ignorar');
+
+        logControleClientes('Confirmacao de importacao CSV recebida', {
+            token: req.body.token,
+            linhas: preview.total,
+            validos: itensValidos.length,
+            ignorar: preview.ignorar
+        });
 
         if (!itensValidos.length) {
             throw new Error('Não há clientes válidos para importar.');
