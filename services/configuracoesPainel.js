@@ -61,6 +61,9 @@ async function obterConfiguracoes() {
         roboPalavrasChave: 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis',
         roboMensagemDesconhecida: 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
         roboAtendimentoHumanoMinutos: '30',
+        roboRespostaHumanizadaAtiva: '1',
+        roboRespostaTempoMinimoSegundos: '3',
+        roboRespostaTempoMaximoSegundos: '8',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -121,6 +124,10 @@ async function salvarConfiguracoesRobo(dados = {}) {
     const palavrasChave = String(dados.roboPalavrasChave || '').trim();
     const mensagemDesconhecida = String(dados.roboMensagemDesconhecida || '').trim();
     const minutosAtendimento = Math.max(1, Math.min(1440, Number.parseInt(dados.roboAtendimentoHumanoMinutos || 30, 10) || 30));
+    const respostaHumanizadaAtiva = dados.roboRespostaHumanizadaAtiva ? '1' : '0';
+    const tempoMinimo = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMinimoSegundos || 3, 10) || 0));
+    const tempoMaximoBruto = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMaximoSegundos || 8, 10) || 0));
+    const tempoMaximo = Math.max(tempoMinimo, tempoMaximoBruto);
 
     if (!nomeEmpresa) {
         throw new Error('Informe o nome da empresa que aparecera nas mensagens.');
@@ -130,6 +137,9 @@ async function salvarConfiguracoesRobo(dados = {}) {
     await salvarConfiguracao('roboPalavrasChave', palavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis');
     await salvarConfiguracao('roboMensagemDesconhecida', mensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.');
     await salvarConfiguracao('roboAtendimentoHumanoMinutos', String(minutosAtendimento));
+    await salvarConfiguracao('roboRespostaHumanizadaAtiva', respostaHumanizadaAtiva);
+    await salvarConfiguracao('roboRespostaTempoMinimoSegundos', String(tempoMinimo));
+    await salvarConfiguracao('roboRespostaTempoMaximoSegundos', String(tempoMaximo));
 
     return obterConfiguracoes();
 }

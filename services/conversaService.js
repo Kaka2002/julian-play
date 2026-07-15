@@ -65,6 +65,9 @@ async function obterPerfilRobo() {
             .filter(Boolean),
         mensagemDesconhecida: config.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
         atendimentoHumanoMs: Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000,
+        respostaHumanizadaAtiva: String(config.roboRespostaHumanizadaAtiva ?? '1') === '1',
+        respostaTempoMinimoMs: Math.max(0, Math.min(60, Number.parseInt(config.roboRespostaTempoMinimoSegundos || 3, 10) || 0)) * 1000,
+        respostaTempoMaximoMs: Math.max(0, Math.min(60, Number.parseInt(config.roboRespostaTempoMaximoSegundos || 8, 10) || 0)) * 1000,
         imagens: {
             menu: imagemConfigurada('imagemRoboMenu', imagensRespostas.menu),
             planos: imagemConfigurada('imagemRoboPlanos', imagensRespostas.planos),
@@ -215,8 +218,22 @@ async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
     }
 }
 
+function tempoRespostaHumanizada(perfil = {}) {
+    if (!perfil.respostaHumanizadaAtiva) return 0;
+
+    const minimo = Number(perfil.respostaTempoMinimoMs ?? TEMPO_RESPOSTA_MS);
+    const maximoBruto = Number(perfil.respostaTempoMaximoMs ?? minimo);
+    const maximo = Math.max(minimo, maximoBruto);
+
+    if (!Number.isFinite(minimo) || minimo <= 0) return 0;
+    if (maximo <= minimo) return minimo;
+
+    return Math.round(minimo + Math.random() * (maximo - minimo));
+}
+
 async function responderComDigitacao(message, texto, imagem = null) {
-    await simularDigitacao(message);
+    const perfil = await obterPerfilRobo();
+    await simularDigitacao(message, tempoRespostaHumanizada(perfil));
     const resposta = adicionarOpcaoSair(texto);
     const destino = obterDestinoMensagem(message);
     console.log('Enviando resposta para:', destino);

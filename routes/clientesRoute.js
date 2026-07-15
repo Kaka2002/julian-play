@@ -5479,6 +5479,14 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
             ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preço, teste"' })}
             ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
+            <label>Resposta humanizada
+                <select name="roboRespostaHumanizadaAtiva">
+                    <option value="1" ${String(status.config?.roboRespostaHumanizadaAtiva ?? '1') === '1' ?'selected' : ''}>Ligada</option>
+                    <option value="0" ${String(status.config?.roboRespostaHumanizadaAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
+                </select>
+            </label>
+            ${campo({ nome: 'roboRespostaTempoMinimoSegundos', label: 'Tempo minimo para responder (segundos)', valor: status.config?.roboRespostaTempoMinimoSegundos || '3', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            ${campo({ nome: 'roboRespostaTempoMaximoSegundos', label: 'Tempo maximo para responder (segundos)', valor: status.config?.roboRespostaTempoMaximoSegundos || '8', tipo: 'number', attrs: 'min="0" max="60" required' })}
             ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
             <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento.</div>
             <div class="actions full">
