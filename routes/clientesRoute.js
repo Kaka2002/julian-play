@@ -5347,9 +5347,10 @@ function resumoImportacaoClientes(importacao = {}) {
     const token = importacao.token || '';
     const itens = preview.itens || [];
     const amostra = itens.slice(0, 12);
-    const podeConfirmar = preview.ignorar === 0 && itens.length > 0;
+    const validos = Number(preview.criar || 0) + Number(preview.atualizar || 0);
+    const podeConfirmar = validos > 0;
     const avisoConfirmacao = podeConfirmar
-        ? '<div class="notice" style="border-color:#fde68a;background:#fffbeb;color:#92400e;">Atenção: nesta etapa os clientes ainda não foram gravados. Clique em Confirmar importação para salvar no sistema.</div>'
+        ? `<div class="notice" style="border-color:#fde68a;background:#fffbeb;color:#92400e;">Atenção: nesta etapa os clientes ainda não foram gravados. Clique em Confirmar importação para salvar ${validos} cliente(s) válido(s) no sistema.${preview.ignorar ?` ${preview.ignorar} linha(s) com erro serão ignoradas.` : ''}</div>`
         : '';
 
     return `<section class="panel" style="margin-bottom:24px;">
@@ -5363,7 +5364,7 @@ function resumoImportacaoClientes(importacao = {}) {
                 <button class="button green" type="submit">${icon('check')} Confirmar importação</button>
             </form>` : ''}
         </div>
-        ${preview.ignorar ?'<div class="notice">Corrija as linhas com erro e envie o CSV novamente antes de confirmar.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
+        ${preview.ignorar ?'<div class="notice">Existem linhas com erro. Você pode confirmar para importar somente os clientes válidos ou corrigir o CSV e validar novamente.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
         ${avisoConfirmacao}
         <table>
             <thead>
@@ -6620,10 +6621,6 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
 
         if (!itensValidos.length) {
             throw new Error('Não há clientes válidos para importar.');
-        }
-
-        if (itens.some(item => item.acao === 'ignorar')) {
-            throw new Error('A importação possui linhas com erro. Envie o CSV corrigido antes de confirmar.');
         }
 
         const backup = await criarBackupManual();
