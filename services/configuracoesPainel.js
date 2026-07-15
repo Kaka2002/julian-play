@@ -39,6 +39,7 @@ async function obterConfiguracoes() {
         licencaCodigoAtivacao: '',
         licencaServidorUrl: '',
         licencaUltimaConsultaRemota: '',
+        licencaMachineFingerprint: '',
         nomeEmpresaRobo: process.env.LICENSE_CUSTOMER_NAME || process.env.NOME_EMPRESA_ROBO || 'JULIAN PLAY',
         imagemRoboMenu: instalacaoCliente ? '' : 'Logo 1_7.png',
         imagemRoboPlanos: instalacaoCliente ? '' : 'Plano.png',

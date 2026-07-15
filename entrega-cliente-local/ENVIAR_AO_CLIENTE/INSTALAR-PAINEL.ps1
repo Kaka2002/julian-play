@@ -95,6 +95,15 @@ function ObterUrlPainel([int]$porta, [string]$nomeLocal) {
     return "http://$nomeLocal`:$porta"
 }
 
+function ObterPastaBaseInstalacao([string]$pastaInstalacao) {
+    $caminho = [IO.Path]::GetFullPath($pastaInstalacao).TrimEnd('\')
+    $base = Split-Path -Parent $caminho
+    if ([string]::IsNullOrWhiteSpace($base)) {
+        return 'C:\JulianPlay'
+    }
+    return $base
+}
+
 function ConfigurarNomeLocal([string]$nomeLocal) {
     if ([string]::IsNullOrWhiteSpace($nomeLocal)) {
         return $false
@@ -138,6 +147,10 @@ if ($chromePaths.Count -eq 0) {
 }
 
 Etapa 'Preparando pastas'
+$PastaInstalacao = [IO.Path]::GetFullPath($PastaInstalacao)
+$PastaDados = [IO.Path]::GetFullPath($PastaDados)
+$PastaBase = ObterPastaBaseInstalacao $PastaInstalacao
+New-Item -ItemType Directory -Path $PastaBase -Force | Out-Null
 New-Item -ItemType Directory -Path $PastaInstalacao, $PastaDados -Force | Out-Null
 
 Etapa 'Configurando endereco local'
@@ -149,11 +162,11 @@ if (Test-Path -LiteralPath (Join-Path $PastaInstalacao 'package.json')) {
     PararPm2Local
     EncerrarProcessosDaPasta $PastaInstalacao
 
-    $backup = "C:\JulianPlay\app-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    $backup = Join-Path $PastaBase "app-backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     try {
         Move-Item -LiteralPath $PastaInstalacao -Destination $backup -Force
     } catch {
-        throw "Nao foi possivel mover a instalacao anterior porque o Windows ainda esta usando algum arquivo em C:\JulianPlay\app. Reinicie o computador e execute 2-INSTALAR-PAINEL.bat antes de abrir o painel. Detalhe: $($_.Exception.Message)"
+        throw "Nao foi possivel mover a instalacao anterior porque o Windows ainda esta usando algum arquivo em $PastaInstalacao. Reinicie o computador e execute 2-INSTALAR-PAINEL.bat antes de abrir o painel. Detalhe: $($_.Exception.Message)"
     }
     New-Item -ItemType Directory -Path $PastaInstalacao -Force | Out-Null
     Write-Host "Instalacao anterior movida para $backup" -ForegroundColor Yellow

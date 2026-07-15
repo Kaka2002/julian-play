@@ -10,6 +10,10 @@ const {
     gerarCodigoAssinado,
     lerCodigoAssinado
 } = require('./licencaAssinatura');
+const {
+    obterFingerprintMaquina,
+    normalizarFingerprintMaquina
+} = require('./maquinaInstalacao');
 
 const LICENCA_CODIGO_PREFIXO = 'JPLAY-LIC-';
 const INTERVALO_CONSULTA_REMOTA_MS = 15 * 60 * 1000;
@@ -64,6 +68,7 @@ function gerarCodigoLicenca(dados = {}) {
     const vencimento = String(dados.licencaVencimento || dados.vencimento || '').slice(0, 10);
     const vitalicia = String(dados.licencaVitalicia || '').trim() === '1' || tipo === 'vitalicia';
     const suspensa = String(dados.licencaSuspensa || '').trim() === '1' || tipo === 'suspensa';
+    const machineFingerprint = normalizarFingerprintMaquina(dados.machineFingerprint || dados.licencaMachineFingerprint || '');
 
     if (!instalacaoId) throw new Error('Informe o ID da instalação.');
     if (!cliente) throw new Error('Informe o cliente ou empresa da licença.');
@@ -75,6 +80,7 @@ function gerarCodigoLicenca(dados = {}) {
         instalacaoId,
         cliente,
         telefone: String(dados.licencaTelefone || dados.telefone || '').trim(),
+        machineFingerprint,
         tipo: vitalicia ? 'vitalicia' : suspensa ? 'assinatura' : tipo,
         ativacao,
         vencimento: vitalicia ? '' : vencimento,
@@ -154,7 +160,30 @@ async function obterEstadoLicenca() {
     config = await garantirIdentificadorInstalacao(config);
     config = await inicializarAvaliacaoPadrao(config);
     config = await sincronizarLicencaRemota(config);
-    return calcularEstadoLicenca(config);
+    return aplicarBloqueioMaquina(config, calcularEstadoLicenca(config));
+}
+
+function aplicarBloqueioMaquina(config = {}, estado = {}) {
+    const atual = obterFingerprintMaquina();
+    const licenciado = normalizarFingerprintMaquina(config.licencaMachineFingerprint || '');
+
+    if (!licenciado || licenciado === atual) {
+        return {
+            ...estado,
+            machineFingerprint: atual,
+            machineFingerprintLicenciado: licenciado
+        };
+    }
+
+    return {
+        ...estado,
+        permitida: false,
+        status: 'bloqueada_maquina',
+        rotulo: 'Licenca vinculada a outro computador',
+        motivo: 'machine_mismatch',
+        machineFingerprint: atual,
+        machineFingerprintLicenciado: licenciado
+    };
 }
 
 function consultaRemotaRecente(config = {}) {
@@ -175,9 +204,13 @@ async function sincronizarLicencaRemota(config = {}) {
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     try {
-        const resposta = await fetch(`${servidorUrl}/api/licencas/${encodeURIComponent(instalacaoId)}/status`, {
+        const machineFingerprint = obterFingerprintMaquina();
+        const resposta = await fetch(`${servidorUrl}/api/licencas/${encodeURIComponent(instalacaoId)}/status?machineFingerprint=${encodeURIComponent(machineFingerprint)}`, {
             signal: controller.signal,
-            headers: { accept: 'application/json' }
+            headers: {
+                accept: 'application/json',
+                'x-machine-fingerprint': machineFingerprint
+            }
         });
 
         if (!resposta.ok) {
@@ -201,6 +234,7 @@ async function sincronizarLicencaRemota(config = {}) {
             licencaSuspensa: dados.suspensa ? '1' : '0',
             licencaBloqueioAtivo: '1',
             licencaObservacoes: dados.observacoes || config.licencaObservacoes || '',
+            licencaMachineFingerprint: dados.machineFingerprint || config.licencaMachineFingerprint || machineFingerprint,
             licencaUltimaConsultaRemota: agora
         };
 
@@ -284,9 +318,20 @@ async function aplicarCodigoLicenca(codigo) {
     const config = await garantirIdentificadorInstalacao(await obterConfiguracoes());
     const instalacaoAtual = String(config.instalacaoId || '').trim();
     const instalacaoCodigo = String(payload.instalacaoId || '').trim();
+    const maquinaAtual = obterFingerprintMaquina();
+    const maquinaCodigo = normalizarFingerprintMaquina(payload.machineFingerprint || payload.maquinaFingerprint || '');
+    const maquinaLicenciada = normalizarFingerprintMaquina(config.licencaMachineFingerprint || '');
 
     if (!instalacaoCodigo || instalacaoCodigo !== instalacaoAtual) {
         throw new Error('Este código pertence a outra instalação. Confira o ID informado ao fornecedor.');
+    }
+
+    if (maquinaCodigo && maquinaCodigo !== maquinaAtual) {
+        throw new Error('Este codigo pertence a outro computador. Envie a chave da maquina correta ao fornecedor.');
+    }
+
+    if (maquinaLicenciada && maquinaLicenciada !== maquinaAtual) {
+        throw new Error('Esta licenca ja foi ativada em outro computador. Solicite liberacao ao fornecedor.');
     }
 
     await salvarConfiguracao('licencaCliente', payload.cliente || '');
@@ -301,6 +346,7 @@ async function aplicarCodigoLicenca(codigo) {
     await salvarConfiguracao('licencaObservacoes', payload.observacoes || '');
     await salvarConfiguracao('licencaCodigoAtivacao', codigo);
     await salvarConfiguracao('licencaServidorUrl', payload.servidorUrl || '');
+    await salvarConfiguracao('licencaMachineFingerprint', maquinaCodigo || maquinaAtual);
     await salvarConfiguracao('licencaUltimaConsultaRemota', '');
 
     return obterEstadoLicenca();

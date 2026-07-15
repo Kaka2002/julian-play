@@ -20,6 +20,7 @@ Use este checklist quando o cliente disser que nÃ£o funcionou.
 
 - Print da tela com erro.
 - ID da instalaÃ§Ã£o em `/licenca`.
+- Chave da mÃ¡quina em `/licenca`.
 - Se o WhatsApp aparece conectado em `/qr`.
 - HorÃ¡rio em que o problema aconteceu.
 

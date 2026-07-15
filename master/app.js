@@ -919,6 +919,7 @@ function formularioCodigoLicencaLocal(opcoes = {}) {
     const resumo = [
         opcoes.licencaCliente ? `Cliente: ${opcoes.licencaCliente}` : '',
         opcoes.instalacaoId ? `ID: ${opcoes.instalacaoId}` : '',
+        opcoes.machineFingerprint ? `Maquina: ${opcoes.machineFingerprint}` : '',
         opcoes.licencaVencimento ? `Vencimento: ${formatarDataPainel(opcoes.licencaVencimento)}` : ''
     ].filter(Boolean).join(' | ');
 
@@ -926,6 +927,7 @@ function formularioCodigoLicencaLocal(opcoes = {}) {
       ${codigoGerado ?`<div class="credentials"><strong>Codigo gerado.</strong><div class="small">${escapar(resumo || 'Envie este codigo ao cliente aplicar em /licenca.')}</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
       <form class="fields" method="post" action="/licencas/codigo">
         <label>ID da instalacao<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
+        <label>Chave da maquina<input name="machineFingerprint" value="${escapar(opcoes.machineFingerprint || '')}" required></label>
         <label>Cliente / Empresa<input name="licencaCliente" value="${escapar(opcoes.licencaCliente || '')}" required></label>
         <label>Telefone<input name="licencaTelefone" value="${escapar(opcoes.licencaTelefone || '')}"></label>
         <label>Tipo de licenca<select name="licencaTipo">${opcoesTipoLicencaSelect(opcoes.licencaTipo)}</select></label>
@@ -946,7 +948,7 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
         const tipo = item.vitalicia === '1' ? 'Vitalicia' : item.suspensa === '1' ? 'Suspensa' : item.tipo || '-';
         return `<tr>
           <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
-          <td><code>${escapar(item.instalacaoId)}</code></td>
+          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Maquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Maquina nao vinculada</div>'}</td>
           <td><strong>${escapar(item.vencimento ? formatarDataPainel(item.vencimento) : 'Sem vencimento')}</strong><div class="small">${escapar(tipo)}</div></td>
           <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
           <td>${escapar(item.ultimoPingEm ? formatarDataHoraPainel(item.ultimoPingEm) : 'Sem consulta')}<div class="small">${escapar(item.ultimoStatus || '')}</div></td>
@@ -955,6 +957,7 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
               <a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(item.instalacaoId)}/historico">Historico</a>
               <form class="inline" method="post" action="/licencas/codigo">
                 <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
+                <input type="hidden" name="machineFingerprint" value="${escapar(item.machineFingerprint || '')}">
                 <input type="hidden" name="licencaCliente" value="${escapar(item.cliente)}">
                 <input type="hidden" name="licencaTelefone" value="${escapar(item.telefone || '')}">
                 <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
@@ -1009,12 +1012,13 @@ function urlPublicaMestre(req) {
 async function salvarLicencaLocalGerada(dados = {}) {
     await masterDb.executar(
         `INSERT INTO licencas_locais (
-            instalacaoId, cliente, telefone, tipo, ativacao, vencimento, vitalicia,
+            instalacaoId, cliente, telefone, machineFingerprint, tipo, ativacao, vencimento, vitalicia,
             suspensa, codigo, observacoes, apagada, apagadaEm, atualizadoEm
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', NULL, CURRENT_TIMESTAMP)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', NULL, CURRENT_TIMESTAMP)
         ON CONFLICT(instalacaoId) DO UPDATE SET
             cliente = excluded.cliente,
             telefone = excluded.telefone,
+            machineFingerprint = excluded.machineFingerprint,
             tipo = excluded.tipo,
             ativacao = excluded.ativacao,
             vencimento = excluded.vencimento,
@@ -1029,6 +1033,7 @@ async function salvarLicencaLocalGerada(dados = {}) {
             dados.instalacaoId,
             dados.cliente,
             dados.telefone || '',
+            dados.machineFingerprint || '',
             dados.tipo,
             dados.ativacao || '',
             dados.vencimento || '',
@@ -1130,13 +1135,14 @@ function secaoLicencasLocais(licencas = []) {
         const estado = estadoLicencaLocal(item);
         return `<tr>
           <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
-          <td><code>${escapar(item.instalacaoId)}</code></td>
+          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Maquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Maquina nao vinculada</div>'}</td>
           <td>${escapar(item.tipo || '-')}${item.vencimento ? `<div class="small">ate ${escapar(formatarDataPainel(item.vencimento))}</div>` : '<div class="small">Sem vencimento</div>'}</td>
           <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
           <td>${escapar(formatarDataHoraPainel(item.ultimoPingEm || item.atualizadoEm))}<div class="small">${escapar(item.ultimoStatus || 'Sem consulta')}</div></td>
           <td>
             <form class="inline" method="post" action="/licencas/codigo">
               <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
+              <input type="hidden" name="machineFingerprint" value="${escapar(item.machineFingerprint || '')}">
               <input type="hidden" name="licencaCliente" value="${escapar(item.cliente)}">
               <input type="hidden" name="licencaTelefone" value="${escapar(item.telefone || '')}">
               <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
@@ -1156,9 +1162,34 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
     try {
         const instalacaoId = String(req.params.instalacaoId || '').trim();
+        const machineFingerprint = String(req.query.machineFingerprint || req.headers['x-machine-fingerprint'] || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const licenca = await masterDb.buscarUm("SELECT * FROM licencas_locais WHERE instalacaoId = ? AND COALESCE(apagada, '0') <> '1' LIMIT 1", [instalacaoId]);
         if (!licenca) {
             return res.status(404).json({ ok: false, encontrada: false, mensagem: 'Licença não encontrada no Painel Mestre.' });
+        }
+
+        const machineEsperada = String(licenca.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (machineEsperada && machineFingerprint && machineEsperada !== machineFingerprint) {
+            await masterDb.executar(
+                'UPDATE licencas_locais SET ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ?',
+                ['bloqueada_maquina', instalacaoId]
+            );
+            await registrarEventoLicencaLocal(instalacaoId, 'bloqueio', 'Consulta bloqueada por computador diferente.', `Esperado: ${machineEsperada}; recebido: ${machineFingerprint}`);
+            return res.json({
+                ok: true,
+                encontrada: true,
+                instalacaoId: licenca.instalacaoId,
+                cliente: licenca.cliente,
+                telefone: licenca.telefone || '',
+                machineFingerprint: machineEsperada,
+                tipo: licenca.tipo,
+                ativacao: licenca.ativacao || '',
+                vencimento: licenca.vencimento || '',
+                vitalicia: licenca.vitalicia === '1',
+                suspensa: true,
+                observacoes: 'Licenca vinculada a outro computador. Solicite liberacao ao fornecedor.',
+                atualizadoEm: licenca.atualizadoEm
+            });
         }
 
         await masterDb.executar(
@@ -1173,6 +1204,7 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
             instalacaoId: licenca.instalacaoId,
             cliente: licenca.cliente,
             telefone: licenca.telefone || '',
+            machineFingerprint: licenca.machineFingerprint || '',
             tipo: licenca.tipo,
             ativacao: licenca.ativacao || '',
             vencimento: licenca.vencimento || '',
@@ -1280,6 +1312,7 @@ app.post('/licencas/codigo', async (req, res) => {
     try {
         const tipo = String(req.body.licencaTipo || '').trim();
         const instalacaoId = String(req.body.instalacaoId || '').trim();
+        const machineFingerprint = String(req.body.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const cliente = String(req.body.licencaCliente || '').trim();
         const hoje = dataHojeSaoPaulo();
         const diasPorTipo = {
@@ -1290,6 +1323,7 @@ app.post('/licencas/codigo', async (req, res) => {
             anual: 365
         };
         if (!instalacaoId) throw new Error('Informe o ID da instalação.');
+        if (!machineFingerprint) throw new Error('Informe a chave da maquina exibida na tela de licenca do cliente.');
         if (!cliente) throw new Error('Informe o cliente ou empresa.');
         if (!tipo) throw new Error('Selecione o tipo de licença.');
         const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
@@ -1300,6 +1334,7 @@ app.post('/licencas/codigo', async (req, res) => {
         const codigoLicenca = gerarCodigoLicencaAssinado({
             v: 1,
             instalacaoId,
+            machineFingerprint,
             cliente,
             telefone: String(req.body.licencaTelefone || '').trim(),
             tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
@@ -1314,6 +1349,7 @@ app.post('/licencas/codigo', async (req, res) => {
         });
         await salvarLicencaLocalGerada({
             instalacaoId,
+            machineFingerprint,
             cliente,
             telefone: req.body.licencaTelefone,
             tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,

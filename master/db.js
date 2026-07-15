@@ -27,6 +27,7 @@ const ready = new Promise((resolve, reject) => {
                         instalacaoId TEXT NOT NULL UNIQUE,
                         cliente TEXT NOT NULL,
                         telefone TEXT,
+                        machineFingerprint TEXT,
                         tipo TEXT NOT NULL,
                         ativacao TEXT,
                         vencimento TEXT,
@@ -47,7 +48,8 @@ const ready = new Promise((resolve, reject) => {
                             const colunasAtuais = new Set((colunasLicenca || []).map(coluna => coluna.name));
                             const novasLicencas = [
                                 ['apagada', "TEXT NOT NULL DEFAULT '0'"],
-                                ['apagadaEm', 'DATETIME']
+                                ['apagadaEm', 'DATETIME'],
+                                ['machineFingerprint', 'TEXT']
                             ].filter(([nome]) => !colunasAtuais.has(nome));
 
                             function finalizarLicencasLocais() {

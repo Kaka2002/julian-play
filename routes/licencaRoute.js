@@ -7,6 +7,7 @@ const {
     instalacaoAdministrador
 } = require('../services/licencaService');
 const { formatarDataHoraBrasil } = require('../utils/dataHora');
+const { obterFingerprintMaquina } = require('../services/maquinaInstalacao');
 
 const router = express.Router();
 
@@ -85,6 +86,8 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
             ? `Válida até ${formatarDataBrasileira(licenca.vencimento)}`
             : 'Aguardando configuração';
 
+    const machineFingerprint = licenca.machineFingerprint || obterFingerprintMaquina();
+
     return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -106,6 +109,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
             <div><small>Cliente / Empresa</small>${escapar(licenca.cliente || '-')}</div>
             <div><small>Identificação da instalação</small>${escapar(licenca.instalacaoId || '-')}</div>
             <div><small>Controle remoto</small>${escapar(textoControleRemoto(config))}</div>
+            <div><small>Chave da maquina</small>${escapar(machineFingerprint)}</div>
         </div>
         ${!licenca.permitida ? '<p>O período de avaliação terminou. Entre em contato com o fornecedor para renovar ou ativar esta instalação.</p>' : ''}
     </section>

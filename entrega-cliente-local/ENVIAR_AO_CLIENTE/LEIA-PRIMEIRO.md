@@ -101,11 +101,24 @@ Na tela de licenca:
 1. Confira o nome do cliente ou empresa.
 2. Preencha o **Telefone do responsavel** com o numero do WhatsApp que sera usado pelo robo.
 3. Copie o **ID da instalacao**.
-4. Envie o ID da instalacao e o numero do WhatsApp do robo ao fornecedor.
-5. Aguarde o fornecedor enviar o codigo de ativacao.
-6. Cole o codigo na tela de licenca e clique em **Aplicar codigo de ativacao** ou **Salvar e ativar licenca**, conforme aparecer na tela.
+4. Copie tambem a **Chave da maquina**.
+5. Envie o ID da instalacao, a Chave da maquina e o numero do WhatsApp do robo ao fornecedor.
+6. Aguarde o fornecedor enviar o codigo de ativacao.
+7. Cole o codigo na tela de licenca e clique em **Aplicar codigo de ativacao** ou **Salvar e ativar licenca**, conforme aparecer na tela.
 
 Sem o codigo enviado pelo fornecedor, a licenca nao deve ser alterada.
+
+## Licenca Em Apenas Um Computador
+
+A licenca local fica vinculada ao computador onde foi ativada. Se copiar a pasta ou tentar usar o mesmo codigo em outro computador, o sistema vai bloquear a ativacao.
+
+Para usar em outro computador, solicite ao fornecedor uma nova liberacao.
+
+## Instalacao Em Outro Disco
+
+O painel pode ser instalado no disco C: ou D:. O Google Chrome e o Node.js podem continuar instalados no C:, mesmo que o painel fique no D:.
+
+Nao mova a pasta manualmente depois de instalar. Se precisar mudar de disco ou pasta, fale com o fornecedor.
 
 ## Conectar WhatsApp
 
@@ -125,6 +138,7 @@ Use somente o numero de WhatsApp informado na licenca.
 - Nao use o mesmo numero em outro WhatsApp Web no mesmo computador.
 - Nao apague a pasta `C:\JulianPlay`.
 - Nao renomeie nem mova a pasta instalada sem falar com o fornecedor.
+- Nao instale a mesma licenca em outro computador sem autorizacao do fornecedor.
 - Se o computador reiniciar, aguarde alguns minutos para o painel voltar.
 - Se trocar o numero do WhatsApp do robo, avise o fornecedor antes de conectar outro numero.
 - Se aparecer erro, envie print da tela ao fornecedor.

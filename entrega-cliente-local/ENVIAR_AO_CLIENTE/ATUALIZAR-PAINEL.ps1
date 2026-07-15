@@ -56,12 +56,25 @@ function ConfigurarNomeLocal([string]$nomeLocal) {
     return $true
 }
 
+function ObterPastaBaseInstalacao([string]$pastaInstalacao) {
+    $caminho = [IO.Path]::GetFullPath($pastaInstalacao).TrimEnd('\')
+    $base = Split-Path -Parent $caminho
+    if ([string]::IsNullOrWhiteSpace($base)) {
+        return 'C:\JulianPlay'
+    }
+    return $base
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote atualizado ao fornecedor.'
 }
 
 Etapa 'Verificando instalacao atual'
+$PastaInstalacao = [IO.Path]::GetFullPath($PastaInstalacao)
+$PastaDados = [IO.Path]::GetFullPath($PastaDados)
+$PastaBase = ObterPastaBaseInstalacao $PastaInstalacao
+New-Item -ItemType Directory -Path $PastaBase -Force | Out-Null
 if (-not (Test-Path -LiteralPath $PastaInstalacao)) {
     throw "Instalacao local nao encontrada em $PastaInstalacao. Execute primeiro o instalador do painel."
 }
@@ -98,8 +111,8 @@ if (Test-Path -LiteralPath $banco) {
     Write-Host 'Banco de dados ainda nao encontrado; seguindo a atualizacao.' -ForegroundColor Yellow
 }
 
-$backupApp = "C:\JulianPlay\app-backup-atualizacao-$data"
-$pastaTemporaria = "C:\JulianPlay\app-novo-$data"
+$backupApp = Join-Path $PastaBase "app-backup-atualizacao-$data"
+$pastaTemporaria = Join-Path $PastaBase "app-novo-$data"
 
 Etapa 'Parando o painel local'
 & $pm2.Source stop $NomeProcesso 2>$null | Out-Host
