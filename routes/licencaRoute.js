@@ -109,7 +109,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
             <div><small>Cliente / Empresa</small>${escapar(licenca.cliente || '-')}</div>
             <div><small>Identificação da instalação</small>${escapar(licenca.instalacaoId || '-')}</div>
             <div><small>Controle remoto</small>${escapar(textoControleRemoto(config))}</div>
-            <div><small>Chave da maquina</small>${escapar(machineFingerprint)}</div>
+            <div><small>Chave da máquina</small>${escapar(machineFingerprint)}</div>
         </div>
         ${!licenca.permitida ? '<p>O período de avaliação terminou. Entre em contato com o fornecedor para renovar ou ativar esta instalação.</p>' : ''}
     </section>

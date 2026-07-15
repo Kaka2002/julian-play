@@ -226,7 +226,7 @@ function estadoLicencaLocal(licenca = {}) {
         return { classe: 'error', texto: 'Suspensa', detalhe: 'Bloqueada pelo fornecedor' };
     }
     if (String(licenca.vitalicia || '0') === '1' || licenca.tipo === 'vitalicia') {
-        return { classe: 'ok', texto: 'Vitalicia', detalhe: 'Sem vencimento' };
+        return { classe: 'ok', texto: 'Vitalícia', detalhe: 'Sem vencimento' };
     }
 
     const dias = diasAteData(licenca.vencimento);
@@ -713,11 +713,11 @@ function cardStatusGeral(rotulo, valor, detalhe, classe = '') {
 
 function menuMestre(ativo = 'inicio') {
     const itens = [
-        ['inicio', '/', 'Inicio'],
-        ['licencas', '/licencas', 'Licencas locais'],
-        ['instalacoes', '/#instalacoes', 'Instalacoes'],
-        ['nova', '/#nova-instalacao', 'Nova instalacao'],
-        ['manutencao', '/#manutencao', 'Manutencao']
+        ['inicio', '/', 'Início'],
+        ['licencas', '/licencas', 'Licenças locais'],
+        ['instalacoes', '/#instalacoes', 'Instalações'],
+        ['nova', '/#nova-instalacao', 'Nova instalação'],
+        ['manutencao', '/#manutencao', 'Manutenção']
     ];
     return `<nav class="master-nav">${itens.map(([id, href, texto]) => `<a class="${id === ativo ? 'active' : ''}" href="${href}">${texto}</a>`).join('')}</nav>`;
 }
@@ -754,11 +754,11 @@ function paginaSaude(instalacao, saude, logs = '') {
         <div class="row"><div class="label">WhatsApp conectado</div><div>${escapar(saude.numero || 'Não conectado')}</div></div>
         <div class="row"><div class="label">Status interno</div><div>${escapar(saude.whatsappStatus || saude.estado || 'Não informado')}</div></div>
         <div class="row"><div class="label">Tempo online</div><div>${escapar(formatarTempoOnline(saude.uptime))}</div></div>
-        <div class="row"><div class="label">Ultima mensagem recebida</div><div>${saude.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraPainel(saude.ultimaMensagemRecebidaEm))}${saude.ultimaMensagemRecebidaDe ?` de ${escapar(saude.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</div></div>
-        <div class="row"><div class="label">Ultima resposta do robo</div><div>${saude.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraPainel(saude.ultimoEnvioRoboEm))}${saude.ultimoEnvioRoboPara ?` para ${escapar(saude.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</div></div>
-        <div class="row"><div class="label">Mensagens recebidas</div><div>${escapar(saude.mensagensRecebidasTotal || 0)} desde o ultimo inicio</div></div>
+        <div class="row"><div class="label">Última mensagem recebida</div><div>${saude.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraPainel(saude.ultimaMensagemRecebidaEm))}${saude.ultimaMensagemRecebidaDe ?` de ${escapar(saude.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</div></div>
+        <div class="row"><div class="label">Última resposta do robô</div><div>${saude.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraPainel(saude.ultimoEnvioRoboEm))}${saude.ultimoEnvioRoboPara ?` para ${escapar(saude.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</div></div>
+        <div class="row"><div class="label">Mensagens recebidas</div><div>${escapar(saude.mensagensRecebidasTotal || 0)} desde o último início</div></div>
         <div class="row"><div class="label">Eventos ignorados</div><div>${escapar(Number(saude.eventosInternosIgnoradosTotal || 0) + Number(saude.conversasNaoIndividuaisIgnoradasTotal || 0))} (${escapar(saude.eventosInternosIgnoradosTotal || 0)} internos, ${escapar(saude.conversasNaoIndividuaisIgnoradasTotal || 0)} grupos/newsletters)</div></div>
-        <div class="row"><div class="label">Memoria do processo</div><div>${escapar(formatarBytes(saude.memoriaRss || 0))} em uso, heap ${escapar(formatarBytes(saude.memoriaHeapUsado || 0))} de ${escapar(formatarBytes(saude.memoriaHeapTotal || 0))}</div></div>
+        <div class="row"><div class="label">Memória do processo</div><div>${escapar(formatarBytes(saude.memoriaRss || 0))} em uso, heap ${escapar(formatarBytes(saude.memoriaHeapUsado || 0))} de ${escapar(formatarBytes(saude.memoriaHeapTotal || 0))}</div></div>
         <div class="row"><div class="label">Última checagem</div><div>${escapar(saude.timestamp || new Date().toISOString())}</div></div>
         ${saude.erro ?`<div class="row"><div class="label">Detalhe</div><div>${escapar(saude.erro)}</div></div>` : ''}
     </section>
@@ -904,12 +904,12 @@ function secaoCodigoLicencaLocal(opcoes = {}) {
 function opcoesTipoLicencaSelect(tipoAtual = '') {
     const atual = String(tipoAtual || 'avaliacao_15');
     return [
-        ['avaliacao_15', 'Avaliacao 15 dias'],
-        ['avaliacao_30', 'Avaliacao 30 dias'],
+        ['avaliacao_15', 'Avaliação 15 dias'],
+        ['avaliacao_30', 'Avaliação 30 dias'],
         ['mensal', 'Mensal'],
         ['semestral', 'Semestral'],
         ['anual', 'Anual'],
-        ['vitalicia', 'Vitalicia'],
+        ['vitalicia', 'Vitalícia'],
         ['suspensa', 'Suspensa']
     ].map(([valor, texto]) => `<option value="${valor}" ${valor === atual ? 'selected' : ''}>${texto}</option>`).join('');
 }
@@ -919,21 +919,21 @@ function formularioCodigoLicencaLocal(opcoes = {}) {
     const resumo = [
         opcoes.licencaCliente ? `Cliente: ${opcoes.licencaCliente}` : '',
         opcoes.instalacaoId ? `ID: ${opcoes.instalacaoId}` : '',
-        opcoes.machineFingerprint ? `Maquina: ${opcoes.machineFingerprint}` : '',
+        opcoes.machineFingerprint ? `Máquina: ${opcoes.machineFingerprint}` : '',
         opcoes.licencaVencimento ? `Vencimento: ${formatarDataPainel(opcoes.licencaVencimento)}` : ''
     ].filter(Boolean).join(' | ');
 
-    return `<section class="panel" id="gerar-licenca"><h2>Licenca para instalacao local</h2><div class="sub">Use quando o cliente instalar o sistema no proprio computador. Ele envia o ID da instalacao, voce gera o codigo e ele cola na tela de licenca.</div>
-      ${codigoGerado ?`<div class="credentials"><strong>Codigo gerado.</strong><div class="small">${escapar(resumo || 'Envie este codigo ao cliente aplicar em /licenca.')}</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
+    return `<section class="panel" id="gerar-licenca"><h2>Licença para instalação local</h2><div class="sub">Use quando o cliente instalar o sistema no próprio computador. Ele envia o ID da instalação, você gera o código e ele cola na tela de licença.</div>
+      ${codigoGerado ?`<div class="credentials"><strong>Código gerado.</strong><div class="small">${escapar(resumo || 'Envie este código ao cliente aplicar em /licenca.')}</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
       <form class="fields" method="post" action="/licencas/codigo">
-        <label>ID da instalacao<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
-        <label>Chave da maquina<input name="machineFingerprint" value="${escapar(opcoes.machineFingerprint || '')}" required></label>
+        <label>ID da instalação<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
+        <label>Chave da máquina<input name="machineFingerprint" value="${escapar(opcoes.machineFingerprint || '')}" required></label>
         <label>Cliente / Empresa<input name="licencaCliente" value="${escapar(opcoes.licencaCliente || '')}" required></label>
         <label>Telefone<input name="licencaTelefone" value="${escapar(opcoes.licencaTelefone || '')}"></label>
-        <label>Tipo de licenca<select name="licencaTipo">${opcoesTipoLicencaSelect(opcoes.licencaTipo)}</select></label>
+        <label>Tipo de licença<select name="licencaTipo">${opcoesTipoLicencaSelect(opcoes.licencaTipo)}</select></label>
         <label>Vencimento manual<input type="date" name="licencaVencimento" value="${escapar(opcoes.licencaVencimento || '')}"></label>
-        <label>Observacao<input name="licencaObservacoes" value="${escapar(opcoes.licencaObservacoes || '')}" placeholder="Opcional"></label>
-        <div style="align-self:end"><button type="submit">Gerar codigo</button></div>
+        <label>Observação<input name="licencaObservacoes" value="${escapar(opcoes.licencaObservacoes || '')}" placeholder="Opcional"></label>
+        <div style="align-self:end"><button type="submit">Gerar código</button></div>
       </form>
     </section>`;
 }
@@ -941,20 +941,20 @@ function formularioCodigoLicencaLocal(opcoes = {}) {
 function secaoLicencasLocaisGerenciamento(licencas = []) {
     const vencendo = licencas.filter(item => ['warn', 'error'].includes(estadoLicencaLocal(item).classe)).length;
 
-    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licencas locais emitidas</h2><div class="sub">${licencas.length} licenca(s) ativa(s), ${vencendo} com vencimento ou atencao</div></div><a class="button secondary" href="#gerar-licenca">Gerar nova</a></div>
+    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licenças locais emitidas</h2><div class="sub">${licencas.length} licença(s) ativa(s), ${vencendo} com vencimento ou atenção</div></div><a class="button secondary" href="#gerar-licenca">Gerar nova</a></div>
       <div class="table-wrap">
-      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalacao</th><th>Vencimento</th><th>Status</th><th>Ultima consulta</th><th>Acoes</th></tr></thead><tbody>${licencas.map(item => {
+      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalação</th><th>Vencimento</th><th>Status</th><th>Última consulta</th><th>Ações</th></tr></thead><tbody>${licencas.map(item => {
         const estado = estadoLicencaLocal(item);
-        const tipo = item.vitalicia === '1' ? 'Vitalicia' : item.suspensa === '1' ? 'Suspensa' : item.tipo || '-';
+        const tipo = item.vitalicia === '1' ? 'Vitalícia' : item.suspensa === '1' ? 'Suspensa' : item.tipo || '-';
         return `<tr>
           <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
-          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Maquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Maquina nao vinculada</div>'}</td>
+          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Máquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Máquina não vinculada</div>'}</td>
           <td><strong>${escapar(item.vencimento ? formatarDataPainel(item.vencimento) : 'Sem vencimento')}</strong><div class="small">${escapar(tipo)}</div></td>
           <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
           <td>${escapar(item.ultimoPingEm ? formatarDataHoraPainel(item.ultimoPingEm) : 'Sem consulta')}<div class="small">${escapar(item.ultimoStatus || '')}</div></td>
           <td>
             <div class="actions">
-              <a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(item.instalacaoId)}/historico">Historico</a>
+              <a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(item.instalacaoId)}/historico">Histórico</a>
               <form class="inline" method="post" action="/licencas/codigo">
                 <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
                 <input type="hidden" name="machineFingerprint" value="${escapar(item.machineFingerprint || '')}">
@@ -963,22 +963,22 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
                 <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
                 <select name="licencaTipo" style="max-width:160px;margin-bottom:6px">${opcoesTipoLicencaSelect(tipoLicencaFormulario(item.tipo))}</select>
                 <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}" title="Opcional: defina uma data manual" style="max-width:160px;margin-bottom:6px">
-                <button class="smallbtn" type="submit">Gerar renovacao</button>
+                <button class="smallbtn" type="submit">Gerar renovação</button>
               </form>
-              <form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/apagar" onsubmit="return confirm('Apagar esta licenca local da lista ativa? O historico sera preservado.');"><button class="smallbtn danger" type="submit">Apagar</button></form>
+              <form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/apagar" onsubmit="return confirm('Apagar esta licença local da lista ativa? O histórico será preservado.');"><button class="smallbtn danger" type="submit">Apagar</button></form>
             </div>
           </td>
         </tr>`;
-    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licenca local emitida ainda.</div>'}
+    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licença local emitida ainda.</div>'}
       </div>
     </section>`;
 }
 
 function paginaLicencasLocais(licencas = [], opcoes = {}) {
     const versaoSistema = packageInfo.version || '1.0.0';
-    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Licencas locais - Painel Mestre</title><style>
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Licenças locais - Painel Mestre</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.actions{display:flex;gap:7px;flex-wrap:wrap}.inline{display:inline}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
-    </style></head><body><main><div class="topbar"><div><h1>Painel Mestre</h1><div class="sub">Gestao de licencas locais</div><div class="version-pill">Versao ${escapar(versaoSistema)}</div></div><form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form></div>
+    </style></head><body><main><div class="topbar"><div><h1>Painel Mestre</h1><div class="sub">Gestão de licenças locais</div><div class="version-pill">Versão ${escapar(versaoSistema)}</div></div><form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form></div>
     ${menuMestre('licencas')}
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
@@ -988,15 +988,15 @@ function paginaLicencasLocais(licencas = [], opcoes = {}) {
 }
 
 function paginaHistoricoLicencaLocal(licenca, eventos = []) {
-    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Historico da licenca - Painel Mestre</title><style>
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Histórico da licença - Painel Mestre</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1100px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}.event{display:grid;grid-template-columns:160px 150px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #e8ebf0}.event:last-child{border-bottom:0}.date,.type{font-size:13px;color:#697386;font-weight:800}.msg{font-weight:800}.details{margin-top:5px;color:#697386;font-size:13px;line-height:1.4}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:720px){.event{grid-template-columns:1fr}.date,.type{font-size:12px}}
-    </style></head><body><main><a class="button" href="/licencas#licencas-locais">Voltar</a><h1>Historico da licenca</h1><div class="sub">${escapar(licenca.cliente)} | ${escapar(licenca.instalacaoId)} | vencimento ${escapar(licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem vencimento')}</div>
+    </style></head><body><main><a class="button" href="/licencas#licencas-locais">Voltar</a><h1>Histórico da licença</h1><div class="sub">${escapar(licenca.cliente)} | ${escapar(licenca.instalacaoId)} | vencimento ${escapar(licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem vencimento')}</div>
     <section class="panel">
         ${eventos.length ? eventos.map(evento => `<div class="event">
             <div class="date">${escapar(formatarDataHoraPainel(evento.criadoEm))}</div>
             <div class="type">${escapar(evento.tipo)}</div>
             <div><div class="msg">${escapar(evento.mensagem)}</div>${evento.detalhes ?`<div class="details">${escapar(evento.detalhes)}</div>` : ''}</div>
-        </div>`).join('') : '<div class="empty">Nenhum evento registrado para esta licenca.</div>'}
+        </div>`).join('') : '<div class="empty">Nenhum evento registrado para esta licença.</div>'}
     </section></main></body></html>`;
 }
 
@@ -1043,7 +1043,7 @@ async function salvarLicencaLocalGerada(dados = {}) {
             dados.observacoes || ''
         ]
     );
-    await registrarEventoLicencaLocal(dados.instalacaoId, 'codigo', 'Codigo de licenca gerado.', `Tipo: ${dados.tipo || '-'}; vencimento: ${dados.vencimento || 'sem vencimento'}`);
+    await registrarEventoLicencaLocal(dados.instalacaoId, 'codigo', 'Código de licença gerado.', `Tipo: ${dados.tipo || '-'}; vencimento: ${dados.vencimento || 'sem vencimento'}`);
 }
 
 async function registrarEventoLicencaLocal(instalacaoId, tipo, mensagem, detalhes = '') {
@@ -1063,14 +1063,14 @@ async function buscarLicencaLocal(instalacaoId) {
 
 async function apagarLicencaLocal(instalacaoId) {
     const licenca = await buscarLicencaLocal(instalacaoId);
-    if (!licenca) throw new Error('Licenca local nao encontrada.');
+    if (!licenca) throw new Error('Licença local não encontrada.');
     await masterDb.executar(
         `UPDATE licencas_locais
             SET apagada = '1', apagadaEm = CURRENT_TIMESTAMP, atualizadoEm = CURRENT_TIMESTAMP
           WHERE instalacaoId = ?`,
         [licenca.instalacaoId]
     );
-    await registrarEventoLicencaLocal(licenca.instalacaoId, 'apagada', 'Licenca apagada da lista ativa.', licenca.cliente || '');
+    await registrarEventoLicencaLocal(licenca.instalacaoId, 'apagada', 'Licença apagada da lista ativa.', licenca.cliente || '');
 }
 
 async function listarHistoricoLicencaLocal(instalacaoId) {
@@ -1113,12 +1113,12 @@ function tipoLicencaFormulario(tipo) {
 function opcoesTipoLicencaLocal(tipoAtual) {
     const atual = tipoLicencaFormulario(tipoAtual);
     return [
-        ['avaliacao_15', 'Avaliacao 15 dias'],
-        ['avaliacao_30', 'Avaliacao 30 dias'],
+        ['avaliacao_15', 'Avaliação 15 dias'],
+        ['avaliacao_30', 'Avaliação 30 dias'],
         ['mensal', 'Mensal'],
         ['semestral', 'Semestral'],
         ['anual', 'Anual'],
-        ['vitalicia', 'Vitalicia'],
+        ['vitalicia', 'Vitalícia'],
         ['suspensa', 'Suspensa']
     ].map(([valor, texto]) => `<option value="${valor}" ${valor === atual ? 'selected' : ''}>${texto}</option>`).join('');
 }
@@ -1129,14 +1129,14 @@ function secaoLicencasLocais(licencas = []) {
         return estado.classe === 'warn' || estado.classe === 'error';
     }).length;
 
-    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licencas locais emitidas</h2><div class="sub">${licencas.length} licenca(s) cadastrada(s), ${vencendo} com vencimento ou atencao</div></div><a class="button secondary" href="#licenca-local">Gerar nova</a></div>
+    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licenças locais emitidas</h2><div class="sub">${licencas.length} licença(s) cadastrada(s), ${vencendo} com vencimento ou atenção</div></div><a class="button secondary" href="#licenca-local">Gerar nova</a></div>
       <div class="table-wrap">
-      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalacao</th><th>Licenca</th><th>Status</th><th>Ultima consulta</th><th>Acoes</th></tr></thead><tbody>${licencas.map(item => {
+      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalação</th><th>Licença</th><th>Status</th><th>Última consulta</th><th>Ações</th></tr></thead><tbody>${licencas.map(item => {
         const estado = estadoLicencaLocal(item);
         return `<tr>
           <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
-          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Maquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Maquina nao vinculada</div>'}</td>
-          <td>${escapar(item.tipo || '-')}${item.vencimento ? `<div class="small">ate ${escapar(formatarDataPainel(item.vencimento))}</div>` : '<div class="small">Sem vencimento</div>'}</td>
+          <td><code>${escapar(item.instalacaoId)}</code>${item.machineFingerprint ? `<div class="small">Máquina: <code>${escapar(item.machineFingerprint)}</code></div>` : '<div class="small">Máquina não vinculada</div>'}</td>
+          <td>${escapar(item.tipo || '-')}${item.vencimento ? `<div class="small">até ${escapar(formatarDataPainel(item.vencimento))}</div>` : '<div class="small">Sem vencimento</div>'}</td>
           <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
           <td>${escapar(formatarDataHoraPainel(item.ultimoPingEm || item.atualizadoEm))}<div class="small">${escapar(item.ultimoStatus || 'Sem consulta')}</div></td>
           <td>
@@ -1148,11 +1148,11 @@ function secaoLicencasLocais(licencas = []) {
               <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
               <select name="licencaTipo" style="max-width:160px;margin-bottom:6px">${opcoesTipoLicencaLocal(item.tipo)}</select>
               <input type="date" name="licencaVencimento" value="" title="Opcional: defina uma data manual" style="max-width:160px;margin-bottom:6px">
-              <button class="smallbtn" type="submit">Gerar renovacao</button>
+              <button class="smallbtn" type="submit">Gerar renovação</button>
             </form>
           </td>
         </tr>`;
-    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licenca local emitida ainda.</div>'}
+    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licença local emitida ainda.</div>'}
       </div>
     </section>`;
 }
@@ -1196,7 +1196,7 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
             'UPDATE licencas_locais SET ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ?',
             ['consultada', instalacaoId]
         );
-        await registrarEventoLicencaLocal(instalacaoId, 'consulta', 'Instalacao local consultou a licenca.', `Status anterior: ${licenca.ultimoStatus || 'sem consulta'}`);
+        await registrarEventoLicencaLocal(instalacaoId, 'consulta', 'Instalação local consultou a licença.', `Status anterior: ${licenca.ultimoStatus || 'sem consulta'}`);
 
         res.json({
             ok: true,
@@ -1323,7 +1323,7 @@ app.post('/licencas/codigo', async (req, res) => {
             anual: 365
         };
         if (!instalacaoId) throw new Error('Informe o ID da instalação.');
-        if (!machineFingerprint) throw new Error('Informe a chave da maquina exibida na tela de licenca do cliente.');
+        if (!machineFingerprint) throw new Error('Informe a chave da máquina exibida na tela de licença do cliente.');
         if (!cliente) throw new Error('Informe o cliente ou empresa.');
         if (!tipo) throw new Error('Selecione o tipo de licença.');
         const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;

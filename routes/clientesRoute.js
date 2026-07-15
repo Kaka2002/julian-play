@@ -2295,7 +2295,7 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
             <span class="note-date">${escapar(formatarDataNota(atendimento.criadoEm))}</span>
             <div><strong>${escapar(rotuloMotivoAtendimento(atendimento.motivo))}</strong> - ${escapar(rotuloStatusAtendimento(atendimento.status))}${atendimento.prioridade === 'urgente' ?' / Urgente' : ''}</div>
             ${atendimento.descricao ?`<div>${escapar(atendimento.descricao)}</div>` : ''}
-            ${atendimento.proximoContato ?`<small>Proximo contato: ${escapar(formatarDataHoraCurta(atendimento.proximoContato))}</small>` : ''}
+            ${atendimento.proximoContato ?`<small>Próximo contato: ${escapar(formatarDataHoraCurta(atendimento.proximoContato))}</small>` : ''}
         </div>`).join('')}</div>`
         : '<div class="empty">Nenhum atendimento aberto para este cliente.</div>';
 
@@ -2311,9 +2311,9 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
             <label>Motivo
                 <select name="motivo">
                     ${[
-                        ['instalacao', 'Instalacao'],
+                        ['instalacao', 'Instalação'],
                         ['travamento', 'Travamento'],
-                        ['renovacao', 'Renovacao'],
+                        ['renovacao', 'Renovação'],
                         ['pagamento', 'Pagamento'],
                         ['troca_app', 'Troca de app'],
                         ['whatsapp', 'WhatsApp'],
@@ -2327,8 +2327,8 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
                     <option value="urgente">Urgente</option>
                 </select>
             </label>
-            ${campo({ nome: 'proximoContato', label: 'Proximo contato', tipo: 'datetime-local', valor: '' })}
-            ${areaTexto({ nome: 'descricao', label: 'Descricao', valor: '' })}
+            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: '' })}
+            ${areaTexto({ nome: 'descricao', label: 'Descrição', valor: '' })}
             <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
         </form>
         <div class="fields" style="padding-top:0;">
@@ -4456,19 +4456,19 @@ function opcoesStatusLead(statusAtual = '') {
 }
 
 function mensagemLeadPadrao(lead = {}) {
-    return `Ola, ${lead.nome || 'tudo bem'}!
+    return `Olá, ${lead.nome || 'tudo bem'}!
 
 Passando para acompanhar seu atendimento sobre ${lead.interesse || 'o sistema'}.
 
-Fico a disposicao para ajudar e liberar os proximos passos.`;
+Fico à disposição para ajudar e liberar os próximos passos.`;
 }
 
 function cardsFunilCrm(resumo = {}) {
     return `<section class="metrics" style="margin-bottom:24px;">
         ${metricCard({ label: 'Leads ativos', valor: resumo.ativos || 0, nota: `${resumo.urgentes || 0} urgente(s)`, tipo: resumo.ativos ?'info' : 'green', icone: 'crm' })}
-        ${metricCard({ label: 'Testes liberados', valor: resumo.testes || 0, nota: 'Em avaliacao', tipo: 'info', icone: 'apps' })}
+        ${metricCard({ label: 'Testes liberados', valor: resumo.testes || 0, nota: 'Em avaliação', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Aguardando pagamento', valor: resumo.aguardandoPagamento || 0, nota: 'Prontos para fechar', tipo: resumo.aguardandoPagamento ?'orange' : 'green', icone: 'financeiro' })}
-        ${metricCard({ label: 'Retornos ate amanha', valor: resumo.retornosHoje || 0, nota: 'Agenda comercial', tipo: resumo.retornosHoje ?'orange' : 'green', icone: 'alert' })}
+        ${metricCard({ label: 'Retornos até amanhã', valor: resumo.retornosHoje || 0, nota: 'Agenda comercial', tipo: resumo.retornosHoje ?'orange' : 'green', icone: 'alert' })}
         ${metricCard({ label: 'Ganhos', valor: resumo.ganhos || 0, nota: 'Convertidos', tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Perdidos', valor: resumo.perdidos || 0, nota: 'Aprendizado', tipo: 'red', icone: 'close' })}
     </section>`;
@@ -4506,9 +4506,9 @@ function formularioLead(lead = {}) {
                 </select>
             </label>
             ${campo({ nome: 'valorEstimado', label: 'Valor estimado (R$)', valor: lead.valorEstimado || '', attrs: 'inputmode="decimal" placeholder="35,00"' })}
-            ${campo({ nome: 'proximoContato', label: 'Proximo contato', tipo: 'datetime-local', valor: inputDateTime(lead.proximoContato) })}
+            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: inputDateTime(lead.proximoContato) })}
             ${campo({ nome: 'motivoPerda', label: 'Motivo de perda', valor: lead.motivoPerda || '', attrs: 'placeholder="Preencher quando perder a venda"' })}
-            ${areaTexto({ nome: 'observacoes', label: 'Observacoes', valor: lead.observacoes || '' })}
+            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: lead.observacoes || '' })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar lead</button>
                 <a class="button secondary" href="/crm">Cancelar</a>
@@ -4524,14 +4524,14 @@ function historicoLeadHtml(lead = {}, historico = []) {
             <span class="note-date">${escapar(formatarDataNota(item.criadoEm))}</span>
             <div>${escapar(item.texto)}</div>
         </div>`).join('')
-        : '<div class="empty">Nenhum historico comercial registrado.</div>';
+        : '<div class="empty">Nenhum histórico comercial registrado.</div>';
 
     return `<section class="panel">
         <div class="fields">
-            <div class="form-section full">Historico comercial</div>
+            <div class="form-section full">Histórico comercial</div>
             <form class="full" method="post" action="/crm/${escapar(lead.id)}/historico">
-                ${areaTexto({ nome: 'texto', label: 'Nova anotacao', valor: '' })}
-                <div class="actions"><button class="button secondary" type="submit">${icon('plus')} Adicionar anotacao</button></div>
+                ${areaTexto({ nome: 'texto', label: 'Nova anotação', valor: '' })}
+                <div class="actions"><button class="button secondary" type="submit">${icon('plus')} Adicionar anotação</button></div>
             </form>
             <div class="full"><div class="notes-list">${itens}</div></div>
         </div>
@@ -4545,7 +4545,7 @@ function tabelaLeads(leads = [], clientes = []) {
         .join('');
 
     return `<table>
-        <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>Historico</th><th>Acoes</th></tr></thead>
+        <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>Histórico</th><th>Ações</th></tr></thead>
         <tbody>
             ${leads.map(lead => `<tr>
                 <td>
@@ -4561,7 +4561,7 @@ function tabelaLeads(leads = [], clientes = []) {
                 </td>
                 <td>
                     ${lead.proximoContato ?`<div>${escapar(formatarDataHoraCurta(lead.proximoContato))}</div>` : '-'}
-                    ${lead.ultimoContato ?`<div class="cell-muted">Ultimo: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
+                    ${lead.ultimoContato ?`<div class="cell-muted">Último: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
                 </td>
                 <td>
                     ${lead.observacoes ?`<div class="cell-muted">${escapar(lead.observacoes)}</div>` : '-'}
@@ -4596,15 +4596,15 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
 
     return `<section class="page-title">
         <h1>CRM de vendas</h1>
-        <div class="subtitle">Funil comercial, retornos e conversao de interessados em clientes</div>
+        <div class="subtitle">Funil comercial, retornos e conversão de interessados em clientes</div>
     </section>
     ${cardsFunilCrm(resumo)}
     ${formularioLead({})}
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Relatorio comercial</h2>
-                <div class="subtitle">${relatorio.conversoesMes || 0} conversao(oes) neste mes</div>
+                <h2 class="panel-title">Relatório comercial</h2>
+                <div class="subtitle">${relatorio.conversoesMes || 0} conversão(ões) neste mês</div>
             </div>
         </div>
         <div class="fields" style="padding-top:0;">
@@ -5851,11 +5851,11 @@ function painelSaudeRobo(status = {}) {
         <table>
             <tbody>
                 <tr><td><strong>WhatsApp</strong></td><td>${whatsapp.conectado ?'Conectado' : 'Desconectado'}${saudeRobo.numeroConectado ?` em ${escapar(saudeRobo.numeroConectado)}` : ''}</td></tr>
-                <tr><td><strong>Ultima mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</td></tr>
-                <tr><td><strong>Ultima resposta do robo</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o ultimo inicio'}</td></tr>
-                <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o ultimo inicio</td></tr>
+                <tr><td><strong>Última mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
+                <tr><td><strong>Última resposta do robô</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
+                <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o último início</td></tr>
                 <tr><td><strong>Eventos ignorados</strong></td><td>${escapar(saudeRobo.eventosIgnoradosTotal || 0)} (${escapar(saudeRobo.eventosInternosIgnoradosTotal || 0)} internos, ${escapar(saudeRobo.conversasNaoIndividuaisIgnoradasTotal || 0)} grupos/newsletters)</td></tr>
-                <tr><td><strong>Memoria do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
+                <tr><td><strong>Memória do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
             </tbody>
         </table>
     </section>`;
@@ -6343,7 +6343,7 @@ router.post('/crm/salvar', async (req, res) => {
 router.post('/crm/:id/historico', async (req, res) => {
     try {
         await adicionarHistoricoLead(req.params.id, req.body.texto || '', 'nota');
-        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent('Historico atualizado.')}`);
+        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent('Histórico atualizado.')}`);
     } catch (err) {
         return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent(err.message)}`);
     }
@@ -6817,7 +6817,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
         const deveEnviar = Boolean(req.body.enviarMensagem);
         let mensagemRetorno = 'Renovação registrada com sucesso';
 
-        logControleClientes('Renovacao registrada', {
+        logControleClientes('Renovação registrada', {
             clienteId: clienteAtualizado?.id,
             nome: clienteAtualizado?.nome,
             plano: resultado.plano,
@@ -6839,7 +6839,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
                         client,
                         clienteAtualizado.telefone,
                         mensagem,
-                        'Envio de renovacao confirmada'
+                        'Envio de renovação confirmada'
                     );
 
                     await marcarPagamentoMensagem(resultado.pagamentoId, true);
@@ -6853,7 +6853,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
                 } catch (erroEnvio) {
                     await marcarPagamentoMensagem(resultado.pagamentoId, false, erroEnvio.message);
                     mensagemRetorno = `Renovação registrada, mas não foi possível enviar a confirmação: ${erroEnvio.message}`;
-                    logControleClientes('Erro ao enviar renovacao', {
+                    logControleClientes('Erro ao enviar renovação', {
                         clienteId: clienteAtualizado.id,
                         erro: erroEnvio.message
                     });
@@ -7322,10 +7322,10 @@ router.post('/manutencao/backup', bloquearManutencaoRestritaCliente, async (req,
 router.post('/manutencao/diagnostico', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const resultado = await executarDiagnosticoSistema(getStatusWhatsApp(), testarWebhookAlertas);
-        logControleClientes('Diagnostico do sistema executado', { status: resultado.status });
+        logControleClientes('Diagnóstico do sistema executado', { status: resultado.status });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(resultado.mensagem)}`);
     } catch (err) {
-        logControleClientes('Erro ao executar diagnostico do sistema', { erro: err.message });
+        logControleClientes('Erro ao executar diagnóstico do sistema', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
     }
 });
@@ -7442,14 +7442,14 @@ router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (r
 router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await atualizarLicencaComercial(req.body);
-        logControleClientes('Licenca da instalacao atualizada', {
+        logControleClientes('Licença da instalação atualizada', {
             cliente: req.body.licencaCliente,
             vencimento: req.body.licencaVencimento,
             tipo: req.body.licencaTipo
         });
         res.redirect('/manutencao?mensagem=Licença salva com sucesso');
     } catch (err) {
-        logControleClientes('Erro ao salvar licenca da instalacao', {
+        logControleClientes('Erro ao salvar licença da instalação', {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
@@ -7464,7 +7464,7 @@ router.post('/manutencao/robo', bloquearManutencaoRestritaCliente, async (req, r
         });
         res.redirect('/manutencao?mensagem=Configuração do robô salva com sucesso');
     } catch (err) {
-        logControleClientes('Erro ao salvar configuracao do robo', { erro: err.message });
+        logControleClientes('Erro ao salvar configuração do robô', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuração do robô: ${err.message}`)}`);
     }
 });
@@ -7930,7 +7930,7 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
             ?`${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversário(s) enviado(s).`
             : 'Nenhum aviso novo para enviar agora. Os avisos podem já ter sido enviados para este vencimento.';
 
-        console.log(`[dashboard] Disparo manual concluido: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
+        console.log(`[dashboard] Disparo manual concluído: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
         logControleClientes('Disparo manual de avisos concluido', {
             renovacao: enviados,
             umaHora: enviadosUmaHora,
