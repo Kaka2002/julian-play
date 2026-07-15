@@ -140,6 +140,25 @@ db.serialize(() => {
     `);
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS cliente_atendimentos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER NOT NULL,
+            motivo TEXT NOT NULL,
+            prioridade TEXT DEFAULT 'normal',
+            status TEXT DEFAULT 'aberto',
+            descricao TEXT,
+            proximoContato TEXT,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolvidoEm TEXT,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE
+        )
+    `);
+
+    db.run('CREATE INDEX IF NOT EXISTS idx_cliente_atendimentos_status ON cliente_atendimentos(status, prioridade, proximoContato)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_cliente_atendimentos_cliente ON cliente_atendimentos(clienteId, criadoEm DESC)');
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS testes_gratis_historico (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             telefone TEXT NOT NULL UNIQUE,

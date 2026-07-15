@@ -88,6 +88,15 @@ const {
 const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
 const menuRenovacao = require('../menus/renovacao');
 const { agoraSaoPauloInput, formatarDataHoraBrasil, partesDataHora } = require('../utils/dataHora');
+const {
+    listarAtendimentos,
+    listarAtendimentosCliente,
+    buscarAtendimentoPorId,
+    criarAtendimento,
+    atualizarStatusAtendimento,
+    removerAtendimento,
+    resumoAtendimentos
+} = require('../services/atendimentos');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -607,6 +616,7 @@ function icon(nome) {
         painel: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
         clientes: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>',
         modelos: '<svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>',
+        atendimento: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.4-5.6A8 8 0 1 1 21 12Z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>',
         apps: '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
         dispositivos: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M8 6V3"/><path d="M16 6V3"/><path d="M3 11h18"/></svg>',
         paineis: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M8 22h8"/><path d="M12 18v4"/></svg>',
@@ -2088,6 +2098,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             <nav>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
+                <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
                 <a class="navlink ${ativo === 'planos' ?'active' : ''}" href="/planos">${icon('planos')} Planos</a>
                 <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ?'active' : ''}" href="/apps">${icon('apps')} Apps</a>
@@ -2210,6 +2221,56 @@ function secaoNotasCliente(cliente = {}, notas = [], paginacaoNotas = null) {
                 total: paginacaoNotas.total,
                 porPagina: paginacaoNotas.porPagina
             })}</div>` : ''}
+        </div>
+    </section>`;
+}
+
+function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
+    if (!cliente.id) return '';
+
+    const lista = atendimentos.length
+        ?`<div class="notes-list">${atendimentos.map(atendimento => `<div class="note-item">
+            <span class="note-date">${escapar(formatarDataNota(atendimento.criadoEm))}</span>
+            <div><strong>${escapar(rotuloMotivoAtendimento(atendimento.motivo))}</strong> - ${escapar(rotuloStatusAtendimento(atendimento.status))}${atendimento.prioridade === 'urgente' ?' / Urgente' : ''}</div>
+            ${atendimento.descricao ?`<div>${escapar(atendimento.descricao)}</div>` : ''}
+            ${atendimento.proximoContato ?`<small>Proximo contato: ${escapar(formatarDataHoraCurta(atendimento.proximoContato))}</small>` : ''}
+        </div>`).join('')}</div>`
+        : '<div class="empty">Nenhum atendimento aberto para este cliente.</div>';
+
+    return `<section class="panel" id="atendimentos" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Atendimentos do cliente</h2>
+                <div class="subtitle">Registre problemas, retornos e acompanhamentos em aberto</div>
+            </div>
+            <a class="button secondary" href="/atendimentos">${icon('atendimento')} Central</a>
+        </div>
+        <form class="fields" method="post" action="/clientes/${escapar(cliente.id)}/atendimentos" style="padding-top:0;">
+            <label>Motivo
+                <select name="motivo">
+                    ${[
+                        ['instalacao', 'Instalacao'],
+                        ['travamento', 'Travamento'],
+                        ['renovacao', 'Renovacao'],
+                        ['pagamento', 'Pagamento'],
+                        ['troca_app', 'Troca de app'],
+                        ['whatsapp', 'WhatsApp'],
+                        ['outro', 'Outro']
+                    ].map(([valor, texto]) => `<option value="${valor}">${texto}</option>`).join('')}
+                </select>
+            </label>
+            <label>Prioridade
+                <select name="prioridade">
+                    <option value="normal">Normal</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </label>
+            ${campo({ nome: 'proximoContato', label: 'Proximo contato', tipo: 'datetime-local', valor: '' })}
+            ${areaTexto({ nome: 'descricao', label: 'Descricao', valor: '' })}
+            <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
+        </form>
+        <div class="fields" style="padding-top:0;">
+            <div class="full">${lista}</div>
         </div>
     </section>`;
 }
@@ -3731,6 +3792,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const notas = opcoesFormulario.notas || [];
     const pagamentos = opcoesFormulario.pagamentos || [];
     const alertas = opcoesFormulario.alertas || [];
+    const atendimentos = opcoesFormulario.atendimentos || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
@@ -4145,6 +4207,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
+        secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
 
@@ -4160,6 +4223,141 @@ function metricCard({ label, valor, nota = '', tipo, icone }) {
         </div>
         <span class="metric-icon ${tipo}">${icon(icone)}</span>
     </div>`;
+}
+
+function rotuloMotivoAtendimento(motivo = '') {
+    const mapa = {
+        instalacao: 'Instalação',
+        travamento: 'Travamento',
+        renovacao: 'Renovação',
+        pagamento: 'Pagamento',
+        troca_app: 'Troca de app',
+        whatsapp: 'WhatsApp',
+        outro: 'Outro'
+    };
+
+    return mapa[motivo] || 'Outro';
+}
+
+function rotuloStatusAtendimento(status = '') {
+    const mapa = {
+        aberto: 'Aberto',
+        em_andamento: 'Em andamento',
+        resolvido: 'Resolvido'
+    };
+
+    return mapa[status] || 'Aberto';
+}
+
+function classeStatusAtendimento(status = '', prioridade = '') {
+    if (status === 'resolvido') return 'ok';
+    if (prioridade === 'urgente') return 'error';
+    if (status === 'em_andamento') return 'warn';
+    return 'info';
+}
+
+function mensagemAtendimentoPadrao(atendimento = {}) {
+    return `Olá, ${atendimento.clienteNome || 'tudo bem'}!
+
+Estou acompanhando seu atendimento de ${rotuloMotivoAtendimento(atendimento.motivo).toLowerCase()}.
+
+Vou verificar e retorno por aqui.`;
+}
+
+function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resumo = {} }) {
+    const statusAtual = filtros.status || 'abertos';
+    const busca = filtros.busca || '';
+
+    return `<section class="page-title">
+        <h1>Central de Suporte</h1>
+        <div class="subtitle">Organize solicitações, prioridades e retornos dos clientes</div>
+    </section>
+    <section class="metrics" style="margin-bottom:24px;">
+        ${metricCard({ label: 'Abertos', valor: resumo.abertos || 0, nota: 'Aguardando ação', tipo: resumo.abertos ?'orange' : 'green', icone: 'atendimento' })}
+        ${metricCard({ label: 'Em andamento', valor: resumo.emAndamento || 0, nota: 'Em tratativa', tipo: resumo.emAndamento ?'info' : 'green', icone: 'refresh' })}
+        ${metricCard({ label: 'Urgentes', valor: resumo.urgentes || 0, nota: 'Prioridade alta', tipo: resumo.urgentes ?'red' : 'green', icone: 'alert' })}
+        ${metricCard({ label: 'Resolvidos', valor: resumo.resolvidos || 0, nota: 'Histórico', tipo: 'green', icone: 'check' })}
+    </section>
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Abrir atendimento</h2>
+                <div class="subtitle">Registre uma solicitação para acompanhar até resolver</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/atendimentos" style="padding-top:0;">
+            <label>Cliente
+                <select name="clienteId" required>
+                    <option value="">Selecione o cliente...</option>
+                    ${clientes.map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome)} - ${escapar(cliente.telefone || '')}</option>`).join('')}
+                </select>
+            </label>
+            <label>Motivo
+                <select name="motivo">
+                    ${[
+                        ['instalacao', 'Instalação'],
+                        ['travamento', 'Travamento'],
+                        ['renovacao', 'Renovação'],
+                        ['pagamento', 'Pagamento'],
+                        ['troca_app', 'Troca de app'],
+                        ['whatsapp', 'WhatsApp'],
+                        ['outro', 'Outro']
+                    ].map(([valor, texto]) => `<option value="${valor}">${texto}</option>`).join('')}
+                </select>
+            </label>
+            <label>Prioridade
+                <select name="prioridade">
+                    <option value="normal">Normal</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </label>
+            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: '' })}
+            ${areaTexto({ nome: 'descricao', label: 'Descrição', valor: '' })}
+            <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
+        </form>
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Atendimentos</h2>
+                <div class="subtitle">${atendimentos.length} registro(s) no filtro atual</div>
+            </div>
+            <form class="actions" method="get" action="/atendimentos">
+                <input name="busca" value="${escapar(busca)}" placeholder="Buscar cliente ou motivo" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
+                <select name="status" onchange="this.form.submit()">
+                    ${[
+                        ['abertos', 'Abertos'],
+                        ['aberto', 'Somente abertos'],
+                        ['em_andamento', 'Em andamento'],
+                        ['resolvido', 'Resolvidos'],
+                        ['todos', 'Todos']
+                    ].map(([valor, texto]) => `<option value="${valor}" ${valor === statusAtual ?'selected' : ''}>${texto}</option>`).join('')}
+                </select>
+                <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
+            </form>
+        </div>
+        ${atendimentos.length ?`<table>
+            <thead><tr><th>Cliente</th><th>Atendimento</th><th>Status</th><th>Próximo contato</th><th>Ações</th></tr></thead>
+            <tbody>
+                ${atendimentos.map(atendimento => `<tr>
+                    <td><strong>${escapar(atendimento.clienteNome)}</strong><div class="cell-muted">${escapar(atendimento.clienteTelefone || '')}</div></td>
+                    <td><strong>${escapar(rotuloMotivoAtendimento(atendimento.motivo))}</strong><div class="cell-muted">${escapar(atendimento.descricao || '-')}</div><div class="cell-muted">Aberto em ${escapar(formatarDataHoraCurta(atendimento.criadoEm))}</div></td>
+                    <td><span class="badge ${classeStatusAtendimento(atendimento.status, atendimento.prioridade)}">${escapar(rotuloStatusAtendimento(atendimento.status))}</span>${atendimento.prioridade === 'urgente' ?'<div class="cell-muted">Urgente</div>' : ''}</td>
+                    <td>${atendimento.proximoContato ?escapar(formatarDataHoraCurta(atendimento.proximoContato)) : '-'}</td>
+                    <td>
+                        <div class="row-actions">
+                            <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(atendimento.clienteTelefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                            <form method="post" action="/atendimentos/${escapar(atendimento.id)}/enviar" onsubmit="return confirm('Enviar mensagem de acompanhamento para este cliente?');"><button class="button icon-only icon-action green" type="submit" title="Enviar acompanhamento">${icon('atendimento')}</button></form>
+                            ${atendimento.status !== 'em_andamento' && atendimento.status !== 'resolvido' ?`<form method="post" action="/atendimentos/${escapar(atendimento.id)}/status"><input type="hidden" name="status" value="em_andamento"><button class="button icon-only icon-action refresh" type="submit" title="Marcar em andamento">${icon('refresh')}</button></form>` : ''}
+                            ${atendimento.status !== 'resolvido' ?`<form method="post" action="/atendimentos/${escapar(atendimento.id)}/status"><input type="hidden" name="status" value="resolvido"><button class="button icon-only icon-action green" type="submit" title="Resolver">${icon('check')}</button></form>` : ''}
+                            <a class="button icon-only icon-action" href="/clientes/${escapar(atendimento.clienteId)}/editar#atendimentos" title="Abrir cliente">${icon('edit')}</a>
+                            <form method="post" action="/atendimentos/${escapar(atendimento.id)}/excluir" onsubmit="return confirm('Apagar este atendimento?');"><button class="button icon-only icon-action" type="submit" title="Apagar">${icon('trash')}</button></form>
+                        </div>
+                    </td>
+                </tr>`).join('')}
+            </tbody>
+        </table>` : '<div class="empty">Nenhum atendimento encontrado.</div>'}
+    </section>`;
 }
 
 function itemPreparacao({ pronto, titulo, detalhe, acao, acaoPronto, href }) {
@@ -4398,11 +4596,12 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = []) {
+function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
     const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
+    const suporteAberto = Number(resumoSuporte.abertos || 0) + Number(resumoSuporte.emAndamento || 0);
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -4414,6 +4613,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
         ${metricCard({ label: `Próximos ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
     </section>
     ${receitaMensalCard(receita)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
@@ -4507,6 +4707,7 @@ function tabelaClientes(clientes) {
                     <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
                 </form>
                 <a class="button icon-only icon-action refresh" href="/clientes/${cliente.id}/editar#renovar" title="Renovar cliente">${icon('planos')}</a>
+                <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar#atendimentos" title="Abrir atendimento">${icon('atendimento')}</a>
                 <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar" title="Editar">${icon('edit')}</a>
                 <form method="post" action="/clientes/${cliente.id}/excluir" onsubmit="return confirm('Excluir este cliente?');">
                     <button class="button icon-only icon-action" type="submit" title="Excluir">${icon('trash')}</button>
@@ -5735,17 +5936,18 @@ router.get('/clientes', async (req, res) => {
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
-    const [clientes, receitaBase, aniversariantes] = await Promise.all([
+    const [clientes, receitaBase, aniversariantes, resumoSuporte] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
-        listarClientesAniversarioHoje(anoAtual)
+        listarClientesAniversarioHoje(anoAtual),
+        resumoAtendimentos()
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes),
+        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes, resumoSuporte),
         mensagem,
         ativo: 'painel'
     });
@@ -5772,6 +5974,100 @@ router.get('/clientes/todos', async (req, res) => {
         mensagem,
         ativo: 'clientes'
     });
+});
+
+router.get('/atendimentos', async (req, res) => {
+    desativarCache(res);
+    const filtros = {
+        status: String(req.query.status || 'abertos'),
+        busca: String(req.query.busca || '').trim()
+    };
+    const [atendimentos, clientes, resumo] = await Promise.all([
+        listarAtendimentos(filtros),
+        listarClientes(),
+        resumoAtendimentos()
+    ]);
+
+    await renderizar(res, {
+        titulo: 'Atendimentos',
+        conteudo: telaAtendimentos({ atendimentos, clientes, filtros, resumo }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'atendimentos'
+    });
+});
+
+router.post('/atendimentos', async (req, res) => {
+    try {
+        const atendimento = await criarAtendimento(req.body);
+        await adicionarNotaCliente(atendimento.clienteId, `Atendimento aberto: ${rotuloMotivoAtendimento(atendimento.motivo)}${atendimento.descricao ?` - ${atendimento.descricao}` : ''}`);
+        return res.redirect('/atendimentos?mensagem=Atendimento aberto com sucesso.');
+    } catch (err) {
+        return res.redirect(`/atendimentos?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/clientes/:id/atendimentos', async (req, res) => {
+    try {
+        const atendimento = await criarAtendimento({
+            ...req.body,
+            clienteId: req.params.id
+        });
+        await adicionarNotaCliente(atendimento.clienteId, `Atendimento aberto: ${rotuloMotivoAtendimento(atendimento.motivo)}${atendimento.descricao ?` - ${atendimento.descricao}` : ''}`);
+        return res.redirect(`${montarUrlClienteMensagem(req.params.id, 'Atendimento aberto com sucesso.')}#atendimentos`);
+    } catch (err) {
+        return res.redirect(`${montarUrlClienteMensagem(req.params.id, err.message)}#atendimentos`);
+    }
+});
+
+router.post('/atendimentos/:id/status', async (req, res) => {
+    try {
+        const atendimento = await atualizarStatusAtendimento(req.params.id, req.body.status);
+        await adicionarNotaCliente(atendimento.clienteId, `Atendimento atualizado para ${rotuloStatusAtendimento(atendimento.status)}: ${rotuloMotivoAtendimento(atendimento.motivo)}.`);
+        return res.redirect('/atendimentos?mensagem=Atendimento atualizado.');
+    } catch (err) {
+        return res.redirect(`/atendimentos?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/atendimentos/:id/excluir', async (req, res) => {
+    try {
+        const atendimento = await buscarAtendimentoPorId(req.params.id);
+        await removerAtendimento(req.params.id);
+        if (atendimento?.clienteId) {
+            await adicionarNotaCliente(atendimento.clienteId, `Atendimento removido: ${rotuloMotivoAtendimento(atendimento.motivo)}.`);
+        }
+        return res.redirect('/atendimentos?mensagem=Atendimento removido.');
+    } catch (err) {
+        return res.redirect(`/atendimentos?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/atendimentos/:id/enviar', async (req, res) => {
+    try {
+        const atendimento = await buscarAtendimentoPorId(req.params.id);
+        if (!atendimento) {
+            return res.redirect('/atendimentos?mensagem=Atendimento nao encontrado.');
+        }
+
+        const status = getStatusWhatsApp();
+        const client = getClient();
+
+        if (!client || !status.conectado) {
+            return res.redirect('/atendimentos?mensagem=WhatsApp nao esta conectado.');
+        }
+
+        const envio = await enviarMensagemWhatsAppComFallback(
+            client,
+            atendimento.clienteTelefone,
+            mensagemAtendimentoPadrao(atendimento),
+            'Envio de acompanhamento de atendimento'
+        );
+
+        await adicionarNotaCliente(atendimento.clienteId, `Acompanhamento de atendimento enviado pelo WhatsApp para ${envio.destino}.`);
+        return res.redirect('/atendimentos?mensagem=Acompanhamento enviado ao cliente.');
+    } catch (err) {
+        return res.redirect(`/atendimentos?mensagem=${encodeURIComponent(err.message)}`);
+    }
 });
 
 router.get('/financeiro', async (req, res) => {
@@ -5881,16 +6177,17 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
-        buscarAlertasCadastroCliente(cliente)
+        buscarAlertasCadastroCliente(cliente),
+        listarAtendimentosCliente(cliente.id)
     ]);
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, paginaHistorico: req.query.historico || req.query.pagina }),
+        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, atendimentos, paginaHistorico: req.query.historico || req.query.pagina }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
