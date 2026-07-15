@@ -206,6 +206,36 @@ function formatarDataHoraPainel(valor) {
     return formatarDataHoraBrasil(valor);
 }
 
+function formatarDataPainel(valor) {
+    const data = String(valor || '').slice(0, 10);
+    if (!data) return '-';
+    const [ano, mes, dia] = data.split('-');
+    return ano && mes && dia ? `${dia}/${mes}/${ano}` : data;
+}
+
+function diasAteData(valor) {
+    const data = String(valor || '').slice(0, 10);
+    if (!data) return null;
+    const hoje = new Date(`${dataHojeSaoPaulo()}T00:00:00Z`);
+    const vencimento = new Date(`${data}T00:00:00Z`);
+    return Math.ceil((vencimento - hoje) / 86400000);
+}
+
+function estadoLicencaLocal(licenca = {}) {
+    if (String(licenca.suspensa || '0') === '1') {
+        return { classe: 'error', texto: 'Suspensa', detalhe: 'Bloqueada pelo fornecedor' };
+    }
+    if (String(licenca.vitalicia || '0') === '1' || licenca.tipo === 'vitalicia') {
+        return { classe: 'ok', texto: 'Vitalicia', detalhe: 'Sem vencimento' };
+    }
+
+    const dias = diasAteData(licenca.vencimento);
+    if (dias === null) return { classe: 'warn', texto: 'Sem vencimento', detalhe: 'Revise a licenca' };
+    if (dias < 0) return { classe: 'error', texto: 'Vencida', detalhe: `${Math.abs(dias)} dia(s) vencida` };
+    if (dias <= 7) return { classe: 'warn', texto: 'Vencendo', detalhe: `${dias} dia(s) restante(s)` };
+    return { classe: 'ok', texto: 'Ativa', detalhe: `${dias} dia(s) restante(s)` };
+}
+
 function eventosRecentesHtml(item = {}) {
     const eventos = Array.isArray(item.eventosRecentes) ? item.eventosRecentes : [];
     if (!eventos.length) return '<div class="small">Sem eventos recentes.</div>';
@@ -733,6 +763,7 @@ function pagina(instalacoes, opcoes = {}) {
     const instalacoesFiltradas = filtrarInstalacoesPainel(instalacoes, filtrosInstalacoes);
     const opcoesFiltro = opcoesFiltroInstalacoes(statusGeral);
     const recursos = opcoes.recursos || {};
+    const licencasLocais = opcoes.licencasLocais || [];
     const versaoSistema = packageInfo.version || '1.0.0';
     const sugestaoAdmin = obterSugestaoInstalacaoAdministradoraAtual();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
@@ -752,6 +783,7 @@ function pagina(instalacoes, opcoes = {}) {
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
     ${secaoCodigoLicencaLocal(opcoes.codigoLicenca || {})}
+    ${secaoLicencasLocais(licencasLocais)}
     <section class="status-grid" aria-label="Status geral das instalações">
         ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.comerciais} cliente(s), ${statusGeral.administradoras} administradora(s)`)}
         ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
@@ -896,6 +928,76 @@ async function salvarLicencaLocalGerada(dados = {}) {
     );
 }
 
+async function listarLicencasLocaisEmitidas() {
+    return masterDb.buscarTodos(
+        `SELECT *
+           FROM licencas_locais
+          ORDER BY
+            CASE
+              WHEN suspensa = '1' THEN 0
+              WHEN vitalicia = '1' THEN 3
+              WHEN TRIM(COALESCE(vencimento, '')) = '' THEN 1
+              WHEN date(vencimento) < date('now', 'localtime') THEN 0
+              WHEN date(vencimento) <= date('now', 'localtime', '+7 days') THEN 1
+              ELSE 2
+            END,
+            date(COALESCE(NULLIF(vencimento, ''), '9999-12-31')) ASC,
+            cliente COLLATE NOCASE ASC`
+    );
+}
+
+function tipoLicencaFormulario(tipo) {
+    if (tipo === 'avaliacao') return 'avaliacao_15';
+    if (['mensal', 'semestral', 'anual', 'vitalicia', 'suspensa'].includes(String(tipo || ''))) return tipo;
+    return 'mensal';
+}
+
+function opcoesTipoLicencaLocal(tipoAtual) {
+    const atual = tipoLicencaFormulario(tipoAtual);
+    return [
+        ['avaliacao_15', 'Avaliacao 15 dias'],
+        ['avaliacao_30', 'Avaliacao 30 dias'],
+        ['mensal', 'Mensal'],
+        ['semestral', 'Semestral'],
+        ['anual', 'Anual'],
+        ['vitalicia', 'Vitalicia'],
+        ['suspensa', 'Suspensa']
+    ].map(([valor, texto]) => `<option value="${valor}" ${valor === atual ? 'selected' : ''}>${texto}</option>`).join('');
+}
+
+function secaoLicencasLocais(licencas = []) {
+    const vencendo = licencas.filter(item => {
+        const estado = estadoLicencaLocal(item);
+        return estado.classe === 'warn' || estado.classe === 'error';
+    }).length;
+
+    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licencas locais emitidas</h2><div class="sub">${licencas.length} licenca(s) cadastrada(s), ${vencendo} com vencimento ou atencao</div></div><a class="button secondary" href="#licenca-local">Gerar nova</a></div>
+      <div class="table-wrap">
+      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalacao</th><th>Licenca</th><th>Status</th><th>Ultima consulta</th><th>Acoes</th></tr></thead><tbody>${licencas.map(item => {
+        const estado = estadoLicencaLocal(item);
+        return `<tr>
+          <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
+          <td><code>${escapar(item.instalacaoId)}</code></td>
+          <td>${escapar(item.tipo || '-')}${item.vencimento ? `<div class="small">ate ${escapar(formatarDataPainel(item.vencimento))}</div>` : '<div class="small">Sem vencimento</div>'}</td>
+          <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
+          <td>${escapar(formatarDataHoraPainel(item.ultimoPingEm || item.atualizadoEm))}<div class="small">${escapar(item.ultimoStatus || 'Sem consulta')}</div></td>
+          <td>
+            <form class="inline" method="post" action="/licencas/codigo">
+              <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
+              <input type="hidden" name="licencaCliente" value="${escapar(item.cliente)}">
+              <input type="hidden" name="licencaTelefone" value="${escapar(item.telefone || '')}">
+              <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
+              <select name="licencaTipo" style="max-width:160px;margin-bottom:6px">${opcoesTipoLicencaLocal(item.tipo)}</select>
+              <input type="date" name="licencaVencimento" value="" title="Opcional: defina uma data manual" style="max-width:160px;margin-bottom:6px">
+              <button class="smallbtn" type="submit">Gerar renovacao</button>
+            </form>
+          </td>
+        </tr>`;
+    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licenca local emitida ainda.</div>'}
+      </div>
+    </section>`;
+}
+
 app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
 
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
@@ -967,11 +1069,12 @@ app.post('/logout', (req, res) => {
 app.use(autenticarSessao);
 
 async function renderizarPainel(opcoes = {}) {
-    const [instalacoes, recursos] = await Promise.all([
+    const [instalacoes, recursos, licencasLocais] = await Promise.all([
         listarInstalacoes(),
-        obterRecursosServidor().catch(() => ({}))
+        obterRecursosServidor().catch(() => ({})),
+        listarLicencasLocaisEmitidas().catch(() => [])
     ]);
-    return pagina(instalacoes, { ...opcoes, recursos });
+    return pagina(instalacoes, { ...opcoes, recursos, licencasLocais });
 }
 
 app.get('/', async (req, res) => {
