@@ -1,27 +1,27 @@
-# Checklist Para Suporte
+﻿# Checklist Para Suporte
 
-Use este checklist quando o cliente disser que não funcionou.
+Use este checklist quando o cliente disser que nÃ£o funcionou.
 
 ## Antes De Instalar
 
 - Windows 10 ou 11.
 - Google Chrome instalado.
 - Node.js LTS instalado.
-- Arquivo `julian-play-app.zip` está na pasta recebida.
+- Arquivo `julian-play-app.zip` estÃ¡ na pasta recebida.
 - Internet funcionando.
 
 ## Depois De Instalar
 
-- Abrir painel: http://localhost:10000
-- Abrir licença: http://localhost:10000/licenca
-- Abrir WhatsApp: http://localhost:10000/qr
+- Abrir painel: http://julianplay.local:10000
+- Abrir licenÃ§a: http://julianplay.local:10000/licenca
+- Abrir WhatsApp: http://julianplay.local:10000/qr
 
-## Informações Que O Cliente Deve Enviar
+## InformaÃ§Ãµes Que O Cliente Deve Enviar
 
 - Print da tela com erro.
-- ID da instalação em `/licenca`.
+- ID da instalaÃ§Ã£o em `/licenca`.
 - Se o WhatsApp aparece conectado em `/qr`.
-- Horário em que o problema aconteceu.
+- HorÃ¡rio em que o problema aconteceu.
 
 ## Comando Para Ver Status
 
@@ -36,3 +36,4 @@ pm2 status
 ```powershell
 pm2 logs julian-play-cliente --lines 100
 ```
+

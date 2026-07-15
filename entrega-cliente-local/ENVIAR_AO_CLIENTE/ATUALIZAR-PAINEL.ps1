@@ -6,7 +6,9 @@ param(
 
     [string]$PastaDados = 'C:\JulianPlay\dados',
 
-    [string]$NomeProcesso = 'julian-play-cliente'
+    [string]$NomeProcesso = 'julian-play-cliente',
+
+    [string]$NomeLocal = 'julianplay.local'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -29,6 +31,31 @@ function CopiarSeExistir($origem, $destino) {
     }
 }
 
+function TestarAdministrador {
+    $identidade = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identidade)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function ConfigurarNomeLocal([string]$nomeLocal) {
+    if ([string]::IsNullOrWhiteSpace($nomeLocal) -or -not (TestarAdministrador)) {
+        return $false
+    }
+
+    $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
+    $linha = "127.0.0.1 $nomeLocal"
+    $conteudo = ''
+    if (Test-Path -LiteralPath $hosts) {
+        $conteudo = Get-Content -LiteralPath $hosts -Raw
+    }
+
+    if ($conteudo -notmatch "(?im)^\s*127\.0\.0\.1\s+$([regex]::Escape($nomeLocal))\s*$") {
+        Add-Content -LiteralPath $hosts -Value "`r`n$linha"
+    }
+
+    return $true
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote atualizado ao fornecedor.'
@@ -46,6 +73,10 @@ if (-not (Test-Path -LiteralPath (Join-Path $PastaInstalacao 'package.json'))) {
 Etapa 'Verificando programas obrigatorios'
 ExigirComando 'node' 'Node.js nao encontrado. Instale em https://nodejs.org/ e execute novamente.' | Out-Null
 ExigirComando 'npm.cmd' 'npm nao encontrado. Reinstale o Node.js e execute novamente.' | Out-Null
+
+Etapa 'Configurando endereco local'
+$nomeLocalConfigurado = ConfigurarNomeLocal $NomeLocal
+$urlPainel = if ($nomeLocalConfigurado) { "http://$NomeLocal`:$Porta" } else { "http://localhost:$Porta" }
 
 $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
 if (-not $pm2) {
@@ -112,9 +143,12 @@ try {
     }
 
     Etapa 'Atualizacao finalizada'
-    Write-Host "Painel: http://localhost:$Porta" -ForegroundColor Green
+    Write-Host "Painel: $urlPainel" -ForegroundColor Green
+    if ($nomeLocalConfigurado) {
+        Write-Host "Endereco alternativo: http://localhost:$Porta" -ForegroundColor Yellow
+    }
     Write-Host "Backup da versao anterior: $backupApp" -ForegroundColor Yellow
-    Start-Process "http://localhost:$Porta"
+    Start-Process $urlPainel
 } catch {
     Write-Host "`nFalha na atualizacao: $($_.Exception.Message)" -ForegroundColor Red
 

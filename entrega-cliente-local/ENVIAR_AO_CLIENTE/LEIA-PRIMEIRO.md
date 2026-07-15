@@ -1,4 +1,4 @@
-# Instalacao do Painel no Computador do Cliente
+﻿# Instalacao do Painel no Computador do Cliente
 
 Este pacote instala o painel no computador Windows do cliente.
 
@@ -43,11 +43,11 @@ Se o arquivo `julian-play-app.zip` nao estiver nesta pasta, solicite o pacote of
 
 ## Instalacao Rapida
 
-1. Dê dois cliques em `1-VERIFICAR-COMPUTADOR.bat`.
-2. Se estiver tudo certo, dê dois cliques em `2-INSTALAR-PAINEL.bat`.
-3. Se quiser abrir o painel depois, dê dois cliques em `3-ABRIR-PAINEL.bat`.
+1. DÃª dois cliques em `1-VERIFICAR-COMPUTADOR.bat`.
+2. Se estiver tudo certo, dÃª dois cliques em `2-INSTALAR-PAINEL.bat`.
+3. Se quiser abrir o painel depois, dÃª dois cliques em `3-ABRIR-PAINEL.bat`.
 4. Ao terminar, abra:
-   http://localhost:10000
+   http://julianplay.local:10000
 
 ## Se For Executar Pelo PowerShell
 
@@ -65,16 +65,20 @@ Se digitar apenas `VERIFICAR-COMPUTADOR.ps1`, o PowerShell pode mostrar erro diz
 
 Depois da instalacao:
 
-1. Dê dois cliques em `3-ABRIR-PAINEL.bat`; ou
+1. DÃª dois cliques em `3-ABRIR-PAINEL.bat`; ou
 2. Abra no navegador:
-   http://localhost:10000
+   http://julianplay.local:10000
+
+Se o endereco acima nao abrir, use o endereco alternativo:
+
+http://localhost:10000
 
 ## Atualizar O Painel
 
 Quando o fornecedor enviar uma versao nova:
 
 1. Coloque o novo `julian-play-app.zip` na mesma pasta destes arquivos.
-2. Dê dois cliques em `4-ATUALIZAR-PAINEL.bat`.
+2. DÃª dois cliques em `4-ATUALIZAR-PAINEL.bat`.
 3. Aguarde terminar.
 4. O painel sera aberto novamente no navegador.
 
@@ -90,7 +94,7 @@ Se for executar pelo PowerShell:
 
 Depois da instalacao, abra:
 
-http://localhost:10000/licenca
+http://julianplay.local:10000/licenca
 
 Na tela de licenca:
 
@@ -124,3 +128,4 @@ Use somente o numero de WhatsApp informado na licenca.
 - Se o computador reiniciar, aguarde alguns minutos para o painel voltar.
 - Se trocar o numero do WhatsApp do robo, avise o fornecedor antes de conectar outro numero.
 - Se aparecer erro, envie print da tela ao fornecedor.
+

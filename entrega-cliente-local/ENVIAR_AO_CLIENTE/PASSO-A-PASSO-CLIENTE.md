@@ -1,4 +1,4 @@
-# Passo A Passo Para O Cliente
+﻿# Passo A Passo Para O Cliente
 
 Este guia mostra a ordem correta para instalar, ativar a licenca e conectar o WhatsApp do robo.
 
@@ -34,7 +34,7 @@ Nao abra nem extraia o `julian-play-app.zip`. Ele sera usado automaticamente pel
 
 ## 3. Conferir O Computador
 
-Na pasta recebida, dê dois cliques em:
+Na pasta recebida, dÃª dois cliques em:
 
 `1-VERIFICAR-COMPUTADOR.bat`
 
@@ -48,7 +48,7 @@ Se aparecer alguma pendencia, instale o programa indicado e execute a verificaca
 
 ## 4. Instalar O Painel
 
-Na pasta recebida, dê dois cliques em:
+Na pasta recebida, dÃª dois cliques em:
 
 `2-INSTALAR-PAINEL.bat`
 
@@ -63,6 +63,10 @@ O instalador vai preparar o painel, instalar dependencias, configurar o servico 
 ## 5. Abrir O Painel
 
 Abra no navegador:
+
+http://julianplay.local:10000
+
+Se esse endereco nao abrir, use:
 
 http://localhost:10000
 
@@ -82,7 +86,7 @@ Importante: no PowerShell, sempre use `.\` antes do arquivo. Exemplo: `.\VERIFIC
 
 Abra:
 
-http://localhost:10000/licenca
+http://julianplay.local:10000/licenca
 
 Na tela de licenca:
 
@@ -142,11 +146,11 @@ Quando o fornecedor enviar uma melhoria do sistema:
 
 1. Salve o novo pacote recebido na mesma pasta destes arquivos.
 2. Confira se o arquivo `julian-play-app.zip` foi substituido pelo pacote novo.
-3. Dê dois cliques em `4-ATUALIZAR-PAINEL.bat`.
+3. DÃª dois cliques em `4-ATUALIZAR-PAINEL.bat`.
 4. Aguarde a atualizacao terminar.
 5. Abra o painel em:
 
-http://localhost:10000
+http://julianplay.local:10000
 
 A atualizacao preserva:
 
@@ -161,3 +165,4 @@ Se preferir executar pelo PowerShell, use:
 ```powershell
 .\ATUALIZAR-PAINEL.ps1
 ```
+

@@ -4,7 +4,9 @@ param(
 
     [string]$PastaInstalacao = 'C:\JulianPlay\app',
 
-    [string]$PastaDados = 'C:\JulianPlay\dados'
+    [string]$PastaDados = 'C:\JulianPlay\dados',
+
+    [string]$NomeLocal = 'julianplay.local'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -86,6 +88,37 @@ function EncerrarProcessosDaPasta([string]$pasta) {
     }
 }
 
+function ObterUrlPainel([int]$porta, [string]$nomeLocal) {
+    if ([string]::IsNullOrWhiteSpace($nomeLocal)) {
+        return "http://localhost:$porta"
+    }
+    return "http://$nomeLocal`:$porta"
+}
+
+function ConfigurarNomeLocal([string]$nomeLocal) {
+    if ([string]::IsNullOrWhiteSpace($nomeLocal)) {
+        return $false
+    }
+
+    if (-not (TestarAdministrador)) {
+        Write-Warning "Nome local $nomeLocal nao configurado porque o PowerShell nao esta em modo Administrador. O painel continuara abrindo por localhost."
+        return $false
+    }
+
+    $hosts = Join-Path $env:SystemRoot 'System32\drivers\etc\hosts'
+    $linha = "127.0.0.1 $nomeLocal"
+    $conteudo = ''
+    if (Test-Path -LiteralPath $hosts) {
+        $conteudo = Get-Content -LiteralPath $hosts -Raw
+    }
+
+    if ($conteudo -notmatch "(?im)^\s*127\.0\.0\.1\s+$([regex]::Escape($nomeLocal))\s*$") {
+        Add-Content -LiteralPath $hosts -Value "`r`n$linha"
+    }
+
+    return $true
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote oficial ao fornecedor.'
@@ -106,6 +139,10 @@ if ($chromePaths.Count -eq 0) {
 
 Etapa 'Preparando pastas'
 New-Item -ItemType Directory -Path $PastaInstalacao, $PastaDados -Force | Out-Null
+
+Etapa 'Configurando endereco local'
+$nomeLocalConfigurado = ConfigurarNomeLocal $NomeLocal
+$urlPainel = if ($nomeLocalConfigurado) { ObterUrlPainel $Porta $NomeLocal } else { "http://localhost:$Porta" }
 
 if (Test-Path -LiteralPath (Join-Path $PastaInstalacao 'package.json')) {
     Etapa 'Parando instalacao anterior'
@@ -155,9 +192,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Etapa 'Instalacao finalizada'
-Write-Host "Painel: http://localhost:$Porta" -ForegroundColor Green
-Write-Host "Licenca: http://localhost:$Porta/licenca" -ForegroundColor Green
-Write-Host "WhatsApp: http://localhost:$Porta/qr" -ForegroundColor Green
-Start-Process "http://localhost:$Porta"
+Write-Host "Painel: $urlPainel" -ForegroundColor Green
+Write-Host "Licenca: $urlPainel/licenca" -ForegroundColor Green
+Write-Host "WhatsApp: $urlPainel/qr" -ForegroundColor Green
+if ($nomeLocalConfigurado) {
+    Write-Host "Endereco alternativo: http://localhost:$Porta" -ForegroundColor Yellow
+}
+Start-Process $urlPainel
 
 Read-Host 'Pressione ENTER para fechar'
