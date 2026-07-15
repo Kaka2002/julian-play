@@ -47,19 +47,26 @@ function obterChavePrivada() {
     return normalizarPem(process.env.LICENSE_PRIVATE_KEY || config.licenseSigningPrivateKey || '');
 }
 
-function obterChavePublica() {
+function obterChavesPublicas() {
     const config = lerConfiguracaoLocal();
     const fontes = [
-        process.env.LICENSE_PUBLIC_KEY,
+        lerArquivoTexto(path.join(process.cwd(), 'config', 'license-public-key.pem')),
         config.licensePublicKey,
-        lerArquivoTexto(path.join(process.cwd(), 'config', 'license-public-key.pem'))
+        process.env.LICENSE_PUBLIC_KEY
     ];
 
+    const chaves = [];
     for (const fonte of fontes) {
         const chave = normalizarPem(fonte);
-        if (pareceChavePublicaPem(chave)) return chave;
+        if (pareceChavePublicaPem(chave) && !chaves.includes(chave)) {
+            chaves.push(chave);
+        }
     }
-    return '';
+    return chaves;
+}
+
+function obterChavePublica() {
+    return obterChavesPublicas()[0] || '';
 }
 
 function lerArquivoTexto(caminho) {
