@@ -6,6 +6,7 @@ const {
     aplicarCodigoLicenca,
     instalacaoAdministrador
 } = require('../services/licencaService');
+const { formatarDataHoraBrasil } = require('../utils/dataHora');
 
 const router = express.Router();
 
@@ -27,6 +28,12 @@ function tipoSelecionado(licenca) {
 
 function formatarDataBrasileira(dataIso) {
     return String(dataIso || '').slice(0, 10).split('-').reverse().join('/');
+}
+
+function textoControleRemoto(config = {}) {
+    if (!config.licencaServidorUrl) return 'Não configurado';
+    if (!config.licencaUltimaConsultaRemota) return 'Ativo';
+    return `Ativo - última consulta ${formatarDataHoraBrasil(config.licencaUltimaConsultaRemota, { anoCompleto: true })}`;
 }
 
 function painelGerenciamento({ licenca, tipoAtual }) {
@@ -98,7 +105,7 @@ function pagina({ licenca, config, mensagem = '', erro = '' }) {
         <div class="info">
             <div><small>Cliente / Empresa</small>${escapar(licenca.cliente || '-')}</div>
             <div><small>Identificação da instalação</small>${escapar(licenca.instalacaoId || '-')}</div>
-            <div><small>Controle remoto</small>${config.licencaServidorUrl ? `Ativo${config.licencaUltimaConsultaRemota ? ` - última consulta ${escapar(config.licencaUltimaConsultaRemota)}` : ''}` : 'Não configurado'}</div>
+            <div><small>Controle remoto</small>${escapar(textoControleRemoto(config))}</div>
         </div>
         ${!licenca.permitida ? '<p>O período de avaliação terminou. Entre em contato com o fornecedor para renovar ou ativar esta instalação.</p>' : ''}
     </section>
