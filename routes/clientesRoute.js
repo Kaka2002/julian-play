@@ -111,6 +111,10 @@ const {
 } = require('../services/crmService');
 
 const router = express.Router();
+const WHATSAPP_ENVIO_DUPLICADO_MS = 45000;
+const RENOVACAO_SUBMISSAO_DUPLICADA_MS = 120000;
+const mensagensWhatsAppRecentes = new Map();
+const renovacoesRecentes = new Map();
 const DIAS_DASHBOARD = 7;
 const CODIGO_COBRANCA_VENCIDO = -90;
 const CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL = -33;
@@ -475,6 +479,11 @@ function formatarMoeda(valor) {
         style: 'currency',
         currency: 'BRL'
     });
+}
+
+function valorPrincipalPagamento(pagamento = {}) {
+    const valorPlano = numeroMoeda(pagamento.valorPlano);
+    return valorPlano > 0 ?valorPlano : numeroMoeda(pagamento.valorTotal);
 }
 
 function diasPlanoCliente(cliente = {}) {
@@ -3303,6 +3312,20 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
 
     for (const destino of destinos) {
         try {
+            const chaveEnvio = `${destino}|${mensagem}`;
+            const agora = Date.now();
+            const envioRecente = mensagensWhatsAppRecentes.get(chaveEnvio);
+
+            if (envioRecente && agora - envioRecente.enviadoEm < WHATSAPP_ENVIO_DUPLICADO_MS) {
+                console.warn(`[clientes] ${descricao} ignorado: mensagem duplicada recente para ${destino}.`);
+                return {
+                    destino,
+                    mensagemId: envioRecente.mensagemId || '',
+                    ack: envioRecente.ack,
+                    duplicadoIgnorado: true
+                };
+            }
+
             registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
                 client.sendMessage(destino, mensagem),
@@ -3315,6 +3338,11 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             }
 
             registrarMensagemDoRobo(envio);
+            mensagensWhatsAppRecentes.set(chaveEnvio, {
+                enviadoEm: Date.now(),
+                mensagemId: envio.id?._serialized || '',
+                ack: envio.ack
+            });
 
             return {
                 destino,
@@ -3380,6 +3408,12 @@ Obrigado pela preferência.`;
 }
 
 function montarMensagemRenovacaoConfirmada(cliente = {}, resultado = {}) {
+    const valorPlano = resultado.valorPlano || resultado.valorTotal || '0,00';
+    const valorApp = numeroMoeda(resultado.assinaturaApp);
+    const detalheApp = valorApp > 0
+        ? `\n*Assinatura App:* R$ ${resultado.assinaturaApp}`
+        : '';
+
     return `*RENOVAÇÃO CONFIRMADA*
 --------------------
 Olá, *${cliente.nome || 'cliente'}*!
@@ -3387,7 +3421,7 @@ Olá, *${cliente.nome || 'cliente'}*!
 Sua renovação foi registrada com sucesso.
 
 *Plano:* ${resultado.plano}
-*Valor:* R$ ${resultado.valorTotal}
+*Valor do plano:* R$ ${valorPlano}${detalheApp}
 *Forma de pagamento:* ${resultado.formaPagamento}
 *Novo vencimento:* ${formatarDataHoraMensagem(resultado.vencimentoNovo)}
 
@@ -3501,6 +3535,25 @@ function prepararPlanoPixCliente(cliente = {}, planoPix = {}) {
         valorPlano: valorPlanoFormatado,
         valorApp: valorAppFormatado,
         total: valorFinalFormatado
+    };
+}
+
+function prepararPlanoPixDoPlanoCliente(cliente = {}, planoPix = {}) {
+    const valorPlano = numeroMoeda(cliente.valorPlano || planoPix.valor);
+    const valorFormatado = valorMoedaPix(valorPlano || numeroMoeda(planoPix.valor));
+
+    return {
+        ...planoPix,
+        nome: cliente.plano || planoPix.nome || 'Plano',
+        valor: valorFormatado,
+        valorNumero: numeroMoeda(valorFormatado),
+        valorTotal: valorFormatado,
+        total: valorFormatado,
+        totalNumero: numeroMoeda(valorFormatado),
+        valorPlano: valorFormatado,
+        valorPlanoNumero: numeroMoeda(valorFormatado),
+        valorCobranca: valorFormatado,
+        valorCobrado: valorFormatado
     };
 }
 
@@ -3629,10 +3682,8 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
         const nome = String(plano.nome || '').toLowerCase();
         return Number(plano.dias || 0) > 0 && !nome.includes('teste');
     });
-    const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
-        return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
-    })?.id || planos[0]?.id || '';
-    const planoInicial = planos.find(plano => String(plano.id) === String(planoAtual)) || planos[0] || {};
+    const planoAtual = '';
+    const planoInicial = {};
     const linhasHistorico = pagamentos.length
         ?pagamentos.map(pagamento => `<tr>
             <td>${escapar(formatarDataHoraCurta(pagamento.dataPagamento || pagamento.criadoEm))}</td>
@@ -3640,10 +3691,20 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                 <div class="cell-title">${escapar(pagamento.plano)}</div>
                 <div class="cell-muted">${escapar(pagamento.diasContrato)} dias</div>
             </td>
-            <td>R$ ${escapar(pagamento.valorTotal || '0,00')}</td>
+            <td>
+                <div class="cell-title">R$ ${escapar(pagamento.valorPlano || pagamento.valorTotal || '0,00')}</div>
+                ${numeroMoeda(pagamento.assinaturaApp) > 0 ?`<div class="cell-muted">App: R$ ${escapar(pagamento.assinaturaApp)}</div>` : ''}
+            </td>
             <td>${escapar(pagamento.formaPagamento || '-')}</td>
             <td>${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
-            <td>${pagamento.mensagemEnviada ?'<span class="badge green">Enviada</span>' : '<span class="badge orange">Não enviada</span>'}</td>
+            <td>
+                ${pagamento.mensagemEnviada
+                    ?'<span class="badge green">Enviada</span>'
+                    : `<div><span class="badge orange">Não enviada</span></div>
+                        <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/mensagem-enviada" style="margin-top:6px;">
+                            <button class="button secondary" type="submit">Marcar enviada</button>
+                        </form>`}
+            </td>
             <td>
                 <div class="row-actions">
                     <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
@@ -3663,7 +3724,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             </div>
             <span class="badge green">Vencimento atual: ${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</span>
         </div>
-        <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/renovar">
+        <form class="fields client-form" id="formRenovarCliente" method="post" action="/clientes/${escapar(cliente.id)}/renovar">
             ${campo({
                 nome: 'tipoPlanoId',
                 label: 'Plano da renovação',
@@ -3675,9 +3736,9 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                 ]
             })}
             <input type="hidden" name="plano" id="renovarPlano" value="${escapar(planoInicial.nome || '')}">
-            ${campo({ nome: 'diasContrato', label: 'Dias de contrato', valor: planoInicial.dias || cliente.diasContrato || '', tipo: 'number', attrs: 'id="renovarDiasContrato" min="1" required' })}
-            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: planoInicial.valor || cliente.valorPlano || '', attrs: 'id="renovarValorPlano" inputmode="decimal" class="money-field" placeholder="0,00" required' })}
-            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp || '0,00', attrs: 'id="renovarAssinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
+            ${campo({ nome: 'diasContrato', label: 'Dias de contrato', valor: '', tipo: 'number', attrs: 'id="renovarDiasContrato" min="1" required' })}
+            ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: '', attrs: 'id="renovarValorPlano" inputmode="decimal" class="money-field" placeholder="0,00" required' })}
+            ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: '0,00', attrs: 'id="renovarAssinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
             ${campo({
                 nome: 'formaPagamento',
                 label: 'Forma de pagamento',
@@ -3692,7 +3753,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     { valor: 'Outro', texto: 'Outro' }
                 ]
             })}
-            ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: agoraLocalDateTime(), tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: '', tipo: 'datetime-local', attrs: 'required' })}
             <label class="toggle-line">
                 <input type="checkbox" name="enviarMensagem" value="1" checked>
                 <span>Enviar confirmação da renovação pelo WhatsApp</span>
@@ -3731,17 +3792,29 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                 const planoNome = document.getElementById('renovarPlano');
                 const dias = document.getElementById('renovarDiasContrato');
                 const valor = document.getElementById('renovarValorPlano');
+                const form = document.getElementById('formRenovarCliente');
 
                 function atualizarPlanoRenovacao() {
                     const plano = planosRenovacao.find(item => String(item.id) === String(select?.value));
                     if (!plano) return;
                     planoNome.value = plano.nome || '';
                     dias.value = plano.dias || '';
-                    valor.value = plano.valor || valor.value || '';
+                    valor.value = plano.valor || '';
                 }
 
                 select?.addEventListener('change', atualizarPlanoRenovacao);
-                atualizarPlanoRenovacao();
+                form?.addEventListener('submit', (event) => {
+                    const botao = form.querySelector('button[type="submit"]');
+                    if (form.dataset.enviando === '1') {
+                        event.preventDefault();
+                        return;
+                    }
+                    form.dataset.enviando = '1';
+                    if (botao) {
+                        botao.disabled = true;
+                        botao.textContent = 'Registrando...';
+                    }
+                });
             })();
         </script>
     </section>`;
@@ -3838,6 +3911,28 @@ function secaoConfirmacaoAssinatura(cliente = {}) {
             </div>
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-confirmacao-assinatura">
                 <button class="button green" type="submit">${icon('whats')} Enviar confirmação da assinatura</button>
+            </form>
+        </div>
+    </section>`;
+}
+
+function secaoPixPlanoCliente(cliente = {}) {
+    if (!cliente.id) return '';
+
+    return `<section class="panel" id="pix-plano" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">PIX do plano</h2>
+                <div class="subtitle">Envie manualmente ao cliente o QR Code PIX com o valor do plano atual.</div>
+            </div>
+        </div>
+        <div style="padding:28px;">
+            <div class="notice success" style="margin-bottom:16px;">
+                Plano: <strong>${escapar(cliente.plano || '-')}</strong> &middot;
+                Valor: <strong>R$ ${escapar(cliente.valorPlano || '0,00')}</strong>
+            </div>
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
+                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX do plano</button>
             </form>
         </div>
     </section>`;
@@ -4274,6 +4369,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
     const extras = [
         secaoConfirmacaoAssinatura(cliente),
+        secaoPixPlanoCliente(cliente),
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
@@ -5213,7 +5309,7 @@ function mesAtualInput() {
 function resumoFinanceiro(pagamentos = []) {
     return pagamentos.reduce((resumo, pagamento) => {
         const removido = Boolean(pagamento.excluidoEm);
-        const valor = numeroMoeda(pagamento.valorTotal);
+        const valor = valorPrincipalPagamento(pagamento);
 
         resumo.totalRegistros += 1;
 
@@ -5243,7 +5339,7 @@ function agruparFinanceiro(pagamentos = [], campo, fallback = 'Não informado') 
             const atual = mapa.get(chave) || { nome: chave, quantidade: 0, total: 0 };
 
             atual.quantidade += 1;
-            atual.total += numeroMoeda(pagamento.valorTotal);
+            atual.total += valorPrincipalPagamento(pagamento);
             mapa.set(chave, atual);
 
             return mapa;
@@ -5377,8 +5473,8 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
                 <div class="cell-muted">${escapar(pagamento.diasContrato || 0)} dias</div>
             </td>
             <td data-label="Valor">
-                <div class="cell-title">R$ ${escapar(pagamento.valorTotal || '0,00')}</div>
-                <div class="cell-muted">Plano: R$ ${escapar(pagamento.valorPlano || '0,00')} | App: R$ ${escapar(pagamento.assinaturaApp || '0,00')}</div>
+                <div class="cell-title">R$ ${escapar(pagamento.valorPlano || pagamento.valorTotal || '0,00')}</div>
+                <div class="cell-muted">${numeroMoeda(pagamento.assinaturaApp) > 0 ?`App: R$ ${escapar(pagamento.assinaturaApp)} | Total pago: R$ ${escapar(pagamento.valorTotal || '0,00')}` : 'Plano'}</div>
             </td>
             <td data-label="Pagamento">${escapar(pagamento.formaPagamento || '-')}</td>
             <td data-label="Vencimento">${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
@@ -6815,8 +6911,81 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
     }
 });
 
-router.post('/clientes/:id/renovar', async (req, res) => {
+router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
     try {
+        const cliente = await buscarClientePorId(req.params.id);
+
+        if (!cliente) {
+            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Cliente não encontrado.'));
+        }
+
+        const status = getStatusWhatsApp();
+        const client = getClient();
+
+        if (!client || !status.conectado) {
+            return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado para enviar o PIX do plano.'));
+        }
+
+        const planoBase = buscarPlanoPorNome(cliente.plano) || {
+            nome: cliente.plano || 'Plano',
+            valor: cliente.valorPlano || '0,00'
+        };
+        const planoPix = prepararPlanoPixDoPlanoCliente(cliente, planoBase);
+        const destino = await resolverDestinoWhatsApp(client, cliente.telefone);
+
+        const enviado = await enviarQRCodePIXParaDestino(client, destino, planoPix, {
+            tipo: 'renovacao',
+            nomeCliente: cliente.nome || 'cliente'
+        });
+
+        if (!enviado) {
+            throw new Error('Não foi possível enviar o QR Code PIX.');
+        }
+
+        await adicionarNotaCliente(
+            cliente.id,
+            `PIX do plano enviado manualmente: ${planoPix.nome}, R$ ${planoPix.valor}.`
+        );
+        logControleClientes('PIX do plano enviado ao cliente', {
+            clienteId: cliente.id,
+            nome: cliente.nome,
+            plano: planoPix.nome,
+            valor: planoPix.valor,
+            destino
+        });
+
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'PIX do plano enviado ao cliente.'));
+    } catch (err) {
+        logControleClientes('Erro ao enviar PIX do plano', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(req.params.id, `Não foi possível enviar o PIX do plano: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/renovar', async (req, res) => {
+    const chaveRenovacao = [
+        req.params.id,
+        req.body.tipoPlanoId || '',
+        req.body.plano || '',
+        req.body.diasContrato || '',
+        req.body.valorPlano || '',
+        req.body.assinaturaApp || '',
+        req.body.formaPagamento || '',
+        req.body.dataPagamento || ''
+    ].join('|');
+
+    try {
+        const agora = Date.now();
+        const renovacaoRecente = renovacoesRecentes.get(chaveRenovacao);
+
+        if (renovacaoRecente && agora - renovacaoRecente < RENOVACAO_SUBMISSAO_DUPLICADA_MS) {
+            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Renovação já estava sendo registrada. O envio duplicado foi ignorado.'));
+        }
+
+        renovacoesRecentes.set(chaveRenovacao, agora);
+
         const resultado = await renovarCliente({
             ...req.body,
             clienteId: req.params.id
@@ -6871,6 +7040,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
 
         return res.redirect(montarUrlClienteMensagem(clienteAtualizado.id, mensagemRetorno));
     } catch (err) {
+        renovacoesRecentes.delete(chaveRenovacao);
         logControleClientes('Erro ao renovar cliente', {
             clienteId: req.params.id,
             erro: err.message
@@ -6975,6 +7145,22 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => 
         return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histórico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao editar pagamento', {
+            clienteId: req.params.id,
+            pagamentoId: req.params.pagamentoId,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(req.params.id, err.message));
+    }
+});
+
+router.post('/clientes/:id/pagamentos/:pagamentoId/mensagem-enviada', async (req, res) => {
+    try {
+        await marcarPagamentoMensagem(req.params.pagamentoId, true);
+        await adicionarNotaCliente(req.params.id, 'Confirmação de renovação marcada manualmente como enviada.');
+
+        return res.redirect(`${montarUrlClienteMensagem(req.params.id, 'Mensagem marcada como enviada no histórico.')}#renovar`);
+    } catch (err) {
+        logControleClientes('Erro ao marcar mensagem de pagamento como enviada', {
             clienteId: req.params.id,
             pagamentoId: req.params.pagamentoId,
             erro: err.message
