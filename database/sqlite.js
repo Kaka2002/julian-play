@@ -159,6 +159,44 @@ db.serialize(() => {
     db.run('CREATE INDEX IF NOT EXISTS idx_cliente_atendimentos_cliente ON cliente_atendimentos(clienteId, criadoEm DESC)');
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS leads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            telefone TEXT,
+            origem TEXT,
+            interesse TEXT,
+            status TEXT DEFAULT 'novo',
+            prioridade TEXT DEFAULT 'normal',
+            valorEstimado TEXT,
+            proximoContato TEXT,
+            ultimoContato TEXT,
+            motivoPerda TEXT,
+            observacoes TEXT,
+            clienteId INTEGER,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            convertidoEm TEXT,
+            perdidoEm TEXT,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE SET NULL
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS lead_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            leadId INTEGER NOT NULL,
+            tipo TEXT DEFAULT 'nota',
+            texto TEXT NOT NULL,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(leadId) REFERENCES leads(id) ON DELETE CASCADE
+        )
+    `);
+
+    db.run('CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status, prioridade, proximoContato)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_leads_telefone ON leads(telefone)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_lead_historico_lead ON lead_historico(leadId, criadoEm DESC)');
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS testes_gratis_historico (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             telefone TEXT NOT NULL UNIQUE,

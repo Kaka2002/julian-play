@@ -97,6 +97,18 @@ const {
     removerAtendimento,
     resumoAtendimentos
 } = require('../services/atendimentos');
+const {
+    listarLeads,
+    buscarLeadPorId,
+    listarHistoricoLead,
+    salvarLead,
+    atualizarStatusLead,
+    vincularLeadAoCliente,
+    removerLead,
+    adicionarHistoricoLead,
+    resumoCrm,
+    relatorioComercial
+} = require('../services/crmService');
 
 const router = express.Router();
 const DIAS_DASHBOARD = 7;
@@ -615,6 +627,7 @@ function icon(nome) {
         logo: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
         painel: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
         clientes: '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg>',
+        crm: '<svg viewBox="0 0 24 24"><path d="M3 7h18"/><path d="M6 7v13"/><path d="M12 7v13"/><path d="M18 7v13"/><path d="M4 4h16a1 1 0 0 1 1 1v2H3V5a1 1 0 0 1 1-1Z"/><path d="M3 20h18"/></svg>',
         modelos: '<svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H7l-4 4V5a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>',
         atendimento: '<svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3 1.4-5.6A8 8 0 1 1 21 12Z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>',
         apps: '<svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
@@ -2098,6 +2111,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             <nav>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
+                <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
                 <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
                 <a class="navlink ${ativo === 'planos' ?'active' : ''}" href="/planos">${icon('planos')} Planos</a>
                 <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
@@ -4360,6 +4374,238 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
     </section>`;
 }
 
+function rotuloStatusLead(status = '') {
+    const mapa = {
+        novo: 'Novo',
+        em_conversa: 'Em conversa',
+        teste_liberado: 'Teste liberado',
+        aguardando_pagamento: 'Aguardando pagamento',
+        ganho: 'Cliente ganho',
+        perdido: 'Perdido'
+    };
+
+    return mapa[status] || 'Novo';
+}
+
+function classeStatusLead(status = '', prioridade = '') {
+    if (status === 'ganho') return 'ok';
+    if (status === 'perdido') return 'error';
+    if (prioridade === 'urgente') return 'warn';
+    if (status === 'aguardando_pagamento') return 'warn';
+    if (status === 'teste_liberado') return 'info';
+    return 'muted';
+}
+
+function opcoesStatusLead(statusAtual = '') {
+    return [
+        ['novo', 'Novo'],
+        ['em_conversa', 'Em conversa'],
+        ['teste_liberado', 'Teste liberado'],
+        ['aguardando_pagamento', 'Aguardando pagamento'],
+        ['ganho', 'Cliente ganho'],
+        ['perdido', 'Perdido']
+    ].map(([valor, texto]) => `<option value="${valor}" ${valor === statusAtual ?'selected' : ''}>${texto}</option>`).join('');
+}
+
+function mensagemLeadPadrao(lead = {}) {
+    return `Ola, ${lead.nome || 'tudo bem'}!
+
+Passando para acompanhar seu atendimento sobre ${lead.interesse || 'o sistema'}.
+
+Fico a disposicao para ajudar e liberar os proximos passos.`;
+}
+
+function cardsFunilCrm(resumo = {}) {
+    return `<section class="metrics" style="margin-bottom:24px;">
+        ${metricCard({ label: 'Leads ativos', valor: resumo.ativos || 0, nota: `${resumo.urgentes || 0} urgente(s)`, tipo: resumo.ativos ?'info' : 'green', icone: 'crm' })}
+        ${metricCard({ label: 'Testes liberados', valor: resumo.testes || 0, nota: 'Em avaliacao', tipo: 'info', icone: 'apps' })}
+        ${metricCard({ label: 'Aguardando pagamento', valor: resumo.aguardandoPagamento || 0, nota: 'Prontos para fechar', tipo: resumo.aguardandoPagamento ?'orange' : 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Retornos ate amanha', valor: resumo.retornosHoje || 0, nota: 'Agenda comercial', tipo: resumo.retornosHoje ?'orange' : 'green', icone: 'alert' })}
+        ${metricCard({ label: 'Ganhos', valor: resumo.ganhos || 0, nota: 'Convertidos', tipo: 'green', icone: 'check' })}
+        ${metricCard({ label: 'Perdidos', valor: resumo.perdidos || 0, nota: 'Aprendizado', tipo: 'red', icone: 'close' })}
+    </section>`;
+}
+
+function formularioLead(lead = {}) {
+    return `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">${lead.id ?'Editar lead' : 'Novo lead'}</h2>
+                <div class="subtitle">Registre interessados antes de virarem clientes</div>
+            </div>
+        </div>
+        <form class="fields" method="post" action="/crm/salvar" style="padding-top:0;">
+            ${lead.id ?`<input type="hidden" name="id" value="${escapar(lead.id)}">` : ''}
+            ${campo({ nome: 'nome', label: 'Nome *', valor: lead.nome || '', attrs: 'required placeholder="Nome do interessado"' })}
+            ${campo({ nome: 'telefone', label: 'WhatsApp', valor: lead.telefone || '', attrs: 'inputmode="tel" placeholder="5511999999999"' })}
+            ${campo({
+                nome: 'origem',
+                label: 'Origem',
+                valor: lead.origem || '',
+                opcoes: [
+                    { valor: '', texto: 'Selecione...' },
+                    ...ORIGENS_CLIENTE.map(origem => ({ valor: origem, texto: origem }))
+                ]
+            })}
+            ${campo({ nome: 'interesse', label: 'Interesse', valor: lead.interesse || '', attrs: 'placeholder="Ex: mensal, app, revenda, teste"' })}
+            <label>Status
+                <select name="status">${opcoesStatusLead(lead.status || 'novo')}</select>
+            </label>
+            <label>Prioridade
+                <select name="prioridade">
+                    <option value="normal" ${lead.prioridade !== 'urgente' ?'selected' : ''}>Normal</option>
+                    <option value="urgente" ${lead.prioridade === 'urgente' ?'selected' : ''}>Urgente</option>
+                </select>
+            </label>
+            ${campo({ nome: 'valorEstimado', label: 'Valor estimado (R$)', valor: lead.valorEstimado || '', attrs: 'inputmode="decimal" placeholder="35,00"' })}
+            ${campo({ nome: 'proximoContato', label: 'Proximo contato', tipo: 'datetime-local', valor: inputDateTime(lead.proximoContato) })}
+            ${campo({ nome: 'motivoPerda', label: 'Motivo de perda', valor: lead.motivoPerda || '', attrs: 'placeholder="Preencher quando perder a venda"' })}
+            ${areaTexto({ nome: 'observacoes', label: 'Observacoes', valor: lead.observacoes || '' })}
+            <div class="actions full">
+                <button class="button" type="submit">${icon('check')} Salvar lead</button>
+                <a class="button secondary" href="/crm">Cancelar</a>
+            </div>
+        </form>
+    </section>`;
+}
+
+function historicoLeadHtml(lead = {}, historico = []) {
+    if (!lead.id) return '';
+    const itens = historico.length
+        ?historico.map(item => `<div class="note-item">
+            <span class="note-date">${escapar(formatarDataNota(item.criadoEm))}</span>
+            <div>${escapar(item.texto)}</div>
+        </div>`).join('')
+        : '<div class="empty">Nenhum historico comercial registrado.</div>';
+
+    return `<section class="panel">
+        <div class="fields">
+            <div class="form-section full">Historico comercial</div>
+            <form class="full" method="post" action="/crm/${escapar(lead.id)}/historico">
+                ${areaTexto({ nome: 'texto', label: 'Nova anotacao', valor: '' })}
+                <div class="actions"><button class="button secondary" type="submit">${icon('plus')} Adicionar anotacao</button></div>
+            </form>
+            <div class="full"><div class="notes-list">${itens}</div></div>
+        </div>
+    </section>`;
+}
+
+function tabelaLeads(leads = [], clientes = []) {
+    if (!leads.length) return '<div class="empty">Nenhum lead encontrado.</div>';
+    const opcoesClientes = clientes
+        .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome)} - ${escapar(cliente.telefone || '')}</option>`)
+        .join('');
+
+    return `<table>
+        <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>Historico</th><th>Acoes</th></tr></thead>
+        <tbody>
+            ${leads.map(lead => `<tr>
+                <td>
+                    <strong>${escapar(lead.nome)}</strong>
+                    <div class="cell-muted">${escapar(lead.telefone || '')}</div>
+                    ${lead.origem ?`<div class="cell-muted">Origem: ${escapar(lead.origem)}</div>` : ''}
+                    ${lead.interesse ?`<div class="cell-muted">Interesse: ${escapar(lead.interesse)}</div>` : ''}
+                </td>
+                <td>
+                    <span class="badge ${classeStatusLead(lead.status, lead.prioridade)}">${escapar(rotuloStatusLead(lead.status))}</span>
+                    ${lead.prioridade === 'urgente' ?'<div class="cell-muted">Urgente</div>' : ''}
+                    ${lead.valorEstimado ?`<div class="cell-muted">Estimado: R$ ${escapar(lead.valorEstimado)}</div>` : ''}
+                </td>
+                <td>
+                    ${lead.proximoContato ?`<div>${escapar(formatarDataHoraCurta(lead.proximoContato))}</div>` : '-'}
+                    ${lead.ultimoContato ?`<div class="cell-muted">Ultimo: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
+                </td>
+                <td>
+                    ${lead.observacoes ?`<div class="cell-muted">${escapar(lead.observacoes)}</div>` : '-'}
+                    ${lead.clienteNome ?`<div class="cell-muted">Cliente: ${escapar(lead.clienteNome)}</div>` : ''}
+                </td>
+                <td>
+                    <div class="row-actions">
+                        <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(lead.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
+                        <form method="post" action="/crm/${escapar(lead.id)}/enviar" onsubmit="return confirm('Enviar mensagem comercial para este lead?');"><button class="button icon-only icon-action green" type="submit" title="Enviar acompanhamento">${icon('atendimento')}</button></form>
+                        <form method="post" action="/crm/${escapar(lead.id)}/status"><input type="hidden" name="status" value="teste_liberado"><button class="button icon-only icon-action refresh" type="submit" title="Marcar teste liberado">${icon('apps')}</button></form>
+                        <form method="post" action="/crm/${escapar(lead.id)}/status"><input type="hidden" name="status" value="aguardando_pagamento"><button class="button icon-only icon-action green" type="submit" title="Aguardando pagamento">${icon('financeiro')}</button></form>
+                        <form method="post" action="/crm/${escapar(lead.id)}/criar-cliente" onsubmit="return confirm('Criar cliente a partir deste lead?');"><button class="button icon-only icon-action green" type="submit" title="Criar cliente">${icon('user')}</button></form>
+                        <a class="button icon-only icon-action" href="/crm/${escapar(lead.id)}/editar" title="Editar">${icon('edit')}</a>
+                        <form method="post" action="/crm/${escapar(lead.id)}/excluir" onsubmit="return confirm('Apagar este lead?');"><button class="button icon-only icon-action" type="submit" title="Apagar">${icon('trash')}</button></form>
+                    </div>
+                    <form class="actions" method="post" action="/crm/${escapar(lead.id)}/converter" style="margin-top:8px;">
+                        <select name="clienteId" required>
+                            <option value="">Converter para cliente...</option>
+                            ${opcoesClientes}
+                        </select>
+                        <button class="button secondary" type="submit">${icon('check')} Vincular</button>
+                    </form>
+                </td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+}
+
+function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relatorio = {} }) {
+    const statusAtual = filtros.status || 'ativos';
+    const busca = filtros.busca || '';
+
+    return `<section class="page-title">
+        <h1>CRM de vendas</h1>
+        <div class="subtitle">Funil comercial, retornos e conversao de interessados em clientes</div>
+    </section>
+    ${cardsFunilCrm(resumo)}
+    ${formularioLead({})}
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Relatorio comercial</h2>
+                <div class="subtitle">${relatorio.conversoesMes || 0} conversao(oes) neste mes</div>
+            </div>
+        </div>
+        <div class="fields" style="padding-top:0;">
+            <div>
+                <div class="form-section">Por status</div>
+                ${(relatorio.porStatus || []).map(item => `<div class="client-row"><strong>${escapar(rotuloStatusLead(item.nome))}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
+            </div>
+            <div>
+                <div class="form-section">Por origem</div>
+                ${(relatorio.porOrigem || []).map(item => `<div class="client-row"><strong>${escapar(item.nome)}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
+            </div>
+        </div>
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Funil de leads</h2>
+                <div class="subtitle">${leads.length} lead(s) no filtro atual</div>
+            </div>
+            <form class="actions" method="get" action="/crm">
+                <input name="busca" value="${escapar(busca)}" placeholder="Buscar lead, telefone ou origem" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
+                <select name="status" onchange="this.form.submit()">
+                    ${[
+                        ['ativos', 'Ativos'],
+                        ['novo', 'Novo'],
+                        ['em_conversa', 'Em conversa'],
+                        ['teste_liberado', 'Teste liberado'],
+                        ['aguardando_pagamento', 'Aguardando pagamento'],
+                        ['ganho', 'Ganhos'],
+                        ['perdido', 'Perdidos'],
+                        ['todos', 'Todos']
+                    ].map(([valor, texto]) => `<option value="${valor}" ${valor === statusAtual ?'selected' : ''}>${texto}</option>`).join('')}
+                </select>
+                <button class="button secondary" type="submit">${icon('search')} Filtrar</button>
+            </form>
+        </div>
+        ${tabelaLeads(leads, clientes)}
+    </section>`;
+}
+
+function telaEditarLead({ lead = {}, historico = [] }) {
+    return `<section class="page-title">
+        <h1>Lead comercial</h1>
+        <div class="subtitle">${escapar(lead.nome || '')}</div>
+    </section>
+    ${formularioLead(lead)}
+    ${historicoLeadHtml(lead, historico)}`;
+}
+
 function itemPreparacao({ pronto, titulo, detalhe, acao, acaoPronto, href }) {
     return `<tr>
         <td data-label="Status"><span class="badge ${pronto ?'ok' : 'warn'}">${pronto ?'Pronto' : 'Pendente'}</span></td>
@@ -4596,7 +4842,7 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}) {
+function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
@@ -4614,6 +4860,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         ${metricCard({ label: `Próximos ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
+        ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
     </section>
     ${receitaMensalCard(receita)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
@@ -5936,18 +6183,19 @@ router.get('/clientes', async (req, res) => {
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
-    const [clientes, receitaBase, aniversariantes, resumoSuporte] = await Promise.all([
+    const [clientes, receitaBase, aniversariantes, resumoSuporte, resumoComercial] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarClientesAniversarioHoje(anoAtual),
-        resumoAtendimentos()
+        resumoAtendimentos(),
+        resumoCrm()
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes, resumoSuporte),
+        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial),
         mensagem,
         ativo: 'painel'
     });
@@ -5994,6 +6242,146 @@ router.get('/atendimentos', async (req, res) => {
         mensagem: req.query.mensagem || '',
         ativo: 'atendimentos'
     });
+});
+
+router.get('/crm', async (req, res) => {
+    desativarCache(res);
+    const filtros = {
+        status: String(req.query.status || 'ativos'),
+        busca: String(req.query.busca || '').trim()
+    };
+    const [leads, clientes, resumo, relatorio] = await Promise.all([
+        listarLeads(filtros),
+        listarClientes(),
+        resumoCrm(),
+        relatorioComercial()
+    ]);
+
+    await renderizar(res, {
+        titulo: 'CRM',
+        conteudo: telaCrm({ leads, clientes, filtros, resumo, relatorio }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'crm'
+    });
+});
+
+router.get('/crm/:id/editar', async (req, res) => {
+    const [lead, historico] = await Promise.all([
+        buscarLeadPorId(req.params.id),
+        listarHistoricoLead(req.params.id)
+    ]);
+
+    if (!lead) {
+        return res.redirect('/crm?mensagem=Lead nao encontrado.');
+    }
+
+    await renderizar(res, {
+        titulo: 'Editar lead',
+        conteudo: telaEditarLead({ lead, historico }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'crm'
+    });
+});
+
+router.post('/crm/salvar', async (req, res) => {
+    try {
+        const lead = await salvarLead(req.body);
+        return res.redirect(`/crm/${lead.id}/editar?mensagem=${encodeURIComponent('Lead salvo com sucesso.')}`);
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/historico', async (req, res) => {
+    try {
+        await adicionarHistoricoLead(req.params.id, req.body.texto || '', 'nota');
+        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent('Historico atualizado.')}`);
+    } catch (err) {
+        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/status', async (req, res) => {
+    try {
+        await atualizarStatusLead(req.params.id, req.body.status, `Status alterado para ${rotuloStatusLead(req.body.status)}.`);
+        return res.redirect('/crm?mensagem=Lead atualizado.');
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/converter', async (req, res) => {
+    try {
+        const lead = await vincularLeadAoCliente(req.params.id, req.body.clienteId);
+        await adicionarNotaCliente(req.body.clienteId, `Lead convertido no CRM: ${lead.nome}${lead.telefone ?` (${lead.telefone})` : ''}.`);
+        return res.redirect('/crm?mensagem=Lead convertido e vinculado ao cliente.');
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/criar-cliente', async (req, res) => {
+    try {
+        const lead = await buscarLeadPorId(req.params.id);
+        if (!lead) {
+            return res.redirect('/crm?mensagem=Lead nao encontrado.');
+        }
+
+        const cliente = await salvarCliente({
+            nome: lead.nome,
+            telefone: lead.telefone,
+            origem: lead.origem,
+            plano: lead.interesse || 'Lead comercial',
+            dataInicio: agoraLocalDateTime(),
+            dataVencimento: '',
+            observacoes: `Criado a partir do CRM.${lead.observacoes ?`\n${lead.observacoes}` : ''}`,
+            tags: 'Acompanhar',
+            status: lead.status === 'teste_liberado' ? 'teste' : 'pendente'
+        });
+
+        await vincularLeadAoCliente(lead.id, cliente.id);
+        await adicionarNotaCliente(cliente.id, `Cliente criado a partir do lead ${lead.nome}.`);
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Cliente criado a partir do CRM.'));
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/excluir', async (req, res) => {
+    try {
+        await removerLead(req.params.id);
+        return res.redirect('/crm?mensagem=Lead removido.');
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/crm/:id/enviar', async (req, res) => {
+    try {
+        const lead = await buscarLeadPorId(req.params.id);
+        if (!lead) {
+            return res.redirect('/crm?mensagem=Lead nao encontrado.');
+        }
+
+        const status = getStatusWhatsApp();
+        const client = getClient();
+
+        if (!client || !status.conectado) {
+            return res.redirect('/crm?mensagem=WhatsApp nao esta conectado.');
+        }
+
+        const envio = await enviarMensagemWhatsAppComFallback(
+            client,
+            lead.telefone,
+            mensagemLeadPadrao(lead),
+            'Envio comercial para lead'
+        );
+
+        await adicionarHistoricoLead(lead.id, `Mensagem comercial enviada pelo WhatsApp para ${envio.destino}.`, 'whatsapp');
+        return res.redirect('/crm?mensagem=Mensagem comercial enviada.');
+    } catch (err) {
+        return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`);
+    }
 });
 
 router.post('/atendimentos', async (req, res) => {
