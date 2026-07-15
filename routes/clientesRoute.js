@@ -740,7 +740,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .topbar, main {
-            width: min(1500px, calc(100% - 28px));
+            width: min(1760px, calc(100% - 24px));
             margin: 0 auto;
         }
 
@@ -749,15 +749,17 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 22px;
+            gap: 12px;
         }
 
         .brand {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            font-size: 18px;
+            gap: 8px;
+            flex: 0 0 auto;
+            font-size: 16px;
             font-weight: 800;
+            line-height: 1.05;
         }
 
         .brand form {
@@ -788,20 +790,25 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         nav {
+            flex: 1 1 auto;
+            min-width: 0;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: space-between;
+            gap: 4px;
             color: var(--muted);
             font-weight: 700;
+            overflow: hidden;
         }
 
         .navlink {
-            min-height: 42px;
+            min-height: 40px;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 0 16px;
-            border-radius: 12px;
+            gap: 6px;
+            padding: 0 8px;
+            border-radius: 10px;
+            font-size: 14px;
             white-space: nowrap;
         }
 
@@ -861,6 +868,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             margin-bottom: 36px;
         }
 
+        .dashboard-metrics {
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            gap: 10px;
+        }
+
         .metric, .panel {
             background: var(--panel);
             border: 1px solid var(--line);
@@ -876,12 +888,24 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             gap: 16px;
         }
 
+        .dashboard-metrics .metric {
+            min-height: 128px;
+            padding: 18px 14px;
+            gap: 8px;
+        }
+
         .metric-label {
             display: block;
             margin-bottom: 14px;
             color: var(--muted);
             font-size: 16px;
             font-weight: 700;
+        }
+
+        .dashboard-metrics .metric-label {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.15;
         }
 
         .metric-value {
@@ -892,6 +916,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             line-height: 1;
         }
 
+        .dashboard-metrics .metric-value {
+            font-size: 30px;
+        }
+
         .metric-note {
             display: block;
             margin-top: 14px;
@@ -900,12 +928,24 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 600;
         }
 
+        .dashboard-metrics .metric-note {
+            margin-top: 10px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+
         .metric-icon {
             display: grid;
             place-items: center;
             width: 52px;
             height: 52px;
             border-radius: 14px;
+        }
+
+        .dashboard-metrics .metric-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
         }
 
         .metric-icon.blue { background: var(--blue-soft); color: var(--blue); }
@@ -1951,6 +1991,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 grid-template-columns: repeat(2, minmax(150px, 1fr));
             }
 
+            .dashboard-metrics {
+                grid-template-columns: repeat(2, minmax(150px, 1fr));
+            }
+
             .revenue-row {
                 grid-template-columns: minmax(100px, 1fr) minmax(82px, auto) minmax(90px, auto);
             }
@@ -2002,6 +2046,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             }
 
             .metrics {
+                grid-template-columns: 1fr;
+            }
+
+            .dashboard-metrics {
                 grid-template-columns: 1fr;
             }
 
@@ -4852,7 +4900,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
     </section>
-    <section class="metrics">
+    <section class="metrics dashboard-metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
         ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grátis', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
