@@ -110,6 +110,7 @@ const {
     relatorioComercial
 } = require('../services/crmService');
 const { enfileirarEnvio } = require('../services/filaMensagensService');
+const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 
 const router = express.Router();
 const WHATSAPP_ENVIO_DUPLICADO_MS = 45000;
@@ -3942,6 +3943,28 @@ function secaoPixPlanoCliente(cliente = {}) {
     </section>`;
 }
 
+function secaoHistoricoRobo(interacoes = []) {
+    const itens = interacoes.length
+        ? interacoes.map(item => `<div class="note-item">
+            <strong>${escapar(item.titulo || 'Interação do robô')}</strong>
+            <span>${escapar(formatarDataHoraCurta(item.criadoEm))} &middot; ${escapar(item.status || 'registrado')}${item.destino ?` &middot; ${escapar(item.destino)}` : ''}</span>
+            <p>${escapar(item.resumo || '-')}</p>
+        </div>`).join('')
+        : '<div class="empty">Nenhuma interação do robô registrada para este cliente.</div>';
+
+    return `<section class="panel" id="historico-robo" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Histórico do robô</h2>
+                <div class="subtitle">Últimas mensagens, PIX, renovações e respostas automáticas vinculadas ao WhatsApp do cliente.</div>
+            </div>
+        </div>
+        <div style="padding:20px;">
+            ${itens}
+        </div>
+    </section>`;
+}
+
 function clienteAniversarioPendente(cliente = {}) {
     const nascimento = String(cliente.nascimento || '');
     if (nascimento.length < 10) return false;
@@ -3962,6 +3985,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const pagamentos = opcoesFormulario.pagamentos || [];
     const alertas = opcoesFormulario.alertas || [];
     const atendimentos = opcoesFormulario.atendimentos || [];
+    const interacoesRobo = opcoesFormulario.interacoesRobo || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
@@ -4377,6 +4401,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
+        cliente.id ?secaoHistoricoRobo(interacoesRobo) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
@@ -5947,6 +5972,16 @@ function formatarUptime(segundos = 0) {
 function painelSaudeRobo(status = {}) {
     const whatsapp = status.whatsapp || {};
     const saudeRobo = status.saudeRobo || {};
+    const fila = status.filaMensagens || {};
+    const risco = status.riscoWhatsApp || {};
+    const atendimentosHumanos = status.atendimentosHumanos || [];
+    const classeRisco = risco.nivel === 'alto' ? 'red' : risco.nivel === 'atenção' ? 'orange' : 'green';
+    const pausas = atendimentosHumanos.length
+        ? atendimentosHumanos.slice(0, 6).map(item => `<div class="note-item">
+            <strong>${escapar(item.nome || item.telefone)}</strong>
+            <span>${escapar(item.telefone)} &middot; pausado até ${escapar(formatarDataHoraCurta(item.pausaAte))}${item.expirada ?' &middot; expirada' : ''}</span>
+        </div>`).join('')
+        : '<div class="empty">Nenhum atendimento manual pausado agora.</div>';
 
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5959,6 +5994,8 @@ function painelSaudeRobo(status = {}) {
         <table>
             <tbody>
                 <tr><td><strong>WhatsApp</strong></td><td>${whatsapp.conectado ?'Conectado' : 'Desconectado'}${saudeRobo.numeroConectado ?` em ${escapar(saudeRobo.numeroConectado)}` : ''}</td></tr>
+                <tr><td><strong>Risco do WhatsApp</strong></td><td><span class="badge ${classeRisco}">${escapar(risco.nivel || 'baixo')}</span> ${escapar(risco.recomendacao || 'Operação normal.')}</td></tr>
+                <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} pendente(s)${fila.ultimoEnvioEm ?`, último envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
                 <tr><td><strong>Última mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
                 <tr><td><strong>Última resposta do robô</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
                 <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o último início</td></tr>
@@ -5966,6 +6003,11 @@ function painelSaudeRobo(status = {}) {
                 <tr><td><strong>Memória do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
             </tbody>
         </table>
+        ${risco.pontos?.length ?`<div class="notice" style="margin:16px 20px 0;">${risco.pontos.map(escapar).join(' ')}</div>` : ''}
+        <div style="padding:18px 20px 20px;">
+            <h3 style="margin:0 0 10px;">Atendimentos humanos pausados</h3>
+            ${pausas}
+        </div>
     </section>`;
 }
 
@@ -6018,6 +6060,73 @@ function resumoImportacaoClientes(importacao = {}) {
             </tbody>
         </table>
         ${itens.length > amostra.length ?`<div class="subtitle" style="padding:12px 0 0;">Mostrando ${amostra.length} de ${itens.length} linha(s).</div>` : ''}
+    </section>`;
+}
+
+function telaSimuladorRobo({ nome = 'Cliente Teste', intencao = 'menu', resultado = null } = {}) {
+    const cenarios = {
+        menu: [
+            ['Cliente', 'oi'],
+            ['Robô', 'Boas-vindas com opções: cliente, teste grátis ou planos.']
+        ],
+        teste: [
+            ['Cliente', 'quero teste'],
+            ['Robô', 'Pergunta o nome e depois o dispositivo.'],
+            ['Cliente', 'Amanda'],
+            ['Robô', 'Mostra opções de Smart TV, TV Box, Android, iPhone ou computador.']
+        ],
+        pix: [
+            ['Cliente', 'me manda o pix'],
+            ['Robô', 'Identifica intenção de pagamento e direciona para planos/renovação.']
+        ],
+        suporte: [
+            ['Cliente', 'não está funcionando'],
+            ['Robô', 'Pausa o atendimento automático e orienta aguardar um atendente.']
+        ],
+        renovacao: [
+            ['Cliente', 'quero renovar'],
+            ['Robô', 'Inicia renovação e pede o usuário do painel para localizar o cadastro.']
+        ]
+    };
+    const passos = resultado || cenarios[intencao] || cenarios.menu;
+
+    return `<section class="page-title">
+        <h1>Simular conversa do robô</h1>
+        <div class="subtitle">Demonstração interna: nada é enviado pelo WhatsApp.</div>
+    </section>
+    <section class="panel" style="margin-bottom:24px;">
+        <form class="fields" method="post" action="/manutencao/simular-robo">
+            ${campo({ nome: 'nome', label: 'Nome do cliente teste', valor: nome, attrs: 'placeholder="Ex: Amanda"' })}
+            <label>Fluxo
+                <select name="intencao">
+                    ${[
+                        ['menu', 'Boas-vindas'],
+                        ['teste', 'Teste grátis'],
+                        ['pix', 'Pedido de PIX'],
+                        ['suporte', 'Problema/suporte'],
+                        ['renovacao', 'Renovação']
+                    ].map(([valor, texto]) => `<option value="${valor}" ${intencao === valor ?'selected' : ''}>${texto}</option>`).join('')}
+                </select>
+            </label>
+            <div class="actions full">
+                <button class="button" type="submit">${icon('refresh')} Simular conversa</button>
+                <a class="button secondary" href="/manutencao">Voltar</a>
+            </div>
+        </form>
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Resultado da simulação</h2>
+                <div class="subtitle">Fluxo que você pode mostrar em venda ou treinamento.</div>
+            </div>
+        </div>
+        <div style="padding:20px;display:grid;gap:10px;">
+            ${passos.map(([quem, texto]) => `<div class="note-item">
+                <strong>${escapar(quem)}</strong>
+                <p>${escapar(String(texto).replace('Cliente Teste', nome))}</p>
+            </div>`).join('')}
+        </div>
     </section>`;
 }
 
@@ -6134,6 +6243,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
                 <a class="button secondary" href="/planos">${icon('planos')} Editar planos</a>
                 <a class="button secondary" href="/qr">${icon('whats')} Ver WhatsApp</a>
+                <a class="button secondary" href="/manutencao/simular-robo">${icon('refresh')} Simular conversa</a>
             </div>
         </form>
         <div class="notice" style="margin:0 20px 18px;">Envie imagens leves, preferencialmente JPG ou PNG em 1080x1080 para cards e 1200x628 para banners. O envio ao WhatsApp aguarda até 30 segundos.</div>
@@ -6729,17 +6839,18 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
         buscarAlertasCadastroCliente(cliente),
-        listarAtendimentosCliente(cliente.id)
+        listarAtendimentosCliente(cliente.id),
+        listarInteracoesCliente(cliente)
     ]);
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, atendimentos, paginaHistorico: req.query.historico || req.query.pagina }),
+        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, atendimentos, interacoesRobo, paginaHistorico: req.query.historico || req.query.pagina }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
@@ -7506,6 +7617,26 @@ router.get('/manutencao', async (req, res) => {
         titulo: 'Manutenção',
         conteudo: telaManutencao(status),
         mensagem: req.query.mensagem || '',
+        ativo: 'manutencao'
+    });
+});
+
+router.get('/manutencao/simular-robo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Simular conversa do robô',
+        conteudo: telaSimuladorRobo(),
+        ativo: 'manutencao'
+    });
+});
+
+router.post('/manutencao/simular-robo', async (req, res) => {
+    await renderizar(res, {
+        titulo: 'Simular conversa do robô',
+        conteudo: telaSimuladorRobo({
+            nome: req.body.nome || 'Cliente Teste',
+            intencao: req.body.intencao || 'menu'
+        }),
+        mensagem: 'Simulação gerada sem enviar mensagem real.',
         ativo: 'manutencao'
     });
 });

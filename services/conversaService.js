@@ -150,6 +150,26 @@ function liberarAtendimentosHumanos(telefone = '') {
     return { liberados, totalRestante: conversas.size };
 }
 
+function listarAtendimentosHumanos(perfil = {}) {
+    const limiteMs = perfil.atendimentoHumanoMs || ATENDIMENTO_HUMANO_TIMEOUT_MS;
+
+    return [...conversas.entries()]
+        .filter(([, conversa]) => conversa?.etapa === 'atendimento_humano')
+        .map(([telefone, conversa]) => {
+            const inicio = conversa.iniciadoEm ?new Date(conversa.iniciadoEm).getTime() : 0;
+            const pausaAte = inicio ?new Date(inicio + limiteMs).toISOString() : '';
+
+            return {
+                telefone,
+                nome: conversa.nome || '',
+                origem: conversa.origem || '',
+                iniciadoEm: conversa.iniciadoEm || '',
+                pausaAte,
+                expirada: atendimentoHumanoExpirou(conversa, perfil)
+            };
+        });
+}
+
 function prepararRenovacaoTesteGratis(telefone, cliente = {}) {
     definirConversa(telefone, {
         etapa: 'renovacao_plano',
@@ -399,6 +419,59 @@ function isPedidoPlanos(texto) {
     if (!textoNormalizado) return false;
 
     return /\bplanos?\b/.test(textoNormalizado) || isPedidoPreco(texto);
+}
+
+function isPedidoPix(texto) {
+    const textoNormalizado = normalizar(texto);
+    return [
+        'pix',
+        'pagamento',
+        'pagar',
+        'cobranca',
+        'cobrança',
+        'qr code',
+        'qrcode'
+    ].some((termo) => textoNormalizado.includes(normalizar(termo)));
+}
+
+function isPedidoSuporte(texto) {
+    const textoNormalizado = normalizar(texto);
+    return [
+        'nao funciona',
+        'não funciona',
+        'travando',
+        'travou',
+        'sem sinal',
+        'caiu',
+        'erro',
+        'suporte',
+        'ajuda',
+        'problema'
+    ].some((termo) => textoNormalizado.includes(normalizar(termo)));
+}
+
+function isPedidoSenhaOuAcesso(texto) {
+    const textoNormalizado = normalizar(texto);
+    return [
+        'senha',
+        'usuario',
+        'usuário',
+        'login',
+        'acesso',
+        'dados'
+    ].some((termo) => textoNormalizado.includes(normalizar(termo)));
+}
+
+function isPedidoVencimento(texto) {
+    const textoNormalizado = normalizar(texto);
+    return [
+        'vencimento',
+        'vence',
+        'vencer',
+        'validade',
+        'ate quando',
+        'até quando'
+    ].some((termo) => textoNormalizado.includes(normalizar(termo)));
 }
 
 function isSaudacaoOuInicio(texto) {
@@ -900,6 +973,21 @@ Caso queira retornar ao atendimento, digite *menu*.`, imagens.encerramento);
             return;
         }
 
+        if (textoCurto(textoOriginal) && (isPedidoPix(textoOriginal) || isPedidoVencimento(textoOriginal) || texto.includes('renovar') || texto.includes('renovacao'))) {
+            definirConversa(telefone, { etapa: 'renovacao_nome' });
+            await responderComDigitacao(message, `*RENOVAÇÃO E PAGAMENTO*
+--------------------
+Para eu localizar seu cadastro, envie o *usuário do painel* ou o nome cadastrado.`, imagens.renovacao);
+            return;
+        }
+
+        if (textoCurto(textoOriginal) && (isPedidoSuporte(textoOriginal) || isPedidoSenhaOuAcesso(textoOriginal))) {
+            apagarConversa(telefone);
+            pausarParaAtendente(telefone, conversa.nome, 'suporte');
+            await responderComDigitacao(message, mensagemTransferirAtendente(conversa.nome), imagens.ativacao);
+            return;
+        }
+
         if (texto === '3') {
             apagarConversa(telefone);
             await enviarMenuPrincipal(message, imagens.menu, perfil);
@@ -922,7 +1010,7 @@ Escolha uma das opções:
             return;
         }
 
-        if (texto === '1') {
+        if (texto === '1' || (textoCurto(textoOriginal) && (isPedidoPix(textoOriginal) || isPedidoVencimento(textoOriginal) || texto.includes('renovar') || texto.includes('renovacao')))) {
             definirConversa(telefone, { etapa: 'renovacao_nome' });
 
             await responderComDigitacao(message, `🔄 *RENOVAÇÃO*
@@ -930,6 +1018,13 @@ Escolha uma das opções:
 Vamos iniciar sua renovação.
 
 Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagens.renovacao);
+            return;
+        }
+
+        if (textoCurto(textoOriginal) && (isPedidoSuporte(textoOriginal) || isPedidoSenhaOuAcesso(textoOriginal))) {
+            apagarConversa(telefone);
+            pausarParaAtendente(telefone, conversa.nome, 'suporte');
+            await responderComDigitacao(message, mensagemTransferirAtendente(conversa.nome), imagens.ativacao);
             return;
         }
 
@@ -1184,6 +1279,38 @@ Escolha um dispositivo da lista:
         return;
     }
 
+    if (textoCurto(textoOriginal) && isPedidoSuporte(textoOriginal)) {
+        apagarConversa(telefone);
+        pausarParaAtendente(telefone, await obterNomeContato(message), 'suporte');
+        await responderComDigitacao(message, `*ATENDIMENTO COM SUPORTE*
+--------------------
+Entendi que você está com dificuldade no acesso.
+
+Vou encaminhar seu atendimento para um atendente verificar com cuidado.
+Envie, se possível, uma foto da tela ou descreva o erro que aparece.`, imagens.ativacao);
+        return;
+    }
+
+    if (textoCurto(textoOriginal) && (isPedidoPix(textoOriginal) || isPedidoVencimento(textoOriginal))) {
+        definirConversa(telefone, { etapa: 'renovacao_nome' });
+
+        await responderComDigitacao(message, `*RENOVAÇÃO E PAGAMENTO*
+--------------------
+Para eu localizar seu cadastro e enviar a orientação correta, envie o *usuário do painel* ou o nome cadastrado.`, imagens.renovacao);
+        return;
+    }
+
+    if (textoCurto(textoOriginal) && isPedidoSenhaOuAcesso(textoOriginal)) {
+        apagarConversa(telefone);
+        pausarParaAtendente(telefone, await obterNomeContato(message), 'acesso');
+        await responderComDigitacao(message, `*DADOS DE ACESSO*
+--------------------
+Para proteger seu cadastro, um atendente vai conferir seus dados antes de reenviar usuário ou senha.
+
+Aguarde alguns minutos por aqui.`, imagens.ativacao);
+        return;
+    }
+
     if (texto === '1' || (textoCurto(textoOriginal) && isPedidoPlanos(textoOriginal))) {
         definirConversa(telefone, { etapa: 'planos_escolha' });
         await responderComDigitacao(message, menuPlanos(planos, perfil.nomeEmpresa), imagens.planos);
@@ -1223,6 +1350,7 @@ Envie o *usuário do painel* para o atendente localizar o cadastro.`, imagens.re
 module.exports = {
     pausarParaAtendente,
     liberarAtendimentosHumanos,
+    listarAtendimentosHumanos,
     prepararRenovacaoTesteGratis,
     responderMensagem,
     responderEncerramentoRapido,

@@ -5,6 +5,8 @@ const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarEventosSistema, registrarEventoSistema } = require('./eventosSistema');
 const { calcularEstadoLicenca } = require('./licencaCalculo');
+const { obterStatusFilaMensagens } = require('./filaMensagensService');
+const { listarAtendimentosHumanos } = require('./conversaService');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -28,6 +30,63 @@ function timestampArquivo() {
     ];
 
     return `${partes[0]}${partes[1]}${partes[2]}-${partes[3]}${partes[4]}${partes[5]}`;
+}
+
+function minutosDesde(valor) {
+    if (!valor) return null;
+    const data = new Date(valor).getTime();
+    if (!data) return null;
+    return Math.floor((Date.now() - data) / 60000);
+}
+
+function calcularRiscoWhatsApp(statusWhatsApp = {}, fila = {}) {
+    const pontos = [];
+    let score = 0;
+
+    if (!statusWhatsApp.conectado) {
+        score += statusWhatsApp.temQr ? 2 : 3;
+        pontos.push(statusWhatsApp.temQr ? 'Aguardando leitura de QR Code.' : 'WhatsApp desconectado.');
+    }
+
+    const minutosQr = minutosDesde(statusWhatsApp.ultimoQrEm);
+    if (minutosQr !== null && minutosQr <= 30) {
+        score += 1;
+        pontos.push(`QR Code gerado há ${minutosQr} minuto(s).`);
+    }
+
+    if (Number(statusWhatsApp.eventosInternosIgnoradosTotal || 0) > 50) {
+        score += 1;
+        pontos.push('Muitos eventos internos ignorados nesta execução.');
+    }
+
+    if (Number(statusWhatsApp.conversasNaoIndividuaisIgnoradasTotal || 0) > 20) {
+        score += 1;
+        pontos.push('Muitas mensagens de grupos/newsletters foram ignoradas.');
+    }
+
+    if (Number(fila.pendentes || 0) > 5) {
+        score += 2;
+        pontos.push('Fila de WhatsApp com muitos envios pendentes.');
+    }
+
+    if (fila.ultimoErro) {
+        score += 2;
+        pontos.push(`Último erro de envio: ${fila.ultimoErro}`);
+    }
+
+    const nivel = score >= 4 ? 'alto' : score >= 2 ? 'atenção' : 'baixo';
+    const recomendacao = nivel === 'alto'
+        ? 'Evite disparos em massa agora e verifique QR Code, conexão e logs.'
+        : nivel === 'atenção'
+            ? 'Acompanhe antes de fazer muitos envios.'
+            : 'Operação normal.';
+
+    return {
+        nivel,
+        score,
+        pontos,
+        recomendacao
+    };
 }
 
 function listarBackups() {
@@ -245,6 +304,10 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const backups = listarBackups();
     const config = await obterConfiguracoes();
     const eventos = await listarEventosSistema(6);
+    const filaMensagens = obterStatusFilaMensagens();
+    const atendimentoHumanoMs = Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000;
+    const atendimentosHumanos = listarAtendimentosHumanos({ atendimentoHumanoMs });
+    const riscoWhatsApp = calcularRiscoWhatsApp(statusWhatsApp, filaMensagens);
     const ultimoEventoDiagnostico = eventos.find(evento => evento.tipo === 'diagnostico');
     let diagnostico = null;
 
@@ -284,6 +347,9 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         config,
         licenca: calcularLicenca(config),
         whatsapp: statusWhatsApp,
+        filaMensagens,
+        atendimentosHumanos,
+        riscoWhatsApp,
         saudeRobo: {
             whatsappConectado: Boolean(statusWhatsApp.conectado),
             whatsappStatus: statusWhatsApp.status || '',

@@ -234,6 +234,24 @@ db.serialize(() => {
     `);
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS cliente_interacoes_robo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER,
+            telefone TEXT,
+            tipo TEXT DEFAULT 'whatsapp',
+            titulo TEXT,
+            resumo TEXT,
+            destino TEXT,
+            status TEXT DEFAULT 'registrado',
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE SET NULL
+        )
+    `);
+
+    db.run('CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_robo_cliente ON cliente_interacoes_robo(clienteId, criadoEm DESC)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_cliente_interacoes_robo_telefone ON cliente_interacoes_robo(telefone, criadoEm DESC)');
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS eventos_sistema (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tipo TEXT NOT NULL,

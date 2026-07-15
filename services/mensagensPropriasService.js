@@ -7,6 +7,22 @@ const TEMPO_ENVIO_MS = 60 * 1000;
 let ultimoEnvioDoRoboEm = null;
 let ultimoEnvioDoRoboPara = '';
 
+function registrarHistoricoEnvio(destino, texto) {
+    try {
+        const { registrarInteracaoRoboSilenciosa } = require('./interacoesRoboService');
+        registrarInteracaoRoboSilenciosa({
+            telefone: destino,
+            destino,
+            tipo: 'whatsapp',
+            titulo: 'Mensagem enviada pelo robô',
+            resumo: texto,
+            status: 'enviada'
+        });
+    } catch (err) {
+        console.log('Não foi possível preparar histórico do robô:', err.message);
+    }
+}
+
 function obterId(message) {
     return message?.id?._serialized || '';
 }
@@ -45,6 +61,7 @@ function registrarEnvioDoRobo(destino, texto) {
 
     ultimoEnvioDoRoboEm = new Date().toISOString();
     ultimoEnvioDoRoboPara = destino;
+    registrarHistoricoEnvio(destino, texto);
 
     const chave = chaveEnvio(destino, texto);
     const textoNormalizado = normalizarTexto(texto);
