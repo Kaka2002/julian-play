@@ -965,6 +965,17 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
                 <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}" title="Opcional: defina uma data manual" style="max-width:160px;margin-bottom:6px">
                 <button class="smallbtn" type="submit">Gerar renovação</button>
               </form>
+              <details style="width:100%;margin-top:6px">
+                <summary class="smallbtn secondary" style="display:inline-flex;cursor:pointer">Transferir</summary>
+                <form method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/transferir" style="display:grid;gap:6px;margin-top:8px;min-width:260px">
+                  <input name="novaInstalacaoId" required placeholder="Novo ID da instalação">
+                  <input name="novaMachineFingerprint" required placeholder="Nova chave da máquina">
+                  <select name="licencaTipo">${opcoesTipoLicencaSelect(tipoLicencaFormulario(item.tipo))}</select>
+                  <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}" title="Opcional: novo vencimento">
+                  <input name="motivoTransferencia" placeholder="Motivo: formatou, trocou PC...">
+                  <button class="smallbtn" type="submit">Gerar transferência</button>
+                </form>
+              </details>
               <form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/apagar" onsubmit="return confirm('Apagar esta licença local da lista ativa? O histórico será preservado.');"><button class="smallbtn danger" type="submit">Apagar</button></form>
             </div>
           </td>
@@ -1013,8 +1024,8 @@ async function salvarLicencaLocalGerada(dados = {}) {
     await masterDb.executar(
         `INSERT INTO licencas_locais (
             instalacaoId, cliente, telefone, machineFingerprint, tipo, ativacao, vencimento, vitalicia,
-            suspensa, codigo, observacoes, apagada, apagadaEm, atualizadoEm
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', NULL, CURRENT_TIMESTAMP)
+            suspensa, codigo, observacoes, apagada, apagadaEm, transferida, transferidaEm, transferidaPara, atualizadoEm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', NULL, '0', NULL, NULL, CURRENT_TIMESTAMP)
         ON CONFLICT(instalacaoId) DO UPDATE SET
             cliente = excluded.cliente,
             telefone = excluded.telefone,
@@ -1028,6 +1039,9 @@ async function salvarLicencaLocalGerada(dados = {}) {
             observacoes = excluded.observacoes,
             apagada = '0',
             apagadaEm = NULL,
+            transferida = '0',
+            transferidaEm = NULL,
+            transferidaPara = NULL,
             atualizadoEm = CURRENT_TIMESTAMP`,
         [
             dados.instalacaoId,
@@ -1071,6 +1085,26 @@ async function apagarLicencaLocal(instalacaoId) {
         [licenca.instalacaoId]
     );
     await registrarEventoLicencaLocal(licenca.instalacaoId, 'apagada', 'Licença apagada da lista ativa.', licenca.cliente || '');
+}
+
+async function marcarLicencaLocalTransferida(licenca, novaInstalacaoId, motivo = '') {
+    await masterDb.executar(
+        `UPDATE licencas_locais
+            SET apagada = '1',
+                apagadaEm = CURRENT_TIMESTAMP,
+                transferida = '1',
+                transferidaEm = CURRENT_TIMESTAMP,
+                transferidaPara = ?,
+                atualizadoEm = CURRENT_TIMESTAMP
+          WHERE instalacaoId = ?`,
+        [novaInstalacaoId, licenca.instalacaoId]
+    );
+    await registrarEventoLicencaLocal(
+        licenca.instalacaoId,
+        'transferencia',
+        'Licença transferida para nova instalação.',
+        `Nova instalação: ${novaInstalacaoId}; motivo: ${motivo || 'não informado'}`
+    );
 }
 
 async function listarHistoricoLicencaLocal(instalacaoId) {
@@ -1241,7 +1275,7 @@ app.post('/login', (req, res) => {
 
     return res.status(401).send(paginaLogin({
         destino: req.body.destino,
-        erro: 'Usuario ou senha invalidos.'
+        erro: 'Usuário ou senha inválidos.'
     }));
 });
 
@@ -1375,10 +1409,100 @@ app.post('/licencas/codigo', async (req, res) => {
     }
 });
 
+app.post('/licencas/:instalacaoId/transferir', async (req, res) => {
+    try {
+        const licencaAtual = await buscarLicencaLocal(req.params.instalacaoId);
+        if (!licencaAtual) throw new Error('Licença local não encontrada.');
+
+        const tipo = String(req.body.licencaTipo || tipoLicencaFormulario(licencaAtual.tipo)).trim();
+        const instalacaoId = String(req.body.novaInstalacaoId || '').trim();
+        const machineFingerprint = String(req.body.novaMachineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const motivo = String(req.body.motivoTransferencia || '').trim();
+        const hoje = dataHojeSaoPaulo();
+        const diasPorTipo = {
+            avaliacao_15: 15,
+            avaliacao_30: 30,
+            mensal: 30,
+            semestral: 180,
+            anual: 365
+        };
+
+        if (!instalacaoId) throw new Error('Informe o novo ID da instalação.');
+        if (instalacaoId === licencaAtual.instalacaoId) throw new Error('O novo ID precisa ser diferente da instalação antiga.');
+        if (!machineFingerprint) throw new Error('Informe a nova chave da máquina exibida na tela de licença do cliente.');
+
+        const existente = await buscarLicencaLocal(instalacaoId);
+        if (existente && String(existente.apagada || '0') !== '1') {
+            throw new Error('Já existe uma licença ativa para o novo ID informado.');
+        }
+
+        const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
+        const vencimento = tipo === 'vitalicia'
+            ? ''
+            : String(req.body.licencaVencimento || '').slice(0, 10) || licencaAtual.vencimento || adicionarDias(hoje, diasPorTipo[tipo] || 30);
+        const servidorUrl = urlPublicaMestre(req);
+        const codigoLicenca = gerarCodigoLicencaAssinado({
+            v: 1,
+            instalacaoId,
+            machineFingerprint,
+            cliente: licencaAtual.cliente,
+            telefone: licencaAtual.telefone || '',
+            tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+            ativacao: hoje,
+            vencimento,
+            vitalicia: tipo === 'vitalicia' ? '1' : '0',
+            periodoTesteDias: tipo === 'avaliacao_15' ? '15' : tipo === 'avaliacao_30' ? '30' : '0',
+            suspensa: tipo === 'suspensa' ? '1' : '0',
+            observacoes: licencaAtual.observacoes || '',
+            servidorUrl,
+            emitidoEm: new Date().toISOString()
+        });
+
+        await salvarLicencaLocalGerada({
+            instalacaoId,
+            machineFingerprint,
+            cliente: licencaAtual.cliente,
+            telefone: licencaAtual.telefone || '',
+            tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+            ativacao: hoje,
+            vencimento,
+            vitalicia: tipo === 'vitalicia' ? '1' : '0',
+            suspensa: tipo === 'suspensa' ? '1' : '0',
+            codigo: codigoLicenca,
+            observacoes: licencaAtual.observacoes || ''
+        });
+        await marcarLicencaLocalTransferida(licencaAtual, instalacaoId, motivo);
+        await registrarEventoLicencaLocal(
+            instalacaoId,
+            'transferencia',
+            'Licença criada por transferência.',
+            `Instalação anterior: ${licencaAtual.instalacaoId}; motivo: ${motivo || 'não informado'}`
+        );
+
+        const licencas = await listarLicencasLocaisEmitidas();
+        res.send(paginaLicencasLocais(licencas, {
+            mensagem: 'Transferência gerada. Envie o código novo ao cliente para aplicar na tela de licença.',
+            codigoLicenca: {
+                instalacaoId,
+                machineFingerprint,
+                licencaCliente: licencaAtual.cliente,
+                licencaTelefone: licencaAtual.telefone || '',
+                licencaTipo: tipo,
+                licencaVencimento: vencimento,
+                licencaObservacoes: licencaAtual.observacoes || '',
+                codigoLicenca
+            }
+        }));
+    } catch (err) {
+        const licencas = await listarLicencasLocaisEmitidas().catch(() => []);
+        res.status(400).send(paginaLicencasLocais(licencas, { erro: err.message }));
+    }
+});
+
 app.post('/licencas/:instalacaoId/apagar', async (req, res) => {
     try {
         await apagarLicencaLocal(req.params.instalacaoId);
-        res.redirect('/licencas?mensagem=' + encodeURIComponent('Licenca local apagada da lista ativa. O historico foi preservado.'));
+        res.redirect('/licencas?mensagem=' + encodeURIComponent('Licença local apagada da lista ativa. O histórico foi preservado.'));
     } catch (err) {
         res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
     }
@@ -1391,7 +1515,7 @@ app.get('/licencas/:instalacaoId/historico', async (req, res) => {
             buscarLicencaLocal(instalacaoId),
             listarHistoricoLicencaLocal(instalacaoId)
         ]);
-        if (!licenca) throw new Error('Licenca local nao encontrada.');
+        if (!licenca) throw new Error('Licença local não encontrada.');
         res.send(paginaHistoricoLicencaLocal(licenca, eventos));
     } catch (err) {
         res.redirect('/licencas?erro=' + encodeURIComponent(err.message));

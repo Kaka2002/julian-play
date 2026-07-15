@@ -39,6 +39,9 @@ const ready = new Promise((resolve, reject) => {
                         ultimoPingEm DATETIME,
                         apagada TEXT NOT NULL DEFAULT '0',
                         apagadaEm DATETIME,
+                        transferida TEXT NOT NULL DEFAULT '0',
+                        transferidaEm DATETIME,
+                        transferidaPara TEXT,
                         criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
                         atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
                     )`, (licencaErr) => {
@@ -49,7 +52,10 @@ const ready = new Promise((resolve, reject) => {
                             const novasLicencas = [
                                 ['apagada', "TEXT NOT NULL DEFAULT '0'"],
                                 ['apagadaEm', 'DATETIME'],
-                                ['machineFingerprint', 'TEXT']
+                                ['machineFingerprint', 'TEXT'],
+                                ['transferida', "TEXT NOT NULL DEFAULT '0'"],
+                                ['transferidaEm', 'DATETIME'],
+                                ['transferidaPara', 'TEXT']
                             ].filter(([nome]) => !colunasAtuais.has(nome));
 
                             function finalizarLicencasLocais() {
