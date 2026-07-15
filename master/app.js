@@ -236,6 +236,98 @@ function estadoLicencaLocal(licenca = {}) {
     return { classe: 'ok', texto: 'Ativa', detalhe: `${dias} dia(s) restante(s)` };
 }
 
+function diasDesdeDataHora(valor) {
+    if (!valor) return null;
+    const data = new Date(valor);
+    if (Number.isNaN(data.getTime())) return null;
+    return Math.floor((Date.now() - data.getTime()) / 86400000);
+}
+
+function licencaLocalSemConsultaRecente(licenca = {}) {
+    const dias = diasDesdeDataHora(licenca.ultimoPingEm);
+    return dias === null || dias >= 3;
+}
+
+function licencaLocalBloqueadaPorMaquina(licenca = {}) {
+    return String(licenca.ultimoStatus || '').trim() === 'bloqueada_maquina';
+}
+
+function resumoLicencasLocais(licencas = []) {
+    const resumo = {
+        ativas: 0,
+        suspensas: 0,
+        vencidas: 0,
+        vencendo: 0,
+        semConsulta: 0,
+        bloqueadasMaquina: 0,
+        atencao: []
+    };
+
+    licencas.forEach((licenca) => {
+        const estado = estadoLicencaLocal(licenca);
+        const suspensa = String(licenca.suspensa || '0') === '1';
+        const vencida = estado.texto === 'Vencida';
+        const vencendo = estado.texto === 'Vencendo';
+        const semConsulta = licencaLocalSemConsultaRecente(licenca);
+        const bloqueadaMaquina = licencaLocalBloqueadaPorMaquina(licenca);
+
+        if (suspensa) resumo.suspensas += 1;
+        else resumo.ativas += 1;
+        if (vencida) resumo.vencidas += 1;
+        if (vencendo) resumo.vencendo += 1;
+        if (semConsulta) resumo.semConsulta += 1;
+        if (bloqueadaMaquina) resumo.bloqueadasMaquina += 1;
+
+        const motivos = [];
+        if (suspensa) motivos.push('suspensa');
+        if (vencida) motivos.push('vencida');
+        if (vencendo) motivos.push('vence em até 7 dias');
+        if (semConsulta) motivos.push(licenca.ultimoPingEm ? 'sem consulta há 3 dias' : 'sem consulta');
+        if (bloqueadaMaquina) motivos.push('bloqueio por máquina diferente');
+        if (!String(licenca.machineFingerprint || '').trim()) motivos.push('sem chave de máquina');
+
+        if (motivos.length) resumo.atencao.push({ licenca, estado, motivos });
+    });
+
+    return resumo;
+}
+
+function cardResumoLicenca(rotulo, valor, detalhe, classe = '') {
+    return `<div class="summary-card ${classe}">
+        <div class="small">${escapar(rotulo)}</div>
+        <strong>${escapar(valor)}</strong>
+        <div class="small">${escapar(detalhe)}</div>
+    </div>`;
+}
+
+function secaoResumoLicencasLocais(resumo) {
+    return `<section class="license-summary">
+        ${cardResumoLicenca('Ativas', resumo.ativas, 'licença(s) em uso', 'ok')}
+        ${cardResumoLicenca('Vencendo', resumo.vencendo, 'próximos 7 dias', resumo.vencendo ? 'warn' : 'ok')}
+        ${cardResumoLicenca('Vencidas', resumo.vencidas, 'precisam renovar', resumo.vencidas ? 'error' : 'ok')}
+        ${cardResumoLicenca('Sem consulta', resumo.semConsulta, 'sem retorno recente', resumo.semConsulta ? 'warn' : 'ok')}
+        ${cardResumoLicenca('Bloqueadas', resumo.bloqueadasMaquina, 'máquina diferente', resumo.bloqueadasMaquina ? 'error' : 'ok')}
+        ${cardResumoLicenca('Suspensas', resumo.suspensas, 'bloqueadas por você', resumo.suspensas ? 'error' : 'ok')}
+    </section>`;
+}
+
+function secaoAtencaoLicencasLocais(resumo) {
+    const itens = resumo.atencao.slice(0, 8);
+    if (!itens.length) {
+        return `<section class="panel"><h2>Licenças locais com atenção</h2><div class="empty">Tudo certo nas licenças locais.</div></section>`;
+    }
+
+    return `<section class="panel"><div class="topbar"><div><h2>Licenças locais com atenção</h2><div class="sub">${resumo.atencao.length} ponto(s) para acompanhar</div></div><a class="button secondary" href="#licencas-locais">Ver lista</a></div>
+        <div class="attention-list">
+            ${itens.map(({ licenca, estado, motivos }) => `<div class="attention-item">
+                <div><strong>${escapar(licenca.cliente || '-')}</strong><div class="small">${escapar(motivos.join(', '))}</div></div>
+                <div><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(licenca.ultimoPingEm ? formatarDataHoraPainel(licenca.ultimoPingEm) : 'Sem consulta')}</div></div>
+                <div class="actions"><a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(licenca.instalacaoId)}/historico">Histórico</a><a class="button smallbtn secondary" href="#licencas-locais">Renovar</a></div>
+            </div>`).join('')}
+        </div>
+    </section>`;
+}
+
 function eventosRecentesHtml(item = {}) {
     const eventos = Array.isArray(item.eventosRecentes) ? item.eventosRecentes : [];
     if (!eventos.length) return '<div class="small">Sem eventos recentes.</div>';
@@ -924,7 +1016,7 @@ function formularioCodigoLicencaLocal(opcoes = {}) {
     ].filter(Boolean).join(' | ');
 
     return `<section class="panel" id="gerar-licenca"><h2>Licença para instalação local</h2><div class="sub">Use quando o cliente instalar o sistema no próprio computador. Ele envia o ID da instalação, você gera o código e ele cola na tela de licença.</div>
-      ${codigoGerado ?`<div class="credentials"><strong>Código gerado.</strong><div class="small">${escapar(resumo || 'Envie este código ao cliente aplicar em /licenca.')}</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
+      ${codigoGerado ?`<div class="credentials"><div class="topbar"><div><strong>Código gerado.</strong><div class="small">${escapar(resumo || 'Envie este código ao cliente aplicar em /licenca.')}</div></div><button class="secondary smallbtn" type="button" data-copy-license>Copiar código</button></div><textarea id="codigoLicencaGerado" readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
       <form class="fields" method="post" action="/licencas/codigo">
         <label>ID da instalação<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
         <label>Chave da máquina<input name="machineFingerprint" value="${escapar(opcoes.machineFingerprint || '')}" required></label>
@@ -976,6 +1068,9 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
                   <button class="smallbtn" type="submit">Gerar transferência</button>
                 </form>
               </details>
+              ${item.suspensa === '1'
+                ? `<form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/reativar-local" onsubmit="return confirm('Reativar esta licença local?');"><button class="smallbtn" type="submit">Reativar</button></form>`
+                : `<form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/suspender-local" onsubmit="return confirm('Suspender esta licença local? O cliente ficará bloqueado ao consultar o Painel Mestre.');"><button class="smallbtn warning" type="submit">Suspender</button></form>`}
               <form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/apagar" onsubmit="return confirm('Apagar esta licença local da lista ativa? O histórico será preservado.');"><button class="smallbtn danger" type="submit">Apagar</button></form>
             </div>
           </td>
@@ -987,15 +1082,32 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
 
 function paginaLicencasLocais(licencas = [], opcoes = {}) {
     const versaoSistema = packageInfo.version || '1.0.0';
+    const resumo = resumoLicencasLocais(licencas);
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Licenças locais - Painel Mestre</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.actions{display:flex;gap:7px;flex-wrap:wrap}.inline{display:inline}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.warning{background:#f59e0b;color:#fff}.danger{background:#dc3545}.actions{display:flex;gap:7px;flex-wrap:wrap}.inline{display:inline}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}.license-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.summary-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}.summary-card strong{display:block;font-size:32px;margin:8px 0}.summary-card.ok strong{color:#047446}.summary-card.warn strong{color:#a76100}.summary-card.error strong{color:#c52e35}.attention-list{display:grid;gap:10px}.attention-item{display:grid;grid-template-columns:1fr 190px auto;gap:12px;align-items:center;border:1px solid #e8ebf0;border-radius:8px;padding:12px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1100px){.license-summary{grid-template-columns:repeat(3,minmax(0,1fr))}.attention-item{grid-template-columns:1fr}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}.license-summary{grid-template-columns:1fr 1fr}}
     </style></head><body><main><div class="topbar"><div><h1>Painel Mestre</h1><div class="sub">Gestão de licenças locais</div><div class="version-pill">Versão ${escapar(versaoSistema)}</div></div><form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form></div>
     ${menuMestre('licencas')}
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${formularioCodigoLicencaLocal(opcoes.codigoLicenca || {})}
+    ${secaoResumoLicencasLocais(resumo)}
+    ${secaoAtencaoLicencasLocais(resumo)}
     ${secaoLicencasLocaisGerenciamento(licencas)}
-    </main></body></html>`;
+    <script>
+    document.querySelector('[data-copy-license]')?.addEventListener('click', async (event) => {
+        const campo = document.getElementById('codigoLicencaGerado');
+        if (!campo) return;
+        try {
+            await navigator.clipboard.writeText(campo.value);
+            event.currentTarget.textContent = 'Copiado';
+        } catch (_) {
+            campo.focus();
+            campo.select();
+            document.execCommand('copy');
+            event.currentTarget.textContent = 'Copiado';
+        }
+    });
+    </script></main></body></html>`;
 }
 
 function paginaHistoricoLicencaLocal(licenca, eventos = []) {
@@ -1101,6 +1213,24 @@ async function apagarLicencaLocal(instalacaoId) {
         [licenca.instalacaoId]
     );
     await registrarEventoLicencaLocal(licenca.instalacaoId, 'apagada', 'Licença apagada da lista ativa.', licenca.cliente || '');
+}
+
+async function atualizarSuspensaoLicencaLocal(instalacaoId, suspensa, motivo = '') {
+    const licenca = await buscarLicencaLocal(instalacaoId);
+    if (!licenca) throw new Error('Licença local não encontrada.');
+    const valor = suspensa ? '1' : '0';
+    await masterDb.executar(
+        `UPDATE licencas_locais
+            SET suspensa = ?, atualizadoEm = CURRENT_TIMESTAMP
+          WHERE instalacaoId = ?`,
+        [valor, licenca.instalacaoId]
+    );
+    await registrarEventoLicencaLocal(
+        licenca.instalacaoId,
+        suspensa ? 'suspensao' : 'reativacao',
+        suspensa ? 'Licença suspensa pelo fornecedor.' : 'Licença reativada pelo fornecedor.',
+        motivo || ''
+    );
 }
 
 async function marcarLicencaLocalTransferida(licenca, novaInstalacaoId, motivo = '') {
@@ -1527,6 +1657,24 @@ app.post('/licencas/:instalacaoId/apagar', async (req, res) => {
     try {
         await apagarLicencaLocal(req.params.instalacaoId);
         res.redirect('/licencas?mensagem=' + encodeURIComponent('Licença local apagada da lista ativa. O histórico foi preservado.'));
+    } catch (err) {
+        res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
+    }
+});
+
+app.post('/licencas/:instalacaoId/suspender-local', async (req, res) => {
+    try {
+        await atualizarSuspensaoLicencaLocal(req.params.instalacaoId, true, 'Suspensão manual pelo Painel Mestre.');
+        res.redirect('/licencas?mensagem=' + encodeURIComponent('Licença local suspensa. O cliente será bloqueado na próxima consulta de licença.'));
+    } catch (err) {
+        res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
+    }
+});
+
+app.post('/licencas/:instalacaoId/reativar-local', async (req, res) => {
+    try {
+        await atualizarSuspensaoLicencaLocal(req.params.instalacaoId, false, 'Reativação manual pelo Painel Mestre.');
+        res.redirect('/licencas?mensagem=' + encodeURIComponent('Licença local reativada.'));
     } catch (err) {
         res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
     }

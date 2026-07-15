@@ -663,9 +663,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
     const licenca = calcularEstadoLicenca(config);
-    const avisoAvaliacao = licenca.bloqueioAtivo && licenca.tipo === 'avaliacao' && licenca.permitida
-        ?`Período de avaliação: ${Math.max(0, licenca.diasRestantes)} dia(s) restante(s).`
-        : '';
+    const avisoLicenca = (() => {
+        if (!licenca.bloqueioAtivo || !licenca.permitida || licenca.vitalicia) return '';
+        const dias = Math.max(0, licenca.diasRestantes);
+        if (licenca.status === 'vencendo') return `Atenção: sua licença vence em ${dias} dia(s).`;
+        if (licenca.tipo === 'avaliacao') return `Período de avaliação: ${dias} dia(s) restante(s).`;
+        return '';
+    })();
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -2176,7 +2180,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         </div>
     </div>
     <main>
-        ${avisoAvaliacao ?`<div class="notice">${escapar(avisoAvaliacao)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
+        ${avisoLicenca ?`<div class="notice">${escapar(avisoLicenca)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
         ${mensagem ?`<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
     </main>
