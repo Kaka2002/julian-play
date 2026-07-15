@@ -8,4 +8,6 @@ backups/
 .julian-play.pid
 .julian-play-install.json
 .julian-master-install.json
+config/license-public-key.pem
+entrega-cliente-local/ENVIAR_AO_CLIENTE/julian-play-app.zip
 master/data/
