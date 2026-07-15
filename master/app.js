@@ -994,8 +994,9 @@ function secaoCodigoLicencaLocal(opcoes = {}) {
 }
 
 function opcoesTipoLicencaSelect(tipoAtual = '') {
-    const atual = String(tipoAtual || 'avaliacao_15');
+    const atual = String(tipoAtual || '');
     return [
+        ['', 'Selecione...'],
         ['avaliacao_15', 'Avaliação 15 dias'],
         ['avaliacao_30', 'Avaliação 30 dias'],
         ['mensal', 'Mensal'],
@@ -1106,6 +1107,33 @@ function paginaLicencasLocais(licencas = [], opcoes = {}) {
             document.execCommand('copy');
             event.currentTarget.textContent = 'Copiado';
         }
+    });
+    function dataLicencaPorTipo(tipo) {
+        const data = new Date();
+        data.setHours(12, 0, 0, 0);
+        const dias = {
+            avaliacao_15: 15,
+            avaliacao_30: 30,
+            mensal: 30,
+            semestral: 180,
+            anual: 365
+        };
+        if (tipo === 'vitalicia') {
+            data.setFullYear(data.getFullYear() + 100);
+        } else if (dias[tipo]) {
+            data.setDate(data.getDate() + dias[tipo]);
+        } else {
+            return '';
+        }
+        return data.toISOString().slice(0, 10);
+    }
+    document.querySelectorAll('select[name="licencaTipo"]').forEach((select) => {
+        select.addEventListener('change', () => {
+            const form = select.closest('form');
+            const campoVencimento = form?.querySelector('input[name="licencaVencimento"]');
+            if (!campoVencimento) return;
+            campoVencimento.value = dataLicencaPorTipo(select.value);
+        });
     });
     </script></main></body></html>`;
 }
