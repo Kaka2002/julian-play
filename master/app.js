@@ -807,6 +807,7 @@ function menuMestre(ativo = 'inicio') {
     const itens = [
         ['inicio', '/', 'Início'],
         ['licencas', '/licencas', 'Licenças locais'],
+        ['renovacoes', '/renovacoes', 'Renovações'],
         ['instalacoes', '/#instalacoes', 'Instalações'],
         ['nova', '/#nova-instalacao', 'Nova instalação'],
         ['manutencao', '/#manutencao', 'Manutenção']
@@ -1151,6 +1152,157 @@ function paginaHistoricoLicencaLocal(licenca, eventos = []) {
     </section></main></body></html>`;
 }
 
+function consultaAposUltimaEmissao(licenca = {}) {
+    if (!licenca.ultimoPingEm || !licenca.atualizadoEm) return false;
+    const consulta = new Date(licenca.ultimoPingEm).getTime();
+    const emissao = new Date(licenca.atualizadoEm).getTime();
+    return Number.isFinite(consulta) && Number.isFinite(emissao) && consulta >= emissao;
+}
+
+function mensagemRenovacaoLicencaLocal(licenca = {}) {
+    const vencimento = licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem data definida';
+    const estado = estadoLicencaLocal(licenca);
+    return `Olá! Sua licença do painel ${licenca.cliente || 'Julian Play'} está ${estado.texto.toLowerCase()} com vencimento em ${vencimento}. Para manter o sistema ativo, solicite a renovação comigo.`;
+}
+
+function filtrarLicencasRenovacao(licencas = [], filtros = {}) {
+    const filtro = String(filtros.filtro || 'todas');
+    const busca = String(filtros.busca || '').trim().toLowerCase();
+
+    return licencas.filter((licenca) => {
+        const estado = estadoLicencaLocal(licenca);
+        const dias = diasAteData(licenca.vencimento);
+        const textoBusca = [
+            licenca.cliente,
+            licenca.telefone,
+            licenca.instalacaoId,
+            licenca.machineFingerprint,
+            licenca.observacoes
+        ].join(' ').toLowerCase();
+
+        if (busca && !textoBusca.includes(busca)) return false;
+        if (filtro === 'vencendo7') return dias !== null && dias >= 0 && dias <= 7;
+        if (filtro === 'vencendo15') return dias !== null && dias >= 0 && dias <= 15;
+        if (filtro === 'vencendo30') return dias !== null && dias >= 0 && dias <= 30;
+        if (filtro === 'vencidas') return estado.texto === 'Vencida';
+        if (filtro === 'suspensas') return String(licenca.suspensa || '0') === '1';
+        if (filtro === 'semconsulta') return licencaLocalSemConsultaRecente(licenca);
+        if (filtro === 'bloqueadas') return licencaLocalBloqueadaPorMaquina(licenca);
+        return true;
+    });
+}
+
+function opcoesFiltroRenovacoes(filtroAtual = 'todas') {
+    return [
+        ['todas', 'Todas'],
+        ['vencendo7', 'Vencem em 7 dias'],
+        ['vencendo15', 'Vencem em 15 dias'],
+        ['vencendo30', 'Vencem em 30 dias'],
+        ['vencidas', 'Vencidas'],
+        ['suspensas', 'Suspensas'],
+        ['semconsulta', 'Sem consulta'],
+        ['bloqueadas', 'Máquina bloqueada']
+    ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtroAtual ? 'selected' : ''}>${texto}</option>`).join('');
+}
+
+function paginaRenovacoesLicencasLocais(licencas = [], opcoes = {}) {
+    const filtros = {
+        filtro: String(opcoes.filtro || 'todas'),
+        busca: String(opcoes.busca || '')
+    };
+    const lista = filtrarLicencasRenovacao(licencas, filtros);
+    const resumo = resumoLicencasLocais(licencas);
+    const versaoSistema = packageInfo.version || '1.0.0';
+    const codigoGerado = opcoes.codigoLicenca?.codigoLicenca || '';
+    const resumoCodigo = opcoes.codigoLicenca ? [
+        opcoes.codigoLicenca.licencaCliente ? `Cliente: ${opcoes.codigoLicenca.licencaCliente}` : '',
+        opcoes.codigoLicenca.licencaVencimento ? `Vencimento: ${formatarDataPainel(opcoes.codigoLicenca.licencaVencimento)}` : ''
+    ].filter(Boolean).join(' | ') : '';
+
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Renovações - Painel Mestre</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.filters{display:grid;grid-template-columns:220px 1fr auto;gap:10px;align-items:end}.renewal-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:22px}.summary-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;padding:16px;box-shadow:0 8px 24px rgba(15,23,42,.05)}.summary-card strong{display:block;font-size:30px;margin:8px 0}.summary-card.ok strong{color:#047446}.summary-card.warn strong{color:#a76100}.summary-card.error strong{color:#c52e35}label{display:grid;gap:6px;font-weight:800}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.warning{background:#f59e0b;color:#fff}.danger{background:#dc3545}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;margin-top:10px;min-width:1180px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.actions{display:flex;gap:7px;flex-wrap:wrap}.inline{display:inline}.renew-form{display:grid;grid-template-columns:150px 145px auto;gap:6px;align-items:center}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:980px){.filters{grid-template-columns:1fr}.renewal-summary{grid-template-columns:1fr 1fr}.topbar{display:block}}@media(max-width:620px){.renewal-summary{grid-template-columns:1fr}}
+    </style></head><body><main><div class="topbar"><div><h1>Painel Mestre</h1><div class="sub">Renovações de licenças locais</div><div class="version-pill">Versão ${escapar(versaoSistema)}</div></div><form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form></div>
+    ${menuMestre('renovacoes')}
+    ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
+    ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
+    ${codigoGerado ?`<div class="credentials"><div class="topbar"><div><strong>Código de renovação gerado.</strong><div class="small">${escapar(resumoCodigo || 'Envie este código ao cliente aplicar em /licenca.')}</div></div><button class="secondary smallbtn" type="button" data-copy-license>Copiar código</button></div><textarea id="codigoLicencaGerado" readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
+    <section class="renewal-summary">
+        ${cardResumoLicenca('Vencem em 7 dias', resumo.atencao.filter(item => item.motivos.includes('vence em até 7 dias')).length, 'prioridade comercial', 'warn')}
+        ${cardResumoLicenca('Vencidas', resumo.vencidas, 'renovar ou suspender', resumo.vencidas ? 'error' : 'ok')}
+        ${cardResumoLicenca('Sem consulta', resumo.semConsulta, 'cliente não confirmou', resumo.semConsulta ? 'warn' : 'ok')}
+        ${cardResumoLicenca('Máquina bloqueada', resumo.bloqueadasMaquina, 'instalação diferente', resumo.bloqueadasMaquina ? 'error' : 'ok')}
+        ${cardResumoLicenca('Suspensas', resumo.suspensas, 'bloqueadas por você', resumo.suspensas ? 'error' : 'ok')}
+    </section>
+    <section class="panel">
+        <div class="topbar"><div><h2>Fila de renovação</h2><div class="sub">${lista.length} licença(s) exibida(s)</div></div><a class="button secondary" href="/licencas#gerar-licenca">Gerar licença nova</a></div>
+        <form class="filters" method="get" action="/renovacoes">
+            <label>Filtro<select name="filtro">${opcoesFiltroRenovacoes(filtros.filtro)}</select></label>
+            <label>Busca<input name="busca" value="${escapar(filtros.busca)}" placeholder="Cliente, telefone, ID ou observação"></label>
+            <button type="submit">Filtrar</button>
+        </form>
+        <div class="table-wrap">
+        ${lista.length ? `<table><thead><tr><th>Cliente</th><th>Licença</th><th>Consulta</th><th>Último código</th><th>Renovar</th><th>Ações</th></tr></thead><tbody>${lista.map((item) => {
+            const estado = estadoLicencaLocal(item);
+            const consultouDepois = consultaAposUltimaEmissao(item);
+            const mensagem = mensagemRenovacaoLicencaLocal(item);
+            return `<tr>
+                <td><strong>${escapar(item.cliente || '-')}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
+                <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div><div class="small">Vencimento: ${escapar(item.vencimento ? formatarDataPainel(item.vencimento) : 'sem vencimento')}</div></td>
+                <td>${escapar(item.ultimoPingEm ? formatarDataHoraPainel(item.ultimoPingEm) : 'Sem consulta')}<div class="small">${consultouDepois ? 'Cliente já consultou após a última emissão' : 'Ainda não consultou após a última emissão'}</div></td>
+                <td>${item.codigo ? '<span class="badge ok">Disponível</span>' : '<span class="badge warn">Sem código</span>'}<div class="small">${escapar(item.atualizadoEm ? `Emitido em ${formatarDataHoraPainel(item.atualizadoEm)}` : '-')}</div></td>
+                <td>
+                    <form class="renew-form" method="post" action="/renovacoes/codigo">
+                        <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
+                        <input type="hidden" name="machineFingerprint" value="${escapar(item.machineFingerprint || '')}">
+                        <input type="hidden" name="licencaCliente" value="${escapar(item.cliente || '')}">
+                        <input type="hidden" name="licencaTelefone" value="${escapar(item.telefone || '')}">
+                        <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
+                        <select name="licencaTipo">${opcoesTipoLicencaSelect(tipoLicencaFormulario(item.tipo))}</select>
+                        <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}">
+                        <button class="smallbtn" type="submit">Gerar</button>
+                    </form>
+                </td>
+                <td><div class="actions">
+                    <button class="secondary smallbtn" type="button" data-copy-text="${escapar(mensagem)}">Copiar mensagem</button>
+                    ${item.codigo ? `<button class="secondary smallbtn" type="button" data-copy-text="${escapar(item.codigo)}">Copiar último código</button>` : ''}
+                    <a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(item.instalacaoId)}/historico">Histórico</a>
+                    <a class="button smallbtn secondary" href="/licencas#licencas-locais">Ver licença</a>
+                </div></td>
+            </tr>`;
+        }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licença encontrada para este filtro.</div>'}
+        </div>
+    </section>
+    <script>
+    function dataLicencaPorTipo(tipo) {
+        const data = new Date();
+        data.setHours(12, 0, 0, 0);
+        const dias = { avaliacao_15: 15, avaliacao_30: 30, mensal: 30, semestral: 180, anual: 365 };
+        if (tipo === 'vitalicia') data.setFullYear(data.getFullYear() + 100);
+        else if (dias[tipo]) data.setDate(data.getDate() + dias[tipo]);
+        else return '';
+        return data.toISOString().slice(0, 10);
+    }
+    document.querySelectorAll('select[name="licencaTipo"]').forEach((select) => {
+        select.addEventListener('change', () => {
+            const campo = select.closest('form')?.querySelector('input[name="licencaVencimento"]');
+            if (campo) campo.value = dataLicencaPorTipo(select.value);
+        });
+    });
+    document.querySelector('[data-copy-license]')?.addEventListener('click', async (event) => {
+        const campo = document.getElementById('codigoLicencaGerado');
+        if (!campo) return;
+        await navigator.clipboard.writeText(campo.value);
+        event.currentTarget.textContent = 'Copiado';
+    });
+    document.querySelectorAll('[data-copy-text]').forEach((botao) => {
+        botao.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(botao.getAttribute('data-copy-text') || '');
+            botao.textContent = 'Copiado';
+        });
+    });
+    </script></main></body></html>`;
+}
+
 function urlPublicaMestre(req) {
     const configurada = String(process.env.MASTER_PUBLIC_URL || '').trim();
     if (configurada) return configurada.replace(/\/+$/, '');
@@ -1470,6 +1622,72 @@ async function renderizarPainel(opcoes = {}) {
     return pagina(instalacoes, { ...opcoes, recursos });
 }
 
+async function gerarCodigoLicencaLocalPorRequest(req) {
+    const tipo = String(req.body.licencaTipo || '').trim();
+    const instalacaoId = String(req.body.instalacaoId || '').trim();
+    const machineFingerprint = String(req.body.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const cliente = String(req.body.licencaCliente || '').trim();
+    const hoje = dataHojeSaoPaulo();
+    const diasPorTipo = {
+        avaliacao_15: 15,
+        avaliacao_30: 30,
+        mensal: 30,
+        semestral: 180,
+        anual: 365
+    };
+
+    if (!instalacaoId) throw new Error('Informe o ID da instalação.');
+    if (!machineFingerprint) throw new Error('Informe a chave da máquina exibida na tela de licença do cliente.');
+    if (!cliente) throw new Error('Informe o cliente ou empresa.');
+    if (!tipo) throw new Error('Selecione o tipo de licença.');
+
+    const licencaMesmaMaquina = await buscarLicencaAtivaPorMaquina(machineFingerprint, instalacaoId);
+    if (licencaMesmaMaquina) {
+        throw new Error(`Esta máquina já possui licença ativa para ${licencaMesmaMaquina.cliente}. Use Transferir na licença existente ou apague/suspenda a licença antiga antes de gerar outra.`);
+    }
+
+    const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
+    const vencimento = tipo === 'vitalicia'
+        ? ''
+        : String(req.body.licencaVencimento || '').slice(0, 10) || adicionarDias(hoje, diasPorTipo[tipo] || 30);
+    const servidorUrl = urlPublicaMestre(req);
+    const codigoLicenca = gerarCodigoLicencaAssinado({
+        v: 1,
+        instalacaoId,
+        machineFingerprint,
+        cliente,
+        telefone: String(req.body.licencaTelefone || '').trim(),
+        tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+        ativacao: hoje,
+        vencimento,
+        vitalicia: tipo === 'vitalicia' ? '1' : '0',
+        periodoTesteDias: tipo === 'avaliacao_15' ? '15' : tipo === 'avaliacao_30' ? '30' : '0',
+        suspensa: tipo === 'suspensa' ? '1' : '0',
+        observacoes: String(req.body.licencaObservacoes || '').trim(),
+        servidorUrl,
+        emitidoEm: new Date().toISOString()
+    });
+
+    await salvarLicencaLocalGerada({
+        instalacaoId,
+        machineFingerprint,
+        cliente,
+        telefone: req.body.licencaTelefone,
+        tipo: tipo === 'vitalicia' ? 'vitalicia' : tipoSalvo,
+        ativacao: hoje,
+        vencimento,
+        vitalicia: tipo === 'vitalicia' ? '1' : '0',
+        suspensa: tipo === 'suspensa' ? '1' : '0',
+        codigo: codigoLicenca,
+        observacoes: req.body.licencaObservacoes
+    });
+
+    return {
+        codigoLicenca,
+        dadosFormulario: { ...req.body, licencaTipo: tipo, licencaVencimento: vencimento, codigoLicenca }
+    };
+}
+
 app.get('/', async (req, res) => {
     res.send(await renderizarPainel({
         mensagem: req.query.mensagem,
@@ -1484,6 +1702,16 @@ app.get('/licencas', async (req, res) => {
     res.send(paginaLicencasLocais(licencas, {
         mensagem: req.query.mensagem,
         erro: req.query.erro
+    }));
+});
+
+app.get('/renovacoes', async (req, res) => {
+    const licencas = await listarLicencasLocaisEmitidas();
+    res.send(paginaRenovacoesLicencasLocais(licencas, {
+        mensagem: req.query.mensagem,
+        erro: req.query.erro,
+        filtro: req.query.filtro,
+        busca: req.query.busca
     }));
 });
 
@@ -1518,6 +1746,13 @@ app.post('/instalacoes/admin-atual', async (req, res) => {
 
 app.post('/licencas/codigo', async (req, res) => {
     try {
+        const { dadosFormulario } = await gerarCodigoLicencaLocalPorRequest(req);
+        const licencasAtualizadas = await listarLicencasLocaisEmitidas();
+        return res.send(paginaLicencasLocais(licencasAtualizadas, {
+            mensagem: 'Código de licença gerado. Envie ao cliente para aplicar na tela de licença.',
+            codigoLicenca: dadosFormulario
+        }));
+
         const tipo = String(req.body.licencaTipo || '').trim();
         const instalacaoId = String(req.body.instalacaoId || '').trim();
         const machineFingerprint = String(req.body.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1583,6 +1818,22 @@ app.post('/licencas/codigo', async (req, res) => {
         res.status(400).send(paginaLicencasLocais(licencas, {
             erro: err.message,
             codigoLicenca: req.body
+        }));
+    }
+});
+
+app.post('/renovacoes/codigo', async (req, res) => {
+    try {
+        const { dadosFormulario } = await gerarCodigoLicencaLocalPorRequest(req);
+        const licencas = await listarLicencasLocaisEmitidas();
+        res.send(paginaRenovacoesLicencasLocais(licencas, {
+            mensagem: 'Código de renovação gerado. Envie ao cliente para aplicar na tela de licença.',
+            codigoLicenca: dadosFormulario
+        }));
+    } catch (err) {
+        const licencas = await listarLicencasLocaisEmitidas().catch(() => []);
+        res.status(400).send(paginaRenovacoesLicencasLocais(licencas, {
+            erro: err.message
         }));
     }
 });
