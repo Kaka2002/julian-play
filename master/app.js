@@ -1062,12 +1062,12 @@ function secaoLicencasLocaisGerenciamento(licencas = []) {
               <details style="width:100%;margin-top:6px">
                 <summary class="smallbtn secondary" style="display:inline-flex;cursor:pointer">Transferir</summary>
                 <form method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/transferir" style="display:grid;gap:6px;margin-top:8px;min-width:260px">
-                  <input name="novaInstalacaoId" required placeholder="Novo ID da instalação">
+                  <input name="novaInstalacaoId" placeholder="Novo ID da instalação (opcional)">
                   <input name="novaMachineFingerprint" required placeholder="Nova chave da máquina">
                   <select name="licencaTipo">${opcoesTipoLicencaSelect(tipoLicencaFormulario(item.tipo))}</select>
                   <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}" title="Opcional: novo vencimento">
                   <input name="motivoTransferencia" placeholder="Motivo: formatou, trocou PC...">
-                  <button class="smallbtn" type="submit">Gerar transferência</button>
+                  <button class="smallbtn" type="submit">Vincular / transferir</button>
                 </form>
               </details>
               ${item.suspensa === '1'
@@ -1844,7 +1844,7 @@ app.post('/licencas/:instalacaoId/transferir', async (req, res) => {
         if (!licencaAtual) throw new Error('Licença local não encontrada.');
 
         const tipo = String(req.body.licencaTipo || tipoLicencaFormulario(licencaAtual.tipo)).trim();
-        const instalacaoId = String(req.body.novaInstalacaoId || '').trim();
+        const instalacaoId = String(req.body.novaInstalacaoId || licencaAtual.instalacaoId || '').trim();
         const machineFingerprint = String(req.body.novaMachineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const motivo = String(req.body.motivoTransferencia || '').trim();
         const hoje = dataHojeSaoPaulo();
@@ -1856,12 +1856,12 @@ app.post('/licencas/:instalacaoId/transferir', async (req, res) => {
             anual: 365
         };
 
-        if (!instalacaoId) throw new Error('Informe o novo ID da instalação.');
-        if (instalacaoId === licencaAtual.instalacaoId) throw new Error('O novo ID precisa ser diferente da instalação antiga.');
+        if (!instalacaoId) throw new Error('Informe o ID da instalação.');
         if (!machineFingerprint) throw new Error('Informe a nova chave da máquina exibida na tela de licença do cliente.');
+        const mantendoMesmaInstalacao = instalacaoId === licencaAtual.instalacaoId;
 
         const existente = await buscarLicencaLocal(instalacaoId);
-        if (existente && String(existente.apagada || '0') !== '1') {
+        if (!mantendoMesmaInstalacao && existente && String(existente.apagada || '0') !== '1') {
             throw new Error('Já existe uma licença ativa para o novo ID informado.');
         }
         const licencaMesmaMaquina = await buscarLicencaAtivaPorMaquina(machineFingerprint, licencaAtual.instalacaoId);
@@ -1904,17 +1904,28 @@ app.post('/licencas/:instalacaoId/transferir', async (req, res) => {
             codigo: codigoLicenca,
             observacoes: licencaAtual.observacoes || ''
         });
-        await marcarLicencaLocalTransferida(licencaAtual, instalacaoId, motivo);
-        await registrarEventoLicencaLocal(
-            instalacaoId,
-            'transferencia',
-            'Licença criada por transferência.',
-            `Instalação anterior: ${licencaAtual.instalacaoId}; motivo: ${motivo || 'não informado'}`
-        );
+        if (mantendoMesmaInstalacao) {
+            await registrarEventoLicencaLocal(
+                instalacaoId,
+                'maquina',
+                'Chave da máquina vinculada à licença existente.',
+                `Máquina: ${machineFingerprint}; motivo: ${motivo || 'não informado'}`
+            );
+        } else {
+            await marcarLicencaLocalTransferida(licencaAtual, instalacaoId, motivo);
+            await registrarEventoLicencaLocal(
+                instalacaoId,
+                'transferencia',
+                'Licença criada por transferência.',
+                `Instalação anterior: ${licencaAtual.instalacaoId}; motivo: ${motivo || 'não informado'}`
+            );
+        }
 
         const licencas = await listarLicencasLocaisEmitidas();
         res.send(paginaLicencasLocais(licencas, {
-            mensagem: 'Transferência gerada. Envie o código novo ao cliente para aplicar na tela de licença.',
+            mensagem: mantendoMesmaInstalacao
+                ? 'Chave da máquina vinculada. Envie o código novo ao cliente para aplicar na tela de licença.'
+                : 'Transferência gerada. Envie o código novo ao cliente para aplicar na tela de licença.',
             codigoLicenca: {
                 instalacaoId,
                 machineFingerprint,
