@@ -753,15 +753,16 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
+            gap: 16px;
         }
 
         .brand {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            flex: 0 0 auto;
-            font-size: 16px;
+            gap: 7px;
+            flex: 0 0 150px;
+            min-width: 132px;
+            font-size: 15px;
             font-weight: 800;
             line-height: 1.05;
         }
@@ -772,6 +773,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .brand-text {
             font-weight: 800;
+            overflow-wrap: anywhere;
         }
 
         .brand-icon {
@@ -798,22 +800,24 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             min-width: 0;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 4px;
+            justify-content: flex-start;
+            gap: 3px;
             color: var(--muted);
             font-weight: 700;
-            overflow: hidden;
+            overflow-x: auto;
+            scrollbar-width: thin;
         }
 
         .navlink {
-            min-height: 40px;
+            min-height: 38px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 0 8px;
+            gap: 5px;
+            padding: 0 7px;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 13px;
             white-space: nowrap;
+            flex: 0 0 auto;
         }
 
         .navlink.active {
@@ -874,7 +878,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .dashboard-metrics {
             grid-template-columns: repeat(8, minmax(0, 1fr));
-            gap: 10px;
+            gap: 9px;
         }
 
         .metric, .panel {
@@ -893,9 +897,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .dashboard-metrics .metric {
-            min-height: 128px;
-            padding: 18px 14px;
-            gap: 8px;
+            min-height: 124px;
+            padding: 16px 12px;
+            gap: 7px;
         }
 
         .metric-label {
@@ -907,8 +911,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .dashboard-metrics .metric-label {
-            margin-bottom: 10px;
-            font-size: 14px;
+            margin-bottom: 8px;
+            font-size: 13px;
             line-height: 1.15;
         }
 
@@ -921,7 +925,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .dashboard-metrics .metric-value {
-            font-size: 30px;
+            font-size: 28px;
         }
 
         .metric-note {
@@ -933,8 +937,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .dashboard-metrics .metric-note {
-            margin-top: 10px;
-            font-size: 12px;
+            margin-top: 8px;
+            font-size: 11px;
             line-height: 1.2;
         }
 
@@ -947,9 +951,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .dashboard-metrics .metric-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 12px;
+            width: 32px;
+            height: 32px;
+            border-radius: 9px;
         }
 
         .metric-icon.blue { background: var(--blue-soft); color: var(--blue); }
