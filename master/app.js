@@ -711,6 +711,17 @@ function cardStatusGeral(rotulo, valor, detalhe, classe = '') {
     </div>`;
 }
 
+function menuMestre(ativo = 'inicio') {
+    const itens = [
+        ['inicio', '/', 'Inicio'],
+        ['licencas', '/licencas', 'Licencas locais'],
+        ['instalacoes', '/#instalacoes', 'Instalacoes'],
+        ['nova', '/#nova-instalacao', 'Nova instalacao'],
+        ['manutencao', '/#manutencao', 'Manutencao']
+    ];
+    return `<nav class="master-nav">${itens.map(([id, href, texto]) => `<a class="${id === ativo ? 'active' : ''}" href="${href}">${texto}</a>`).join('')}</nav>`;
+}
+
 function resumirOcorrenciasLog(logs = '') {
     const linhas = String(logs || '')
         .split(/\r?\n/)
@@ -763,12 +774,11 @@ function pagina(instalacoes, opcoes = {}) {
     const instalacoesFiltradas = filtrarInstalacoesPainel(instalacoes, filtrosInstalacoes);
     const opcoesFiltro = opcoesFiltroInstalacoes(statusGeral);
     const recursos = opcoes.recursos || {};
-    const licencasLocais = opcoes.licencasLocais || [];
     const versaoSistema = packageInfo.version || '1.0.0';
     const sugestaoAdmin = obterSugestaoInstalacaoAdministradoraAtual();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Painel Mestre - Julian Play</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.topbar form{margin:0}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}main>h1:first-of-type,main>h1:first-of-type+.sub,main>h1:first-of-type+.sub+form{display:none}.status-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;margin-top:22px}.status-card{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);padding:18px}.status-label{color:#697386;font-size:13px;font-weight:800}.status-value{font-size:34px;font-weight:900;line-height:1.1;margin-top:8px}.status-detail{color:#697386;font-size:12px;margin-top:8px}.status-card.ok .status-value{color:#047446}.status-card.warn .status-value{color:#a76100}.status-card.error .status-value{color:#c52e35}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.priority-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:16px}.priority-group{border:1px solid #e8ebf0;border-radius:8px;padding:14px;background:#fafbfc}.priority-group h3{margin:0 0 10px;font-size:15px}.priority-item{display:grid;gap:10px;border-left:4px solid #dfe3ea;background:#fff;border-radius:8px;padding:12px;margin-top:10px}.priority-item.warn{border-left-color:#e98a13}.priority-item.error{border-left-color:#dc3545}.empty.compact{padding:16px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.button.smallbtn,button.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.warning{background:#e98a13}.actions{display:flex;gap:7px;flex-wrap:wrap}.support-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.full{grid-column:1/-1}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.dangertext{color:#c52e35;font-weight:700}.diagnostic{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;max-width:390px}.diagnostic span{background:#f4f6f9;border:1px solid #e8ebf0;border-radius:999px;color:#4b5565;font-size:12px;padding:4px 8px}.event-list{display:grid;gap:5px;margin-top:8px;color:#596273;font-size:12px;line-height:1.35}.event-list strong{color:#263247}.readiness-list{margin:7px 0 5px;padding:0;list-style:none;color:#697386;font-size:12px;line-height:1.4}.readiness-list li{display:grid;grid-template-columns:minmax(130px,1fr) auto;align-items:start;gap:7px;padding:6px 0;border-bottom:1px solid #eef1f5}.readiness-list a,.readiness-action{color:#315bd6;font-weight:800;text-decoration:none;white-space:nowrap}.readiness-action{display:inline-flex;margin-top:6px;font-size:12px}.inline{display:inline}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:1200px){.priority-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:1100px){.status-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.status-grid{grid-template-columns:1fr 1fr}.priority-grid{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1300px}}@media(max-width:560px){.status-grid{grid-template-columns:1fr}}
-    </style></head><body><main>
+    </style><style>.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}</style></head><body><main>
     <div class="topbar">
       <div>
         <h1>Painel Mestre</h1>
@@ -779,11 +789,10 @@ function pagina(instalacoes, opcoes = {}) {
     </div>
     <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
     <form method="post" action="/logout" style="margin-top:12px"><button class="secondary" type="submit">Sair</button></form>
+    ${menuMestre('inicio')}
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
     ${criado ?`<div class="credentials"><strong>Instalação criada.</strong><br>URL: <a href="https://${escapar(criado.dominio)}" target="_blank">https://${escapar(criado.dominio)}</a><br>Usuário: ${escapar(criado.usuarioPainel)}<br>Senha inicial: <strong>${escapar(criado.senhaInicial)}</strong><div class="small">Anote agora. A senha não fica armazenada no Painel Mestre.</div></div>` : ''}
-    ${secaoCodigoLicencaLocal(opcoes.codigoLicenca || {})}
-    ${secaoLicencasLocais(licencasLocais)}
     <section class="status-grid" aria-label="Status geral das instalações">
         ${cardStatusGeral('Instalações', statusGeral.total, `${statusGeral.comerciais} cliente(s), ${statusGeral.administradoras} administradora(s)`)}
         ${cardStatusGeral('WhatsApp conectado', statusGeral.whatsappConectado, `${statusGeral.aguardandoWhatsapp} aguardando conex\u00e3o, ${statusGeral.reconexaoPendente} acima de 5min`, statusGeral.aguardandoWhatsapp ? 'warn' : 'ok')}
@@ -798,13 +807,13 @@ function pagina(instalacoes, opcoes = {}) {
     </section>
     ${secaoPrioridades(instalacoes)}
     ${painelChecklistComercial(instalacoes)}
-    <section class="panel"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
+    <section class="panel" id="manutencao"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
       <form class="actions" method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura? Bancos e sessões dos robôs ativos serão preservados.');">
         <label>Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
         <div style="align-self:end"><button type="submit">Executar limpeza segura</button></div>
       </form>
     </section>
-    <section class="panel"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
+    <section class="panel" id="nova-instalacao"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
       <form class="fields" method="post" action="/instalacoes">
         <label>Cliente / Empresa<input name="nome" required></label>
         <label>Identificador da URL<input name="slug" placeholder="ex: cliente-teste"></label>
@@ -887,6 +896,102 @@ function secaoCodigoLicencaLocal(opcoes = {}) {
     </section>`;
 }
 
+function opcoesTipoLicencaSelect(tipoAtual = '') {
+    const atual = String(tipoAtual || 'avaliacao_15');
+    return [
+        ['avaliacao_15', 'Avaliacao 15 dias'],
+        ['avaliacao_30', 'Avaliacao 30 dias'],
+        ['mensal', 'Mensal'],
+        ['semestral', 'Semestral'],
+        ['anual', 'Anual'],
+        ['vitalicia', 'Vitalicia'],
+        ['suspensa', 'Suspensa']
+    ].map(([valor, texto]) => `<option value="${valor}" ${valor === atual ? 'selected' : ''}>${texto}</option>`).join('');
+}
+
+function formularioCodigoLicencaLocal(opcoes = {}) {
+    const codigoGerado = opcoes.codigoLicenca || '';
+    const resumo = [
+        opcoes.licencaCliente ? `Cliente: ${opcoes.licencaCliente}` : '',
+        opcoes.instalacaoId ? `ID: ${opcoes.instalacaoId}` : '',
+        opcoes.licencaVencimento ? `Vencimento: ${formatarDataPainel(opcoes.licencaVencimento)}` : ''
+    ].filter(Boolean).join(' | ');
+
+    return `<section class="panel" id="gerar-licenca"><h2>Licenca para instalacao local</h2><div class="sub">Use quando o cliente instalar o sistema no proprio computador. Ele envia o ID da instalacao, voce gera o codigo e ele cola na tela de licenca.</div>
+      ${codigoGerado ?`<div class="credentials"><strong>Codigo gerado.</strong><div class="small">${escapar(resumo || 'Envie este codigo ao cliente aplicar em /licenca.')}</div><textarea readonly style="width:100%;min-height:130px;margin-top:10px;border:1px solid #dfe3ea;border-radius:8px;padding:12px;font:inherit">${escapar(codigoGerado)}</textarea></div>` : ''}
+      <form class="fields" method="post" action="/licencas/codigo">
+        <label>ID da instalacao<input name="instalacaoId" value="${escapar(opcoes.instalacaoId || '')}" required></label>
+        <label>Cliente / Empresa<input name="licencaCliente" value="${escapar(opcoes.licencaCliente || '')}" required></label>
+        <label>Telefone<input name="licencaTelefone" value="${escapar(opcoes.licencaTelefone || '')}"></label>
+        <label>Tipo de licenca<select name="licencaTipo">${opcoesTipoLicencaSelect(opcoes.licencaTipo)}</select></label>
+        <label>Vencimento manual<input type="date" name="licencaVencimento" value="${escapar(opcoes.licencaVencimento || '')}"></label>
+        <label>Observacao<input name="licencaObservacoes" value="${escapar(opcoes.licencaObservacoes || '')}" placeholder="Opcional"></label>
+        <div style="align-self:end"><button type="submit">Gerar codigo</button></div>
+      </form>
+    </section>`;
+}
+
+function secaoLicencasLocaisGerenciamento(licencas = []) {
+    const vencendo = licencas.filter(item => ['warn', 'error'].includes(estadoLicencaLocal(item).classe)).length;
+
+    return `<section class="panel" id="licencas-locais"><div class="topbar"><div><h2>Licencas locais emitidas</h2><div class="sub">${licencas.length} licenca(s) ativa(s), ${vencendo} com vencimento ou atencao</div></div><a class="button secondary" href="#gerar-licenca">Gerar nova</a></div>
+      <div class="table-wrap">
+      ${licencas.length ? `<table><thead><tr><th>Cliente</th><th>ID da instalacao</th><th>Vencimento</th><th>Status</th><th>Ultima consulta</th><th>Acoes</th></tr></thead><tbody>${licencas.map(item => {
+        const estado = estadoLicencaLocal(item);
+        const tipo = item.vitalicia === '1' ? 'Vitalicia' : item.suspensa === '1' ? 'Suspensa' : item.tipo || '-';
+        return `<tr>
+          <td><strong>${escapar(item.cliente)}</strong><div class="small">${escapar(item.telefone || '-')}</div>${item.observacoes ? `<div class="small">${escapar(item.observacoes)}</div>` : ''}</td>
+          <td><code>${escapar(item.instalacaoId)}</code></td>
+          <td><strong>${escapar(item.vencimento ? formatarDataPainel(item.vencimento) : 'Sem vencimento')}</strong><div class="small">${escapar(tipo)}</div></td>
+          <td><span class="badge ${estado.classe}">${escapar(estado.texto)}</span><div class="small">${escapar(estado.detalhe)}</div></td>
+          <td>${escapar(item.ultimoPingEm ? formatarDataHoraPainel(item.ultimoPingEm) : 'Sem consulta')}<div class="small">${escapar(item.ultimoStatus || '')}</div></td>
+          <td>
+            <div class="actions">
+              <a class="button smallbtn secondary" href="/licencas/${encodeURIComponent(item.instalacaoId)}/historico">Historico</a>
+              <form class="inline" method="post" action="/licencas/codigo">
+                <input type="hidden" name="instalacaoId" value="${escapar(item.instalacaoId)}">
+                <input type="hidden" name="licencaCliente" value="${escapar(item.cliente)}">
+                <input type="hidden" name="licencaTelefone" value="${escapar(item.telefone || '')}">
+                <input type="hidden" name="licencaObservacoes" value="${escapar(item.observacoes || '')}">
+                <select name="licencaTipo" style="max-width:160px;margin-bottom:6px">${opcoesTipoLicencaSelect(tipoLicencaFormulario(item.tipo))}</select>
+                <input type="date" name="licencaVencimento" value="${escapar(item.vencimento || '')}" title="Opcional: defina uma data manual" style="max-width:160px;margin-bottom:6px">
+                <button class="smallbtn" type="submit">Gerar renovacao</button>
+              </form>
+              <form class="inline" method="post" action="/licencas/${encodeURIComponent(item.instalacaoId)}/apagar" onsubmit="return confirm('Apagar esta licenca local da lista ativa? O historico sera preservado.');"><button class="smallbtn danger" type="submit">Apagar</button></form>
+            </div>
+          </td>
+        </tr>`;
+    }).join('')}</tbody></table>` : '<div class="empty">Nenhuma licenca local emitida ainda.</div>'}
+      </div>
+    </section>`;
+}
+
+function paginaLicencasLocais(licencas = [], opcoes = {}) {
+    const versaoSistema = packageInfo.version || '1.0.0';
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Licencas locais - Painel Mestre</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1480px,calc(100% - 30px));margin:34px auto}h1,h2{margin:0 0 8px}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.sub{color:#697386}.version-pill{display:inline-flex;margin-top:10px;padding:5px 10px;border-radius:999px;background:#eef1f5;color:#4b5565;font-size:12px;font-weight:800}.master-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.master-nav a{display:inline-flex;align-items:center;border-radius:8px;padding:10px 13px;background:#eef1f5;color:#263247;text-decoration:none;font-weight:800}.master-nav a.active{background:#4368e8;color:#fff}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);margin-top:22px;padding:22px}.fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}label{display:grid;gap:6px;font-weight:700}input,select,textarea{border:1px solid #dfe3ea;border-radius:8px;padding:11px;font:inherit}.button,button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.smallbtn{padding:7px 10px;font-size:13px}.secondary{background:#eef1f5;color:#263247}.danger{background:#dc3545}.actions{display:flex;gap:7px;flex-wrap:wrap}.inline{display:inline}.notice{padding:14px;border-radius:8px;margin-top:18px;background:#dff8ee;color:#047446;font-weight:700}.errorbox{background:#ffe5e7;color:#c52e35}.credentials{background:#fff8dd;border:1px solid #f2d56b;padding:16px;border-radius:8px;margin-top:18px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:12px 9px;border-bottom:1px solid #e8ebf0;text-align:left;vertical-align:top}th{font-size:12px;color:#697386;text-transform:uppercase}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800}.badge.ok{background:#dff8ee;color:#047446}.badge.warn{background:#fff2dc;color:#a76100}.badge.error{background:#ffe5e7;color:#c52e35}.small{font-size:12px;color:#697386;margin-top:4px}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:900px){.topbar{display:block}.fields{grid-template-columns:1fr}.table-wrap{overflow:auto}table{min-width:1200px}}
+    </style></head><body><main><div class="topbar"><div><h1>Painel Mestre</h1><div class="sub">Gestao de licencas locais</div><div class="version-pill">Versao ${escapar(versaoSistema)}</div></div><form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form></div>
+    ${menuMestre('licencas')}
+    ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
+    ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
+    ${formularioCodigoLicencaLocal(opcoes.codigoLicenca || {})}
+    ${secaoLicencasLocaisGerenciamento(licencas)}
+    </main></body></html>`;
+}
+
+function paginaHistoricoLicencaLocal(licenca, eventos = []) {
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Historico da licenca - Painel Mestre</title><style>
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1100px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}.event{display:grid;grid-template-columns:160px 150px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #e8ebf0}.event:last-child{border-bottom:0}.date,.type{font-size:13px;color:#697386;font-weight:800}.msg{font-weight:800}.details{margin-top:5px;color:#697386;font-size:13px;line-height:1.4}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:720px){.event{grid-template-columns:1fr}.date,.type{font-size:12px}}
+    </style></head><body><main><a class="button" href="/licencas#licencas-locais">Voltar</a><h1>Historico da licenca</h1><div class="sub">${escapar(licenca.cliente)} | ${escapar(licenca.instalacaoId)} | vencimento ${escapar(licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem vencimento')}</div>
+    <section class="panel">
+        ${eventos.length ? eventos.map(evento => `<div class="event">
+            <div class="date">${escapar(formatarDataHoraPainel(evento.criadoEm))}</div>
+            <div class="type">${escapar(evento.tipo)}</div>
+            <div><div class="msg">${escapar(evento.mensagem)}</div>${evento.detalhes ?`<div class="details">${escapar(evento.detalhes)}</div>` : ''}</div>
+        </div>`).join('') : '<div class="empty">Nenhum evento registrado para esta licenca.</div>'}
+    </section></main></body></html>`;
+}
+
 function urlPublicaMestre(req) {
     const configurada = String(process.env.MASTER_PUBLIC_URL || '').trim();
     if (configurada) return configurada.replace(/\/+$/, '');
@@ -900,8 +1005,8 @@ async function salvarLicencaLocalGerada(dados = {}) {
     await masterDb.executar(
         `INSERT INTO licencas_locais (
             instalacaoId, cliente, telefone, tipo, ativacao, vencimento, vitalicia,
-            suspensa, codigo, observacoes, atualizadoEm
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            suspensa, codigo, observacoes, apagada, apagadaEm, atualizadoEm
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '0', NULL, CURRENT_TIMESTAMP)
         ON CONFLICT(instalacaoId) DO UPDATE SET
             cliente = excluded.cliente,
             telefone = excluded.telefone,
@@ -912,6 +1017,8 @@ async function salvarLicencaLocalGerada(dados = {}) {
             suspensa = excluded.suspensa,
             codigo = excluded.codigo,
             observacoes = excluded.observacoes,
+            apagada = '0',
+            apagadaEm = NULL,
             atualizadoEm = CURRENT_TIMESTAMP`,
         [
             dados.instalacaoId,
@@ -926,14 +1033,55 @@ async function salvarLicencaLocalGerada(dados = {}) {
             dados.observacoes || ''
         ]
     );
+    await registrarEventoLicencaLocal(dados.instalacaoId, 'codigo', 'Codigo de licenca gerado.', `Tipo: ${dados.tipo || '-'}; vencimento: ${dados.vencimento || 'sem vencimento'}`);
 }
 
-async function listarLicencasLocaisEmitidas() {
+async function registrarEventoLicencaLocal(instalacaoId, tipo, mensagem, detalhes = '') {
+    await masterDb.executar(
+        `INSERT INTO eventos_licenca_local (instalacaoId, tipo, mensagem, detalhes)
+         VALUES (?, ?, ?, ?)`,
+        [String(instalacaoId || '').trim(), tipo, mensagem, detalhes]
+    );
+}
+
+async function buscarLicencaLocal(instalacaoId) {
+    return masterDb.buscarUm(
+        'SELECT * FROM licencas_locais WHERE instalacaoId = ? LIMIT 1',
+        [String(instalacaoId || '').trim()]
+    );
+}
+
+async function apagarLicencaLocal(instalacaoId) {
+    const licenca = await buscarLicencaLocal(instalacaoId);
+    if (!licenca) throw new Error('Licenca local nao encontrada.');
+    await masterDb.executar(
+        `UPDATE licencas_locais
+            SET apagada = '1', apagadaEm = CURRENT_TIMESTAMP, atualizadoEm = CURRENT_TIMESTAMP
+          WHERE instalacaoId = ?`,
+        [licenca.instalacaoId]
+    );
+    await registrarEventoLicencaLocal(licenca.instalacaoId, 'apagada', 'Licenca apagada da lista ativa.', licenca.cliente || '');
+}
+
+async function listarHistoricoLicencaLocal(instalacaoId) {
+    return masterDb.buscarTodos(
+        `SELECT * FROM eventos_licenca_local
+          WHERE instalacaoId = ?
+          ORDER BY criadoEm DESC
+          LIMIT 200`,
+        [String(instalacaoId || '').trim()]
+    );
+}
+
+async function listarLicencasLocaisEmitidas(opcoes = {}) {
+    const incluirApagadas = Boolean(opcoes.incluirApagadas);
     return masterDb.buscarTodos(
         `SELECT *
            FROM licencas_locais
+          WHERE ${incluirApagadas ? '1 = 1' : "COALESCE(apagada, '0') <> '1'"}
           ORDER BY
             CASE
+              WHEN COALESCE(apagada, '0') = '1' THEN 4
               WHEN suspensa = '1' THEN 0
               WHEN vitalicia = '1' THEN 3
               WHEN TRIM(COALESCE(vencimento, '')) = '' THEN 1
@@ -1003,7 +1151,7 @@ app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
     try {
         const instalacaoId = String(req.params.instalacaoId || '').trim();
-        const licenca = await masterDb.buscarUm('SELECT * FROM licencas_locais WHERE instalacaoId = ? LIMIT 1', [instalacaoId]);
+        const licenca = await masterDb.buscarUm("SELECT * FROM licencas_locais WHERE instalacaoId = ? AND COALESCE(apagada, '0') <> '1' LIMIT 1", [instalacaoId]);
         if (!licenca) {
             return res.status(404).json({ ok: false, encontrada: false, mensagem: 'Licença não encontrada no Painel Mestre.' });
         }
@@ -1012,6 +1160,7 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
             'UPDATE licencas_locais SET ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ?',
             ['consultada', instalacaoId]
         );
+        await registrarEventoLicencaLocal(instalacaoId, 'consulta', 'Instalacao local consultou a licenca.', `Status anterior: ${licenca.ultimoStatus || 'sem consulta'}`);
 
         res.json({
             ok: true,
@@ -1069,12 +1218,11 @@ app.post('/logout', (req, res) => {
 app.use(autenticarSessao);
 
 async function renderizarPainel(opcoes = {}) {
-    const [instalacoes, recursos, licencasLocais] = await Promise.all([
+    const [instalacoes, recursos] = await Promise.all([
         listarInstalacoes(),
-        obterRecursosServidor().catch(() => ({})),
-        listarLicencasLocaisEmitidas().catch(() => [])
+        obterRecursosServidor().catch(() => ({}))
     ]);
-    return pagina(instalacoes, { ...opcoes, recursos, licencasLocais });
+    return pagina(instalacoes, { ...opcoes, recursos });
 }
 
 app.get('/', async (req, res) => {
@@ -1083,6 +1231,14 @@ app.get('/', async (req, res) => {
         erro: req.query.erro,
         filtro: req.query.filtro,
         busca: req.query.busca
+    }));
+});
+
+app.get('/licencas', async (req, res) => {
+    const licencas = await listarLicencasLocaisEmitidas();
+    res.send(paginaLicencasLocais(licencas, {
+        mensagem: req.query.mensagem,
+        erro: req.query.erro
     }));
 });
 
@@ -1164,15 +1320,40 @@ app.post('/licencas/codigo', async (req, res) => {
             observacoes: req.body.licencaObservacoes
         });
 
-        res.send(await renderizarPainel({
+        const licencas = await listarLicencasLocaisEmitidas();
+        res.send(paginaLicencasLocais(licencas, {
             mensagem: 'Código de licença gerado. Envie ao cliente para aplicar na tela de licença.',
             codigoLicenca: { ...req.body, licencaTipo: tipo, licencaVencimento: vencimento, codigoLicenca }
         }));
     } catch (err) {
-        res.status(400).send(await renderizarPainel({
+        const licencas = await listarLicencasLocaisEmitidas().catch(() => []);
+        res.status(400).send(paginaLicencasLocais(licencas, {
             erro: err.message,
             codigoLicenca: req.body
         }));
+    }
+});
+
+app.post('/licencas/:instalacaoId/apagar', async (req, res) => {
+    try {
+        await apagarLicencaLocal(req.params.instalacaoId);
+        res.redirect('/licencas?mensagem=' + encodeURIComponent('Licenca local apagada da lista ativa. O historico foi preservado.'));
+    } catch (err) {
+        res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
+    }
+});
+
+app.get('/licencas/:instalacaoId/historico', async (req, res) => {
+    try {
+        const instalacaoId = String(req.params.instalacaoId || '').trim();
+        const [licenca, eventos] = await Promise.all([
+            buscarLicencaLocal(instalacaoId),
+            listarHistoricoLicencaLocal(instalacaoId)
+        ]);
+        if (!licenca) throw new Error('Licenca local nao encontrada.');
+        res.send(paginaHistoricoLicencaLocal(licenca, eventos));
+    } catch (err) {
+        res.redirect('/licencas?erro=' + encodeURIComponent(err.message));
     }
 });
 

@@ -36,13 +36,50 @@ const ready = new Promise((resolve, reject) => {
                         observacoes TEXT,
                         ultimoStatus TEXT,
                         ultimoPingEm DATETIME,
+                        apagada TEXT NOT NULL DEFAULT '0',
+                        apagadaEm DATETIME,
                         criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
                         atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
                     )`, (licencaErr) => {
                         if (licencaErr) return reject(licencaErr);
-                        db.run('CREATE INDEX IF NOT EXISTS idx_licencas_locais_instalacao ON licencas_locais(instalacaoId)', (licencaIndiceErr) => {
-                            if (licencaIndiceErr) return reject(licencaIndiceErr);
-                            resolve();
+                        db.all('PRAGMA table_info(licencas_locais)', (pragmaLicencaErr, colunasLicenca) => {
+                            if (pragmaLicencaErr) return reject(pragmaLicencaErr);
+                            const colunasAtuais = new Set((colunasLicenca || []).map(coluna => coluna.name));
+                            const novasLicencas = [
+                                ['apagada', "TEXT NOT NULL DEFAULT '0'"],
+                                ['apagadaEm', 'DATETIME']
+                            ].filter(([nome]) => !colunasAtuais.has(nome));
+
+                            function finalizarLicencasLocais() {
+                                db.run('CREATE INDEX IF NOT EXISTS idx_licencas_locais_instalacao ON licencas_locais(instalacaoId)', (licencaIndiceErr) => {
+                                    if (licencaIndiceErr) return reject(licencaIndiceErr);
+                                    db.run(`CREATE TABLE IF NOT EXISTS eventos_licenca_local (
+                                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        instalacaoId TEXT NOT NULL,
+                                        tipo TEXT NOT NULL,
+                                        mensagem TEXT NOT NULL,
+                                        detalhes TEXT,
+                                        criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+                                    )`, (eventoLicencaErr) => {
+                                        if (eventoLicencaErr) return reject(eventoLicencaErr);
+                                        db.run('CREATE INDEX IF NOT EXISTS idx_eventos_licenca_local ON eventos_licenca_local(instalacaoId, criadoEm DESC)', (indiceEventoLicencaErr) => {
+                                            if (indiceEventoLicencaErr) return reject(indiceEventoLicencaErr);
+                                            resolve();
+                                        });
+                                    });
+                                });
+                            }
+
+                            if (!novasLicencas.length) return finalizarLicencasLocais();
+
+                            let pendentesLicencas = novasLicencas.length;
+                            novasLicencas.forEach(([nome, definicao]) => {
+                                db.run(`ALTER TABLE licencas_locais ADD COLUMN ${nome} ${definicao}`, (alterLicencaErr) => {
+                                    if (alterLicencaErr) return reject(alterLicencaErr);
+                                    pendentesLicencas -= 1;
+                                    if (!pendentesLicencas) finalizarLicencasLocais();
+                                });
+                            });
                         });
                     });
                 });
