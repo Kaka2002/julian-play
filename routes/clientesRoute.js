@@ -3943,9 +3943,10 @@ function secaoPixPlanoCliente(cliente = {}) {
     </section>`;
 }
 
-function secaoHistoricoRobo(interacoes = []) {
-    const itens = interacoes.length
-        ? interacoes.map(item => `<div class="note-item">
+function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null) {
+    const interacoesVisiveis = paginacaoRobo?.itens || interacoes;
+    const itens = interacoesVisiveis.length
+        ? interacoesVisiveis.map(item => `<div class="note-item">
             <strong>${escapar(item.titulo || 'Interação do robô')}</strong>
             <span>${escapar(formatarDataHoraCurta(item.criadoEm))} &middot; ${escapar(item.status || 'registrado')}${item.destino ?` &middot; ${escapar(item.destino)}` : ''}</span>
             <p>${escapar(item.resumo || '-')}</p>
@@ -3961,6 +3962,14 @@ function secaoHistoricoRobo(interacoes = []) {
         </div>
         <div style="padding:20px;">
             ${itens}
+            ${paginacaoRobo ?paginacao({
+                base: `/clientes/${cliente.id}/editar`,
+                params: { parametroPagina: 'robo' },
+                pagina: paginacaoRobo.pagina,
+                totalPaginas: paginacaoRobo.totalPaginas,
+                total: paginacaoRobo.total,
+                porPagina: paginacaoRobo.porPagina
+            }) : ''}
         </div>
     </section>`;
 }
@@ -3987,7 +3996,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const atendimentos = opcoesFormulario.atendimentos || [];
     const interacoesRobo = opcoesFormulario.interacoesRobo || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
+    const paginaRobo = paginaAtual(opcoesFormulario.paginaRobo);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
+    const paginacaoRobo = cliente.id ? paginarItens(interacoesRobo, paginaRobo, REGISTROS_POR_PAGINA) : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
@@ -4401,7 +4412,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
-        cliente.id ?secaoHistoricoRobo(interacoesRobo) : '',
+        cliente.id ?secaoHistoricoRobo(cliente, interacoesRobo, paginacaoRobo) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
@@ -6845,12 +6856,20 @@ router.get('/clientes/:id/editar', async (req, res) => {
         listarPagamentosCliente(cliente.id),
         buscarAlertasCadastroCliente(cliente),
         listarAtendimentosCliente(cliente.id),
-        listarInteracoesCliente(cliente)
+        listarInteracoesCliente(cliente, 60)
     ]);
 
     await renderizar(res, {
         titulo: 'Editar cliente',
-        conteudo: formularioCliente(cliente, listas, { notas, pagamentos, alertas, atendimentos, interacoesRobo, paginaHistorico: req.query.historico || req.query.pagina }),
+        conteudo: formularioCliente(cliente, listas, {
+            notas,
+            pagamentos,
+            alertas,
+            atendimentos,
+            interacoesRobo,
+            paginaHistorico: req.query.historico || req.query.pagina,
+            paginaRobo: req.query.robo
+        }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
     });
