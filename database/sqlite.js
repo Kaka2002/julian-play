@@ -16,6 +16,7 @@ db.serialize(() => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             telefone TEXT NOT NULL,
+            ddiTelefone TEXT DEFAULT '55',
             usuario TEXT,
             senha TEXT,
             plano TEXT,
@@ -263,6 +264,7 @@ db.serialize(() => {
     `);
 
     const colunas = {
+        ddiTelefone: "TEXT DEFAULT '55'",
         usuario: 'TEXT',
         senha: 'TEXT',
         plano: 'TEXT',
@@ -407,6 +409,7 @@ function migrarTelefoneDuplicado(done) {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     nome TEXT NOT NULL,
                     telefone TEXT NOT NULL,
+                    ddiTelefone TEXT DEFAULT '55',
                     usuario TEXT,
                     senha TEXT,
                     plano TEXT,
@@ -444,7 +447,7 @@ function migrarTelefoneDuplicado(done) {
             `);
             db.run(`
                 INSERT INTO clientes (
-                    id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
+                    id, nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
@@ -452,7 +455,7 @@ function migrarTelefoneDuplicado(done) {
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 )
                 SELECT
-                    id, nome, telefone, usuario, senha, plano, aparelho, vencimento,
+                    id, nome, telefone, '55', usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, 0, appInstalado,

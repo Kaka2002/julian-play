@@ -32,6 +32,8 @@ function limparTexto(valor) {
     return String(valor || '').trim();
 }
 
+const DDIS_TELEFONE = ['1', '33', '34', '39', '44', '49', '52', '54', '56', '57', '591', '595', '598', '351'];
+
 function normalizarTelefone(telefone) {
     const textoOriginal = limparTexto(telefone);
     let numeros = textoOriginal.replace(/\D/g, '');
@@ -44,8 +46,29 @@ function normalizarTelefone(telefone) {
         numeros = `55${numeros.slice(-11)}`;
     }
     if (numeros.startsWith('55')) return numeros;
+    if (numeros.length === 11 && /^1[1-9]9/.test(numeros)) return `55${numeros}`;
+    if (DDIS_TELEFONE.some(ddi => numeros.startsWith(ddi) && numeros.length > ddi.length + 6)) return numeros;
+    if (numeros.length === 11 && numeros.startsWith('1')) return numeros;
+    if (numeros.length > 11) return numeros;
 
     return `55${numeros}`;
+}
+
+function normalizarTelefoneComDdi(ddi, telefone) {
+    const codigo = limparTexto(ddi).replace(/\D/g, '') || '55';
+    let numero = limparTexto(telefone).replace(/\D/g, '');
+
+    if (!numero) return '';
+
+    if (numero.startsWith(codigo) && numero.length > codigo.length + 6) {
+        numero = numero.slice(codigo.length);
+    }
+
+    if (codigo === '55') {
+        return normalizarTelefone(`${codigo}${numero}`);
+    }
+
+    return `${codigo}${numero}`;
 }
 
 function normalizarLista(valor) {
@@ -205,7 +228,7 @@ function montarCliente(dados = {}) {
         numero = numero.slice(ddi.length);
     }
 
-    const telefone = normalizarTelefone(ddi ? `${ddi}${numero}` : dados.telefone);
+    const telefone = ddi ? normalizarTelefoneComDdi(ddi, numero) : normalizarTelefone(dados.telefone);
 
     if (!limparTexto(dados.nome)) {
         throw new Error('Informe o nome do cliente.');
@@ -221,6 +244,7 @@ function montarCliente(dados = {}) {
     return {
         nome: limparTexto(dados.nome),
         telefone,
+        ddiTelefone: ddi || '55',
         usuario: limparTexto(dados.usuario),
         senha: limparTexto(dados.senha),
         plano: limparTexto(dados.plano),
@@ -485,6 +509,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             `UPDATE clientes SET
                 nome = ?,
                 telefone = ?,
+                ddiTelefone = ?,
                 usuario = ?,
                 senha = ?,
                 plano = ?,
@@ -525,7 +550,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
 
     const resultado = await executar(
         `INSERT INTO clientes (
-            nome, telefone, usuario, senha, plano, aparelho, vencimento,
+            nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
             dataInicio, dataVencimento, appsInstalados, dispositivosSelecionados,
             paineisSelecionados, appInstalado, status
         ) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
@@ -721,6 +746,7 @@ async function salvarCliente(dados) {
             [
                 cliente.nome,
                 cliente.telefone,
+                cliente.ddiTelefone,
                 cliente.usuario,
                 cliente.senha,
                 cliente.plano,
@@ -766,15 +792,16 @@ async function salvarCliente(dados) {
 
     const resultado = await executar(
         `INSERT INTO clientes (
-            nome, telefone, usuario, senha, plano, aparelho, vencimento,
+            nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
             usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
+            cliente.ddiTelefone,
             cliente.usuario || credenciais.usuario,
             cliente.senha || credenciais.senha,
             cliente.plano,
@@ -1304,7 +1331,9 @@ async function atualizarPagamentoCliente(clienteId, pagamentoId, dados = {}) {
 function buscarAlertasCadastroCliente(dados = {}) {
     const idAtual = limparTexto(dados.id);
     const nome = limparTexto(dados.nome);
-    const telefone = normalizarTelefone(dados.ddiTelefone ? `${dados.ddiTelefone}${dados.telefone}` : dados.telefone);
+    const telefone = dados.ddiTelefone
+        ? normalizarTelefoneComDdi(dados.ddiTelefone, dados.telefone)
+        : normalizarTelefone(dados.telefone);
     const telefoneCurto = telefoneSemDdi(telefone);
     const params = [];
     const condicoes = [];

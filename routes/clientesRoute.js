@@ -146,6 +146,24 @@ const ORIGENS_CLIENTE = [
     'Fornecedor',
     'Outro'
 ];
+const PAISES_TELEFONE = [
+    { pais: 'Brasil', ddi: '55', exemplo: '11999999999' },
+    { pais: 'Estados Unidos', ddi: '1', exemplo: '5303531844' },
+    { pais: 'Canada', ddi: '1', exemplo: '4165551234' },
+    { pais: 'Portugal', ddi: '351', exemplo: '912345678' },
+    { pais: 'Espanha', ddi: '34', exemplo: '612345678' },
+    { pais: 'Italia', ddi: '39', exemplo: '3123456789' },
+    { pais: 'Franca', ddi: '33', exemplo: '612345678' },
+    { pais: 'Alemanha', ddi: '49', exemplo: '15123456789' },
+    { pais: 'Reino Unido', ddi: '44', exemplo: '7123456789' },
+    { pais: 'Mexico', ddi: '52', exemplo: '5512345678' },
+    { pais: 'Argentina', ddi: '54', exemplo: '91123456789' },
+    { pais: 'Chile', ddi: '56', exemplo: '912345678' },
+    { pais: 'Uruguai', ddi: '598', exemplo: '91234567' },
+    { pais: 'Paraguai', ddi: '595', exemplo: '981123456' },
+    { pais: 'Bolivia', ddi: '591', exemplo: '71234567' },
+    { pais: 'Colombia', ddi: '57', exemplo: '3012345678' }
+];
 const TAGS_CLIENTE = [
     'VIP',
     'Problemático',
@@ -1671,7 +1689,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .phone-field {
             display: grid;
-            grid-template-columns: 74px minmax(120px, 1fr);
+            grid-template-columns: minmax(170px, 220px) minmax(120px, 1fr);
             align-items: center;
             margin-top: 7px;
             border: 1px solid var(--line);
@@ -1686,10 +1704,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             color: var(--ink);
             background: #f7f8fb;
             font-weight: 700;
-            text-align: center;
+            padding: 0 10px;
         }
 
-        .phone-field input {
+        .phone-field input,
+        .phone-field select {
             margin-top: 0;
             border: 0;
             border-radius: 0;
@@ -2521,25 +2540,45 @@ function editorMensagemModelo(valor = '') {
     </script>`;
 }
 
-function campoWhatsApp(valor = '') {
+function campoWhatsApp(valor = '', ddiSalvo = '') {
     const numeros = String(valor || '').replace(/\D/g, '');
-    let ddi = '55';
+    let ddi = String(ddiSalvo || '').replace(/\D/g, '') || '55';
     let telefone = numeros;
 
-    if (numeros.startsWith('55') && numeros.length > 11) {
+    if (ddiSalvo) {
+        telefone = numeros.startsWith(ddi) && numeros.length > ddi.length + 6
+            ? numeros.slice(ddi.length)
+            : numeros;
+    } else if (numeros.startsWith('55') && numeros.length > 11) {
         telefone = numeros.slice(2);
         while (telefone.startsWith('55') && telefone.length > 11) {
             telefone = telefone.slice(2);
         }
     } else if (numeros.length > 11) {
-        ddi = numeros.slice(0, numeros.length - 11) || '55';
-        telefone = numeros.slice(-11);
+        const pais = [...PAISES_TELEFONE]
+            .sort((a, b) => b.ddi.length - a.ddi.length)
+            .find(item => numeros.startsWith(item.ddi) && numeros.length > item.ddi.length + 6);
+
+        if (pais) {
+            ddi = pais.ddi;
+            telefone = numeros.slice(pais.ddi.length);
+        } else {
+            ddi = numeros.slice(0, numeros.length - 11) || '55';
+            telefone = numeros.slice(-11);
+        }
     }
+
+    const opcoes = PAISES_TELEFONE.map(item => {
+        const selecionado = item.ddi === ddi ? ' selected' : '';
+        return `<option value="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}"${selecionado}>${escapar(item.pais)} (+${escapar(item.ddi)})</option>`;
+    }).join('');
 
     return `<label>WhatsApp *
         <div class="phone-field">
-            <input class="phone-prefix" type="text" name="ddiTelefone" value="${escapar(ddi || '55')}" aria-label="DDI">
-            <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="11999999999">
+            <select class="phone-prefix" name="ddiTelefone" aria-label="País do WhatsApp">
+                ${opcoes}
+            </select>
+            <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="${escapar(PAISES_TELEFONE.find(item => item.ddi === ddi)?.exemplo || '11999999999')}">
         </div>
     </label>`;
 }
@@ -4500,7 +4539,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${cliente.id ?`<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
-            ${campoWhatsApp(cliente.telefone)}
+            ${campoWhatsApp(cliente.telefone, cliente.ddiTelefone)}
             ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
             ${campo({
                 nome: 'origem',
