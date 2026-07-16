@@ -1,6 +1,5 @@
 const express = require('express');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
@@ -3520,7 +3519,8 @@ async function criarImagemCampanhaAmizade(telefoneInstalacao) {
         return { arquivo: origem, temporario: false };
     }
 
-    const destino = path.join(os.tmpdir(), `amizade-presente-${Date.now()}-${Math.random().toString(16).slice(2)}.png`);
+    fs.mkdirSync(ASSETS_DIR, { recursive: true });
+    const destino = path.join(ASSETS_DIR, `amizade-presente-${telefone}.png`);
     const script = `
 $origem = $args[0]
 $destino = $args[1]
@@ -3544,7 +3544,7 @@ $imagem.Dispose()
 `;
 
     await executarPowerShell(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script, origem, destino, telefone]);
-    return { arquivo: destino, temporario: true };
+    return { arquivo: destino, temporario: false };
 }
 
 function formatarDataHoraMensagem(valor) {
