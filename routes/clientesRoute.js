@@ -3584,6 +3584,76 @@ async function criarImagemCampanhaAmizade(telefoneInstalacao) {
     return { arquivo: destino, temporario: false };
 }
 
+async function enviarCampanhaAmizadeParaCliente(client, cliente, imagemCampanha, telefoneInstalacao, descricao = 'Campanha amizade que vale presente') {
+    const telefone = normalizarTelefone(cliente.telefone);
+
+    if (!telefone) {
+        throw new Error('Cliente sem telefone cadastrado.');
+    }
+
+    const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao));
+    const envio = await enviarImagemWhatsAppComFallback(
+        client,
+        telefone,
+        imagemCampanha.arquivo,
+        legenda,
+        descricao
+    );
+
+    return {
+        ...envio,
+        telefone
+    };
+}
+
+async function enviarCampanhaAmizadeManualPorId(clienteId, descricao = 'Campanha amizade que vale presente manual') {
+    const cliente = await buscarClientePorId(clienteId);
+
+    if (!cliente) {
+        throw new Error('Cliente nao encontrado.');
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+    const config = await obterConfiguracoes();
+    const telefoneInstalacao = telefoneCampanhaAmizade(status, config);
+    let imagemCampanha = null;
+
+    if (!client || !status.conectado) {
+        throw new Error('WhatsApp nao esta conectado.');
+    }
+
+    if (!fs.existsSync(IMAGEM_CAMPANHA_AMIZADE) && !fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)) {
+        throw new Error('Imagem da campanha nao encontrada. Gere o pacote novamente.');
+    }
+
+    try {
+        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao);
+        const envioWhatsApp = await enviarCampanhaAmizadeParaCliente(
+            client,
+            cliente,
+            imagemCampanha,
+            telefoneInstalacao,
+            descricao
+        );
+
+        await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada manualmente pelo WhatsApp.');
+        logControleClientes('Campanha amizade manual enviada', {
+            clienteId: cliente.id,
+            destino: envioWhatsApp.destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack,
+            telefoneInstalacao: formatarTelefoneCampanha(telefoneInstalacao)
+        });
+
+        return { cliente, envioWhatsApp };
+    } finally {
+        if (imagemCampanha?.temporario) {
+            fs.promises.unlink(imagemCampanha.arquivo).catch(() => {});
+        }
+    }
+}
+
 function formatarDataHoraMensagem(valor) {
     if (!valor) return '';
 
@@ -5451,6 +5521,11 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
     const proximos = clientesComVencimentoProximo(clientes);
     const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
     const suporteAberto = Number(resumoSuporte.abertos || 0) + Number(resumoSuporte.emAndamento || 0);
+    const opcoesClientesCampanha = clientes
+        .filter(cliente => normalizarTelefone(cliente.telefone))
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+        .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome || 'Cliente sem nome')}${clienteEhTeste(cliente) ? ' (teste)' : ''}</option>`)
+        .join('');
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -5471,9 +5546,18 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
                 <h2 class="panel-title">Campanha de indicação</h2>
                 <div class="subtitle">Dispare a arte "Amizade que vale presente" para clientes ativos, exceto testes.</div>
             </div>
-            <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes ativos, exceto testes?');">
-                <button class="button green" type="submit">${icon('whats')} Disparar campanha</button>
-            </form>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                <form method="post" action="/clientes/disparar-amizade-presente-cliente" onsubmit="return confirm('Enviar a campanha somente para o cliente selecionado?');" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <select name="clienteId" required style="min-width:220px;">
+                        <option value="">Enviar para 1 cliente...</option>
+                        ${opcoesClientesCampanha}
+                    </select>
+                    <button class="button secondary" type="submit">${icon('whats')} Testar envio</button>
+                </form>
+                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes ativos, exceto testes?');">
+                    <button class="button green" type="submit">${icon('whats')} Disparar campanha</button>
+                </form>
+            </div>
         </div>
     </section>
     ${receitaMensalCard(receita)}
@@ -5557,6 +5641,9 @@ function tabelaClientes(clientes) {
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
                 <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar vencimento próximo">${icon('alert')}</button>
+                </form>
+                <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-campanha-amizade" onsubmit="return confirm('Enviar a campanha Amizade que vale presente somente para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar campanha de indicação">${icon('whats')}</button>
                 </form>
                 ${clienteTesteExpirado(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-planos-teste-expirado" onsubmit="return confirm('Enviar a tela de planos para este teste expirado? Esta acao so deve ser usada uma vez.');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar planos do teste expirado">${icon('planos')}</button>
@@ -8681,6 +8768,46 @@ router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar aviso: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/enviar-campanha-amizade', async (req, res) => {
+    try {
+        const { cliente } = await enviarCampanhaAmizadeManualPorId(
+            req.params.id,
+            'Campanha amizade que vale presente manual'
+        );
+
+        return res.redirect(montarUrlListaClientesMensagem(`Campanha enviada para ${cliente.nome}.`));
+    } catch (err) {
+        logControleClientes('Erro ao enviar campanha amizade manual', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar campanha: ${err.message}`));
+    }
+});
+
+router.post('/clientes/disparar-amizade-presente-cliente', async (req, res) => {
+    const clienteId = req.body?.clienteId;
+
+    if (!clienteId) {
+        return res.redirect(montarUrlListaClientesMensagem('Selecione um cliente para testar a campanha.'));
+    }
+
+    try {
+        const { cliente } = await enviarCampanhaAmizadeManualPorId(
+            clienteId,
+            'Campanha amizade que vale presente teste individual'
+        );
+
+        return res.redirect(montarUrlListaClientesMensagem(`Campanha de teste enviada para ${cliente.nome}.`));
+    } catch (err) {
+        logControleClientes('Erro ao enviar campanha amizade teste individual', {
+            clienteId,
+            erro: err.message
+        });
+        return res.redirect(montarUrlListaClientesMensagem(`Erro ao testar campanha: ${err.message}`));
     }
 });
 
