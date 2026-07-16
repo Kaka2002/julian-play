@@ -3974,6 +3974,190 @@ function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null)
     </section>`;
 }
 
+function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = [], interacoesRobo = []) {
+    if (!cliente.id) return '';
+
+    const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+    const infoVencimento = textoVencimento(cliente);
+    const valorPlano = cliente.valorPlano || '0,00';
+    const valorApp = cliente.assinaturaApp || '0,00';
+    const total = numeroMoeda(valorPlano) + numeroMoeda(valorApp);
+    const totalFormatado = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const apps = lerListaSalva(cliente.appsInstalados);
+    const dispositivos = lerListaSalva(cliente.dispositivosSelecionados);
+    const ultimoPagamento = pagamentos[0] || null;
+    const ultimoRobo = interacoesRobo[0] || null;
+    const abertos = atendimentos.filter(item => item.status !== 'resolvido');
+    const classeVencimento = clienteEhTeste(cliente)
+        ? 'info'
+        : vencimentoExpirou(vencimento)
+            ? 'error'
+            : vencimentoNoIntervalo(vencimento, new Date(), new Date(Date.now() + 7 * 86400000))
+                ? 'warn'
+                : 'ok';
+
+    return `<section class="metrics" style="margin-bottom:24px;">
+        ${metricCard({ label: 'Status', valor: rotuloStatus(cliente.status), nota: clienteEhTeste(cliente) ? 'Cliente em teste' : 'Cliente comercial', tipo: classeVencimento === 'error' ? 'red' : classeVencimento === 'warn' ? 'orange' : 'green', icone: classeVencimento === 'error' ? 'x' : 'check' })}
+        ${metricCard({ label: 'Vencimento', valor: formatarDataHoraCurta(vencimento) || '-', nota: infoVencimento || 'Sem data definida', tipo: classeVencimento === 'error' ? 'red' : classeVencimento === 'warn' ? 'orange' : 'info', icone: 'calendario' })}
+        ${metricCard({ label: 'Plano', valor: cliente.plano || '-', nota: `Total R$ ${totalFormatado}`, tipo: 'info', icone: 'planos' })}
+        ${metricCard({ label: 'Apps', valor: apps.length || 0, nota: apps.slice(0, 2).join(', ') || 'Nenhum app informado', tipo: 'green', icone: 'apps' })}
+        ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
+        ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
+        ${metricCard({ label: 'Último pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histórico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
+        ${metricCard({ label: 'Último robô', valor: ultimoRobo ?rotuloCurto(ultimoRobo.titulo || 'Mensagem') : '-', nota: ultimoRobo ?formatarDataHoraCurta(ultimoRobo.criadoEm) : 'Sem interação registrada', tipo: ultimoRobo ? 'info' : 'orange', icone: 'whats' })}
+    </section>`;
+}
+
+function rotuloCurto(valor = '', limite = 18) {
+    const texto = String(valor || '').trim();
+    if (texto.length <= limite) return texto || '-';
+    return `${texto.slice(0, limite - 3)}...`;
+}
+
+function acoesRapidasCliente(cliente = {}) {
+    if (!cliente.id) return '';
+
+    const whatsapp = normalizarTelefone(cliente.telefone);
+    const numeroWhatsApp = whatsapp ?(whatsapp.startsWith('55') ? whatsapp : `55${whatsapp}`) : '';
+    const linkWhatsApp = numeroWhatsApp ?`https://wa.me/${numeroWhatsApp}` : '';
+
+    return `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Ações rápidas</h2>
+                <div class="subtitle">Atalhos para resolver o atendimento sem procurar em outras áreas.</div>
+            </div>
+        </div>
+        <div class="actions" style="padding:20px;gap:10px;flex-wrap:wrap;">
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
+                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX</button>
+            </form>
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
+                <button class="button green" type="submit">${icon('whats')} Enviar vencimento</button>
+            </form>
+            <a class="button" href="#renovar">${icon('refresh')} Renovar</a>
+            <a class="button secondary" href="#atendimentos">${icon('atendimento')} Atendimento</a>
+            <a class="button secondary" href="#historico-unificado">${icon('info')} Histórico</a>
+            ${linkWhatsApp ?`<a class="button secondary" href="${linkWhatsApp}" target="_blank" rel="noopener">${icon('whats')} Abrir WhatsApp</a>` : ''}
+            <a class="button secondary" href="/clientes/todos">${icon('clientes')} Lista</a>
+        </div>
+    </section>`;
+}
+
+function recomendacoesCliente(cliente = {}, pagamentos = [], atendimentos = []) {
+    if (!cliente.id) return '';
+
+    const itens = [];
+    const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+    const abertos = atendimentos.filter(item => item.status !== 'resolvido');
+
+    if (!String(cliente.telefone || '').trim()) itens.push(['WhatsApp ausente', 'Cadastre o número para enviar cobranças, PIX e avisos pelo robô.']);
+    if (!String(cliente.plano || '').trim()) itens.push(['Plano incompleto', 'Escolha o plano para renovar e gerar cobranças corretamente.']);
+    if (!String(vencimento || '').trim()) itens.push(['Sem vencimento', 'Informe a data de vencimento para aparecer no painel e nas cobranças.']);
+    if (!pagamentos.length && !clienteEhTeste(cliente)) itens.push(['Sem financeiro', 'Envie a confirmação da assinatura ou registre a próxima renovação.']);
+    if (vencimentoExpirou(vencimento)) itens.push(['Cliente vencido', 'Enviar cobrança ou registrar renovação.']);
+    else if (!clienteEhTeste(cliente) && vencimentoNoIntervalo(vencimento, new Date(), new Date(Date.now() + 7 * 86400000))) itens.push(['Vencimento próximo', 'Enviar aviso de vencimento e PIX do plano.']);
+    if (abertos.length) itens.push(['Atendimento aberto', `${abertos.length} atendimento(s) precisam de acompanhamento.`]);
+
+    if (!itens.length) {
+        return `<section class="panel" style="margin-bottom:24px;">
+            <div class="panel-head">
+                <div>
+                    <h2 class="panel-title">Ações recomendadas</h2>
+                    <div class="subtitle">Tudo certo para este cliente no momento.</div>
+                </div>
+                <span class="badge green">Sem pendências</span>
+            </div>
+        </section>`;
+    }
+
+    return `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Ações recomendadas</h2>
+                <div class="subtitle">Pontos que merecem atenção neste cadastro.</div>
+            </div>
+            <span class="badge orange">${itens.length} ponto(s)</span>
+        </div>
+        <div style="padding:20px;display:grid;gap:10px;">
+            ${itens.map(([titulo, detalhe]) => `<div class="note-item">
+                <strong>${escapar(titulo)}</strong>
+                <p>${escapar(detalhe)}</p>
+            </div>`).join('')}
+        </div>
+    </section>`;
+}
+
+function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], atendimentos = [], interacoesRobo = [] } = {}) {
+    const itens = [];
+
+    pagamentos.forEach(item => itens.push({
+        data: item.dataPagamento || item.criadoEm,
+        tipo: 'Financeiro',
+        titulo: `${item.plano || 'Pagamento'} - R$ ${item.valorTotal || item.valorPlano || '0,00'}`,
+        detalhe: `${item.formaPagamento || '-'}${item.vencimentoNovo ?` | vencimento ${formatarDataHoraCurta(item.vencimentoNovo)}` : ''}`
+    }));
+
+    interacoesRobo.forEach(item => itens.push({
+        data: item.criadoEm,
+        tipo: 'Robô',
+        titulo: item.titulo || 'Interação do robô',
+        detalhe: `${item.status || 'registrado'}${item.resumo ?` | ${item.resumo}` : ''}`
+    }));
+
+    atendimentos.forEach(item => itens.push({
+        data: item.criadoEm,
+        tipo: 'Atendimento',
+        titulo: `${rotuloMotivoAtendimento(item.motivo)} - ${rotuloStatusAtendimento(item.status)}`,
+        detalhe: item.descricao || (item.proximoContato ?`Próximo contato: ${formatarDataHoraCurta(item.proximoContato)}` : '')
+    }));
+
+    notas.forEach(item => itens.push({
+        data: item.criadoEm,
+        tipo: 'Nota',
+        titulo: 'Registro manual',
+        detalhe: item.texto || ''
+    }));
+
+    return itens
+        .sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0))
+        .slice(0, 60);
+}
+
+function secaoHistoricoUnificado(cliente = {}, dados = {}, paginacaoHistoricoUnificado = null) {
+    if (!cliente.id) return '';
+
+    const itens = paginacaoHistoricoUnificado?.itens || [];
+    const conteudo = itens.length
+        ? itens.map(item => `<div class="note-item">
+            <span class="badge info">${escapar(item.tipo)}</span>
+            <strong>${escapar(item.titulo)}</strong>
+            <span>${escapar(formatarDataHoraCurta(item.data))}</span>
+            ${item.detalhe ?`<p>${escapar(item.detalhe)}</p>` : ''}
+        </div>`).join('')
+        : '<div class="empty">Nenhum histórico registrado ainda.</div>';
+
+    return `<section class="panel" id="historico-unificado" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Histórico unificado</h2>
+                <div class="subtitle">Financeiro, robô, atendimentos e notas em uma linha do tempo.</div>
+            </div>
+        </div>
+        <div style="padding:20px;">
+            ${conteudo}
+            ${paginacaoHistoricoUnificado ?paginacao({
+                base: `/clientes/${cliente.id}/editar`,
+                params: { parametroPagina: 'linha' },
+                pagina: paginacaoHistoricoUnificado.pagina,
+                totalPaginas: paginacaoHistoricoUnificado.totalPaginas,
+                total: paginacaoHistoricoUnificado.total,
+                porPagina: paginacaoHistoricoUnificado.porPagina
+            }) : ''}
+        </div>
+    </section>`;
+}
+
 function clienteAniversarioPendente(cliente = {}) {
     const nascimento = String(cliente.nascimento || '');
     if (nascimento.length < 10) return false;
@@ -3997,8 +4181,15 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const interacoesRobo = opcoesFormulario.interacoesRobo || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginaRobo = paginaAtual(opcoesFormulario.paginaRobo);
+    const paginaLinha = paginaAtual(opcoesFormulario.paginaLinha);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
     const paginacaoRobo = cliente.id ? paginarItens(interacoesRobo, paginaRobo, REGISTROS_POR_PAGINA) : null;
+    const historicoUnificado = cliente.id
+        ? montarHistoricoUnificado(cliente, { notas, pagamentos, atendimentos, interacoesRobo })
+        : [];
+    const paginacaoHistoricoUnificado = cliente.id
+        ? paginarItens(historicoUnificado, paginaLinha, REGISTROS_POR_PAGINA)
+        : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
     const appsSelecionados = lerListaSalva(cliente.appsInstalados);
@@ -4008,6 +4199,11 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
+    const topoCliente = cliente.id
+        ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
+            ${acoesRapidasCliente(cliente)}
+            ${recomendacoesCliente(cliente, pagamentos, atendimentos)}`
+        : '';
 
     const formulario = `<section class="page-title">
         <h1>${cliente.id ?'Editar Cliente' : 'Novo Cliente'}</h1>
@@ -4412,12 +4608,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoRenovacaoCliente(cliente, listas, pagamentos),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
+        cliente.id ?secaoHistoricoUnificado(cliente, {}, paginacaoHistoricoUnificado) : '',
         cliente.id ?secaoHistoricoRobo(cliente, interacoesRobo, paginacaoRobo) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
 
-    return `${formulario}${extras}`;
+    return `${topoCliente}${formulario}${extras}`;
 }
 
 function metricCard({ label, valor, nota = '', tipo, icone }) {
@@ -6877,7 +7074,8 @@ router.get('/clientes/:id/editar', async (req, res) => {
             atendimentos,
             interacoesRobo,
             paginaHistorico: req.query.historico || req.query.pagina,
-            paginaRobo: req.query.robo
+            paginaRobo: req.query.robo,
+            paginaLinha: req.query.linha
         }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
