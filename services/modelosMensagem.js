@@ -132,6 +132,14 @@ const modelosLegadosSemAcento = {
     }
 };
 
+const modeloCampanhaAmizade = {
+    chave: 'campanha_amizade_presente',
+    plano: 'campanha',
+    titulo: 'Amizade que vale presente',
+    cor: 'green',
+    texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+};
+
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
         db.run(sql, params, function onRun(err) {
@@ -250,8 +258,31 @@ async function garantirModelosPadrao() {
     await marcarSeedModelosProcessado();
 }
 
+async function garantirModeloCampanhaAmizade() {
+    await executar(
+        `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
+        VALUES (?, ?, ?, ?, ?, 1)`,
+        [
+            modeloCampanhaAmizade.chave,
+            modeloCampanhaAmizade.plano,
+            modeloCampanhaAmizade.titulo,
+            modeloCampanhaAmizade.texto,
+            modeloCampanhaAmizade.cor
+        ]
+    );
+
+    await executar(
+        `UPDATE modelos_mensagem
+        SET texto = ?
+        WHERE chave = ?
+            AND texto LIKE '%5511925716232%'`,
+        [modeloCampanhaAmizade.texto, modeloCampanhaAmizade.chave]
+    );
+}
+
 async function listarModelos() {
     await garantirModelosPadrao();
+    await garantirModeloCampanhaAmizade();
 
     return buscarTodos(
         `SELECT * FROM modelos_mensagem
@@ -270,6 +301,7 @@ async function listarModelos() {
 
 async function buscarModeloPorId(id) {
     await garantirModelosPadrao();
+    await garantirModeloCampanhaAmizade();
     return buscarUm('SELECT * FROM modelos_mensagem WHERE id = ?', [id]);
 }
 
@@ -357,6 +389,7 @@ function aplicarVariaveis(texto, variaveis) {
 
 async function obterModeloPorChave(chave) {
     await garantirModelosPadrao();
+    await garantirModeloCampanhaAmizade();
 
     return buscarUm(
         `SELECT * FROM modelos_mensagem
@@ -364,6 +397,20 @@ async function obterModeloPorChave(chave) {
         LIMIT 1`,
         [chave]
     );
+}
+
+async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '') {
+    const modelo = await obterModeloPorChave(modeloCampanhaAmizade.chave);
+    const variaveis = {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano || 'assinatura',
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
+        dias: '',
+        valor: cliente.valorPlano || cliente.valor || '',
+        telefoneWhatsApp: telefoneWhatsApp || 'o WhatsApp da instalação'
+    };
+
+    return aplicarVariaveis(modelo?.texto || modeloCampanhaAmizade.texto, variaveis);
 }
 
 async function obterModeloParaCliente(cliente, dias) {
@@ -471,6 +518,7 @@ module.exports = {
     montarMensagemAvisoProgramado,
     montarMensagemAniversario,
     montarMensagemCobrancaVencido,
+    montarMensagemCampanhaAmizade,
     normalizarPlano,
     aplicarVariaveis,
     modelosPadrao

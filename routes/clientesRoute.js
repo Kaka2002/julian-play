@@ -1,8 +1,12 @@
 const express = require('express');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const { execFile } = require('child_process');
+const { MessageMedia } = require('whatsapp-web.js');
 const {
     listarClientes,
+    listarClientesAtivosComerciais,
     salvarCliente,
     buscarClientePorId,
     buscarClientePorTelefone,
@@ -39,7 +43,8 @@ const {
     salvarModelo,
     removerModelo,
     montarMensagemPorModelo,
-    montarMensagemCobrancaVencido
+    montarMensagemCobrancaVencido,
+    montarMensagemCampanhaAmizade
 } = require('../services/modelosMensagem');
 const {
     obterConfiguracoes,
@@ -128,6 +133,8 @@ const CLIENTES_POR_PAGINA = 6;
 const FINANCEIRO_POR_PAGINA = 10;
 const REGISTROS_POR_PAGINA = 6;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
+const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-presente.png');
+const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
     'Indicação pessoal',
@@ -3412,6 +3419,134 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
     throw ultimoErro || new Error('Nao foi possivel enviar a mensagem pelo WhatsApp.');
 }
 
+async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, legenda, descricao = 'Envio de imagem pelo WhatsApp') {
+    const destinos = await resolverDestinosWhatsApp(client, telefone);
+    let ultimoErro = null;
+
+    for (const destino of destinos) {
+        try {
+            const chaveEnvio = `${destino}|${arquivoImagem}|${legenda}`;
+            const agora = Date.now();
+            const envioRecente = mensagensWhatsAppRecentes.get(chaveEnvio);
+
+            if (envioRecente && agora - envioRecente.enviadoEm < WHATSAPP_ENVIO_DUPLICADO_MS) {
+                console.warn(`[clientes] ${descricao} ignorado: imagem duplicada recente para ${destino}.`);
+                return {
+                    destino,
+                    mensagemId: envioRecente.mensagemId || '',
+                    ack: envioRecente.ack,
+                    duplicadoIgnorado: true
+                };
+            }
+
+            const media = MessageMedia.fromFilePath(arquivoImagem);
+            registrarEnvioDoRobo(destino, legenda);
+            const envio = await aguardarComTimeout(
+                enfileirarEnvio(
+                    () => client.sendMessage(destino, media, { caption: legenda }),
+                    descricao
+                ),
+                120000,
+                descricao
+            );
+
+            if (!envio) {
+                throw new Error('O WhatsApp nao confirmou o envio da imagem.');
+            }
+
+            registrarMensagemDoRobo(envio);
+            mensagensWhatsAppRecentes.set(chaveEnvio, {
+                enviadoEm: Date.now(),
+                mensagemId: envio.id?._serialized || '',
+                ack: envio.ack
+            });
+
+            return {
+                destino,
+                mensagemId: envio.id?._serialized || '',
+                ack: envio.ack
+            };
+        } catch (err) {
+            ultimoErro = err;
+            console.warn(`[clientes] ${descricao} falhou para ${destino}: ${err.message}`);
+        }
+    }
+
+    throw ultimoErro || new Error('Nao foi possivel enviar a imagem pelo WhatsApp.');
+}
+
+function telefoneCampanhaAmizade(status = {}, config = {}) {
+    const candidatos = [
+        status.numeroConectado,
+        config.licencaTelefone,
+        config.telefoneResponsavel,
+        config.whatsappTelefone,
+        config.whatsappNumero
+    ];
+
+    for (const candidato of candidatos) {
+        const telefone = normalizarTelefone(candidato);
+        if (telefone) return telefone;
+    }
+
+    return '';
+}
+
+function formatarTelefoneCampanha(telefone) {
+    return String(telefone || '').replace(/\D/g, '');
+}
+
+function executarPowerShell(args) {
+    return new Promise((resolve, reject) => {
+        execFile('powershell.exe', args, { windowsHide: true }, (err, stdout, stderr) => {
+            if (err) {
+                err.message = `${err.message}${stderr ? `\n${stderr}` : ''}`;
+                reject(err);
+                return;
+            }
+
+            resolve(stdout);
+        });
+    });
+}
+
+async function criarImagemCampanhaAmizade(telefoneInstalacao) {
+    const origem = fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)
+        ? IMAGEM_CAMPANHA_AMIZADE_BASE
+        : IMAGEM_CAMPANHA_AMIZADE;
+    const telefone = formatarTelefoneCampanha(telefoneInstalacao);
+
+    if (!telefone || process.platform !== 'win32') {
+        return { arquivo: origem, temporario: false };
+    }
+
+    const destino = path.join(os.tmpdir(), `amizade-presente-${Date.now()}-${Math.random().toString(16).slice(2)}.png`);
+    const script = `
+$origem = $args[0]
+$destino = $args[1]
+$texto = $args[2]
+Add-Type -AssemblyName System.Drawing
+$imagem = [System.Drawing.Image]::FromFile($origem)
+$bitmap = New-Object System.Drawing.Bitmap $imagem.Width, $imagem.Height
+$grafico = [System.Drawing.Graphics]::FromImage($bitmap)
+$grafico.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+$grafico.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+$grafico.DrawImage($imagem, 0, 0, $imagem.Width, $imagem.Height)
+$fonte = New-Object System.Drawing.Font('Arial', 27, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+$pincel = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(6, 18, 37))
+$grafico.DrawString($texto, $fonte, $pincel, 220, 1157)
+$bitmap.Save($destino, [System.Drawing.Imaging.ImageFormat]::Png)
+$pincel.Dispose()
+$fonte.Dispose()
+$grafico.Dispose()
+$bitmap.Dispose()
+$imagem.Dispose()
+`;
+
+    await executarPowerShell(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script, origem, destino, telefone]);
+    return { arquivo: destino, temporario: true };
+}
+
 function formatarDataHoraMensagem(valor) {
     if (!valor) return '';
 
@@ -5293,6 +5428,17 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
     </section>
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Campanha de indicação</h2>
+                <div class="subtitle">Dispare a arte "Amizade que vale presente" para clientes ativos, exceto testes.</div>
+            </div>
+            <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes ativos, exceto testes?');">
+                <button class="button green" type="submit">${icon('whats')} Disparar campanha</button>
+            </form>
+        </div>
+    </section>
     ${receitaMensalCard(receita)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -5919,7 +6065,7 @@ function variaveisDisponiveis() {
 }
 
 function chipPlano(modelo) {
-    const label = modelo.plano === 'padrao' ?'Padrão (todos os planos)' : modelo.plano;
+    const label = modelo.plano === 'padrao' ? 'Padrão (todos os planos)' : modelo.plano === 'campanha' ? 'Campanha' : modelo.plano;
     return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
 }
 
@@ -6004,6 +6150,7 @@ function formularioModelo(modelo = {}) {
                 valor: modelo.plano || 'padrao',
                 opcoes: [
                     { valor: 'padrao', texto: 'Padrão (todos os planos)' },
+                    { valor: 'campanha', texto: 'Campanha' },
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
@@ -8565,6 +8712,75 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         logControleClientes('Erro no disparo manual de avisos', { erro: err.message });
         res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao disparar avisos: ${err.message}`)}`);
     }
+});
+
+router.post('/clientes/disparar-amizade-presente', async (req, res) => {
+    const status = getStatusWhatsApp();
+    const client = getClient();
+    const config = await obterConfiguracoes();
+    const telefoneInstalacao = telefoneCampanhaAmizade(status, config);
+    let imagemCampanha = null;
+
+    if (!client || !status.conectado) {
+        return res.redirect(`/clientes?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
+    }
+
+    if (!fs.existsSync(IMAGEM_CAMPANHA_AMIZADE) && !fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)) {
+        return res.redirect(`/clientes?mensagem=${encodeURIComponent('Imagem da campanha nao encontrada. Gere o pacote novamente.')}`);
+    }
+
+    let enviados = 0;
+    let ignorados = 0;
+
+    try {
+        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao);
+        const clientes = await listarClientesAtivosComerciais();
+
+        for (const cliente of clientes) {
+            const telefone = normalizarTelefone(cliente.telefone);
+
+            if (!telefone || clienteEhTeste(cliente)) {
+                ignorados += 1;
+                continue;
+            }
+
+            try {
+                const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao));
+                await enviarImagemWhatsAppComFallback(
+                    client,
+                    telefone,
+                    imagemCampanha.arquivo,
+                    legenda,
+                    'Campanha amizade que vale presente'
+                );
+                await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada pelo WhatsApp.');
+                enviados += 1;
+            } catch (err) {
+                ignorados += 1;
+                logControleClientes('Erro ao enviar campanha amizade', {
+                    clienteId: cliente.id,
+                    telefone,
+                    erro: err.message
+                });
+            }
+        }
+
+        logControleClientes('Campanha amizade que vale presente concluida', {
+            enviados,
+            ignorados,
+            total: clientes.length,
+            telefoneInstalacao: formatarTelefoneCampanha(telefoneInstalacao)
+        });
+    } catch (err) {
+        logControleClientes('Erro ao preparar campanha amizade', { erro: err.message });
+        return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao preparar campanha: ${err.message}`)}`);
+    } finally {
+        if (imagemCampanha?.temporario) {
+            fs.promises.unlink(imagemCampanha.arquivo).catch(() => {});
+        }
+    }
+
+    return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Campanha enviada para ${enviados} cliente(s). ${ignorados} ignorado(s).`)}`);
 });
 
 router.post('/clientes/cobrar-vencidos', async (req, res) => {

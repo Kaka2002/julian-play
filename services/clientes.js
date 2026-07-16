@@ -593,6 +593,19 @@ function buscarClientePorUsuarioIPTV(usuario) {
     return buscarUm('SELECT * FROM clientes WHERE usuario = ? LIMIT 1', [limparTexto(usuario)]);
 }
 
+async function listarClientesAtivosComerciais() {
+    await atualizarStatusAutomaticoClientes();
+
+    return buscarTodos(
+        `SELECT * FROM clientes
+        WHERE status = 'ativo'
+            AND (plano IS NULL OR plano NOT LIKE '%Teste%')
+            AND telefone IS NOT NULL
+            AND telefone != ''
+        ORDER BY nome ASC`
+    );
+}
+
 async function atualizarStatusAutomaticoClientes() {
     const agora = agoraSaoPauloISO();
 
@@ -1600,6 +1613,7 @@ module.exports = {
     buscarClientePorUsuarioIPTV,
     cadastrarClienteTesteParcial,
     cadastrarTesteLiberadoPorAtendente,
+    listarClientesAtivosComerciais,
     listarClientes,
     salvarCliente,
     buscarClientePorId,
