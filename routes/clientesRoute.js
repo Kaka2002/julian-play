@@ -154,7 +154,10 @@ const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-pr
 const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
 const CHAVE_IMAGEM_CAMPANHA_AMIZADE = 'imagemCampanhaAmizade';
 const CAMPANHA_AMIZADE_LOTE_TAMANHO = 10;
-const CAMPANHA_AMIZADE_INTERVALO_LOTES_MS = 3 * 60 * 1000;
+const CAMPANHA_AMIZADE_INTERVALO_LOTES_MIN_MS = 150 * 1000;
+const CAMPANHA_AMIZADE_INTERVALO_LOTES_MAX_MS = 210 * 1000;
+const CAMPANHA_AMIZADE_INTERVALO_CLIENTES_MIN_MS = 2 * 1000;
+const CAMPANHA_AMIZADE_INTERVALO_CLIENTES_MAX_MS = 5 * 1000;
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
     'Indicação pessoal',
@@ -3747,7 +3750,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
     throw ultimoErro || new Error('Nao foi possivel enviar a mensagem pelo WhatsApp.');
 }
 
-async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, legenda, descricao = 'Envio de imagem pelo WhatsApp') {
+async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, legenda, descricao = 'Envio de imagem pelo WhatsApp', opcoes = {}) {
     const destinos = await resolverDestinosWhatsApp(client, telefone);
     let ultimoErro = null;
 
@@ -3771,8 +3774,20 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
             registrarEnvioDoRobo(destino, legenda);
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
-                    () => client.sendMessage(destino, media, { caption: legenda }),
-                    descricao
+                    async () => {
+                        if (opcoes.simularDigitacao) {
+                            await simularDigitacaoDestino(
+                                client,
+                                destino,
+                                opcoes.digitacaoMinimaMs ?? CAMPANHA_AMIZADE_INTERVALO_CLIENTES_MIN_MS,
+                                opcoes.digitacaoMaximaMs ?? CAMPANHA_AMIZADE_INTERVALO_CLIENTES_MAX_MS
+                            );
+                        }
+
+                        return client.sendMessage(destino, media, { caption: legenda });
+                    },
+                    descricao,
+                    opcoes.fila || {}
                 ),
                 120000,
                 descricao
@@ -3838,6 +3853,41 @@ function formatarTelefoneCampanha(telefone) {
 
 function esperar(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function intervaloAleatorioMs(minimoMs, maximoMs) {
+    if (!Number.isFinite(minimoMs) || !Number.isFinite(maximoMs)) return 0;
+    if (maximoMs <= minimoMs) return Math.max(0, minimoMs);
+
+    return Math.round(minimoMs + Math.random() * (maximoMs - minimoMs));
+}
+
+function textoIntervaloSegundos(ms) {
+    const segundos = Math.max(1, Math.round(Number(ms || 0) / 1000));
+    if (segundos < 60) return `${segundos}s`;
+
+    const minutos = Math.floor(segundos / 60);
+    const resto = segundos % 60;
+    return resto ? `${minutos}min ${resto}s` : `${minutos}min`;
+}
+
+async function simularDigitacaoDestino(client, destino, minimoMs, maximoMs) {
+    const espera = intervaloAleatorioMs(minimoMs, maximoMs);
+
+    try {
+        const chat = await client.getChatById(destino);
+        await chat.sendStateTyping();
+        await esperar(espera);
+
+        if (typeof chat.clearState === 'function') {
+            await chat.clearState();
+        }
+    } catch (err) {
+        if (espera > 0) {
+            await esperar(espera);
+        }
+        console.log(`[clientes] Nao foi possivel simular digitacao para ${destino}: ${err.message}`);
+    }
 }
 
 function limparStatusCampanhaAmizade() {
@@ -3966,7 +4016,14 @@ async function enviarCampanhaAmizadeParaCliente(client, cliente, imagemCampanha,
         telefone,
         imagemCampanha.arquivo,
         legenda,
-        descricao
+        descricao,
+        {
+            simularDigitacao: true,
+            fila: {
+                intervaloMinimoSegundos: 2,
+                intervaloMaximoSegundos: 5
+            }
+        }
     );
 
     return {
@@ -4088,7 +4145,14 @@ async function executarCampanhaAmizadeEmLotes() {
                         telefone,
                         imagemCampanha.arquivo,
                         legenda,
-                        'Campanha amizade que vale presente em lote'
+                        'Campanha amizade que vale presente em lote',
+                        {
+                            simularDigitacao: true,
+                            fila: {
+                                intervaloMinimoSegundos: 2,
+                                intervaloMaximoSegundos: 5
+                            }
+                        }
                     );
                     await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada pelo WhatsApp.');
                     campanhaAmizadeExecucao.enviados += 1;
@@ -4113,9 +4177,13 @@ async function executarCampanhaAmizadeEmLotes() {
             const aindaTemLote = indice + CAMPANHA_AMIZADE_LOTE_TAMANHO < clientesElegiveis.length;
 
             if (aindaTemLote) {
-                campanhaAmizadeExecucao.proximoLoteEm = new Date(Date.now() + CAMPANHA_AMIZADE_INTERVALO_LOTES_MS).toISOString();
-                campanhaAmizadeExecucao.mensagem = `Lote ${campanhaAmizadeExecucao.loteAtual} concluido. Proximo lote em 3 minutos.`;
-                await esperar(CAMPANHA_AMIZADE_INTERVALO_LOTES_MS);
+                const intervaloLoteMs = intervaloAleatorioMs(
+                    CAMPANHA_AMIZADE_INTERVALO_LOTES_MIN_MS,
+                    CAMPANHA_AMIZADE_INTERVALO_LOTES_MAX_MS
+                );
+                campanhaAmizadeExecucao.proximoLoteEm = new Date(Date.now() + intervaloLoteMs).toISOString();
+                campanhaAmizadeExecucao.mensagem = `Lote ${campanhaAmizadeExecucao.loteAtual} concluido. Proximo lote em aproximadamente ${textoIntervaloSegundos(intervaloLoteMs)}.`;
+                await esperar(intervaloLoteMs);
             }
         }
 
@@ -9400,7 +9468,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         limparStatusCampanhaAmizade();
         campanhaAmizadeExecucao.emAndamento = true;
         campanhaAmizadeExecucao.iniciadaEm = new Date().toISOString();
-        campanhaAmizadeExecucao.mensagem = 'Campanha iniciada. Enviando em lotes de 10 clientes a cada 3 minutos.';
+        campanhaAmizadeExecucao.mensagem = 'Campanha iniciada. Enviando em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos.';
 
         setImmediate(() => {
             executarCampanhaAmizadeEmLotes()
@@ -9422,7 +9490,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao preparar campanha: ${err.message}`)}`);
     }
 
-    return res.redirect(`/clientes?mensagem=${encodeURIComponent('Campanha iniciada. O envio sera feito em lotes de 10 clientes a cada 3 minutos. Aguarde finalizar antes de iniciar outra campanha.')}`);
+    return res.redirect(`/clientes?mensagem=${encodeURIComponent('Campanha iniciada. O envio sera feito em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos. Aguarde finalizar antes de iniciar outra campanha.')}`);
 });
 
 router.post('/clientes/cobrar-vencidos', async (req, res) => {
