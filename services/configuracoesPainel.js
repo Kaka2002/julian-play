@@ -49,6 +49,7 @@ async function obterConfiguracoes() {
         imagemRoboAtivacao: '',
         imagemRoboErro: '',
         imagemRoboEncerramento: '',
+        imagemCampanhaAmizade: '',
         pixChave: instalacaoCliente ? '' : (process.env.CHAVE_PIX || '61319147704'),
         pixNome: instalacaoCliente ? '' : (process.env.PIX_NOME || 'JULIAN PLAY'),
         pixCidade: instalacaoCliente ? '' : (process.env.PIX_CIDADE || 'SAO PAULO'),
@@ -164,7 +165,8 @@ async function salvarImagemRobo(chave, nomeArquivo) {
         'imagemRoboRenovacao',
         'imagemRoboAtivacao',
         'imagemRoboErro',
-        'imagemRoboEncerramento'
+        'imagemRoboEncerramento',
+        'imagemCampanhaAmizade'
     ]);
 
     if (!camposPermitidos.has(chave)) {

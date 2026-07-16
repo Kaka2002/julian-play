@@ -135,6 +135,7 @@ const REGISTROS_POR_PAGINA = 6;
 const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
 const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-presente.png');
 const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
+const CHAVE_IMAGEM_CAMPANHA_AMIZADE = 'imagemCampanhaAmizade';
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
     'Indicação pessoal',
@@ -420,6 +421,19 @@ function removerArquivoImagemTenant(nomeArquivo) {
 
     fs.unlinkSync(arquivo);
     return true;
+}
+
+function obterImagemBaseCampanhaAmizade(config = {}) {
+    const arquivoSeguro = path.basename(String(config[CHAVE_IMAGEM_CAMPANHA_AMIZADE] || '').split('?')[0]);
+    const imagemConfigurada = arquivoSeguro ? path.join(ASSETS_DIR, arquivoSeguro) : '';
+
+    if (imagemConfigurada && fs.existsSync(imagemConfigurada)) {
+        return imagemConfigurada;
+    }
+
+    return fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)
+        ? IMAGEM_CAMPANHA_AMIZADE_BASE
+        : IMAGEM_CAMPANHA_AMIZADE;
 }
 
 function formatarData(dataISO) {
@@ -3855,10 +3869,8 @@ if (-not (Test-Path -LiteralPath $Destino)) {
 }
 `;
 
-async function criarImagemCampanhaAmizade(telefoneInstalacao) {
-    const origem = fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)
-        ? IMAGEM_CAMPANHA_AMIZADE_BASE
-        : IMAGEM_CAMPANHA_AMIZADE;
+async function criarImagemCampanhaAmizade(telefoneInstalacao, config = {}) {
+    const origem = obterImagemBaseCampanhaAmizade(config);
     const telefone = formatarTelefoneCampanha(telefoneInstalacao);
 
     if (!telefone || process.platform !== 'win32') {
@@ -3918,12 +3930,12 @@ async function enviarCampanhaAmizadeManualPorId(clienteId, descricao = 'Campanha
         throw new Error('WhatsApp nao esta conectado.');
     }
 
-    if (!fs.existsSync(IMAGEM_CAMPANHA_AMIZADE) && !fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)) {
+    if (!fs.existsSync(obterImagemBaseCampanhaAmizade(config))) {
         throw new Error('Imagem da campanha nao encontrada. Gere o pacote novamente.');
     }
 
     try {
-        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao);
+        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao, config);
         const envioWhatsApp = await enviarCampanhaAmizadeParaCliente(
             client,
             cliente,
@@ -7085,6 +7097,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'Ativação')}
             ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opções inválidas')}
             ${campoImagemRobo(status.config, 'imagemRoboEncerramento', 'Encerramento')}
+            ${campoImagemRobo(status.config, CHAVE_IMAGEM_CAMPANHA_AMIZADE, 'Campanha de indicação')}
         </div>
     </section>`}
 
@@ -8655,6 +8668,11 @@ router.post('/manutencao/robo/imagem/:chave', bloquearManutencaoRestritaCliente,
 
         const extensao = path.extname(upload.filename).toLowerCase();
         const chave = String(req.params.chave || '');
+
+        if (chave === CHAVE_IMAGEM_CAMPANHA_AMIZADE && !['.png', '.jpg', '.jpeg'].includes(extensao)) {
+            return res.redirect('/manutencao?mensagem=Para campanha, use imagem PNG ou JPG');
+        }
+
         const configAnterior = await obterConfiguracoes();
         const arquivoAnterior = configAnterior[chave] || '';
         const nomeArquivo = `${chave}-${Date.now()}${extensao}`;
@@ -9188,7 +9206,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         return res.redirect(`/clientes?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
     }
 
-    if (!fs.existsSync(IMAGEM_CAMPANHA_AMIZADE) && !fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)) {
+    if (!fs.existsSync(obterImagemBaseCampanhaAmizade(config))) {
         return res.redirect(`/clientes?mensagem=${encodeURIComponent('Imagem da campanha nao encontrada. Gere o pacote novamente.')}`);
     }
 
@@ -9197,7 +9215,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
     let jaEnviados = 0;
 
     try {
-        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao);
+        imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao, config);
         const clientes = await listarClientesAtivosComerciais();
 
         for (const cliente of clientes) {
