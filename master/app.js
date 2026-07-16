@@ -820,7 +820,7 @@ function temaVisualMestre() {
     return `<style>
     :root{--blue-deep:#041b4f;--blue:#2563eb;--cyan:#10d7f7;--green:#10b981;--gold:#f59e0b;--red:#ef4444;--ink:#081225;--muted:#667085;--line:rgba(148,163,184,.24);--surface:rgba(255,255,255,.92);--shadow-card:0 18px 45px rgba(15,23,42,.10);--brand-gradient:linear-gradient(135deg,#061a44 0%,#0f3b8f 42%,#00c2ff 100%)}
     body{min-height:100vh;background:radial-gradient(circle at 12% 0%,rgba(16,215,247,.18),transparent 28%),radial-gradient(circle at 88% 8%,rgba(245,158,11,.16),transparent 25%),linear-gradient(180deg,#f7fbff 0%,#eef3f9 44%,#f7f8fb 100%) !important;color:var(--ink);position:relative;overflow-x:hidden}
-    body::before{content:"";position:fixed;inset:0;background-image:url('/assets/Logo.png');background-repeat:no-repeat;background-position:right 40px bottom 24px;background-size:min(360px,42vw);opacity:.035;pointer-events:none;z-index:-1}
+    body::before{content:"";position:fixed;left:50%;top:50%;width:min(820px,72vw);aspect-ratio:1;background:url('/assets/julian-play-fundo-painel.png') center / contain no-repeat;opacity:.105;pointer-events:none;z-index:-1;transform:translate(-50%,-50%);filter:saturate(1.08)}
     main{position:relative}
     main > .topbar:first-child{align-items:center;background:var(--brand-gradient);color:#fff;border:1px solid rgba(255,255,255,.26);border-radius:16px;box-shadow:0 22px 55px rgba(4,27,79,.22);padding:22px 24px;margin-bottom:18px;overflow:hidden;position:relative}
     main > .topbar:first-child::after{content:"";position:absolute;inset:auto -80px -120px auto;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.13)}
@@ -853,7 +853,7 @@ function temaVisualMestre() {
     .credentials{background:linear-gradient(135deg,#fff7d6,#fefce8) !important;border-color:rgba(245,158,11,.28) !important;border-radius:14px !important}
     .priority-group,.priority-item,.attention-item{border-color:var(--line) !important;border-radius:12px !important;background:rgba(255,255,255,.72) !important}
     .badge{border:1px solid rgba(255,255,255,.55)}
-    @media(max-width:700px){main > .topbar:first-child{display:block;padding:18px}body::before{background-size:220px;background-position:right 14px bottom 14px}}
+    @media(max-width:700px){main > .topbar:first-child{display:block;padding:18px}body::before{width:min(460px,92vw);opacity:.08}}
     </style>`;
 }
 

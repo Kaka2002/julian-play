@@ -724,7 +724,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const status = getStatusWhatsApp();
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
-    const marcaDaguaUrl = logoUrl || '/assets/Logo.png';
+    const marcaDaguaUrl = '/assets/julian-play-fundo-painel.png';
     const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : '';
     const licenca = calcularEstadoLicenca(config);
     const avisoLicenca = (() => {
@@ -785,15 +785,16 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         body::before {
             content: "";
             position: fixed;
-            right: clamp(18px, 5vw, 86px);
-            bottom: clamp(18px, 6vw, 92px);
-            width: min(440px, 48vw);
+            left: 50%;
+            top: 50%;
+            width: min(820px, 72vw);
             aspect-ratio: 1;
             background: url("${escapar(marcaDaguaUrl)}") center / contain no-repeat;
-            opacity: .045;
+            opacity: .105;
             pointer-events: none;
             z-index: 0;
-            filter: saturate(.95);
+            transform: translate(-50%, -50%);
+            filter: saturate(1.08);
         }
 
         svg {
@@ -1367,8 +1368,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             color: #fff;
             overflow: hidden;
             background:
-                linear-gradient(120deg, rgba(7, 27, 79, .96), rgba(18, 60, 151, .88) 52%, rgba(17, 200, 214, .78)),
-                url("${escapar(marcaDaguaUrl)}") right 34px center / 170px auto no-repeat;
+                linear-gradient(120deg, rgba(7, 27, 79, .96), rgba(18, 60, 151, .88) 52%, rgba(17, 200, 214, .78));
             box-shadow: 0 18px 42px rgba(7, 27, 79, .22);
         }
 
