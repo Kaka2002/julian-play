@@ -33,6 +33,24 @@ function limparTexto(valor) {
 }
 
 const DDIS_TELEFONE = ['1', '33', '34', '39', '44', '49', '52', '54', '56', '57', '591', '595', '598', '351'];
+const PAISES_TELEFONE = {
+    BR: '55',
+    US: '1',
+    CA: '1',
+    PT: '351',
+    ES: '34',
+    IT: '39',
+    FR: '33',
+    DE: '49',
+    GB: '44',
+    MX: '52',
+    AR: '54',
+    CL: '56',
+    UY: '598',
+    PY: '595',
+    BO: '591',
+    CO: '57'
+};
 
 function normalizarTelefone(telefone) {
     const textoOriginal = limparTexto(telefone);
@@ -221,7 +239,9 @@ function gerarCredenciais() {
 }
 
 function montarCliente(dados = {}) {
-    const ddi = limparTexto(dados.ddiTelefone).replace(/\D/g, '');
+    const paisTelefone = limparTexto(dados.paisTelefone).toUpperCase();
+    const ddiPais = PAISES_TELEFONE[paisTelefone] || '';
+    const ddi = ddiPais || limparTexto(dados.ddiTelefone).replace(/\D/g, '');
     let numero = limparTexto(dados.telefone).replace(/\D/g, '');
 
     if (ddi && numero.startsWith(ddi) && numero.length > 11) {
@@ -245,6 +265,7 @@ function montarCliente(dados = {}) {
         nome: limparTexto(dados.nome),
         telefone,
         ddiTelefone: ddi || '55',
+        paisTelefone: paisTelefone || (ddi === '1' ? 'US' : 'BR'),
         usuario: limparTexto(dados.usuario),
         senha: limparTexto(dados.senha),
         plano: limparTexto(dados.plano),
@@ -510,6 +531,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 nome = ?,
                 telefone = ?,
                 ddiTelefone = ?,
+                paisTelefone = ?,
                 usuario = ?,
                 senha = ?,
                 plano = ?,
@@ -750,6 +772,7 @@ async function salvarCliente(dados) {
                 cliente.nome,
                 cliente.telefone,
                 cliente.ddiTelefone,
+                cliente.paisTelefone,
                 cliente.usuario,
                 cliente.senha,
                 cliente.plano,
@@ -795,16 +818,17 @@ async function salvarCliente(dados) {
 
     const resultado = await executar(
         `INSERT INTO clientes (
-            nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
+            nome, telefone, ddiTelefone, paisTelefone, usuario, senha, plano, aparelho, vencimento,
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
             usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
             cliente.ddiTelefone,
+            cliente.paisTelefone,
             cliente.usuario || credenciais.usuario,
             cliente.senha || credenciais.senha,
             cliente.plano,

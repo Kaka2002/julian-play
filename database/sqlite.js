@@ -17,6 +17,7 @@ db.serialize(() => {
             nome TEXT NOT NULL,
             telefone TEXT NOT NULL,
             ddiTelefone TEXT DEFAULT '55',
+            paisTelefone TEXT DEFAULT 'BR',
             usuario TEXT,
             senha TEXT,
             plano TEXT,
@@ -265,6 +266,7 @@ db.serialize(() => {
 
     const colunas = {
         ddiTelefone: "TEXT DEFAULT '55'",
+        paisTelefone: "TEXT DEFAULT 'BR'",
         usuario: 'TEXT',
         senha: 'TEXT',
         plano: 'TEXT',
@@ -410,6 +412,7 @@ function migrarTelefoneDuplicado(done) {
                     nome TEXT NOT NULL,
                     telefone TEXT NOT NULL,
                     ddiTelefone TEXT DEFAULT '55',
+                    paisTelefone TEXT DEFAULT 'BR',
                     usuario TEXT,
                     senha TEXT,
                     plano TEXT,
@@ -447,7 +450,7 @@ function migrarTelefoneDuplicado(done) {
             `);
             db.run(`
                 INSERT INTO clientes (
-                    id, nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
+                    id, nome, telefone, ddiTelefone, paisTelefone, usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
@@ -455,7 +458,7 @@ function migrarTelefoneDuplicado(done) {
                     ultimoAvisoAniversario, dataCadastro, atualizadoEm
                 )
                 SELECT
-                    id, nome, telefone, '55', usuario, senha, plano, aparelho, vencimento,
+                    id, nome, telefone, '55', 'BR', usuario, senha, plano, aparelho, vencimento,
                     nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
                     validadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
                     dispositivosSelecionados, paineisSelecionados, 0, appInstalado,
