@@ -920,8 +920,34 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .client-summary-metrics .metric {
             min-height: 130px;
-            padding: 22px 22px;
-            gap: 10px;
+            padding: 16px 12px;
+            gap: 7px;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .client-summary-metrics .metric > div {
+            min-width: 0;
+        }
+
+        .client-summary-metrics .metric-label {
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.15;
+        }
+
+        .client-summary-metrics .metric-value {
+            font-size: 28px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+
+        .client-summary-metrics .metric-note {
+            margin-top: 8px;
+            font-size: 11px;
+            line-height: 1.2;
         }
 
         .metric-label {
@@ -951,8 +977,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics .metric-date .metric-value {
-            font-size: clamp(24px, 1.45vw, 28px);
+            font-size: clamp(20px, 1.25vw, 24px);
             white-space: nowrap;
+        }
+
+        .client-summary-metrics .metric-icon {
+            width: 42px;
+            height: 42px;
+            flex: 0 0 42px;
         }
 
         .metric-note {
