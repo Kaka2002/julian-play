@@ -528,6 +528,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             [
                 nome,
                 telefone,
+                telefone.startsWith('55') ? '55' : '',
                 usuario,
                 senha,
                 'Teste grátis',
@@ -553,10 +554,11 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
             dataInicio, dataVencimento, appsInstalados, dispositivosSelecionados,
             paineisSelecionados, appInstalado, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
         [
             nome,
             telefone,
+            telefone.startsWith('55') ? '55' : '',
             usuario,
             senha,
             'Teste grátis',
@@ -711,6 +713,7 @@ async function salvarCliente(dados) {
             `UPDATE clientes SET
                 nome = ?,
                 telefone = ?,
+                ddiTelefone = ?,
                 usuario = ?,
                 senha = ?,
                 plano = ?,
