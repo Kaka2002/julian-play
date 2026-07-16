@@ -724,6 +724,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const status = getStatusWhatsApp();
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
+    const marcaDaguaUrl = logoUrl || '/assets/Logo.png';
+    const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : '';
     const licenca = calcularEstadoLicenca(config);
     const avisoLicenca = (() => {
         if (!licenca.bloqueioAtivo || !licenca.permitida || licenca.vitalicia) return '';
@@ -753,6 +755,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             --line: #e4e7ec;
             --blue: #4368e8;
             --blue-soft: #eef2ff;
+            --blue-deep: #071b4f;
+            --cyan: #11c8d6;
+            --gold: #f6b21a;
             --green: #16a76a;
             --green-soft: #dff8ee;
             --red: #ef4444;
@@ -760,15 +765,35 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             --orange: #f08a12;
             --orange-soft: #fff2dc;
             --shadow: 0 1px 2px rgba(15, 23, 42, .08), 0 10px 24px rgba(15, 23, 42, .04);
+            --shadow-card: 0 1px 2px rgba(8, 18, 37, .08), 0 18px 42px rgba(8, 18, 37, .075);
+            --brand-gradient: linear-gradient(120deg, #071b4f 0%, #123c97 42%, #11c8d6 100%);
         }
 
         * { box-sizing: border-box; }
 
         body {
             margin: 0;
-            background: var(--bg);
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 12% 12%, rgba(17, 200, 214, .12), transparent 26%),
+                radial-gradient(circle at 88% 10%, rgba(246, 178, 26, .12), transparent 22%),
+                linear-gradient(180deg, #f4f7fb 0%, #eef2f7 100%);
             color: var(--ink);
             font-family: var(--font-inter);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            right: clamp(18px, 5vw, 86px);
+            bottom: clamp(18px, 6vw, 92px);
+            width: min(440px, 48vw);
+            aspect-ratio: 1;
+            background: url("${escapar(marcaDaguaUrl)}") center / contain no-repeat;
+            opacity: .045;
+            pointer-events: none;
+            z-index: 0;
+            filter: saturate(.95);
         }
 
         svg {
@@ -797,17 +822,25 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .top-shell {
-            background: rgba(255,255,255,.94);
-            border-bottom: 1px solid var(--line);
+            background:
+                linear-gradient(90deg, rgba(7, 27, 79, .98), rgba(18, 60, 151, .96) 48%, rgba(17, 200, 214, .92)),
+                var(--brand-gradient);
+            border-bottom: 1px solid rgba(255, 255, 255, .18);
             position: sticky;
             top: 0;
             z-index: 10;
             backdrop-filter: blur(10px);
+            box-shadow: 0 14px 34px rgba(7, 27, 79, .18);
         }
 
         .topbar, main {
             width: min(1760px, calc(100% - 24px));
             margin: 0 auto;
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
         }
 
         .topbar {
@@ -827,6 +860,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-size: 15px;
             font-weight: 800;
             line-height: 1.05;
+            color: #fff;
         }
 
         .brand form {
@@ -853,8 +887,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             height: 42px;
             object-fit: contain;
             border-radius: 10px;
-            background: #fff;
-            border: 1px solid var(--line);
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid rgba(255, 255, 255, .42);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, .18);
         }
 
         nav {
@@ -864,7 +899,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             align-items: center;
             justify-content: flex-start;
             gap: 3px;
-            color: var(--muted);
+            color: rgba(255, 255, 255, .78);
             font-weight: 700;
             overflow-x: auto;
             scrollbar-width: thin;
@@ -880,12 +915,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-size: 13px;
             white-space: nowrap;
             flex: 0 0 auto;
+            transition: background .18s ease, color .18s ease, transform .18s ease;
+        }
+
+        .navlink:hover {
+            background: rgba(255, 255, 255, .12);
+            color: #fff;
         }
 
         .navlink.active {
-            background: var(--blue);
-            color: #fff;
-            box-shadow: 0 8px 16px rgba(67, 104, 232, .25);
+            background: rgba(255, 255, 255, .96);
+            color: var(--blue-deep);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, .18);
         }
 
         .navlink.disabled {
@@ -949,18 +990,30 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .metric, .panel {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            box-shadow: var(--shadow);
+            background: rgba(255, 255, 255, .94);
+            border: 1px solid rgba(226, 232, 240, .92);
+            border-radius: 16px;
+            box-shadow: var(--shadow-card);
+            backdrop-filter: blur(8px);
         }
 
         .metric {
+            position: relative;
             min-height: 142px;
             padding: 26px 28px;
             display: flex;
             justify-content: space-between;
             gap: 16px;
+            overflow: hidden;
+        }
+
+        .metric::before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 4px;
+            background: linear-gradient(180deg, var(--cyan), var(--blue));
+            opacity: .78;
         }
 
         .dashboard-metrics .metric {
@@ -1059,6 +1112,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             width: 52px;
             height: 52px;
             border-radius: 14px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .62);
         }
 
         .dashboard-metrics .metric-icon {
@@ -1186,7 +1240,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             justify-content: space-between;
             gap: 18px;
             padding: 28px;
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1px solid rgba(226, 232, 240, .9);
+            background: linear-gradient(180deg, rgba(248, 250, 252, .9), rgba(255, 255, 255, .62));
         }
 
         .panel-title {
@@ -1211,25 +1266,41 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             padding: 0 16px;
             border-radius: 10px;
             border: 1px solid transparent;
-            background: var(--blue);
+            background: linear-gradient(135deg, #4368e8, #2457d6);
             color: #fff;
             font-weight: 800;
             white-space: nowrap;
+            box-shadow: 0 8px 18px rgba(67, 104, 232, .22);
+            transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.02);
+            box-shadow: 0 12px 24px rgba(67, 104, 232, .28);
         }
 
         .button.green {
-            background: #16a34a;
+            background: linear-gradient(135deg, #16a34a, #0f8f5a);
+            box-shadow: 0 8px 18px rgba(22, 163, 74, .22);
         }
 
         .button.secondary {
-            background: #fff;
+            background: rgba(255, 255, 255, .94);
             color: var(--ink);
             border-color: var(--line);
             box-shadow: 0 1px 6px rgba(15, 23, 42, .06);
         }
 
         .button.danger {
-            background: var(--red);
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 8px 18px rgba(239, 68, 68, .22);
+        }
+
+        .button.orange,
+        .button.warn {
+            background: linear-gradient(135deg, #f59e0b, #ea580c);
+            box-shadow: 0 8px 18px rgba(240, 138, 18, .22);
         }
 
         .button.icon-only {
@@ -1278,6 +1349,54 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .page-link.disabled {
             pointer-events: none;
             opacity: .45;
+        }
+
+        .commercial-mode main {
+            width: min(1560px, calc(100% - 28px));
+        }
+
+        .commercial-mode .page-title {
+            position: relative;
+            min-height: 168px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 28px;
+            padding: 28px 34px;
+            border-radius: 18px;
+            color: #fff;
+            overflow: hidden;
+            background:
+                linear-gradient(120deg, rgba(7, 27, 79, .96), rgba(18, 60, 151, .88) 52%, rgba(17, 200, 214, .78)),
+                url("${escapar(marcaDaguaUrl)}") right 34px center / 170px auto no-repeat;
+            box-shadow: 0 18px 42px rgba(7, 27, 79, .22);
+        }
+
+        .commercial-mode .page-title::after {
+            content: "";
+            position: absolute;
+            inset: auto -40px -70px auto;
+            width: 260px;
+            height: 180px;
+            border-radius: 999px;
+            background: rgba(246, 178, 26, .24);
+            filter: blur(4px);
+        }
+
+        .commercial-mode .page-title h1,
+        .commercial-mode .page-title .subtitle {
+            position: relative;
+            z-index: 1;
+            max-width: 820px;
+            color: #fff;
+        }
+
+        .commercial-mode .page-title .subtitle {
+            color: rgba(255, 255, 255, .84);
+        }
+
+        .commercial-mode .metric::before {
+            background: linear-gradient(180deg, var(--gold), var(--cyan));
         }
 
         .client-row {
@@ -2292,7 +2411,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
     </style>
 </head>
-<body>
+<body class="${escapar(bodyClass)}">
     <div class="top-shell">
         <div class="topbar">
             <div class="brand">
