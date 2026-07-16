@@ -883,6 +883,19 @@ function listarNotasCliente(clienteId) {
     );
 }
 
+async function campanhaAmizadeJaEnviada(clienteId) {
+    const nota = await buscarUm(
+        `SELECT id
+        FROM cliente_notas
+        WHERE clienteId = ?
+            AND texto LIKE 'Campanha "Amizade que vale presente" enviada pelo WhatsApp%'
+        LIMIT 1`,
+        [clienteId]
+    );
+
+    return Boolean(nota);
+}
+
 async function adicionarNotaCliente(clienteId, texto) {
     const conteudo = limparTexto(texto);
     if (!conteudo) {
@@ -1629,6 +1642,7 @@ module.exports = {
     removerPagamentoCliente,
     removerCliente,
     listarNotasCliente,
+    campanhaAmizadeJaEnviada,
     adicionarNotaCliente,
     buscarAlertasCadastroCliente,
     listarClientesParaAviso,

@@ -24,6 +24,7 @@ const {
     removerCliente,
     normalizarTelefone,
     listarNotasCliente,
+    campanhaAmizadeJaEnviada,
     adicionarNotaCliente,
     buscarAlertasCadastroCliente,
     listarClientesVencidosParaCobranca,
@@ -3450,7 +3451,19 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
             );
 
             if (!envio) {
-                throw new Error('O WhatsApp nao confirmou o envio da imagem.');
+                console.warn(`[clientes] ${descricao} sem confirmacao do WhatsApp para ${destino}; tratando como enviado para evitar duplicidade.`);
+                mensagensWhatsAppRecentes.set(chaveEnvio, {
+                    enviadoEm: Date.now(),
+                    mensagemId: '',
+                    ack: undefined
+                });
+
+                return {
+                    destino,
+                    mensagemId: '',
+                    ack: undefined,
+                    semConfirmacao: true
+                };
             }
 
             registrarMensagemDoRobo(envio);
@@ -8755,6 +8768,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
 
     let enviados = 0;
     let ignorados = 0;
+    let jaEnviados = 0;
 
     try {
         imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao);
@@ -8765,6 +8779,11 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
 
             if (!telefone || clienteEhTeste(cliente)) {
                 ignorados += 1;
+                continue;
+            }
+
+            if (await campanhaAmizadeJaEnviada(cliente.id)) {
+                jaEnviados += 1;
                 continue;
             }
 
@@ -8792,6 +8811,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         logControleClientes('Campanha amizade que vale presente concluida', {
             enviados,
             ignorados,
+            jaEnviados,
             total: clientes.length,
             telefoneInstalacao: formatarTelefoneCampanha(telefoneInstalacao)
         });
@@ -8804,7 +8824,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         }
     }
 
-    return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Campanha enviada para ${enviados} cliente(s). ${ignorados} ignorado(s).`)}`);
+    return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Campanha enviada para ${enviados} cliente(s). ${ignorados} ignorado(s), ${jaEnviados} ja tinham recebido.`)}`);
 });
 
 router.post('/clientes/cobrar-vencidos', async (req, res) => {

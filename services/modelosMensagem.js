@@ -382,7 +382,7 @@ function ajustarModeloAvisoAmanha(texto) {
 }
 
 function aplicarVariaveis(texto, variaveis) {
-    return String(texto || '').replace(/\{\{(nome|plano|vencimento|dias|valor)\}\}/g, (_, chave) => {
+    return String(texto || '').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, chave) => {
         return variaveis[chave] ?? '';
     });
 }
