@@ -164,6 +164,21 @@ const PAISES_TELEFONE = [
     { codigo: 'BO', pais: 'Bolívia', ddi: '591', exemplo: '71234567' },
     { codigo: 'CO', pais: 'Colômbia', ddi: '57', exemplo: '3012345678' }
 ];
+
+function bandeiraPaisTelefone(cliente = {}) {
+    const codigoSalvo = String(cliente.paisTelefone || '').trim().toUpperCase();
+    const ddi = String(cliente.ddiTelefone || '').replace(/\D/g, '');
+    const telefone = String(cliente.telefone || '').replace(/\D/g, '');
+    const pais = PAISES_TELEFONE.find(item => item.codigo === codigoSalvo)
+        || PAISES_TELEFONE.find(item => item.ddi === ddi)
+        || [...PAISES_TELEFONE].sort((a, b) => b.ddi.length - a.ddi.length)
+            .find(item => telefone.startsWith(item.ddi))
+        || PAISES_TELEFONE[0];
+
+    return pais.codigo
+        .toUpperCase()
+        .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt(0)));
+}
 const TAGS_CLIENTE = [
     'VIP',
     'Problemático',
@@ -1960,6 +1975,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-size: 13px;
             line-height: 1.25;
             white-space: nowrap;
+        }
+
+        .country-emoji {
+            display: inline-block;
+            margin-right: 6px;
+            font-size: 15px;
+            line-height: 1;
+            vertical-align: -1px;
         }
 
         .app-chip {
@@ -5726,9 +5749,12 @@ function tabelaClientes(clientes) {
         return '<div class="empty">Nenhum cliente encontrado.</div>';
     }
 
-    const linhas = clientes.map(cliente => `<tr>
+    const linhas = clientes.map(cliente => {
+        const bandeira = bandeiraPaisTelefone(cliente);
+
+        return `<tr>
         <td data-label="Cliente">
-            <div class="cell-title">${escapar(cliente.nome)}</div>
+            <div class="cell-title"><span class="country-emoji" title="País do WhatsApp">${escapar(bandeira)}</span>${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
             ${cliente.origem ?`<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
             ${cliente.nascimento ?`<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
@@ -5781,7 +5807,8 @@ function tabelaClientes(clientes) {
                 </form>
             </div>
         </td>
-    </tr>`).join('');
+    </tr>`;
+    }).join('');
 
     return `<table class="clients-table">
         <thead>
