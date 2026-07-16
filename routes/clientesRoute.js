@@ -165,19 +165,30 @@ const PAISES_TELEFONE = [
     { codigo: 'CO', pais: 'Colômbia', ddi: '57', exemplo: '3012345678' }
 ];
 
-function bandeiraPaisTelefone(cliente = {}) {
+function paisTelefoneDoCliente(cliente = {}) {
     const codigoSalvo = String(cliente.paisTelefone || '').trim().toUpperCase();
     const ddi = String(cliente.ddiTelefone || '').replace(/\D/g, '');
     const telefone = String(cliente.telefone || '').replace(/\D/g, '');
-    const pais = PAISES_TELEFONE.find(item => item.codigo === codigoSalvo)
+    return PAISES_TELEFONE.find(item => item.codigo === codigoSalvo)
         || PAISES_TELEFONE.find(item => item.ddi === ddi)
         || [...PAISES_TELEFONE].sort((a, b) => b.ddi.length - a.ddi.length)
             .find(item => telefone.startsWith(item.ddi))
         || PAISES_TELEFONE[0];
+}
+
+function bandeiraPaisTelefone(cliente = {}) {
+    const pais = paisTelefoneDoCliente(cliente);
 
     return pais.codigo
         .toUpperCase()
         .replace(/./g, char => String.fromCodePoint(127397 + char.charCodeAt(0)));
+}
+
+function imagemBandeiraPaisTelefone(cliente = {}) {
+    const pais = paisTelefoneDoCliente(cliente);
+    const codigo = String(pais.codigo || 'BR').toLowerCase();
+
+    return `<img class="country-flag-inline" src="https://flagcdn.com/w40/${escapar(codigo)}.png" alt="${escapar(pais.pais)}" title="${escapar(pais.pais)}" loading="lazy">`;
 }
 const TAGS_CLIENTE = [
     'VIP',
@@ -1977,11 +1988,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             white-space: nowrap;
         }
 
-        .country-emoji {
+        .country-flag-inline {
             display: inline-block;
-            margin-right: 6px;
-            font-size: 15px;
-            line-height: 1;
+            width: 18px;
+            height: 13px;
+            margin-right: 7px;
+            border-radius: 2px;
+            object-fit: cover;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.10);
             vertical-align: -1px;
         }
 
@@ -3458,10 +3472,30 @@ function aguardarComTimeout(promessa, ms, descricao) {
     ]);
 }
 
+function normalizarTelefoneClienteWhatsApp(clienteOuTelefone = {}) {
+    if (typeof clienteOuTelefone !== 'object' || clienteOuTelefone === null) {
+        return normalizarTelefone(clienteOuTelefone);
+    }
+
+    const telefone = String(clienteOuTelefone.telefone || '').replace(/\D/g, '');
+    const paisTelefone = String(clienteOuTelefone.paisTelefone || '').trim().toUpperCase();
+    const pais = PAISES_TELEFONE.find(item => item.codigo === paisTelefone);
+    const ddi = String(pais?.ddi || clienteOuTelefone.ddiTelefone || '').replace(/\D/g, '');
+
+    if (!telefone) return '';
+
+    if (ddi) {
+        const numeroComDdi = telefone.startsWith(ddi) ? telefone : `${ddi}${telefone}`;
+        return normalizarTelefone(numeroComDdi);
+    }
+
+    return normalizarTelefone(telefone);
+}
+
 async function resolverDestinosWhatsApp(client, telefone) {
     const numero = normalizarTelefone(telefone);
 
-    if (!numero || numero.length < 12) {
+    if (!numero || numero.length < 8 || numero.length > 15) {
         throw new Error('Telefone do cliente invalido. Confira o DDD e o numero.');
     }
 
@@ -3727,7 +3761,7 @@ async function criarImagemCampanhaAmizade(telefoneInstalacao) {
 }
 
 async function enviarCampanhaAmizadeParaCliente(client, cliente, imagemCampanha, telefoneInstalacao, descricao = 'Campanha amizade que vale presente') {
-    const telefone = normalizarTelefone(cliente.telefone);
+    const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
     if (!telefone) {
         throw new Error('Cliente sem telefone cadastrado.');
@@ -5750,11 +5784,11 @@ function tabelaClientes(clientes) {
     }
 
     const linhas = clientes.map(cliente => {
-        const bandeira = bandeiraPaisTelefone(cliente);
+        const bandeira = imagemBandeiraPaisTelefone(cliente);
 
         return `<tr>
         <td data-label="Cliente">
-            <div class="cell-title"><span class="country-emoji" title="País do WhatsApp">${escapar(bandeira)}</span>${escapar(cliente.nome)}</div>
+            <div class="cell-title">${bandeira}${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
             ${cliente.origem ?`<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
             ${cliente.nascimento ?`<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
@@ -9048,7 +9082,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         const clientes = await listarClientesAtivosComerciais();
 
         for (const cliente of clientes) {
-            const telefone = normalizarTelefone(cliente.telefone);
+            const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
             if (!telefone || clienteEhTeste(cliente)) {
                 ignorados += 1;
