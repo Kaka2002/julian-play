@@ -523,6 +523,8 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
     const dispositivosSelecionados = JSON.stringify([aparelho]);
     const appsInstalados = aplicativo ? JSON.stringify([aplicativo]) : JSON.stringify([]);
     const paineisSelecionados = painel ? JSON.stringify([painel]) : JSON.stringify([]);
+    const ddiTeste = telefone.startsWith('55') ? '55' : '';
+    const paisTeste = ddiTeste === '55' ? 'BR' : '';
     const clienteExistente = await buscarClienteTestePorTelefone(telefone);
 
     if (clienteExistente?.id) {
@@ -550,7 +552,8 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             [
                 nome,
                 telefone,
-                telefone.startsWith('55') ? '55' : '',
+                ddiTeste,
+                paisTeste,
                 usuario,
                 senha,
                 'Teste grátis',
@@ -573,14 +576,15 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
 
     const resultado = await executar(
         `INSERT INTO clientes (
-            nome, telefone, ddiTelefone, usuario, senha, plano, aparelho, vencimento,
+            nome, telefone, ddiTelefone, paisTelefone, usuario, senha, plano, aparelho, vencimento,
             dataInicio, dataVencimento, appsInstalados, dispositivosSelecionados,
             paineisSelecionados, appInstalado, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), CURRENT_TIMESTAMP), ?, ?, ?, ?, ?, ?)`,
         [
             nome,
             telefone,
-            telefone.startsWith('55') ? '55' : '',
+            ddiTeste,
+            paisTeste,
             usuario,
             senha,
             'Teste grátis',
