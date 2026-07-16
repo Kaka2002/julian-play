@@ -893,7 +893,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics {
-            grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
             gap: 14px;
         }
 
@@ -919,7 +919,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics .metric {
-            min-height: 130px;
+            min-height: 118px;
             padding: 16px 12px;
             gap: 7px;
             min-width: 0;
@@ -937,7 +937,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics .metric-value {
-            font-size: 28px;
+            font-size: 24px;
+            font-weight: 800;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -977,14 +978,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics .metric-date .metric-value {
-            font-size: clamp(20px, 1.25vw, 24px);
+            font-size: clamp(18px, 1.05vw, 21px);
             white-space: nowrap;
         }
 
         .client-summary-metrics .metric-icon {
-            width: 42px;
-            height: 42px;
-            flex: 0 0 42px;
+            width: 38px;
+            height: 38px;
+            flex: 0 0 38px;
         }
 
         .metric-note {
@@ -4022,7 +4023,7 @@ function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null)
     </section>`;
 }
 
-function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = [], interacoesRobo = []) {
+function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = []) {
     if (!cliente.id) return '';
 
     const vencimento = cliente.dataVencimento || cliente.vencimento || '';
@@ -4032,7 +4033,6 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
     const apps = lerListaSalva(cliente.appsInstalados);
     const dispositivos = lerListaSalva(cliente.dispositivosSelecionados);
     const ultimoPagamento = pagamentos[0] || null;
-    const ultimoRobo = interacoesRobo[0] || null;
     const abertos = atendimentos.filter(item => item.status !== 'resolvido');
     const classeVencimento = clienteEhTeste(cliente)
         ? 'info'
@@ -4050,7 +4050,6 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
         ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
         ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'Último pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histórico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
-        ${metricCard({ label: 'Último robô', valor: ultimoRobo ?rotuloCurto(ultimoRobo.titulo || 'Mensagem') : '-', nota: ultimoRobo ?formatarDataHoraCurta(ultimoRobo.criadoEm) : 'Sem interação registrada', tipo: ultimoRobo ? 'info' : 'orange', icone: 'whats' })}
     </section>`;
 }
 
@@ -4226,10 +4225,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const atendimentos = opcoesFormulario.atendimentos || [];
     const interacoesRobo = opcoesFormulario.interacoesRobo || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
-    const paginaRobo = paginaAtual(opcoesFormulario.paginaRobo);
     const paginaLinha = paginaAtual(opcoesFormulario.paginaLinha);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
-    const paginacaoRobo = cliente.id ? paginarItens(interacoesRobo, paginaRobo, REGISTROS_POR_PAGINA) : null;
     const historicoUnificado = cliente.id
         ? montarHistoricoUnificado(cliente, { notas, pagamentos, atendimentos, interacoesRobo })
         : [];
@@ -4246,7 +4243,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
     const topoCliente = cliente.id
-        ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
+        ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos)}
             ${acoesRapidasCliente(cliente)}
             ${recomendacoesCliente(cliente, pagamentos, atendimentos)}`
         : '';
@@ -4655,7 +4652,6 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
         cliente.id ?secaoHistoricoUnificado(cliente, {}, paginacaoHistoricoUnificado) : '',
-        cliente.id ?secaoHistoricoRobo(cliente, interacoesRobo, paginacaoRobo) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas)
     ].filter(Boolean).join('');
@@ -7120,7 +7116,6 @@ router.get('/clientes/:id/editar', async (req, res) => {
             atendimentos,
             interacoesRobo,
             paginaHistorico: req.query.historico || req.query.pagina,
-            paginaRobo: req.query.robo,
             paginaLinha: req.query.linha
         }),
         mensagem: req.query.mensagem || '',
