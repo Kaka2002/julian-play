@@ -21,8 +21,8 @@ async function obterPerfilFila(opcoes = {}) {
         const { obterConfiguracoes } = require('./configuracoesPainel');
         const config = await obterConfiguracoes();
         const ativa = String(config.roboFilaMensagensAtiva ?? '1') === '1';
-        const minimo = numeroInteiro(config.roboFilaIntervaloMinimoSegundos, 2, 0, 120);
-        const maximo = numeroInteiro(config.roboFilaIntervaloMaximoSegundos, 5, minimo, 180);
+        const minimo = numeroInteiro(opcoes.intervaloMinimoSegundos ?? config.roboFilaIntervaloMinimoSegundos, 2, 0, 600);
+        const maximo = numeroInteiro(opcoes.intervaloMaximoSegundos ?? config.roboFilaIntervaloMaximoSegundos, 5, minimo, 900);
 
         return {
             ativa,
