@@ -5985,6 +5985,8 @@ function painelSaudeRobo(status = {}) {
     const saudeRobo = status.saudeRobo || {};
     const fila = status.filaMensagens || {};
     const risco = status.riscoWhatsApp || {};
+    const verificacaoSaude = status.verificacaoSaudeWhatsApp || {};
+    const recuperacaoWhatsApp = status.recuperacaoWhatsApp || {};
     const atendimentosHumanos = status.atendimentosHumanos || [];
     const classeRisco = risco.nivel === 'alto' ? 'red' : risco.nivel === 'atenção' ? 'orange' : 'green';
     const pausas = atendimentosHumanos.length
@@ -6011,6 +6013,8 @@ function painelSaudeRobo(status = {}) {
             <tbody>
                 <tr><td><strong>WhatsApp</strong></td><td>${whatsapp.conectado ?'Conectado' : 'Desconectado'}${saudeRobo.numeroConectado ?` em ${escapar(saudeRobo.numeroConectado)}` : ''}</td></tr>
                 <tr><td><strong>Risco do WhatsApp</strong></td><td><span class="badge ${classeRisco}">${escapar(risco.nivel || 'baixo')}</span> ${escapar(risco.recomendacao || 'Operação normal.')}</td></tr>
+                <tr><td><strong>Diagnóstico da sessão</strong></td><td>${verificacaoSaude.verificadoEm ?`${verificacaoSaude.ok ?'Saudável' : 'Atenção'} (${escapar(verificacaoSaude.estado || '-')}) em ${escapar(formatarDataHoraCurta(verificacaoSaude.verificadoEm))}${verificacaoSaude.erro ?` &middot; ${escapar(verificacaoSaude.erro)}` : ''}` : 'Ainda não verificado pelo monitor'}</td></tr>
+                <tr><td><strong>Recuperação automática</strong></td><td>${recuperacaoWhatsApp.iniciadoEm ?`${escapar(recuperacaoWhatsApp.tipo || '-')}: ${escapar(recuperacaoWhatsApp.status || '-')}, ${escapar(formatarDataHoraCurta(recuperacaoWhatsApp.iniciadoEm))}${recuperacaoWhatsApp.motivo ?` &middot; ${escapar(recuperacaoWhatsApp.motivo)}` : ''}${recuperacaoWhatsApp.erro ?` &middot; erro: ${escapar(recuperacaoWhatsApp.erro)}` : ''}` : 'Nenhuma recuperação automática executada'}</td></tr>
                 <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} pendente(s)${fila.ultimoEnvioEm ?`, último envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
                 <tr><td><strong>Última mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
                 <tr><td><strong>Última resposta do robô</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
@@ -8259,7 +8263,7 @@ router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
 
 router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
     try {
-        const resultado = await gerarNovoQrCodeWhatsApp();
+        const resultado = await gerarNovoQrCodeWhatsApp({ motivo: 'Solicitado pelo painel de manutencao' });
         logControleClientes('Sessao do WhatsApp reiniciada para gerar novo QR Code', {
             status: resultado.status,
             authDataPath: resultado.authDataPath

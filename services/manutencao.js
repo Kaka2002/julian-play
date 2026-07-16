@@ -350,6 +350,8 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         filaMensagens,
         atendimentosHumanos,
         riscoWhatsApp,
+        recuperacaoWhatsApp: statusWhatsApp.ultimaRecuperacaoWhatsApp || null,
+        verificacaoSaudeWhatsApp: statusWhatsApp.ultimaVerificacaoSaude || null,
         saudeRobo: {
             whatsappConectado: Boolean(statusWhatsApp.conectado),
             whatsappStatus: statusWhatsApp.status || '',

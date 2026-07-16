@@ -40,6 +40,9 @@ let mensagensRecebidasTotal = 0;
 let ultimaMensagemRecebidaEm = null;
 let ultimaMensagemRecebidaDe = '';
 let ultimoEventoIgnoradoEm = null;
+let ultimaVerificacaoSaude = null;
+let ultimaRecuperacaoWhatsApp = null;
+let recuperacaoEmAndamento = false;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
@@ -677,7 +680,27 @@ async function encerrarWhatsApp() {
     }
 }
 
-async function gerarNovoQrCodeWhatsApp() {
+async function reiniciarWhatsApp({ motivo = 'reinicio manual' } = {}) {
+    statusWhatsApp = 'reconectando';
+    qrAtual = '';
+
+    await encerrarWhatsApp();
+    await esperar(1200);
+
+    conectado = false;
+    inicializando = false;
+
+    console.log(`WhatsApp reiniciado: ${motivo}`);
+
+    await iniciarWhatsApp();
+
+    return {
+        status: statusWhatsApp,
+        motivo
+    };
+}
+
+async function gerarNovoQrCodeWhatsApp({ motivo = 'novo QR Code manual' } = {}) {
     statusWhatsApp = 'reconectando';
     qrAtual = '';
     ultimoQrEm = null;
@@ -691,7 +714,7 @@ async function gerarNovoQrCodeWhatsApp() {
     inicializando = false;
     statusWhatsApp = 'aguardando_qr';
 
-    console.log('Sessao local do WhatsApp removida manualmente. Um novo QR Code sera gerado.');
+    console.log(`Sessao local do WhatsApp removida. Um novo QR Code sera gerado. Motivo: ${motivo}`);
 
     await iniciarWhatsApp();
 
@@ -700,6 +723,89 @@ async function gerarNovoQrCodeWhatsApp() {
         authDataPath: AUTH_DATA_PATH,
         cacheDataPath: CACHE_DATA_PATH
     };
+}
+
+async function verificarSaudeWhatsApp() {
+    const verificadoEm = new Date().toISOString();
+
+    if (!client) {
+        ultimaVerificacaoSaude = {
+            ok: false,
+            estado: 'sem_cliente',
+            erro: '',
+            verificadoEm
+        };
+        return ultimaVerificacaoSaude;
+    }
+
+    try {
+        const estado = await client.getState();
+        const ok = estado === 'CONNECTED';
+
+        if (conectado && !ok) {
+            conectado = false;
+            statusWhatsApp = estado ? `sessao_${String(estado).toLowerCase()}` : 'sessao_presa';
+        }
+
+        ultimaVerificacaoSaude = {
+            ok,
+            estado: estado || 'sem_estado',
+            erro: '',
+            verificadoEm
+        };
+    } catch (err) {
+        if (conectado) {
+            conectado = false;
+            statusWhatsApp = 'sessao_presa';
+        }
+
+        ultimaVerificacaoSaude = {
+            ok: false,
+            estado: 'erro',
+            erro: err.message,
+            verificadoEm
+        };
+    }
+
+    return ultimaVerificacaoSaude;
+}
+
+async function recuperarWhatsAppAutomaticamente({ limparSessao = false, motivo = 'recuperacao automatica' } = {}) {
+    if (recuperacaoEmAndamento) {
+        return {
+            status: 'ignorado',
+            motivo: 'recuperacao ja em andamento'
+        };
+    }
+
+    recuperacaoEmAndamento = true;
+    ultimaRecuperacaoWhatsApp = {
+        tipo: limparSessao ? 'novo_qr' : 'reinicio',
+        motivo,
+        status: 'executando',
+        iniciadoEm: new Date().toISOString(),
+        concluidoEm: null,
+        erro: ''
+    };
+
+    try {
+        const resultado = limparSessao
+            ? await gerarNovoQrCodeWhatsApp({ motivo })
+            : await reiniciarWhatsApp({ motivo });
+
+        ultimaRecuperacaoWhatsApp.status = 'sucesso';
+        ultimaRecuperacaoWhatsApp.concluidoEm = new Date().toISOString();
+        ultimaRecuperacaoWhatsApp.resultado = resultado.status || '';
+
+        return resultado;
+    } catch (err) {
+        ultimaRecuperacaoWhatsApp.status = 'erro';
+        ultimaRecuperacaoWhatsApp.concluidoEm = new Date().toISOString();
+        ultimaRecuperacaoWhatsApp.erro = err.message;
+        throw err;
+    } finally {
+        recuperacaoEmAndamento = false;
+    }
 }
 
 function getQrCode() {
@@ -732,14 +838,20 @@ function getStatusWhatsApp() {
         ultimoEnvioRoboPara: enviosRobo.ultimoEnvioPara,
         eventosInternosIgnoradosTotal,
         conversasNaoIndividuaisIgnoradasTotal,
-        ultimoEventoIgnoradoEm
+        ultimoEventoIgnoradoEm,
+        ultimaVerificacaoSaude,
+        ultimaRecuperacaoWhatsApp,
+        recuperacaoEmAndamento
     };
 }
 
 module.exports = {
     iniciarWhatsApp,
     encerrarWhatsApp,
+    reiniciarWhatsApp,
     gerarNovoQrCodeWhatsApp,
+    verificarSaudeWhatsApp,
+    recuperarWhatsAppAutomaticamente,
     getQrCode,
     getClient,
     getStatusWhatsApp

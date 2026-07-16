@@ -118,7 +118,7 @@ router.get('/qr', async (req, res) => {
 
 router.post('/qr/novo', async (req, res) => {
     try {
-        await gerarNovoQrCodeWhatsApp();
+        await gerarNovoQrCodeWhatsApp({ motivo: 'Solicitado pela tela de QR Code' });
         res.redirect('/qr');
     } catch (err) {
         res.send(pagina({

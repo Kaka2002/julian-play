@@ -10,7 +10,9 @@ const {
     iniciarWhatsApp,
     encerrarWhatsApp,
     getClient,
-    getStatusWhatsApp
+    getStatusWhatsApp,
+    verificarSaudeWhatsApp,
+    recuperarWhatsAppAutomaticamente
 } = require('./config/whatsapp');
 const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
 const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComercial');
@@ -122,7 +124,10 @@ app.get('/health', (req, res) => {
             ultimoEnvioRoboPara: whatsapp.ultimoEnvioRoboPara || '',
             eventosInternosIgnoradosTotal: whatsapp.eventosInternosIgnoradosTotal || 0,
             conversasNaoIndividuaisIgnoradasTotal: whatsapp.conversasNaoIndividuaisIgnoradasTotal || 0,
-            ultimoEventoIgnoradoEm: whatsapp.ultimoEventoIgnoradoEm || null
+            ultimoEventoIgnoradoEm: whatsapp.ultimoEventoIgnoradoEm || null,
+            ultimaVerificacaoSaude: whatsapp.ultimaVerificacaoSaude || null,
+            ultimaRecuperacaoWhatsApp: whatsapp.ultimaRecuperacaoWhatsApp || null,
+            recuperacaoEmAndamento: Boolean(whatsapp.recuperacaoEmAndamento)
         },
         memoria: {
             rss: memoria.rss,
@@ -146,7 +151,11 @@ const server = app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);
     iniciarWhatsApp();
     iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
-    iniciarMonitoramentoComercial({ getStatusWhatsApp });
+    iniciarMonitoramentoComercial({
+        getStatusWhatsApp,
+        verificarSaudeWhatsApp,
+        recuperarWhatsAppAutomaticamente
+    });
 });
 
 server.on('error', (err) => {
