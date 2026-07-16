@@ -892,6 +892,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             gap: 9px;
         }
 
+        .client-summary-metrics {
+            grid-template-columns: repeat(auto-fit, minmax(205px, 1fr));
+            gap: 14px;
+        }
+
         .metric, .panel {
             background: var(--panel);
             border: 1px solid var(--line);
@@ -911,6 +916,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             min-height: 124px;
             padding: 16px 12px;
             gap: 7px;
+        }
+
+        .client-summary-metrics .metric {
+            min-height: 130px;
+            padding: 22px 22px;
+            gap: 10px;
         }
 
         .metric-label {
@@ -937,6 +948,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .dashboard-metrics .metric-value {
             font-size: 28px;
+        }
+
+        .client-summary-metrics .metric-date .metric-value {
+            font-size: clamp(24px, 1.45vw, 28px);
+            white-space: nowrap;
         }
 
         .metric-note {
@@ -3980,9 +3996,7 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
     const vencimento = cliente.dataVencimento || cliente.vencimento || '';
     const infoVencimento = textoVencimento(cliente);
     const valorPlano = cliente.valorPlano || '0,00';
-    const valorApp = cliente.assinaturaApp || '0,00';
-    const total = numeroMoeda(valorPlano) + numeroMoeda(valorApp);
-    const totalFormatado = total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const valorPlanoFormatado = numeroMoeda(valorPlano).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const apps = lerListaSalva(cliente.appsInstalados);
     const dispositivos = lerListaSalva(cliente.dispositivosSelecionados);
     const ultimoPagamento = pagamentos[0] || null;
@@ -3996,10 +4010,10 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
                 ? 'warn'
                 : 'ok';
 
-    return `<section class="metrics" style="margin-bottom:24px;">
+    return `<section class="metrics client-summary-metrics" style="margin-bottom:24px;">
         ${metricCard({ label: 'Status', valor: rotuloStatus(cliente.status), nota: clienteEhTeste(cliente) ? 'Cliente em teste' : 'Cliente comercial', tipo: classeVencimento === 'error' ? 'red' : classeVencimento === 'warn' ? 'orange' : 'green', icone: classeVencimento === 'error' ? 'x' : 'check' })}
-        ${metricCard({ label: 'Vencimento', valor: formatarDataHoraCurta(vencimento) || '-', nota: infoVencimento || 'Sem data definida', tipo: classeVencimento === 'error' ? 'red' : classeVencimento === 'warn' ? 'orange' : 'info', icone: 'calendario' })}
-        ${metricCard({ label: 'Plano', valor: cliente.plano || '-', nota: `Total R$ ${totalFormatado}`, tipo: 'info', icone: 'planos' })}
+        ${metricCard({ label: 'Vencimento', valor: formatarDataHoraCurta(vencimento) || '-', nota: infoVencimento || 'Sem data definida', tipo: classeVencimento === 'error' ? 'red' : classeVencimento === 'warn' ? 'orange' : 'info', icone: 'calendario', classe: 'metric-date' })}
+        ${metricCard({ label: 'Plano', valor: cliente.plano || '-', nota: `Plano R$ ${valorPlanoFormatado}`, tipo: 'info', icone: 'planos' })}
         ${metricCard({ label: 'Apps', valor: apps.length || 0, nota: apps.slice(0, 2).join(', ') || 'Nenhum app informado', tipo: 'green', icone: 'apps' })}
         ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
         ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
@@ -4617,8 +4631,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     return `${topoCliente}${formulario}${extras}`;
 }
 
-function metricCard({ label, valor, nota = '', tipo, icone }) {
-    return `<div class="metric">
+function metricCard({ label, valor, nota = '', tipo, icone, classe = '' }) {
+    return `<div class="metric ${escapar(classe)}">
         <div>
             <span class="metric-label">${escapar(label)}</span>
             <strong class="metric-value">${escapar(valor)}</strong>
