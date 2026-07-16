@@ -32,7 +32,7 @@ const {
     verificarClientesVencendoUmaHora,
     verificarClientesVencidosPorDias
 } = require('../services/renovacaoAutomatica');
-const { getClient, getStatusWhatsApp } = require('../config/whatsapp');
+const { getClient, getStatusWhatsApp, gerarNovoQrCodeWhatsApp } = require('../config/whatsapp');
 const {
     listarModelos,
     buscarModeloPorId,
@@ -6000,7 +6000,12 @@ function painelSaudeRobo(status = {}) {
                 <h2 class="panel-title">Saude do robo</h2>
                 <div class="subtitle">Sinais rapidos para saber se o atendimento automatico esta recebendo e respondendo mensagens</div>
             </div>
-            <a class="button secondary" href="/qr">${icon('whats')} WhatsApp</a>
+            <div class="actions">
+                <a class="button secondary" href="/qr">${icon('whats')} WhatsApp</a>
+                <form method="post" action="/manutencao/whatsapp/novo-qr" onsubmit="return confirm('Isso vai encerrar a sessao atual do WhatsApp e gerar um novo QR Code. Os clientes, licenca e configuracoes serao mantidos. Continuar?')">
+                    <button class="button secondary" type="submit">${icon('refresh')} Gerar novo QR Code</button>
+                </form>
+            </div>
         </div>
         <table>
             <tbody>
@@ -8249,6 +8254,22 @@ router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar aviso: ${err.message}`));
+    }
+});
+
+router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
+    try {
+        const resultado = await gerarNovoQrCodeWhatsApp();
+        logControleClientes('Sessao do WhatsApp reiniciada para gerar novo QR Code', {
+            status: resultado.status,
+            authDataPath: resultado.authDataPath
+        });
+        res.redirect('/qr');
+    } catch (err) {
+        logControleClientes('Erro ao reiniciar sessao do WhatsApp para novo QR Code', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao gerar novo QR Code: ${err.message}`)}`);
     }
 });
 

@@ -2,9 +2,9 @@ const express = require('express');
 const QRCode = require('qrcode');
 const router = express.Router();
 
-const { getQrCode, getStatusWhatsApp } = require('../config/whatsapp');
+const { getQrCode, getStatusWhatsApp, gerarNovoQrCodeWhatsApp } = require('../config/whatsapp');
 
-function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
+function pagina({ titulo, mensagem, qrImage = '', refresh = 2, mostrarNovoQr = false }) {
     return `
     <!doctype html>
     <html lang="pt-BR">
@@ -46,6 +46,17 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
             small {
                 color: #aaa;
             }
+
+            button {
+                margin-top: 16px;
+                border: 0;
+                border-radius: 8px;
+                padding: 12px 16px;
+                background: #4169e1;
+                color: #fff;
+                cursor: pointer;
+                font-weight: 700;
+            }
         </style>
     </head>
     <body>
@@ -53,6 +64,7 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2 }) {
             <h2>${titulo}</h2>
             ${qrImage ? `<img src="${qrImage}" alt="QR Code WhatsApp">` : ''}
             <p>${mensagem}</p>
+            ${mostrarNovoQr ? `<form method="post" action="/qr/novo" onsubmit="return confirm('Isso vai encerrar a sessao atual do WhatsApp e gerar um novo QR Code. Continuar?')"><button type="submit">Gerar novo QR Code</button></form>` : ''}
             <small>Esta página atualiza automaticamente.</small>
         </main>
     </body>
@@ -74,7 +86,8 @@ router.get('/qr', async (req, res) => {
         return res.send(pagina({
             titulo: 'WhatsApp conectado',
             mensagem: 'O robô está conectado e pronto para responder.',
-            refresh: 10
+            refresh: 10,
+            mostrarNovoQr: true
         }));
     }
 
@@ -101,6 +114,19 @@ router.get('/qr', async (req, res) => {
         mensagem: 'Abra o WhatsApp no celular, toque em Aparelhos conectados e escaneie este QR Code. Use sempre o QR Code mais recente desta tela.',
         qrImage
     }));
+});
+
+router.post('/qr/novo', async (req, res) => {
+    try {
+        await gerarNovoQrCodeWhatsApp();
+        res.redirect('/qr');
+    } catch (err) {
+        res.send(pagina({
+            titulo: 'Erro ao gerar novo QR Code',
+            mensagem: err.message || 'Não foi possível reiniciar a sessão do WhatsApp.',
+            refresh: 5
+        }));
+    }
 });
 
 module.exports = router;

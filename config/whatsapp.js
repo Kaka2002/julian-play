@@ -15,6 +15,7 @@ const { licencaPermiteUso } = require('../services/licencaService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
+const CACHE_DATA_PATH = process.env.WWEBJS_CACHE_PATH || path.join(DATA_DIR, '.wwebjs_cache');
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
@@ -123,6 +124,15 @@ class LocalAuthControlado extends LocalAuth {
 
 async function removerSessaoLocal() {
     await fs.promises.rm(SESSION_DATA_PATH, {
+        recursive: true,
+        force: true,
+        maxRetries: 8,
+        retryDelay: 750
+    });
+}
+
+async function removerCacheLocal() {
+    await fs.promises.rm(CACHE_DATA_PATH, {
         recursive: true,
         force: true,
         maxRetries: 8,
@@ -667,6 +677,31 @@ async function encerrarWhatsApp() {
     }
 }
 
+async function gerarNovoQrCodeWhatsApp() {
+    statusWhatsApp = 'reconectando';
+    qrAtual = '';
+    ultimoQrEm = null;
+
+    await encerrarWhatsApp();
+    await esperar(1200);
+    await removerSessaoLocal();
+    await removerCacheLocal();
+
+    conectado = false;
+    inicializando = false;
+    statusWhatsApp = 'aguardando_qr';
+
+    console.log('Sessao local do WhatsApp removida manualmente. Um novo QR Code sera gerado.');
+
+    await iniciarWhatsApp();
+
+    return {
+        status: statusWhatsApp,
+        authDataPath: AUTH_DATA_PATH,
+        cacheDataPath: CACHE_DATA_PATH
+    };
+}
+
 function getQrCode() {
     return qrAtual;
 }
@@ -685,6 +720,7 @@ function getStatusWhatsApp() {
         temQr: Boolean(qrAtual),
         ultimoQrEm,
         authDataPath: AUTH_DATA_PATH,
+        cacheDataPath: CACHE_DATA_PATH,
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
@@ -703,6 +739,7 @@ function getStatusWhatsApp() {
 module.exports = {
     iniciarWhatsApp,
     encerrarWhatsApp,
+    gerarNovoQrCodeWhatsApp,
     getQrCode,
     getClient,
     getStatusWhatsApp
