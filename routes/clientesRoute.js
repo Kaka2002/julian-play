@@ -3509,6 +3509,44 @@ function executarPowerShell(args) {
     });
 }
 
+const SCRIPT_GERAR_CAMPANHA_AMIZADE = `
+param(
+    [Parameter(Mandatory = $true)][string]$Origem,
+    [Parameter(Mandatory = $true)][string]$Destino,
+    [Parameter(Mandatory = $true)][string]$Texto
+)
+
+Add-Type -AssemblyName System.Drawing
+$imagem = [System.Drawing.Image]::FromFile($Origem)
+try {
+    $bitmap = New-Object System.Drawing.Bitmap $imagem.Width, $imagem.Height
+    $grafico = [System.Drawing.Graphics]::FromImage($bitmap)
+    try {
+        $grafico.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        $grafico.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+        $grafico.DrawImage($imagem, 0, 0, $imagem.Width, $imagem.Height)
+        $fonte = New-Object System.Drawing.Font('Arial', 27, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+        $pincel = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(6, 18, 37))
+        try {
+            $grafico.DrawString($Texto, $fonte, $pincel, 220, 1157)
+            $bitmap.Save($Destino, [System.Drawing.Imaging.ImageFormat]::Png)
+        } finally {
+            $pincel.Dispose()
+            $fonte.Dispose()
+        }
+    } finally {
+        $grafico.Dispose()
+        $bitmap.Dispose()
+    }
+} finally {
+    $imagem.Dispose()
+}
+
+if (-not (Test-Path -LiteralPath $Destino)) {
+    throw "Imagem da campanha nao foi gerada: $Destino"
+}
+`;
+
 async function criarImagemCampanhaAmizade(telefoneInstalacao) {
     const origem = fs.existsSync(IMAGEM_CAMPANHA_AMIZADE_BASE)
         ? IMAGEM_CAMPANHA_AMIZADE_BASE
@@ -3521,29 +3559,15 @@ async function criarImagemCampanhaAmizade(telefoneInstalacao) {
 
     fs.mkdirSync(ASSETS_DIR, { recursive: true });
     const destino = path.join(ASSETS_DIR, `amizade-presente-${telefone}.png`);
-    const script = `
-$origem = $args[0]
-$destino = $args[1]
-$texto = $args[2]
-Add-Type -AssemblyName System.Drawing
-$imagem = [System.Drawing.Image]::FromFile($origem)
-$bitmap = New-Object System.Drawing.Bitmap $imagem.Width, $imagem.Height
-$grafico = [System.Drawing.Graphics]::FromImage($bitmap)
-$grafico.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-$grafico.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-$grafico.DrawImage($imagem, 0, 0, $imagem.Width, $imagem.Height)
-$fonte = New-Object System.Drawing.Font('Arial', 27, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
-$pincel = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(6, 18, 37))
-$grafico.DrawString($texto, $fonte, $pincel, 220, 1157)
-$bitmap.Save($destino, [System.Drawing.Imaging.ImageFormat]::Png)
-$pincel.Dispose()
-$fonte.Dispose()
-$grafico.Dispose()
-$bitmap.Dispose()
-$imagem.Dispose()
-`;
+    const scriptPath = path.join(ASSETS_DIR, 'gerar-campanha-amizade.ps1');
 
-    await executarPowerShell(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script, origem, destino, telefone]);
+    fs.writeFileSync(scriptPath, SCRIPT_GERAR_CAMPANHA_AMIZADE, 'utf8');
+    await executarPowerShell(['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, origem, destino, telefone]);
+
+    if (!fs.existsSync(destino)) {
+        throw new Error(`Imagem da campanha nao foi gerada: ${destino}`);
+    }
+
     return { arquivo: destino, temporario: false };
 }
 
