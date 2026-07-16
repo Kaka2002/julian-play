@@ -821,16 +821,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         body::before {
             content: "";
             position: fixed;
-            left: 50%;
-            top: 50%;
-            width: min(820px, 72vw);
-            aspect-ratio: 1;
-            background: url("${escapar(marcaDaguaUrl)}") center / contain no-repeat;
-            opacity: .105;
+            left: clamp(18px, 3.2vw, 64px);
+            top: 132px;
+            width: clamp(220px, 14vw, 300px);
+            height: calc(100vh - 158px);
+            background: url("${escapar(marcaDaguaUrl)}") center top / contain no-repeat;
+            opacity: .22;
             pointer-events: none;
             z-index: 0;
-            transform: translate(-50%, -50%);
-            filter: saturate(1.08);
+            filter: saturate(1.1) contrast(1.06);
         }
 
         svg {
@@ -2278,6 +2277,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         @media (max-width: 980px) {
+            body::before {
+                left: -48px;
+                width: 240px;
+                opacity: .13;
+            }
+
             .topbar {
                 align-items: flex-start;
                 flex-direction: column;
@@ -2340,6 +2345,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         @media (max-width: 640px) {
+            body::before {
+                display: none;
+            }
+
             .topbar, main {
                 width: min(100% - 24px, 1250px);
             }
