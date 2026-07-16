@@ -736,6 +736,7 @@ async function salvarCliente(dados) {
                 nome = ?,
                 telefone = ?,
                 ddiTelefone = ?,
+                paisTelefone = ?,
                 usuario = ?,
                 senha = ?,
                 plano = ?,

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
@@ -137,7 +137,7 @@ const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-pr
 const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
 const IMPORTACOES_DIR = path.join(__dirname, '..', 'backups', 'importacoes');
 const ORIGENS_CLIENTE = [
-    'Indicação pessoal',
+    'IndicaÃ§Ã£o pessoal',
     'Instagram',
     'WhatsApp',
     'Facebook',
@@ -147,26 +147,26 @@ const ORIGENS_CLIENTE = [
     'Outro'
 ];
 const PAISES_TELEFONE = [
-    { codigo: 'BR', bandeira: '🇧🇷', pais: 'Brasil', ddi: '55', exemplo: '11999999999' },
-    { codigo: 'US', bandeira: '🇺🇸', pais: 'Estados Unidos', ddi: '1', exemplo: '5303531844' },
-    { codigo: 'CA', bandeira: '🇨🇦', pais: 'Canadá', ddi: '1', exemplo: '4165551234' },
-    { codigo: 'PT', bandeira: '🇵🇹', pais: 'Portugal', ddi: '351', exemplo: '912345678' },
-    { codigo: 'ES', bandeira: '🇪🇸', pais: 'Espanha', ddi: '34', exemplo: '612345678' },
-    { codigo: 'IT', bandeira: '🇮🇹', pais: 'Itália', ddi: '39', exemplo: '3123456789' },
-    { codigo: 'FR', bandeira: '🇫🇷', pais: 'França', ddi: '33', exemplo: '612345678' },
-    { codigo: 'DE', bandeira: '🇩🇪', pais: 'Alemanha', ddi: '49', exemplo: '15123456789' },
-    { codigo: 'GB', bandeira: '🇬🇧', pais: 'Reino Unido', ddi: '44', exemplo: '7123456789' },
-    { codigo: 'MX', bandeira: '🇲🇽', pais: 'México', ddi: '52', exemplo: '5512345678' },
-    { codigo: 'AR', bandeira: '🇦🇷', pais: 'Argentina', ddi: '54', exemplo: '91123456789' },
-    { codigo: 'CL', bandeira: '🇨🇱', pais: 'Chile', ddi: '56', exemplo: '912345678' },
-    { codigo: 'UY', bandeira: '🇺🇾', pais: 'Uruguai', ddi: '598', exemplo: '91234567' },
-    { codigo: 'PY', bandeira: '🇵🇾', pais: 'Paraguai', ddi: '595', exemplo: '981123456' },
-    { codigo: 'BO', bandeira: '🇧🇴', pais: 'Bolívia', ddi: '591', exemplo: '71234567' },
-    { codigo: 'CO', bandeira: '🇨🇴', pais: 'Colômbia', ddi: '57', exemplo: '3012345678' }
+    { codigo: 'BR', bandeira: 'ðŸ‡§ðŸ‡·', pais: 'Brasil', ddi: '55', exemplo: '11999999999' },
+    { codigo: 'US', bandeira: 'ðŸ‡ºðŸ‡¸', pais: 'Estados Unidos', ddi: '1', exemplo: '5303531844' },
+    { codigo: 'CA', bandeira: 'ðŸ‡¨ðŸ‡¦', pais: 'CanadÃ¡', ddi: '1', exemplo: '4165551234' },
+    { codigo: 'PT', bandeira: 'ðŸ‡µðŸ‡¹', pais: 'Portugal', ddi: '351', exemplo: '912345678' },
+    { codigo: 'ES', bandeira: 'ðŸ‡ªðŸ‡¸', pais: 'Espanha', ddi: '34', exemplo: '612345678' },
+    { codigo: 'IT', bandeira: 'ðŸ‡®ðŸ‡¹', pais: 'ItÃ¡lia', ddi: '39', exemplo: '3123456789' },
+    { codigo: 'FR', bandeira: 'ðŸ‡«ðŸ‡·', pais: 'FranÃ§a', ddi: '33', exemplo: '612345678' },
+    { codigo: 'DE', bandeira: 'ðŸ‡©ðŸ‡ª', pais: 'Alemanha', ddi: '49', exemplo: '15123456789' },
+    { codigo: 'GB', bandeira: 'ðŸ‡¬ðŸ‡§', pais: 'Reino Unido', ddi: '44', exemplo: '7123456789' },
+    { codigo: 'MX', bandeira: 'ðŸ‡²ðŸ‡½', pais: 'MÃ©xico', ddi: '52', exemplo: '5512345678' },
+    { codigo: 'AR', bandeira: 'ðŸ‡¦ðŸ‡·', pais: 'Argentina', ddi: '54', exemplo: '91123456789' },
+    { codigo: 'CL', bandeira: 'ðŸ‡¨ðŸ‡±', pais: 'Chile', ddi: '56', exemplo: '912345678' },
+    { codigo: 'UY', bandeira: 'ðŸ‡ºðŸ‡¾', pais: 'Uruguai', ddi: '598', exemplo: '91234567' },
+    { codigo: 'PY', bandeira: 'ðŸ‡µðŸ‡¾', pais: 'Paraguai', ddi: '595', exemplo: '981123456' },
+    { codigo: 'BO', bandeira: 'ðŸ‡§ðŸ‡´', pais: 'BolÃ­via', ddi: '591', exemplo: '71234567' },
+    { codigo: 'CO', bandeira: 'ðŸ‡¨ðŸ‡´', pais: 'ColÃ´mbia', ddi: '57', exemplo: '3012345678' }
 ];
 const TAGS_CLIENTE = [
     'VIP',
-    'Problemático',
+    'ProblemÃ¡tico',
     'Indicado',
     'Retorno',
     'Fornecedor',
@@ -175,26 +175,26 @@ const TAGS_CLIENTE = [
     'Atrasou pagamento'
 ];
 const NOTAS_ATENDIMENTO_PADRAO = [
-    'Cliente pediu teste grátis.',
+    'Cliente pediu teste grÃ¡tis.',
     'Cliente teve dificuldade para instalar o aplicativo.',
-    'Cliente recebeu orientação passo a passo pelo WhatsApp.',
+    'Cliente recebeu orientaÃ§Ã£o passo a passo pelo WhatsApp.',
     'Cliente reclamou de travamentos.',
     'Orientado a testar a internet e reiniciar o roteador.',
-    'Cliente solicitou renovação de assinatura.',
+    'Cliente solicitou renovaÃ§Ã£o de assinatura.',
     'Cliente informou pagamento realizado.',
     'Pagamento atrasou, mas foi regularizado.',
     'Cliente pediu troca de aplicativo.',
     'Cliente pediu troca de dispositivo.',
     'Cliente pediu suporte para configurar TV.',
     'Cliente pediu suporte para configurar celular.',
-    'O Cliente informou que o aplicativo não está carregando os canais e/ou app não está funcionando.',
+    'O Cliente informou que o aplicativo nÃ£o estÃ¡ carregando os canais e/ou app nÃ£o estÃ¡ funcionando.',
     'Cliente indicado por outro cliente.',
     'Cliente deve receber atendimento com prioridade.',
-    'Cliente demonstrou comportamento problemático.',
-    'Cliente não seguiu as orientações enviadas.',
+    'Cliente demonstrou comportamento problemÃ¡tico.',
+    'Cliente nÃ£o seguiu as orientaÃ§Ãµes enviadas.',
     'Cliente pediu cancelamento.',
-    'Cliente retornou após período sem usar o serviço.',
-    'Cliente precisa de acompanhamento no próximo atendimento.'
+    'Cliente retornou apÃ³s perÃ­odo sem usar o serviÃ§o.',
+    'Cliente precisa de acompanhamento no prÃ³ximo atendimento.'
 ];
 function instalacaoComercialCliente() {
     return Boolean(String(process.env.LICENSE_CUSTOMER_NAME || '').trim());
@@ -202,7 +202,7 @@ function instalacaoComercialCliente() {
 
 function bloquearManutencaoRestritaCliente(req, res, next) {
     if (!instalacaoComercialCliente() || instalacaoAdministrador()) return next();
-    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Esta opção é restrita ao fornecedor.')}`);
+    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Esta opÃ§Ã£o Ã© restrita ao fornecedor.')}`);
 }
 
 function manutencaoRestritaCliente() {
@@ -214,7 +214,7 @@ const LOCAIS_INSTALACAO_APP = [
     'TV do quarto',
     'TV da cozinha',
     'TV principal',
-    'TV secundária',
+    'TV secundÃ¡ria',
     'TV box',
     'Celular do cliente',
     'Celular do filho',
@@ -332,7 +332,7 @@ function lerUploadMultipart(req) {
             const fimArquivo = buffer.indexOf(fimMarcador, inicioArquivo);
 
             if (fimArquivo < 0) {
-                reject(new Error('Não foi possível ler o arquivo enviado.'));
+                reject(new Error('NÃ£o foi possÃ­vel ler o arquivo enviado.'));
                 return;
             }
 
@@ -378,7 +378,7 @@ function campoImagemRobo(config = {}, chave, descricao) {
                 <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar</span>
             </label>
         </form>
-        ${arquivo ? `<form method="post" action="/manutencao/robo/imagem/${escapar(chave)}/limpar" style="margin-top:8px;" onsubmit="return confirm('Remover esta imagem das mensagens do robô?');">
+        ${arquivo ? `<form method="post" action="/manutencao/robo/imagem/${escapar(chave)}/limpar" style="margin-top:8px;" onsubmit="return confirm('Remover esta imagem das mensagens do robÃ´?');">
             <button class="button secondary" type="submit">${icon('trash')} Limpar imagem</button>
         </form>` : ''}
     </div>`;
@@ -641,9 +641,9 @@ function textoVencimento(cliente) {
     if (dias === null) return 'Sem vencimento';
     if (vencimentoExpirou(vencimento)) {
         if (dias === 0) return 'Vencido hoje';
-        return `Vencido há ${Math.abs(dias)} dia(s)`;
+        return `Vencido hÃ¡ ${Math.abs(dias)} dia(s)`;
     }
-    if (dias < 0) return `Vencido há ${Math.abs(dias)} dia(s)`;
+    if (dias < 0) return `Vencido hÃ¡ ${Math.abs(dias)} dia(s)`;
     if (tempo && tempo !== '-') {
         return `Vence em ${tempo.replace(/ restantes?$/, '')}`;
     }
@@ -702,8 +702,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const avisoLicenca = (() => {
         if (!licenca.bloqueioAtivo || !licenca.permitida || licenca.vitalicia) return '';
         const dias = Math.max(0, licenca.diasRestantes);
-        if (licenca.status === 'vencendo') return `Atenção: sua licença vence em ${dias} dia(s).`;
-        if (licenca.tipo === 'avaliacao') return `Período de avaliação: ${dias} dia(s) restante(s).`;
+        if (licenca.status === 'vencendo') return `AtenÃ§Ã£o: sua licenÃ§a vence em ${dias} dia(s).`;
+        if (licenca.tipo === 'avaliacao') return `PerÃ­odo de avaliaÃ§Ã£o: ${dias} dia(s) restante(s).`;
         return '';
     })();
 
@@ -1714,6 +1714,73 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             border-radius: 0;
         }
 
+        .country-picker {
+            position: relative;
+            min-height: 42px;
+            border-right: 1px solid var(--line);
+            background: #f7f8fb;
+            font-weight: 700;
+        }
+
+        .country-picker summary {
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0 10px;
+            cursor: pointer;
+            list-style: none;
+        }
+
+        .country-picker summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .country-flag {
+            width: 24px;
+            height: 16px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, .14);
+            flex: 0 0 auto;
+        }
+
+        .country-options {
+            position: absolute;
+            z-index: 20;
+            top: calc(100% + 4px);
+            left: 0;
+            min-width: 280px;
+            max-height: 320px;
+            overflow: auto;
+            padding: 6px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: var(--shadow);
+        }
+
+        .country-option {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--ink);
+            font: inherit;
+            font-weight: 700;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .country-option:hover {
+            background: var(--blue-soft);
+            color: var(--blue);
+        }
+
         .inline-field input {
             margin-top: 0;
         }
@@ -2259,18 +2326,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ?'active' : ''}" href="/apps">${icon('apps')} Apps</a>
                 <a class="navlink ${ativo === 'dispositivos' ?'active' : ''}" href="/dispositivos">${icon('dispositivos')} Dispositivos</a>
-                <a class="navlink ${ativo === 'paineis' ?'active' : ''}" href="/paineis">${icon('paineis')} Painéis</a>
+                <a class="navlink ${ativo === 'paineis' ?'active' : ''}" href="/paineis">${icon('paineis')} PainÃ©is</a>
                 <a class="navlink ${ativo === 'financeiro' ?'active' : ''}" href="/financeiro">${icon('financeiro')} Financeiro</a>
-                <a class="navlink ${ativo === 'preparacao' ?'active' : ''}" href="/preparacao-comercial">${icon('trend')} Preparação</a>
+                <a class="navlink ${ativo === 'preparacao' ?'active' : ''}" href="/preparacao-comercial">${icon('trend')} PreparaÃ§Ã£o</a>
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
-                <a class="navlink" href="/licenca">${icon('licenca')} Licença</a>
-                <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
+                <a class="navlink" href="/licenca">${icon('licenca')} LicenÃ§a</a>
+                <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} ManutenÃ§Ã£o</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
         </div>
     </div>
     <main>
-        ${avisoLicenca ?`<div class="notice">${escapar(avisoLicenca)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
+        ${avisoLicenca ?`<div class="notice">${escapar(avisoLicenca)} <a href="/licenca"><strong>Ver licenÃ§a</strong></a></div>` : ''}
         ${mensagem ?`<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
     </main>
@@ -2345,12 +2412,12 @@ function alertaClienteHtml(alertas = []) {
     if (!alertas.length) return '';
 
     const itens = alertas.map(alerta => `<div class="client-alert-item">
-        Atenção: existe cadastro anterior para ${escapar(alerta.nome || 'cliente')} (${escapar(alerta.telefone || '-')})
+        AtenÃ§Ã£o: existe cadastro anterior para ${escapar(alerta.nome || 'cliente')} (${escapar(alerta.telefone || '-')})
         <small>Status: ${escapar(rotuloStatus(alerta.status))}${alerta.tags ?` | Tags: ${escapar(alerta.tags)}` : ''}${alerta.origem ?` | Origem: ${escapar(alerta.origem)}` : ''}</small>
-        ${alerta.ultimaNota ?`<small>Última nota: ${escapar(alerta.ultimaNota)}</small>` : ''}
+        ${alerta.ultimaNota ?`<small>Ãšltima nota: ${escapar(alerta.ultimaNota)}</small>` : ''}
     </div>`).join('');
 
-    return `<div class="notice warn">Cliente com histórico que merece avaliação antes de continuar.</div>
+    return `<div class="notice warn">Cliente com histÃ³rico que merece avaliaÃ§Ã£o antes de continuar.</div>
     <div class="client-alert-list">${itens}</div>`;
 }
 
@@ -2367,7 +2434,7 @@ function secaoNotasCliente(cliente = {}, notas = [], paginacaoNotas = null) {
 
     return `<section class="panel" style="margin-top:24px;">
         <div class="fields">
-            <div class="form-section full">Histórico de atendimento</div>
+            <div class="form-section full">HistÃ³rico de atendimento</div>
             <div class="full">${listaNotas}</div>
             ${paginacaoNotas ?`<div class="full">${paginacao({
                 base: `/clientes/${cliente.id}/editar`,
@@ -2389,7 +2456,7 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
             <span class="note-date">${escapar(formatarDataNota(atendimento.criadoEm))}</span>
             <div><strong>${escapar(rotuloMotivoAtendimento(atendimento.motivo))}</strong> - ${escapar(rotuloStatusAtendimento(atendimento.status))}${atendimento.prioridade === 'urgente' ?' / Urgente' : ''}</div>
             ${atendimento.descricao ?`<div>${escapar(atendimento.descricao)}</div>` : ''}
-            ${atendimento.proximoContato ?`<small>Próximo contato: ${escapar(formatarDataHoraCurta(atendimento.proximoContato))}</small>` : ''}
+            ${atendimento.proximoContato ?`<small>PrÃ³ximo contato: ${escapar(formatarDataHoraCurta(atendimento.proximoContato))}</small>` : ''}
         </div>`).join('')}</div>`
         : '<div class="empty">Nenhum atendimento aberto para este cliente.</div>';
 
@@ -2405,9 +2472,9 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
             <label>Motivo
                 <select name="motivo">
                     ${[
-                        ['instalacao', 'Instalação'],
+                        ['instalacao', 'InstalaÃ§Ã£o'],
                         ['travamento', 'Travamento'],
-                        ['renovacao', 'Renovação'],
+                        ['renovacao', 'RenovaÃ§Ã£o'],
                         ['pagamento', 'Pagamento'],
                         ['troca_app', 'Troca de app'],
                         ['whatsapp', 'WhatsApp'],
@@ -2421,8 +2488,8 @@ function secaoAtendimentosCliente(cliente = {}, atendimentos = []) {
                     <option value="urgente">Urgente</option>
                 </select>
             </label>
-            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: '' })}
-            ${areaTexto({ nome: 'descricao', label: 'Descrição', valor: '' })}
+            ${campo({ nome: 'proximoContato', label: 'PrÃ³ximo contato', tipo: 'datetime-local', valor: '' })}
+            ${areaTexto({ nome: 'descricao', label: 'DescriÃ§Ã£o', valor: '' })}
             <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
         </form>
         <div class="fields" style="padding-top:0;">
@@ -2435,7 +2502,7 @@ function camposNovaNotaAtendimento() {
     return `<div class="form-section full">Nova nota de atendimento</div>
         ${campo({
             nome: 'novaNotaPadrao',
-            label: 'Nota padrão',
+            label: 'Nota padrÃ£o',
             attrs: 'id="novaNotaPadraoAtendimento"',
             opcoes: [
                 { valor: '', texto: 'Selecione uma nota pronta...' },
@@ -2481,12 +2548,12 @@ function camposNovaNotaAtendimento() {
 
 function editorMensagemModelo(valor = '') {
     const grupos = [
-        ['Mais usados', ['😀', '😃', '😄', '😁', '😉', '😊', '😍', '🤔', '👍', '🙏', '💪', '👏', '💬', '📲', '📺', '💰', '💳', '📅', '⏰', '✅']],
-        ['Atendimento', ['👋', '🤗', '🙂', '✅', '⚠', '🚨', '📞', '📱', '📩', '📝', '📌', '📋', '🧾', '🔒', '🔑', '🔎', '🔧', '💡', '🚀', '🎯']],
-        ['IPTV e apps', ['📺', '📱', '🖥', '⌨', '💻', '🕹', '📡', '📶', '💬', '🌐', '🔗', '🎞', '▶', '⏯', '🎧', '📦', '🛠', '⚡', '🔋', '💾']],
-        ['Festas', ['🎉', '🎊', '🎁', '🎂', '🥳', '🥂', '🍾', '🌟', '✨', '💖', '💚', '💙', '❤', '🥇', '🏆', '🎁', '🙌', '👏', '🥰', '😍']],
-        ['Datas e pagamento', ['📅', '⏰', '⌛', '💸', '💵', '💰', '💳', '🧾', '📈', '📊', '📤', '📥', '📋', '📝', '📢', '🔔', '🔜', '🔁', '🆗', '🆘', '🟢', '🔴']],
-        ['Mãos e sinais', ['👍', '👎', '☝', '✌', '🤝', '👌', '🤞', '🙏', '👏', '💪', '👉', '👈', '👆', '👇', '🖐', '🖖', '🤟', '🤘', '✋', '🤚']]
+        ['Mais usados', ['ðŸ˜€', 'ðŸ˜ƒ', 'ðŸ˜„', 'ðŸ˜', 'ðŸ˜‰', 'ðŸ˜Š', 'ðŸ˜', 'ðŸ¤”', 'ðŸ‘', 'ðŸ™', 'ðŸ’ª', 'ðŸ‘', 'ðŸ’¬', 'ðŸ“²', 'ðŸ“º', 'ðŸ’°', 'ðŸ’³', 'ðŸ“…', 'â°', 'âœ…']],
+        ['Atendimento', ['ðŸ‘‹', 'ðŸ¤—', 'ðŸ™‚', 'âœ…', 'âš ', 'ðŸš¨', 'ðŸ“ž', 'ðŸ“±', 'ðŸ“©', 'ðŸ“', 'ðŸ“Œ', 'ðŸ“‹', 'ðŸ§¾', 'ðŸ”’', 'ðŸ”‘', 'ðŸ”Ž', 'ðŸ”§', 'ðŸ’¡', 'ðŸš€', 'ðŸŽ¯']],
+        ['IPTV e apps', ['ðŸ“º', 'ðŸ“±', 'ðŸ–¥', 'âŒ¨', 'ðŸ’»', 'ðŸ•¹', 'ðŸ“¡', 'ðŸ“¶', 'ðŸ’¬', 'ðŸŒ', 'ðŸ”—', 'ðŸŽž', 'â–¶', 'â¯', 'ðŸŽ§', 'ðŸ“¦', 'ðŸ› ', 'âš¡', 'ðŸ”‹', 'ðŸ’¾']],
+        ['Festas', ['ðŸŽ‰', 'ðŸŽŠ', 'ðŸŽ', 'ðŸŽ‚', 'ðŸ¥³', 'ðŸ¥‚', 'ðŸ¾', 'ðŸŒŸ', 'âœ¨', 'ðŸ’–', 'ðŸ’š', 'ðŸ’™', 'â¤', 'ðŸ¥‡', 'ðŸ†', 'ðŸŽ', 'ðŸ™Œ', 'ðŸ‘', 'ðŸ¥°', 'ðŸ˜']],
+        ['Datas e pagamento', ['ðŸ“…', 'â°', 'âŒ›', 'ðŸ’¸', 'ðŸ’µ', 'ðŸ’°', 'ðŸ’³', 'ðŸ§¾', 'ðŸ“ˆ', 'ðŸ“Š', 'ðŸ“¤', 'ðŸ“¥', 'ðŸ“‹', 'ðŸ“', 'ðŸ“¢', 'ðŸ””', 'ðŸ”œ', 'ðŸ”', 'ðŸ†—', 'ðŸ†˜', 'ðŸŸ¢', 'ðŸ”´']],
+        ['MÃ£os e sinais', ['ðŸ‘', 'ðŸ‘Ž', 'â˜', 'âœŒ', 'ðŸ¤', 'ðŸ‘Œ', 'ðŸ¤ž', 'ðŸ™', 'ðŸ‘', 'ðŸ’ª', 'ðŸ‘‰', 'ðŸ‘ˆ', 'ðŸ‘†', 'ðŸ‘‡', 'ðŸ–', 'ðŸ––', 'ðŸ¤Ÿ', 'ðŸ¤˜', 'âœ‹', 'ðŸ¤š']]
     ];
 
     return `<label class="full message-editor">Mensagem
@@ -2575,7 +2642,7 @@ function campoWhatsApp(valor = '', ddiSalvo = '') {
 
     return `<label>WhatsApp *
         <div class="phone-field">
-            <select class="phone-prefix" name="ddiTelefone" aria-label="País do WhatsApp">
+            <select class="phone-prefix" name="ddiTelefone" aria-label="PaÃ­s do WhatsApp">
                 ${opcoes}
             </select>
             <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="${escapar(PAISES_TELEFONE.find(item => item.ddi === ddi)?.exemplo || '11999999999')}">
@@ -2623,16 +2690,27 @@ function campoWhatsAppComPais(valor = '', ddiSalvo = '', paisSalvo = '') {
         || PAISES_TELEFONE[0];
     ddi = paisSelecionado.ddi;
 
+    const urlBandeira = (codigo) => `https://flagcdn.com/w40/${String(codigo || 'BR').toLowerCase()}.png`;
     const opcoes = PAISES_TELEFONE.map(item => {
-        const selecionado = item.codigo === paisSelecionado.codigo ? ' selected' : '';
-        return `<option value="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}"${selecionado}>${escapar(item.bandeira)} ${escapar(item.pais)} (+${escapar(item.ddi)})</option>`;
+        const flag = urlBandeira(item.codigo);
+        const label = `${item.pais} (+${item.ddi})`;
+        return `<button type="button" class="country-option" data-codigo="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}" data-label="${escapar(label)}" data-flag="${escapar(flag)}" onclick="const b=this, box=b.closest('.phone-field'), picker=b.closest('.country-picker'); picker.querySelector('.country-current').textContent=b.dataset.label; picker.querySelector('.country-current-flag').src=b.dataset.flag; box.querySelector('input[name=paisTelefone]').value=b.dataset.codigo; box.querySelector('input[name=ddiTelefone]').value=b.dataset.ddi; box.querySelector('input[name=telefone]').placeholder=b.dataset.placeholder||'11999999999'; picker.removeAttribute('open');">
+            <img class="country-flag" src="${escapar(flag)}" alt="" loading="lazy">
+            <span>${escapar(label)}</span>
+        </button>`;
     }).join('');
+    const bandeiraSelecionada = urlBandeira(paisSelecionado.codigo);
 
     return `<label>WhatsApp *
         <div class="phone-field">
-            <select class="phone-prefix" name="paisTelefone" aria-label="País do WhatsApp" onchange="const opt=this.options[this.selectedIndex]; const box=this.closest('.phone-field'); box.querySelector('input[name=ddiTelefone]').value=opt.dataset.ddi||'55'; box.querySelector('input[name=telefone]').placeholder=opt.dataset.placeholder||'11999999999';">
-                ${opcoes}
-            </select>
+            <details class="country-picker">
+                <summary>
+                    <img class="country-flag country-current-flag" src="${escapar(bandeiraSelecionada)}" alt="" loading="lazy">
+                    <span class="country-current">${escapar(paisSelecionado.pais)} (+${escapar(paisSelecionado.ddi)})</span>
+                </summary>
+                <div class="country-options">${opcoes}</div>
+            </details>
+            <input type="hidden" name="paisTelefone" value="${escapar(paisSelecionado.codigo)}">
             <input type="hidden" name="ddiTelefone" value="${escapar(ddi)}">
             <input type="tel" name="telefone" value="${escapar(telefone)}" required placeholder="${escapar(paisSelecionado.exemplo || '11999999999')}">
         </div>
@@ -2724,7 +2802,7 @@ function rotuloStatus(status) {
 
 function detalhePlanoCliente(cliente = {}) {
     if (clienteEhTeste(cliente)) {
-        return cliente.horasTeste || 'Teste grátis';
+        return cliente.horasTeste || 'Teste grÃ¡tis';
     }
 
     return `${cliente.diasContrato || '-'} dias`;
@@ -2815,13 +2893,13 @@ function linhaAcessoApp(acesso = {}, apps = [], dispositivos = [], paineis = [])
                 ${opcoesSelectLista(paineis, acesso.painel, 'Selecione o painel...')}
             </select>
         </label>
-        <label>Usuário IPTV
-            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="Usuário desta conexão">
+        <label>UsuÃ¡rio IPTV
+            <input type="text" name="acessoUsuario" value="${escapar(acesso.usuario || '')}" placeholder="UsuÃ¡rio desta conexÃ£o">
         </label>
         <label>Senha IPTV
-            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexão">
+            <input type="text" name="acessoSenha" value="${escapar(acesso.senha || '')}" placeholder="Senha desta conexÃ£o">
         </label>
-        <label>Endereço MAC
+        <label>EndereÃ§o MAC
             <input class="mac-field" type="text" name="acessoEnderecoMac" value="${escapar(acesso.enderecoMac || '')}" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">
         </label>
         <label>ID do Aplicativo
@@ -2850,7 +2928,7 @@ function listaAcessosApp(cliente = {}, apps = [], dispositivos = [], paineis = [
         <div class="app-access-header">
             <div>
                 <strong>Dados por app instalado</strong>
-                <span>Cada linha representa uma conexão: app, dispositivo, painel, usuário, senha, MAC e ID quando exigir.</span>
+                <span>Cada linha representa uma conexÃ£o: app, dispositivo, painel, usuÃ¡rio, senha, MAC e ID quando exigir.</span>
             </div>
             <button class="button secondary" type="button" id="adicionarAcessoApp">${icon('plus')} Adicionar acesso</button>
         </div>
@@ -2895,7 +2973,7 @@ function descreverAcessosAppCsv(cliente = {}) {
             acesso.app ?`App: ${acesso.app}` : '',
             acesso.dispositivo ?`Dispositivo: ${acesso.dispositivo}` : '',
             acesso.painel ?`Painel: ${acesso.painel}` : '',
-            acesso.usuario ?`Usuário: ${acesso.usuario}` : '',
+            acesso.usuario ?`UsuÃ¡rio: ${acesso.usuario}` : '',
             acesso.senha ?`Senha: ${acesso.senha}` : '',
             acesso.localInstalacao ?`Onde: ${acesso.localInstalacao}` : '',
             acesso.enderecoMac ?`MAC: ${acesso.enderecoMac}` : '',
@@ -2929,23 +3007,23 @@ function gerarCsvClientes(clientes = []) {
         'Valor do plano',
         'Assinatura app',
         'Status',
-        'Data/Hora de início',
+        'Data/Hora de inÃ­cio',
         'Data/Hora de vencimento',
         'Validade app',
         'Data validade app',
         'Apps instalados',
         'Dispositivos',
-        'Painéis',
+        'PainÃ©is',
         'App instalado',
-        'Usuário IPTV',
+        'UsuÃ¡rio IPTV',
         'Senha IPTV',
-        'Endereço MAC',
+        'EndereÃ§o MAC',
         'ID do aplicativo',
         'Dados por app instalado',
         'Origem',
         'Tags',
-        'Bônus disponíveis',
-        'Observações'
+        'BÃ´nus disponÃ­veis',
+        'ObservaÃ§Ãµes'
     ];
 
     const linhas = clientes.map(cliente => [
@@ -2965,7 +3043,7 @@ function gerarCsvClientes(clientes = []) {
         juntarListaCsv(cliente.appsInstalados),
         juntarListaCsv(cliente.dispositivosSelecionados),
         juntarListaCsv(cliente.paineisSelecionados),
-        cliente.appInstalado ?'Sim' : 'Não',
+        cliente.appInstalado ?'Sim' : 'NÃ£o',
         valoresAcessosAppCsv(cliente, 'usuario') || cliente.usuario,
         valoresAcessosAppCsv(cliente, 'senha') || cliente.senha,
         valoresAcessosAppCsv(cliente, 'enderecoMac'),
@@ -3000,7 +3078,7 @@ function gerarCsvFinanceiro(pagamentos = []) {
         'Removido em',
         'Mensagem enviada',
         'Erro da mensagem',
-        'Observações'
+        'ObservaÃ§Ãµes'
     ];
 
     const linhas = pagamentos.map(pagamento => [
@@ -3016,9 +3094,9 @@ function gerarCsvFinanceiro(pagamentos = []) {
         pagamento.formaPagamento,
         formatarDataHoraCurta(pagamento.vencimentoAnterior),
         formatarDataHoraCurta(pagamento.vencimentoNovo),
-        pagamento.excluidoEm ?'Removido' : 'Válido',
+        pagamento.excluidoEm ?'Removido' : 'VÃ¡lido',
         formatarDataHoraCurta(pagamento.excluidoEm),
-        pagamento.mensagemEnviada ?'Sim' : 'Não',
+        pagamento.mensagemEnviada ?'Sim' : 'NÃ£o',
         pagamento.erroMensagem,
         pagamento.observacoes
     ]);
@@ -3184,17 +3262,17 @@ function montarDadosClienteImportado(registro, planos = []) {
     const nome = valorCsv(registro, ['Nome', 'Cliente', 'Nome completo']);
     const telefone = valorCsv(registro, ['WhatsApp', 'Telefone', 'Celular']);
     const plano = valorCsv(registro, ['Plano', 'Tipo do plano']) || 'Mensal';
-    const status = statusCsv(valorCsv(registro, ['Status', 'Situação'])) || 'ativo';
+    const status = statusCsv(valorCsv(registro, ['Status', 'SituaÃ§Ã£o'])) || 'ativo';
     const planoEncontrado = planos.find(item => normalizarCabecalhoCsv(item.nome) === normalizarCabecalhoCsv(plano));
     const isTeste = normalizarCabecalhoCsv(plano).includes('teste') || status === 'teste';
     const diasContrato = valorCsv(registro, ['Dias de contrato', 'Dias contrato', 'Dias']) || planoEncontrado?.dias || (isTeste ?0 : 30);
-    const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']), true);
+    const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de inÃ­cio', 'Data inicio', 'InÃ­cio', 'Inicio']), true);
     const dataVencimento = dataCsvParaIso(valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']), true);
-    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']), false);
+    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversÃ¡rio', 'Data aniversario']), false);
     const apps = listaCsvParaArray(valorCsv(registro, ['Apps instalados', 'Aplicativos', 'App']));
     const dispositivos = listaCsvParaArray(valorCsv(registro, ['Dispositivos', 'Dispositivo', 'Aparelho']));
-    const paineis = listaCsvParaArray(valorCsv(registro, ['Painéis', 'Paineis', 'Painel']));
-    const enderecoMac = valorCsv(registro, ['Endereço MAC', 'Endereco MAC', 'MAC']);
+    const paineis = listaCsvParaArray(valorCsv(registro, ['PainÃ©is', 'Paineis', 'Painel']));
+    const enderecoMac = valorCsv(registro, ['EndereÃ§o MAC', 'Endereco MAC', 'MAC']);
     const idAplicativo = valorCsv(registro, ['ID do aplicativo', 'ID aplicativo', 'ID']);
 
     return {
@@ -3218,7 +3296,7 @@ function montarDadosClienteImportado(registro, planos = []) {
         dispositivosSelecionados: dispositivos,
         paineisSelecionados: paineis,
         appInstalado: booleanoCsv(valorCsv(registro, ['App instalado', 'Instalado'])),
-        usuario: valorCsv(registro, ['Usuário IPTV', 'Usuario IPTV', 'Usuário', 'Usuario']),
+        usuario: valorCsv(registro, ['UsuÃ¡rio IPTV', 'Usuario IPTV', 'UsuÃ¡rio', 'Usuario']),
         senha: valorCsv(registro, ['Senha IPTV', 'Senha']),
         enderecoMac,
         idAplicativo,
@@ -3227,12 +3305,12 @@ function montarDadosClienteImportado(registro, planos = []) {
         acessoPainel: paineis[0] || '',
         acessoEnderecoMac: enderecoMac,
         acessoIdAplicativo: idAplicativo,
-        acessoLocalInstalacao: valorCsv(registro, ['Onde foi instalado', 'Local de instalação', 'Local instalacao']),
-        acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativação', 'URL ativacao']),
+        acessoLocalInstalacao: valorCsv(registro, ['Onde foi instalado', 'Local de instalaÃ§Ã£o', 'Local instalacao']),
+        acessoUrlAtivarAplicativo: valorCsv(registro, ['URL Ativar Aplicativo', 'URL ativaÃ§Ã£o', 'URL ativacao']),
         origem: valorCsv(registro, ['Origem']),
         tags: listaCsvParaArray(valorCsv(registro, ['Tags', 'Categoria', 'Categorias'])),
-        bonusMeses: valorCsv(registro, ['Bônus disponíveis', 'Bonus disponiveis', 'Bônus', 'Bonus']),
-        observacoes: valorCsv(registro, ['Observações', 'Observacoes', 'Notas'])
+        bonusMeses: valorCsv(registro, ['BÃ´nus disponÃ­veis', 'Bonus disponiveis', 'BÃ´nus', 'Bonus']),
+        observacoes: valorCsv(registro, ['ObservaÃ§Ãµes', 'Observacoes', 'Notas'])
     };
 }
 
@@ -3243,14 +3321,14 @@ function validarClienteImportado(dados = {}, registro = {}, planos = []) {
     const planoExiste = planos.some(item => normalizarCabecalhoCsv(item.nome) === planoNormalizado);
     const isTeste = planoNormalizado.includes('teste') || dados.status === 'teste';
 
-    if (!dados.nome) erros.push('Nome obrigatório.');
-    if (!normalizarTelefone(dados.telefone)) erros.push('WhatsApp inválido ou vazio.');
-    if (!dados.plano) erros.push('Plano obrigatório.');
-    if (dados.plano && !planoExiste && !isTeste) erros.push(`Plano não cadastrado: ${dados.plano}.`);
-    if (valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']) && !dados.dataInicio) erros.push('Data/Hora de início inválida.');
-    if (valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']) && !dados.dataVencimento) erros.push('Data/Hora de vencimento inválida.');
-    if (valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']) && !dados.nascimento) avisos.push('Nascimento não reconhecido; será importado vazio.');
-    if (!dados.dataInicio) avisos.push('Data/Hora de início vazia.');
+    if (!dados.nome) erros.push('Nome obrigatÃ³rio.');
+    if (!normalizarTelefone(dados.telefone)) erros.push('WhatsApp invÃ¡lido ou vazio.');
+    if (!dados.plano) erros.push('Plano obrigatÃ³rio.');
+    if (dados.plano && !planoExiste && !isTeste) erros.push(`Plano nÃ£o cadastrado: ${dados.plano}.`);
+    if (valorCsv(registro, ['Data/Hora de inÃ­cio', 'Data inicio', 'InÃ­cio', 'Inicio']) && !dados.dataInicio) erros.push('Data/Hora de inÃ­cio invÃ¡lida.');
+    if (valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']) && !dados.dataVencimento) erros.push('Data/Hora de vencimento invÃ¡lida.');
+    if (valorCsv(registro, ['Nascimento', 'Data de aniversÃ¡rio', 'Data aniversario']) && !dados.nascimento) avisos.push('Nascimento nÃ£o reconhecido; serÃ¡ importado vazio.');
+    if (!dados.dataInicio) avisos.push('Data/Hora de inÃ­cio vazia.');
     if (!dados.dataVencimento) avisos.push('Data/Hora de vencimento vazia.');
 
     return { erros, avisos };
@@ -3313,7 +3391,7 @@ function lerPreviaImportacao(token) {
     const nomeSeguro = path.basename(String(token || ''));
     const caminho = path.join(IMPORTACOES_DIR, nomeSeguro);
     if (!nomeSeguro || !fs.existsSync(caminho)) {
-        throw new Error('Pré-visualização da importação não encontrada. Envie o CSV novamente.');
+        throw new Error('PrÃ©-visualizaÃ§Ã£o da importaÃ§Ã£o nÃ£o encontrada. Envie o CSV novamente.');
     }
 
     return JSON.parse(fs.readFileSync(caminho, 'utf8'));
@@ -3336,23 +3414,23 @@ function csvModeloClientes() {
             'Valor do plano',
             'Assinatura app',
             'Status',
-            'Data/Hora de início',
+            'Data/Hora de inÃ­cio',
             'Data/Hora de vencimento',
             'Validade app',
             'Apps instalados',
             'Dispositivos',
-            'Painéis',
+            'PainÃ©is',
             'App instalado',
-            'Usuário IPTV',
+            'UsuÃ¡rio IPTV',
             'Senha IPTV',
-            'Endereço MAC',
+            'EndereÃ§o MAC',
             'ID do aplicativo',
             'Onde foi instalado',
             'URL Ativar Aplicativo',
             'Origem',
             'Tags',
-            'Bônus disponíveis',
-            'Observações'
+            'BÃ´nus disponÃ­veis',
+            'ObservaÃ§Ãµes'
         ],
         [
             'Cliente Exemplo',
@@ -3762,11 +3840,11 @@ function formatarDataHoraMensagem(valor) {
     const hora = String(data.getHours()).padStart(2, '0');
     const minuto = String(data.getMinutes()).padStart(2, '0');
 
-    return `${dia}/${mes}/${ano} às ${hora}:${minuto}`;
+    return `${dia}/${mes}/${ano} Ã s ${hora}:${minuto}`;
 }
 
 function montarMensagemTesteLiberado(dados = {}) {
-    return `*TESTE GRÁTIS LIBERADO*
+    return `*TESTE GRÃTIS LIBERADO*
 --------------------
 Seu acesso de teste foi preparado com sucesso.
 
@@ -3774,29 +3852,29 @@ Seu acesso de teste foi preparado com sucesso.
 *Dispositivo:* ${dados.aparelho}
 *Aplicativo:* ${dados.aplicativo}
 *Painel:* ${dados.painel}
-*Usuário:* ${dados.usuario}
+*UsuÃ¡rio:* ${dados.usuario}
 *Senha:* ${dados.senha}
-*Data/Início:* ${formatarDataHoraMensagem(dados.dataInicio)}
-*Válido até:* ${formatarDataHoraMensagem(dados.validade)}
+*Data/InÃ­cio:* ${formatarDataHoraMensagem(dados.dataInicio)}
+*VÃ¡lido atÃ©:* ${formatarDataHoraMensagem(dados.validade)}
 
 Teste configurado. Para encerrar o atendimento, digite *sair*.`;
 }
 
 function montarMensagemBonusAplicado(cliente = {}, resultado = {}) {
     const meses = Number(resultado.meses || 1);
-    const textoMeses = meses === 1 ?'1 mês grátis' : `${meses} meses grátis`;
+    const textoMeses = meses === 1 ?'1 mÃªs grÃ¡tis' : `${meses} meses grÃ¡tis`;
     const saldo = Number(resultado.saldoRestante || 0);
 
-    return `🎁 *BÔNUS APLICADO*
+    return `ðŸŽ *BÃ”NUS APLICADO*
 --------------------
-Olá, *${cliente.nome || 'cliente'}*!
+OlÃ¡, *${cliente.nome || 'cliente'}*!
 
-Foi aplicado em seu cadastro um bônus de *${textoMeses}* no seu plano.
+Foi aplicado em seu cadastro um bÃ´nus de *${textoMeses}* no seu plano.
 
     *Vencimento:* ${formatarDataHoraMensagem(resultado.dataVencimento)}
-*Saldo de bônus restante:* ${saldo}
+*Saldo de bÃ´nus restante:* ${saldo}
 
-Obrigado pela preferência.`;
+Obrigado pela preferÃªncia.`;
 }
 
 function montarMensagemRenovacaoConfirmada(cliente = {}, resultado = {}) {
@@ -3806,18 +3884,18 @@ function montarMensagemRenovacaoConfirmada(cliente = {}, resultado = {}) {
         ? `\n*Assinatura App:* R$ ${resultado.assinaturaApp}`
         : '';
 
-    return `*RENOVAÇÃO CONFIRMADA*
+    return `*RENOVAÃ‡ÃƒO CONFIRMADA*
 --------------------
-Olá, *${cliente.nome || 'cliente'}*!
+OlÃ¡, *${cliente.nome || 'cliente'}*!
 
-Sua renovação foi registrada com sucesso.
+Sua renovaÃ§Ã£o foi registrada com sucesso.
 
 *Plano:* ${resultado.plano}
 *Valor do plano:* R$ ${valorPlano}${detalheApp}
 *Forma de pagamento:* ${resultado.formaPagamento}
 *Novo vencimento:* ${formatarDataHoraMensagem(resultado.vencimentoNovo)}
 
-Obrigado pela preferência.`;
+Obrigado pela preferÃªncia.`;
 }
 
 function montarMensagemAssinaturaConfirmada(cliente = {}) {
@@ -3826,14 +3904,14 @@ function montarMensagemAssinaturaConfirmada(cliente = {}) {
 
     return `*ASSINATURA ATIVADA*
 --------------------
-Olá, *${cliente.nome || 'cliente'}*!
+OlÃ¡, *${cliente.nome || 'cliente'}*!
 
 Sua assinatura foi cadastrada com sucesso.
 
 *Plano:* ${cliente.plano || '-'}
-${inicio ? `*Início:* ${inicio}\n` : ''}*Válida até:* ${vencimento || '-'}
+${inicio ? `*InÃ­cio:* ${inicio}\n` : ''}*VÃ¡lida atÃ©:* ${vencimento || '-'}
 
-Obrigado pela preferência.`;
+Obrigado pela preferÃªncia.`;
 }
 
 function clienteEhTeste(cliente = {}) {
@@ -3860,15 +3938,15 @@ async function obterPlanosRenovacaoManual() {
 }
 
 function montarMensagemPlanosTesteExpiradoManual(cliente = {}, planos = []) {
-    return `⚠️ *TESTE GRÁTIS EXPIRADO*
+    return `âš ï¸ *TESTE GRÃTIS EXPIRADO*
 --------------------
-Olá, *${cliente.nome || 'cliente'}*! Seu teste grátis expirou.
+OlÃ¡, *${cliente.nome || 'cliente'}*! Seu teste grÃ¡tis expirou.
 
 Para reativar seu acesso, escolha um plano fixo:
 
 ${menuRenovacao(planos)}
 
-Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
+Digite apenas o nÃºmero do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
 }
 
 function clientePodeReceberReativacao(cliente = {}) {
@@ -3954,14 +4032,14 @@ function montarMensagemReativacaoCliente(cliente = {}, pixCliente = null) {
     const valorPlano = pixCliente?.valorPlano || cliente.valorPlano || '0,00';
     const assinaturaApp = pixCliente?.valorApp || cliente.assinaturaApp || '0,00';
     const textoApp = pixCliente?.incluirApp
-        ?`*Assinatura App:* R$ ${assinaturaApp} (incluída porque a validade do app venceu)`
-        : `*Assinatura App:* não incluída neste PIX${cliente.dataValidadeApp ?` (app válido até ${formatarDataHoraCurta(cliente.dataValidadeApp)})` : ''}`;
+        ?`*Assinatura App:* R$ ${assinaturaApp} (incluÃ­da porque a validade do app venceu)`
+        : `*Assinatura App:* nÃ£o incluÃ­da neste PIX${cliente.dataValidadeApp ?` (app vÃ¡lido atÃ© ${formatarDataHoraCurta(cliente.dataValidadeApp)})` : ''}`;
 
-    return `*REATIVAÇÃO DE PLANO*
+    return `*REATIVAÃ‡ÃƒO DE PLANO*
 --------------------
-Olá, *${cliente.nome || 'cliente'}*!
+OlÃ¡, *${cliente.nome || 'cliente'}*!
 
-Seu plano *${cliente.plano || 'atual'}* está vencido${vencimento ?` desde *${vencimento}*` : ''}.
+Seu plano *${cliente.plano || 'atual'}* estÃ¡ vencido${vencimento ?` desde *${vencimento}*` : ''}.
 
 Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em seguida.
 
@@ -3970,7 +4048,7 @@ Para reativar seu acesso, realize o pagamento pelo QR Code PIX que vou enviar em
 ${textoApp}
 *Total do PIX:* R$ ${pixCliente?.total || valorPlano}
 
-Depois do pagamento, envie o comprovante aqui para confirmar a reativação.`;
+Depois do pagamento, envie o comprovante aqui para confirmar a reativaÃ§Ã£o.`;
 }
 
 function dadosTesteLiberadoDoCliente(cliente = {}) {
@@ -4020,7 +4098,7 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
     return `<section class="panel" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Teste grátis liberado</h2>
+                <h2 class="panel-title">Teste grÃ¡tis liberado</h2>
                 <div class="subtitle">Preencha os dados e envie a resposta para o cliente pelo WhatsApp</div>
             </div>
         </div>
@@ -4056,10 +4134,10 @@ function secaoTesteLiberado(cliente = {}, listas = {}) {
                     ...paineis.map(item => ({ valor: item.nome, texto: item.nome }))
                 ]
             })}
-            ${campo({ nome: 'usuario', label: 'Usuário', valor: acesso.usuario || cliente.usuario, attrs: 'required' })}
+            ${campo({ nome: 'usuario', label: 'UsuÃ¡rio', valor: acesso.usuario || cliente.usuario, attrs: 'required' })}
             ${campo({ nome: 'senha', label: 'Senha', valor: acesso.senha || cliente.senha, attrs: 'required' })}
-            ${campo({ nome: 'dataInicio', label: 'Data/Início', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
-            ${campo({ nome: 'validade', label: 'Válido até', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/InÃ­cio', valor: inicio, tipo: 'datetime-local', attrs: 'required' })}
+            ${campo({ nome: 'validade', label: 'VÃ¡lido atÃ©', valor: validade, tipo: 'datetime-local', attrs: 'required' })}
             <div class="actions full">
                 <button class="button green" type="submit">${icon('whats')} Enviar teste liberado</button>
             </div>
@@ -4092,7 +4170,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             <td>
                 ${pagamento.mensagemEnviada
                     ?'<span class="badge green">Enviada</span>'
-                    : `<div><span class="badge orange">Não enviada</span></div>
+                    : `<div><span class="badge orange">NÃ£o enviada</span></div>
                         <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/mensagem-enviada" style="margin-top:6px;">
                             <button class="button secondary" type="submit">Marcar enviada</button>
                         </form>`}
@@ -4100,26 +4178,26 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             <td>
                 <div class="row-actions">
                     <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
-                    <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico?O vencimento atual do cliente não será alterado.');">
+                    <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histÃ³rico?O vencimento atual do cliente nÃ£o serÃ¡ alterado.');">
                         <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
                     </form>
                 </div>
             </td>
         </tr>`).join('')
-        : '<tr><td colspan="7" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
+        : '<tr><td colspan="7" class="empty">Nenhuma renovaÃ§Ã£o registrada ainda.</td></tr>';
 
     return `<section class="panel" id="renovar" style="margin-top:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Renovar cliente</h2>
-                <div class="subtitle">Registre o pagamento, atualize o vencimento e envie a confirmação se desejar.</div>
+                <div class="subtitle">Registre o pagamento, atualize o vencimento e envie a confirmaÃ§Ã£o se desejar.</div>
             </div>
             <span class="badge green">Vencimento atual: ${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</span>
         </div>
         <form class="fields client-form" id="formRenovarCliente" method="post" action="/clientes/${escapar(cliente.id)}/renovar">
             ${campo({
                 nome: 'tipoPlanoId',
-                label: 'Plano da renovação',
+                label: 'Plano da renovaÃ§Ã£o',
                 valor: planoAtual,
                 attrs: 'id="renovarTipoPlanoId" required',
                 opcoes: [
@@ -4139,25 +4217,25 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     { valor: '', texto: 'Selecione...' },
                     { valor: 'Pix', texto: 'Pix' },
                     { valor: 'Dinheiro', texto: 'Dinheiro' },
-                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
-                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
-                    { valor: 'Transferência', texto: 'Transferência' },
+                    { valor: 'CartÃ£o de crÃ©dito', texto: 'CartÃ£o de crÃ©dito' },
+                    { valor: 'CartÃ£o de dÃ©bito', texto: 'CartÃ£o de dÃ©bito' },
+                    { valor: 'TransferÃªncia', texto: 'TransferÃªncia' },
                     { valor: 'Outro', texto: 'Outro' }
                 ]
             })}
             ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: '', tipo: 'datetime-local', attrs: 'required' })}
             <label class="toggle-line">
                 <input type="checkbox" name="enviarMensagem" value="1" checked>
-                <span>Enviar confirmação da renovação pelo WhatsApp</span>
+                <span>Enviar confirmaÃ§Ã£o da renovaÃ§Ã£o pelo WhatsApp</span>
             </label>
-            <label class="full">Observações do pagamento
+            <label class="full">ObservaÃ§Ãµes do pagamento
                 <textarea name="observacoes" rows="3" placeholder="Opcional"></textarea>
             </label>
             <div class="actions full">
                 <button class="button green" type="submit">${icon('refresh')} Renovar cliente</button>
             </div>
         </form>
-        <div class="form-section full" style="margin-top:22px;">Histórico de pagamentos</div>
+        <div class="form-section full" style="margin-top:22px;">HistÃ³rico de pagamentos</div>
         <table class="clients-table compact-table">
             <thead>
                 <tr>
@@ -4167,7 +4245,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     <th>Pagamento</th>
                     <th>Novo vencimento</th>
                     <th>Mensagem</th>
-                    <th>Ações</th>
+                    <th>AÃ§Ãµes</th>
                 </tr>
             </thead>
             <tbody>${linhasHistorico}</tbody>
@@ -4215,7 +4293,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
 function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
     return `<section class="page-title">
         <h1>Editar pagamento</h1>
-        <div class="subtitle">${escapar(cliente.nome || '')} - corrija os dados do histórico financeiro</div>
+        <div class="subtitle">${escapar(cliente.nome || '')} - corrija os dados do histÃ³rico financeiro</div>
     </section>
     <section class="panel">
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/salvar">
@@ -4231,16 +4309,16 @@ function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
                     { valor: '', texto: 'Selecione...' },
                     { valor: 'Pix', texto: 'Pix' },
                     { valor: 'Dinheiro', texto: 'Dinheiro' },
-                    { valor: 'Cartão de crédito', texto: 'Cartão de crédito' },
-                    { valor: 'Cartão de débito', texto: 'Cartão de débito' },
-                    { valor: 'Transferência', texto: 'Transferência' },
+                    { valor: 'CartÃ£o de crÃ©dito', texto: 'CartÃ£o de crÃ©dito' },
+                    { valor: 'CartÃ£o de dÃ©bito', texto: 'CartÃ£o de dÃ©bito' },
+                    { valor: 'TransferÃªncia', texto: 'TransferÃªncia' },
                     { valor: 'Outro', texto: 'Outro' }
                 ]
             })}
             ${campo({ nome: 'dataPagamento', label: 'Data/Hora do pagamento', valor: inputDateTime(pagamento.dataPagamento || pagamento.criadoEm), tipo: 'datetime-local', attrs: 'required' })}
             ${campo({ nome: 'vencimentoNovo', label: 'Novo vencimento registrado', valor: inputDateTime(pagamento.vencimentoNovo), tipo: 'datetime-local' })}
-            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: pagamento.observacoes || '' })}
-            <div class="notice full">A edição altera apenas o histórico financeiro. O vencimento atual do cliente não será recalculado automaticamente.</div>
+            ${areaTexto({ nome: 'observacoes', label: 'ObservaÃ§Ãµes', valor: pagamento.observacoes || '' })}
+            <div class="notice full">A ediÃ§Ã£o altera apenas o histÃ³rico financeiro. O vencimento atual do cliente nÃ£o serÃ¡ recalculado automaticamente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar pagamento</button>
                 <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#renovar">Cancelar</a>
@@ -4256,29 +4334,29 @@ function secaoBonusCliente(cliente = {}) {
     const aniversarioPendente = clienteAniversarioPendente(cliente);
     const saldoAplicavel = saldo + (aniversarioPendente ? 1 : 0);
     const opcoes = Array.from({ length: Math.max(1, Math.min(12, saldoAplicavel || 1)) }, (_, index) => index + 1)
-        .map(valor => `<option value="${valor}">${valor} ${valor === 1 ?'mês' : 'meses'}</option>`)
+        .map(valor => `<option value="${valor}">${valor} ${valor === 1 ?'mÃªs' : 'meses'}</option>`)
         .join('');
 
     return `<section class="panel" id="bonus" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Bônus do cliente</h2>
-                <div class="subtitle">Ajuste e salve primeiro a data de vencimento. Este botão apenas aplica o saldo e envia ao cliente a data já cadastrada.</div>
+                <h2 class="panel-title">BÃ´nus do cliente</h2>
+                <div class="subtitle">Ajuste e salve primeiro a data de vencimento. Este botÃ£o apenas aplica o saldo e envia ao cliente a data jÃ¡ cadastrada.</div>
             </div>
-            <span class="badge green">${escapar(saldoAplicavel)} disponível(is)</span>
+            <span class="badge green">${escapar(saldoAplicavel)} disponÃ­vel(is)</span>
         </div>
-        ${aniversarioPendente ?'<div class="notice">🎂 Aniversário hoje: 1 bônus está aguardando sua aprovação manual.</div>' : ''}
+        ${aniversarioPendente ?'<div class="notice">ðŸŽ‚ AniversÃ¡rio hoje: 1 bÃ´nus estÃ¡ aguardando sua aprovaÃ§Ã£o manual.</div>' : ''}
         <form class="fields client-form" method="post" action="/clientes/${escapar(cliente.id)}/aplicar-bonus">
-            <label>Quantidade de bônus para aplicar
+            <label>Quantidade de bÃ´nus para aplicar
                 <select name="quantidade" ${saldoAplicavel <= 0 ?'disabled' : ''}>
-                    ${saldoAplicavel > 0 ?opcoes : '<option value="">Sem bônus disponível</option>'}
+                    ${saldoAplicavel > 0 ?opcoes : '<option value="">Sem bÃ´nus disponÃ­vel</option>'}
                 </select>
             </label>
-            <label class="full">Observação da bonificação
-                <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicação, aniversário ou detalhe da bonificação"></textarea>
+            <label class="full">ObservaÃ§Ã£o da bonificaÃ§Ã£o
+                <textarea name="observacaoBonus" rows="3" placeholder="Opcional: indicaÃ§Ã£o, aniversÃ¡rio ou detalhe da bonificaÃ§Ã£o"></textarea>
             </label>
             <div class="actions full">
-                <button class="button green" type="submit" ${saldoAplicavel <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bônus e avisar cliente</button>
+                <button class="button green" type="submit" ${saldoAplicavel <= 0 ?'disabled' : ''}>${icon('whats')} Aplicar bÃ´nus e avisar cliente</button>
             </div>
         </form>
     </section>`;
@@ -4287,22 +4365,22 @@ function secaoBonusCliente(cliente = {}) {
 function secaoConfirmacaoAssinatura(cliente = {}) {
     if (!cliente.id || clienteEhTeste(cliente)) return '';
 
-    const vencimento = formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento) || 'Não informado';
+    const vencimento = formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento) || 'NÃ£o informado';
 
     return `<section class="panel" id="confirmacao-assinatura" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Confirmação da assinatura</h2>
-                <div class="subtitle">Envie manualmente ao cliente a confirmação do plano cadastrado.</div>
+                <h2 class="panel-title">ConfirmaÃ§Ã£o da assinatura</h2>
+                <div class="subtitle">Envie manualmente ao cliente a confirmaÃ§Ã£o do plano cadastrado.</div>
             </div>
         </div>
         <div style="padding:28px;">
             <div class="notice success" style="margin-bottom:16px;">
                 Plano: <strong>${escapar(cliente.plano || '-')}</strong> &middot;
-                Válido até: <strong>${escapar(vencimento)}</strong>
+                VÃ¡lido atÃ©: <strong>${escapar(vencimento)}</strong>
             </div>
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-confirmacao-assinatura">
-                <button class="button green" type="submit">${icon('whats')} Enviar confirmação da assinatura</button>
+                <button class="button green" type="submit">${icon('whats')} Enviar confirmaÃ§Ã£o da assinatura</button>
             </form>
         </div>
     </section>`;
@@ -4334,17 +4412,17 @@ function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null)
     const interacoesVisiveis = paginacaoRobo?.itens || interacoes;
     const itens = interacoesVisiveis.length
         ? interacoesVisiveis.map(item => `<div class="note-item">
-            <strong>${escapar(item.titulo || 'Interação do robô')}</strong>
+            <strong>${escapar(item.titulo || 'InteraÃ§Ã£o do robÃ´')}</strong>
             <span>${escapar(formatarDataHoraCurta(item.criadoEm))} &middot; ${escapar(item.status || 'registrado')}${item.destino ?` &middot; ${escapar(item.destino)}` : ''}</span>
             <p>${escapar(item.resumo || '-')}</p>
         </div>`).join('')
-        : '<div class="empty">Nenhuma interação do robô registrada para este cliente.</div>';
+        : '<div class="empty">Nenhuma interaÃ§Ã£o do robÃ´ registrada para este cliente.</div>';
 
     return `<section class="panel" id="historico-robo" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Histórico do robô</h2>
-                <div class="subtitle">Últimas mensagens, PIX, renovações e respostas automáticas vinculadas ao WhatsApp do cliente.</div>
+                <h2 class="panel-title">HistÃ³rico do robÃ´</h2>
+                <div class="subtitle">Ãšltimas mensagens, PIX, renovaÃ§Ãµes e respostas automÃ¡ticas vinculadas ao WhatsApp do cliente.</div>
             </div>
         </div>
         <div style="padding:20px;">
@@ -4386,8 +4464,8 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
         ${metricCard({ label: 'Plano', valor: cliente.plano || '-', nota: `Plano R$ ${valorPlanoFormatado}`, tipo: 'info', icone: 'planos' })}
         ${metricCard({ label: 'Apps', valor: apps.length || 0, nota: apps.slice(0, 2).join(', ') || 'Nenhum app informado', tipo: 'green', icone: 'apps' })}
         ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
-        ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
-        ${metricCard({ label: 'Último pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histórico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
+        ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendÃªncias', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
+        ${metricCard({ label: 'Ãšltimo pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histÃ³rico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
     </section>`;
 }
 
@@ -4407,20 +4485,20 @@ function acoesRapidasCliente(cliente = {}) {
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Ações rápidas</h2>
-                <div class="subtitle">Atalhos para resolver o atendimento sem procurar em outras áreas.</div>
+                <h2 class="panel-title">AÃ§Ãµes rÃ¡pidas</h2>
+                <div class="subtitle">Atalhos para resolver o atendimento sem procurar em outras Ã¡reas.</div>
             </div>
         </div>
         <div class="actions" style="padding:20px;gap:10px;flex-wrap:wrap;">
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
                 <button class="button green" type="submit">${icon('financeiro')} Enviar PIX</button>
             </form>
-            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento prÃ³ximo para este cliente?');">
                 <button class="button green" type="submit">${icon('whats')} Enviar vencimento</button>
             </form>
             <a class="button" href="#renovar">${icon('refresh')} Renovar</a>
             <a class="button secondary" href="#atendimentos">${icon('atendimento')} Atendimento</a>
-            <a class="button secondary" href="#historico-unificado">${icon('info')} Histórico</a>
+            <a class="button secondary" href="#historico-unificado">${icon('info')} HistÃ³rico</a>
             ${linkWhatsApp ?`<a class="button secondary" href="${linkWhatsApp}" target="_blank" rel="noopener">${icon('whats')} Abrir WhatsApp</a>` : ''}
             <a class="button secondary" href="/clientes/todos">${icon('clientes')} Lista</a>
         </div>
@@ -4434,22 +4512,22 @@ function recomendacoesCliente(cliente = {}, pagamentos = [], atendimentos = []) 
     const vencimento = cliente.dataVencimento || cliente.vencimento || '';
     const abertos = atendimentos.filter(item => item.status !== 'resolvido');
 
-    if (!String(cliente.telefone || '').trim()) itens.push(['WhatsApp ausente', 'Cadastre o número para enviar cobranças, PIX e avisos pelo robô.']);
-    if (!String(cliente.plano || '').trim()) itens.push(['Plano incompleto', 'Escolha o plano para renovar e gerar cobranças corretamente.']);
-    if (!String(vencimento || '').trim()) itens.push(['Sem vencimento', 'Informe a data de vencimento para aparecer no painel e nas cobranças.']);
-    if (!pagamentos.length && !clienteEhTeste(cliente)) itens.push(['Sem financeiro', 'Envie a confirmação da assinatura ou registre a próxima renovação.']);
-    if (vencimentoExpirou(vencimento)) itens.push(['Cliente vencido', 'Enviar cobrança ou registrar renovação.']);
-    else if (!clienteEhTeste(cliente) && vencimentoNoIntervalo(vencimento, new Date(), new Date(Date.now() + 7 * 86400000))) itens.push(['Vencimento próximo', 'Enviar aviso de vencimento e PIX do plano.']);
+    if (!String(cliente.telefone || '').trim()) itens.push(['WhatsApp ausente', 'Cadastre o nÃºmero para enviar cobranÃ§as, PIX e avisos pelo robÃ´.']);
+    if (!String(cliente.plano || '').trim()) itens.push(['Plano incompleto', 'Escolha o plano para renovar e gerar cobranÃ§as corretamente.']);
+    if (!String(vencimento || '').trim()) itens.push(['Sem vencimento', 'Informe a data de vencimento para aparecer no painel e nas cobranÃ§as.']);
+    if (!pagamentos.length && !clienteEhTeste(cliente)) itens.push(['Sem financeiro', 'Envie a confirmaÃ§Ã£o da assinatura ou registre a prÃ³xima renovaÃ§Ã£o.']);
+    if (vencimentoExpirou(vencimento)) itens.push(['Cliente vencido', 'Enviar cobranÃ§a ou registrar renovaÃ§Ã£o.']);
+    else if (!clienteEhTeste(cliente) && vencimentoNoIntervalo(vencimento, new Date(), new Date(Date.now() + 7 * 86400000))) itens.push(['Vencimento prÃ³ximo', 'Enviar aviso de vencimento e PIX do plano.']);
     if (abertos.length) itens.push(['Atendimento aberto', `${abertos.length} atendimento(s) precisam de acompanhamento.`]);
 
     if (!itens.length) {
         return `<section class="panel" style="margin-bottom:24px;">
             <div class="panel-head">
                 <div>
-                    <h2 class="panel-title">Ações recomendadas</h2>
+                    <h2 class="panel-title">AÃ§Ãµes recomendadas</h2>
                     <div class="subtitle">Tudo certo para este cliente no momento.</div>
                 </div>
-                <span class="badge green">Sem pendências</span>
+                <span class="badge green">Sem pendÃªncias</span>
             </div>
         </section>`;
     }
@@ -4457,8 +4535,8 @@ function recomendacoesCliente(cliente = {}, pagamentos = [], atendimentos = []) 
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Ações recomendadas</h2>
-                <div class="subtitle">Pontos que merecem atenção neste cadastro.</div>
+                <h2 class="panel-title">AÃ§Ãµes recomendadas</h2>
+                <div class="subtitle">Pontos que merecem atenÃ§Ã£o neste cadastro.</div>
             </div>
             <span class="badge orange">${itens.length} ponto(s)</span>
         </div>
@@ -4483,8 +4561,8 @@ function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], a
 
     interacoesRobo.forEach(item => itens.push({
         data: item.criadoEm,
-        tipo: 'Robô',
-        titulo: item.titulo || 'Interação do robô',
+        tipo: 'RobÃ´',
+        titulo: item.titulo || 'InteraÃ§Ã£o do robÃ´',
         detalhe: `${item.status || 'registrado'}${item.resumo ?` | ${item.resumo}` : ''}`
     }));
 
@@ -4492,7 +4570,7 @@ function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], a
         data: item.criadoEm,
         tipo: 'Atendimento',
         titulo: `${rotuloMotivoAtendimento(item.motivo)} - ${rotuloStatusAtendimento(item.status)}`,
-        detalhe: item.descricao || (item.proximoContato ?`Próximo contato: ${formatarDataHoraCurta(item.proximoContato)}` : '')
+        detalhe: item.descricao || (item.proximoContato ?`PrÃ³ximo contato: ${formatarDataHoraCurta(item.proximoContato)}` : '')
     }));
 
     notas.forEach(item => itens.push({
@@ -4518,13 +4596,13 @@ function secaoHistoricoUnificado(cliente = {}, dados = {}, paginacaoHistoricoUni
             <span>${escapar(formatarDataHoraCurta(item.data))}</span>
             ${item.detalhe ?`<p>${escapar(item.detalhe)}</p>` : ''}
         </div>`).join('')
-        : '<div class="empty">Nenhum histórico registrado ainda.</div>';
+        : '<div class="empty">Nenhum histÃ³rico registrado ainda.</div>';
 
     return `<section class="panel" id="historico-unificado" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Histórico unificado</h2>
-                <div class="subtitle">Financeiro, robô, atendimentos e notas em uma linha do tempo.</div>
+                <h2 class="panel-title">HistÃ³rico unificado</h2>
+                <div class="subtitle">Financeiro, robÃ´, atendimentos e notas em uma linha do tempo.</div>
             </div>
         </div>
         <div style="padding:20px;">
@@ -4597,7 +4675,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsAppComPais(cliente.telefone, cliente.ddiTelefone, cliente.paisTelefone)}
-            ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
+            ${campo({ nome: 'nascimento', label: 'Data de AniversÃ¡rio', valor: cliente.nascimento, tipo: 'date' })}
             ${campo({
                 nome: 'origem',
                 label: 'Origem do Cliente',
@@ -4608,7 +4686,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
-            ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
+            ${campo({ nome: 'bonusMeses', label: 'BÃ´nus disponÃ­veis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
 
             <div class="form-section full">Plano</div>
             ${campo({
@@ -4634,7 +4712,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     { valor: '1 Ano', texto: '1 Ano' },
-                    { valor: 'Vitalicio', texto: 'Vitalício' }
+                    { valor: 'Vitalicio', texto: 'VitalÃ­cio' }
                 ]
             })}
             ${campo({ nome: 'dataValidadeApp', label: 'Data de validade do app', valor: cliente.dataValidadeApp || '', tipo: 'date' })}
@@ -4670,29 +4748,29 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: '24 horas', texto: '24 horas' }
                 ]
             })}
-            ${campo({ nome: 'dataInicio', label: 'Data/Hora de Início *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
+            ${campo({ nome: 'dataInicio', label: 'Data/Hora de InÃ­cio *', valor: inicio, tipo: 'datetime-local', attrs: 'id="dataInicio" required' })}
             <label>Data/Hora de Vencimento *
                 <div class="inline-field">
                     <input type="datetime-local" name="dataVencimento" id="dataVencimento" value="${escapar(vencimento)}" required>
                     <button class="button secondary icon-only" type="button" id="recalcularVencimento" title="Recalcular vencimento">${icon('refresh')}</button>
                 </div>
-                <span class="helper">Clique em recalcular para usar início + dias</span>
+                <span class="helper">Clique em recalcular para usar inÃ­cio + dias</span>
             </label>
 
             <div class="form-section full">Acesso ao aplicativo</div>
-            ${campo({ nome: 'conexoesPainel', label: 'Conexões do Painel', valor: cliente.conexoesPainel || '', tipo: 'number', attrs: 'id="conexoesPainel" min="0" step="1" placeholder="Quantidade de conexões"' })}
+            ${campo({ nome: 'conexoesPainel', label: 'ConexÃµes do Painel', valor: cliente.conexoesPainel || '', tipo: 'number', attrs: 'id="conexoesPainel" min="0" step="1" placeholder="Quantidade de conexÃµes"' })}
             ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
             ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
-            ${opcoesMulti('paineisSelecionados', 'Painéis', paineis, paineisSelecionados, 'Adicionar painel...')}
+            ${opcoesMulti('paineisSelecionados', 'PainÃ©is', paineis, paineisSelecionados, 'Adicionar painel...')}
             <label class="toggle-line">
                 <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ?'checked' : ''}>
                 <span>App instalado no dispositivo</span>
             </label>
-            ${campo({ nome: 'usuario', label: 'Usuário IPTV', valor: cliente.usuario })}
+            ${campo({ nome: 'usuario', label: 'UsuÃ¡rio IPTV', valor: cliente.usuario })}
             ${campo({ nome: 'senha', label: 'Senha IPTV', valor: cliente.senha })}
             ${listaAcessosApp(cliente, apps, dispositivos, paineis)}
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
-            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
+            ${areaTexto({ nome: 'observacoes', label: 'ObservaÃ§Ãµes', valor: cliente.observacoes })}
             ${cliente.id ?camposNovaNotaAtendimento() : ''}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
@@ -4865,13 +4943,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 + '<label>Painel'
                 + '<select name="acessoPainel">' + opcoesHtml(opcoesPaineis, 'Selecione o painel...') + '</select>'
                 + '</label>'
-                + '<label>Usuário IPTV'
-                + '<input type="text" name="acessoUsuario" placeholder="Usuário desta conexão">'
+                + '<label>UsuÃ¡rio IPTV'
+                + '<input type="text" name="acessoUsuario" placeholder="UsuÃ¡rio desta conexÃ£o">'
                 + '</label>'
                 + '<label>Senha IPTV'
-                + '<input type="text" name="acessoSenha" placeholder="Senha desta conexão">'
+                + '<input type="text" name="acessoSenha" placeholder="Senha desta conexÃ£o">'
                 + '</label>'
-                + '<label>Endereço MAC'
+                + '<label>EndereÃ§o MAC'
                 + '<input class="mac-field" type="text" name="acessoEnderecoMac" maxlength="17" placeholder="XX:XX:XX:XX:XX:XX" autocomplete="off">'
                 + '</label>'
                 + '<label>ID do Aplicativo'
@@ -5010,9 +5088,9 @@ function metricCard({ label, valor, nota = '', tipo, icone, classe = '' }) {
 
 function rotuloMotivoAtendimento(motivo = '') {
     const mapa = {
-        instalacao: 'Instalação',
+        instalacao: 'InstalaÃ§Ã£o',
         travamento: 'Travamento',
-        renovacao: 'Renovação',
+        renovacao: 'RenovaÃ§Ã£o',
         pagamento: 'Pagamento',
         troca_app: 'Troca de app',
         whatsapp: 'WhatsApp',
@@ -5040,7 +5118,7 @@ function classeStatusAtendimento(status = '', prioridade = '') {
 }
 
 function mensagemAtendimentoPadrao(atendimento = {}) {
-    return `Olá, ${atendimento.clienteNome || 'tudo bem'}!
+    return `OlÃ¡, ${atendimento.clienteNome || 'tudo bem'}!
 
 Estou acompanhando seu atendimento de ${rotuloMotivoAtendimento(atendimento.motivo).toLowerCase()}.
 
@@ -5053,19 +5131,19 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
 
     return `<section class="page-title">
         <h1>Central de Suporte</h1>
-        <div class="subtitle">Organize solicitações, prioridades e retornos dos clientes</div>
+        <div class="subtitle">Organize solicitaÃ§Ãµes, prioridades e retornos dos clientes</div>
     </section>
     <section class="metrics" style="margin-bottom:24px;">
-        ${metricCard({ label: 'Abertos', valor: resumo.abertos || 0, nota: 'Aguardando ação', tipo: resumo.abertos ?'orange' : 'green', icone: 'atendimento' })}
+        ${metricCard({ label: 'Abertos', valor: resumo.abertos || 0, nota: 'Aguardando aÃ§Ã£o', tipo: resumo.abertos ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'Em andamento', valor: resumo.emAndamento || 0, nota: 'Em tratativa', tipo: resumo.emAndamento ?'info' : 'green', icone: 'refresh' })}
         ${metricCard({ label: 'Urgentes', valor: resumo.urgentes || 0, nota: 'Prioridade alta', tipo: resumo.urgentes ?'red' : 'green', icone: 'alert' })}
-        ${metricCard({ label: 'Resolvidos', valor: resumo.resolvidos || 0, nota: 'Histórico', tipo: 'green', icone: 'check' })}
+        ${metricCard({ label: 'Resolvidos', valor: resumo.resolvidos || 0, nota: 'HistÃ³rico', tipo: 'green', icone: 'check' })}
     </section>
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Abrir atendimento</h2>
-                <div class="subtitle">Registre uma solicitação para acompanhar até resolver</div>
+                <div class="subtitle">Registre uma solicitaÃ§Ã£o para acompanhar atÃ© resolver</div>
             </div>
         </div>
         <form class="fields" method="post" action="/atendimentos" style="padding-top:0;">
@@ -5078,9 +5156,9 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
             <label>Motivo
                 <select name="motivo">
                     ${[
-                        ['instalacao', 'Instalação'],
+                        ['instalacao', 'InstalaÃ§Ã£o'],
                         ['travamento', 'Travamento'],
-                        ['renovacao', 'Renovação'],
+                        ['renovacao', 'RenovaÃ§Ã£o'],
                         ['pagamento', 'Pagamento'],
                         ['troca_app', 'Troca de app'],
                         ['whatsapp', 'WhatsApp'],
@@ -5094,8 +5172,8 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
                     <option value="urgente">Urgente</option>
                 </select>
             </label>
-            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: '' })}
-            ${areaTexto({ nome: 'descricao', label: 'Descrição', valor: '' })}
+            ${campo({ nome: 'proximoContato', label: 'PrÃ³ximo contato', tipo: 'datetime-local', valor: '' })}
+            ${areaTexto({ nome: 'descricao', label: 'DescriÃ§Ã£o', valor: '' })}
             <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
         </form>
     </section>
@@ -5120,7 +5198,7 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
             </form>
         </div>
         ${atendimentos.length ?`<table>
-            <thead><tr><th>Cliente</th><th>Atendimento</th><th>Status</th><th>Próximo contato</th><th>Ações</th></tr></thead>
+            <thead><tr><th>Cliente</th><th>Atendimento</th><th>Status</th><th>PrÃ³ximo contato</th><th>AÃ§Ãµes</th></tr></thead>
             <tbody>
                 ${atendimentos.map(atendimento => `<tr>
                     <td><strong>${escapar(atendimento.clienteNome)}</strong><div class="cell-muted">${escapar(atendimento.clienteTelefone || '')}</div></td>
@@ -5177,19 +5255,19 @@ function opcoesStatusLead(statusAtual = '') {
 }
 
 function mensagemLeadPadrao(lead = {}) {
-    return `Olá, ${lead.nome || 'tudo bem'}!
+    return `OlÃ¡, ${lead.nome || 'tudo bem'}!
 
 Passando para acompanhar seu atendimento sobre ${lead.interesse || 'o sistema'}.
 
-Fico à disposição para ajudar e liberar os próximos passos.`;
+Fico Ã  disposiÃ§Ã£o para ajudar e liberar os prÃ³ximos passos.`;
 }
 
 function cardsFunilCrm(resumo = {}) {
     return `<section class="metrics" style="margin-bottom:24px;">
         ${metricCard({ label: 'Leads ativos', valor: resumo.ativos || 0, nota: `${resumo.urgentes || 0} urgente(s)`, tipo: resumo.ativos ?'info' : 'green', icone: 'crm' })}
-        ${metricCard({ label: 'Testes liberados', valor: resumo.testes || 0, nota: 'Em avaliação', tipo: 'info', icone: 'apps' })}
+        ${metricCard({ label: 'Testes liberados', valor: resumo.testes || 0, nota: 'Em avaliaÃ§Ã£o', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Aguardando pagamento', valor: resumo.aguardandoPagamento || 0, nota: 'Prontos para fechar', tipo: resumo.aguardandoPagamento ?'orange' : 'green', icone: 'financeiro' })}
-        ${metricCard({ label: 'Retornos até amanhã', valor: resumo.retornosHoje || 0, nota: 'Agenda comercial', tipo: resumo.retornosHoje ?'orange' : 'green', icone: 'alert' })}
+        ${metricCard({ label: 'Retornos atÃ© amanhÃ£', valor: resumo.retornosHoje || 0, nota: 'Agenda comercial', tipo: resumo.retornosHoje ?'orange' : 'green', icone: 'alert' })}
         ${metricCard({ label: 'Ganhos', valor: resumo.ganhos || 0, nota: 'Convertidos', tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Perdidos', valor: resumo.perdidos || 0, nota: 'Aprendizado', tipo: 'red', icone: 'close' })}
     </section>`;
@@ -5227,9 +5305,9 @@ function formularioLead(lead = {}) {
                 </select>
             </label>
             ${campo({ nome: 'valorEstimado', label: 'Valor estimado (R$)', valor: lead.valorEstimado || '', attrs: 'inputmode="decimal" placeholder="35,00"' })}
-            ${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: inputDateTime(lead.proximoContato) })}
+            ${campo({ nome: 'proximoContato', label: 'PrÃ³ximo contato', tipo: 'datetime-local', valor: inputDateTime(lead.proximoContato) })}
             ${campo({ nome: 'motivoPerda', label: 'Motivo de perda', valor: lead.motivoPerda || '', attrs: 'placeholder="Preencher quando perder a venda"' })}
-            ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: lead.observacoes || '' })}
+            ${areaTexto({ nome: 'observacoes', label: 'ObservaÃ§Ãµes', valor: lead.observacoes || '' })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar lead</button>
                 <a class="button secondary" href="/crm">Cancelar</a>
@@ -5245,14 +5323,14 @@ function historicoLeadHtml(lead = {}, historico = []) {
             <span class="note-date">${escapar(formatarDataNota(item.criadoEm))}</span>
             <div>${escapar(item.texto)}</div>
         </div>`).join('')
-        : '<div class="empty">Nenhum histórico comercial registrado.</div>';
+        : '<div class="empty">Nenhum histÃ³rico comercial registrado.</div>';
 
     return `<section class="panel">
         <div class="fields">
-            <div class="form-section full">Histórico comercial</div>
+            <div class="form-section full">HistÃ³rico comercial</div>
             <form class="full" method="post" action="/crm/${escapar(lead.id)}/historico">
-                ${areaTexto({ nome: 'texto', label: 'Nova anotação', valor: '' })}
-                <div class="actions"><button class="button secondary" type="submit">${icon('plus')} Adicionar anotação</button></div>
+                ${areaTexto({ nome: 'texto', label: 'Nova anotaÃ§Ã£o', valor: '' })}
+                <div class="actions"><button class="button secondary" type="submit">${icon('plus')} Adicionar anotaÃ§Ã£o</button></div>
             </form>
             <div class="full"><div class="notes-list">${itens}</div></div>
         </div>
@@ -5266,7 +5344,7 @@ function tabelaLeads(leads = [], clientes = []) {
         .join('');
 
     return `<table>
-        <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>Histórico</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>HistÃ³rico</th><th>AÃ§Ãµes</th></tr></thead>
         <tbody>
             ${leads.map(lead => `<tr>
                 <td>
@@ -5282,7 +5360,7 @@ function tabelaLeads(leads = [], clientes = []) {
                 </td>
                 <td>
                     ${lead.proximoContato ?`<div>${escapar(formatarDataHoraCurta(lead.proximoContato))}</div>` : '-'}
-                    ${lead.ultimoContato ?`<div class="cell-muted">Último: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
+                    ${lead.ultimoContato ?`<div class="cell-muted">Ãšltimo: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
                 </td>
                 <td>
                     ${lead.observacoes ?`<div class="cell-muted">${escapar(lead.observacoes)}</div>` : '-'}
@@ -5317,15 +5395,15 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
 
     return `<section class="page-title">
         <h1>CRM de vendas</h1>
-        <div class="subtitle">Funil comercial, retornos e conversão de interessados em clientes</div>
+        <div class="subtitle">Funil comercial, retornos e conversÃ£o de interessados em clientes</div>
     </section>
     ${cardsFunilCrm(resumo)}
     ${formularioLead({})}
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Relatório comercial</h2>
-                <div class="subtitle">${relatorio.conversoesMes || 0} conversão(ões) neste mês</div>
+                <h2 class="panel-title">RelatÃ³rio comercial</h2>
+                <div class="subtitle">${relatorio.conversoesMes || 0} conversÃ£o(Ãµes) neste mÃªs</div>
             </div>
         </div>
         <div class="fields" style="padding-top:0;">
@@ -5382,7 +5460,7 @@ function itemPreparacao({ pronto, titulo, detalhe, acao, acaoPronto, href }) {
             <div class="cell-title">${escapar(titulo)}</div>
             <div class="cell-muted">${escapar(detalhe)}</div>
         </td>
-        <td data-label="Ação">
+        <td data-label="AÃ§Ã£o">
             <a class="button secondary" href="${escapar(href)}">${icon(pronto ?'check' : 'arrow')} ${escapar(pronto && acaoPronto ?acaoPronto : acao)}</a>
         </td>
     </tr>`;
@@ -5403,8 +5481,8 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
     const itens = [
         {
             pronto: Boolean(nomeSistema && nomeSistema !== 'Controle de Cliente IPTV e P2P' && temLogo),
-            titulo: 'Marca da instalação',
-            detalhe: temLogo ? `Nome exibido: ${nomeSistema || 'não informado'}` : 'Defina nome comercial e logo antes de apresentar.',
+            titulo: 'Marca da instalaÃ§Ã£o',
+            detalhe: temLogo ? `Nome exibido: ${nomeSistema || 'nÃ£o informado'}` : 'Defina nome comercial e logo antes de apresentar.',
             acao: 'Ajustar marca',
             acaoPronto: 'Revisar marca',
             href: '/modelos'
@@ -5420,31 +5498,31 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
         {
             pronto: pixConfigurado,
             titulo: 'PIX de recebimento',
-            detalhe: pixConfigurado ? `Recebedor: ${config.pixNome || '-'}` : 'Configure chave, nome e cidade para gerar cobranças.',
+            detalhe: pixConfigurado ? `Recebedor: ${config.pixNome || '-'}` : 'Configure chave, nome e cidade para gerar cobranÃ§as.',
             acao: 'Configurar PIX',
             acaoPronto: 'Ver PIX',
             href: '/manutencao'
         },
         {
             pronto: temCatalogo,
-            titulo: 'Catálogo operacional',
+            titulo: 'CatÃ¡logo operacional',
             detalhe: `${planos.length} plano(s), ${apps.length} app(s), ${dispositivos.length} dispositivo(s), ${paineis.length} painel(is).`,
             acao: 'Revisar planos',
-            acaoPronto: 'Conferir catálogo',
+            acaoPronto: 'Conferir catÃ¡logo',
             href: '/planos'
         },
         {
             pronto: modelosAtivos.length >= 5,
-            titulo: 'Mensagens automáticas',
-            detalhe: `${modelosAtivos.length} modelo(s) ativo(s) para renovação, cobrança e aniversário.`,
+            titulo: 'Mensagens automÃ¡ticas',
+            detalhe: `${modelosAtivos.length} modelo(s) ativo(s) para renovaÃ§Ã£o, cobranÃ§a e aniversÃ¡rio.`,
             acao: 'Editar modelos',
             acaoPronto: 'Conferir modelos',
             href: '/modelos'
         },
         {
             pronto: temClientes,
-            titulo: 'Base para demonstração',
-            detalhe: temClientes ? `${clientes.length} cliente(s) cadastrados para mostrar o painel.` : 'Use dados reais ou rode o modo demo para não vender com tela vazia.',
+            titulo: 'Base para demonstraÃ§Ã£o',
+            detalhe: temClientes ? `${clientes.length} cliente(s) cadastrados para mostrar o painel.` : 'Use dados reais ou rode o modo demo para nÃ£o vender com tela vazia.',
             acao: 'Cadastrar cliente',
             acaoPronto: 'Ver clientes',
             href: '/clientes/novo'
@@ -5452,25 +5530,25 @@ function resumoPreparacaoComercial({ config = {}, clientes = [], planos = [], ap
         {
             pronto: temClientesPagantes && temFinanceiro,
             titulo: 'Prova financeira',
-            detalhe: temFinanceiro ? `${pagamentos.length} registro(s) financeiro(s) encontrados.` : 'Registre pagamentos para demonstrar receita e inadimplência.',
+            detalhe: temFinanceiro ? `${pagamentos.length} registro(s) financeiro(s) encontrados.` : 'Registre pagamentos para demonstrar receita e inadimplÃªncia.',
             acao: 'Abrir financeiro',
             acaoPronto: 'Conferir financeiro',
             href: '/financeiro'
         },
         {
             pronto: backupAtivo,
-            titulo: 'Backup automático',
-            detalhe: backupAtivo ? `Ativo às ${config.backupAutomaticoHora || '03:00'}, retenção de ${config.backupRetencaoDias || 30} dia(s).` : 'Ative backup automático para reduzir risco na entrega.',
-            acao: 'Ver manutenção',
+            titulo: 'Backup automÃ¡tico',
+            detalhe: backupAtivo ? `Ativo Ã s ${config.backupAutomaticoHora || '03:00'}, retenÃ§Ã£o de ${config.backupRetencaoDias || 30} dia(s).` : 'Ative backup automÃ¡tico para reduzir risco na entrega.',
+            acao: 'Ver manutenÃ§Ã£o',
             acaoPronto: 'Conferir backup',
             href: '/manutencao'
         },
         {
             pronto: Boolean(licenca.bloqueioAtivo && licenca.permitida),
-            titulo: 'Licença comercial',
-            detalhe: licenca.rotulo ? `${licenca.rotulo}${licenca.vencimento ? ` até ${formatarData(licenca.vencimento)}` : ''}.` : 'Configure avaliação, assinatura ou licença vitalícia.',
-            acao: 'Ver licença',
-            acaoPronto: 'Conferir licença',
+            titulo: 'LicenÃ§a comercial',
+            detalhe: licenca.rotulo ? `${licenca.rotulo}${licenca.vencimento ? ` atÃ© ${formatarData(licenca.vencimento)}` : ''}.` : 'Configure avaliaÃ§Ã£o, assinatura ou licenÃ§a vitalÃ­cia.',
+            acao: 'Ver licenÃ§a',
+            acaoPronto: 'Conferir licenÃ§a',
             href: '/licenca'
         }
     ];
@@ -5487,15 +5565,15 @@ function telaPreparacaoComercial(dados = {}) {
     const linhas = resumo.itens.map(itemPreparacao).join('');
 
     return `<section class="page-title">
-        <h1>Preparação comercial</h1>
-        <div class="subtitle">Checklist para deixar a instalação pronta para demonstração, venda e entrega</div>
+        <h1>PreparaÃ§Ã£o comercial</h1>
+        <div class="subtitle">Checklist para deixar a instalaÃ§Ã£o pronta para demonstraÃ§Ã£o, venda e entrega</div>
     </section>
 
     <section class="metrics">
-        ${metricCard({ label: 'Prontidão', valor: `${resumo.percentual}%`, nota: `${resumo.prontos} de ${resumo.total} item(ns)`, tipo: classe, icone: 'trend' })}
-        ${metricCard({ label: 'Pendências', valor: pendentes, nota: pendentes ? 'Revise antes de vender' : 'Pronto para apresentar', tipo: pendentes ? 'orange' : 'green', icone: pendentes ? 'alert' : 'check' })}
+        ${metricCard({ label: 'ProntidÃ£o', valor: `${resumo.percentual}%`, nota: `${resumo.prontos} de ${resumo.total} item(ns)`, tipo: classe, icone: 'trend' })}
+        ${metricCard({ label: 'PendÃªncias', valor: pendentes, nota: pendentes ? 'Revise antes de vender' : 'Pronto para apresentar', tipo: pendentes ? 'orange' : 'green', icone: pendentes ? 'alert' : 'check' })}
         ${metricCard({ label: 'Clientes', valor: dados.clientes.length, nota: 'Base atual do painel', tipo: 'info', icone: 'clientes' })}
-        ${metricCard({ label: 'Financeiro', valor: dados.pagamentos.length, nota: 'Pagamentos no histórico', tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Financeiro', valor: dados.pagamentos.length, nota: 'Pagamentos no histÃ³rico', tipo: 'green', icone: 'financeiro' })}
     </section>
 
     <section class="panel" style="margin-bottom:24px;">
@@ -5506,12 +5584,12 @@ function telaPreparacaoComercial(dados = {}) {
             </div>
             <div class="actions">
                 <a class="button" href="/clientes">${icon('painel')} Ver painel</a>
-                <a class="button secondary" href="/manutencao">${icon('manutencao')} Manutenção</a>
+                <a class="button secondary" href="/manutencao">${icon('manutencao')} ManutenÃ§Ã£o</a>
             </div>
         </div>
         <table>
             <thead>
-                <tr><th>Status</th><th>Item</th><th>Ação</th></tr>
+                <tr><th>Status</th><th>Item</th><th>AÃ§Ã£o</th></tr>
             </thead>
             <tbody>${linhas}</tbody>
         </table>
@@ -5520,13 +5598,13 @@ function telaPreparacaoComercial(dados = {}) {
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Modo demonstração</h2>
-                <div class="subtitle">Para uma reunião de venda, use dados fictícios e mostre fluxo completo: clientes, vencimentos, cobrança e financeiro</div>
+                <h2 class="panel-title">Modo demonstraÃ§Ã£o</h2>
+                <div class="subtitle">Para uma reuniÃ£o de venda, use dados fictÃ­cios e mostre fluxo completo: clientes, vencimentos, cobranÃ§a e financeiro</div>
             </div>
             <span class="badge info">Comando local</span>
         </div>
         <div style="padding:22px 28px;">
-            <div class="notice warn">Antes de apresentar uma instalação nova, rode <strong>npm run demo:seed</strong> para preencher exemplos sem apagar dados existentes.</div>
+            <div class="notice warn">Antes de apresentar uma instalaÃ§Ã£o nova, rode <strong>npm run demo:seed</strong> para preencher exemplos sem apagar dados existentes.</div>
             <div class="actions">
                 <a class="button secondary" href="/clientes/todos">${icon('clientes')} Conferir clientes</a>
                 <a class="button secondary" href="/financeiro">${icon('financeiro')} Conferir financeiro</a>
@@ -5552,11 +5630,11 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }
         paginas.push(`<a class="page-link ${numero === pagina ?'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
     }
 
-    return `<nav class="pagination" aria-label="Paginação">
+    return `<nav class="pagination" aria-label="PaginaÃ§Ã£o">
         <span class="pagination-info">${escapar(inicio)}-${escapar(fim)} de ${escapar(total)}</span>
         <a class="page-link ${pagina <= 1 ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
         ${paginas.join('')}
-        <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
+        <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">PrÃ³xima</a>
     </nav>`;
 }
 
@@ -5580,7 +5658,7 @@ function receitaMensalCard(receita) {
             <div>
                 <div class="revenue-title">Receita Mensal Recorrente</div>
                 <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
-                <span class="revenue-note">Baseada nos pagamentos válidos e nos clientes ativos sem histórico financeiro</span>
+                <span class="revenue-note">Baseada nos pagamentos vÃ¡lidos e nos clientes ativos sem histÃ³rico financeiro</span>
             </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
@@ -5605,7 +5683,7 @@ function cardVencimento(cliente) {
             <div class="due-date">${escapar(formatarDataHoraCurta(vencimento))}</div>
         </div>
         <span class="badge ${statusClasse(cliente.status)}">${escapar(cliente.status || '-')}</span>
-        <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
+        <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento prÃ³ximo para este cliente?');">
             <button class="button secondary icon-only" type="submit" title="Enviar aviso de vencimento">${icon('whats')}</button>
         </form>
     </div>`;
@@ -5624,22 +5702,22 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         .join('');
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
-        <div class="subtitle">Visão geral dos seus clientes</div>
+        <div class="subtitle">VisÃ£o geral dos seus clientes</div>
     </section>
     <section class="metrics dashboard-metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
-        ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grátis', tipo: 'info', icone: 'apps' })}
+        ${metricCard({ label: 'Em Teste', valor: resumo.testes, nota: 'Teste grÃ¡tis', tipo: 'info', icone: 'apps' })}
         ${metricCard({ label: 'Ativos', valor: resumo.ativos, tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Vencidos', valor: resumo.vencidos, tipo: 'red', icone: 'close' })}
-        ${metricCard({ label: `Próximos ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenção', tipo: 'orange', icone: 'alert' })}
-        ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: `PrÃ³ximos ${DIAS_DASHBOARD} dias`, valor: resumo.vencendo, nota: 'Precisam de atenÃ§Ã£o', tipo: 'orange', icone: 'alert' })}
+        ${metricCard({ label: 'Vencem este mÃªs', valor: resumo.vencemMes, nota: 'Ainda este mÃªs', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
     </section>
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Campanha de indicação</h2>
+                <h2 class="panel-title">Campanha de indicaÃ§Ã£o</h2>
                 <div class="subtitle">Dispare a arte "Amizade que vale presente" para clientes ativos, exceto testes.</div>
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
@@ -5660,7 +5738,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Aniversariantes com bônus pendente</h2>
+                <h2 class="panel-title">Aniversariantes com bÃ´nus pendente</h2>
                 <div class="subtitle">Revise e salve o vencimento antes de aplicar e avisar o cliente.</div>
             </div>
             <span class="badge orange">${aniversariantes.length} pendente(s)</span>
@@ -5669,15 +5747,15 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
             <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
             <div><div class="client-name">${escapar(cliente.nome)}</div><div class="helper">${escapar(cliente.telefone || '')}</div></div>
             <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
-            <span class="badge orange">Bônus aguardando aprovação</span>
+            <span class="badge orange">BÃ´nus aguardando aprovaÃ§Ã£o</span>
             <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
         </div>`).join('')}
     </section>` : ''}
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Clientes com Vencimento Próximo</h2>
-                <div class="subtitle">Clientes que vencem nos próximos ${DIAS_DASHBOARD} dias corridos</div>
+                <h2 class="panel-title">Clientes com Vencimento PrÃ³ximo</h2>
+                <div class="subtitle">Clientes que vencem nos prÃ³ximos ${DIAS_DASHBOARD} dias corridos</div>
             </div>
             <div class="actions">
                 <form method="post" action="/clientes/verificar-renovacoes">
@@ -5686,7 +5764,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
                 <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
-        ${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
+        ${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos prÃ³ximos dias.</div>'}
         ${paginacao({
             base: '/clientes',
             pagina: proximosPaginados.pagina,
@@ -5708,8 +5786,8 @@ function tabelaClientes(clientes) {
             <div class="cell-title">${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
             ${cliente.origem ?`<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
-            ${cliente.nascimento ?`<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
-            ${Number(cliente.bonusMeses || 0) > 0 ?`<div class="cell-muted">🎁 ${escapar(cliente.bonusMeses)} bônus</div>` : ''}
+            ${cliente.nascimento ?`<div class="cell-muted">ðŸŽ‚ ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
+            ${Number(cliente.bonusMeses || 0) > 0 ?`<div class="cell-muted">ðŸŽ ${escapar(cliente.bonusMeses)} bÃ´nus</div>` : ''}
             ${renderTagsCliente(cliente.tags)}
         </td>
         <td data-label="Plano">
@@ -5717,7 +5795,7 @@ function tabelaClientes(clientes) {
             <div class="cell-muted">${escapar(detalhePlanoCliente(cliente))}</div>
             <div class="cell-muted">${cliente.valorPlano ?`R$ ${escapar(cliente.valorPlano)}` : ''}</div>
         </td>
-        <td data-label="Início">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
+        <td data-label="InÃ­cio">${escapar(formatarDataHoraCurta(cliente.dataInicio))}</td>
         <td data-label="Vencimento">
             <div class="cell-title">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div>
             <div class="cell-muted" data-vencimento-restante="${escapar(cliente.dataVencimento || cliente.vencimento)}">${escapar(textoDiasRestantes(cliente.dataVencimento || cliente.vencimento))}</div>
@@ -5732,20 +5810,20 @@ function tabelaClientes(clientes) {
             ${renderChips(cliente.dispositivosSelecionados, 'device-chip')}
         </td>
         <td data-label="Status"><span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span></td>
-        <td data-label="Ações">
+        <td data-label="AÃ§Ãµes">
             <div class="row-actions">
                 <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(cliente.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
-                <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
-                    <button class="button icon-only icon-action green" type="submit" title="Enviar vencimento próximo">${icon('alert')}</button>
+                <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento prÃ³ximo para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar vencimento prÃ³ximo">${icon('alert')}</button>
                 </form>
                 <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-campanha-amizade" onsubmit="return confirm('Enviar a campanha Amizade que vale presente somente para este cliente?');">
-                    <button class="button icon-only icon-action green" type="submit" title="Enviar campanha de indicação">${icon('whats')}</button>
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar campanha de indicaÃ§Ã£o">${icon('whats')}</button>
                 </form>
                 ${clienteTesteExpirado(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-planos-teste-expirado" onsubmit="return confirm('Enviar a tela de planos para este teste expirado? Esta acao so deve ser usada uma vez.');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar planos do teste expirado">${icon('planos')}</button>
                 </form>` : ''}
-                ${clientePodeReceberReativacao(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativação com QR Code para este cliente?');">
-                    <button class="button icon-only icon-action green" type="submit" title="Enviar reativação com QR Code">${icon('financeiro')}</button>
+                ${clientePodeReceberReativacao(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-reativacao" onsubmit="return confirm('Enviar mensagem de reativaÃ§Ã£o com QR Code para este cliente?');">
+                    <button class="button icon-only icon-action green" type="submit" title="Enviar reativaÃ§Ã£o com QR Code">${icon('financeiro')}</button>
                 </form>` : ''}
                 <form method="post" action="/clientes/verificar-renovacoes">
                     <button class="button icon-only icon-action refresh" type="submit" title="Enviar aviso">${icon('refresh')}</button>
@@ -5765,12 +5843,12 @@ function tabelaClientes(clientes) {
             <tr>
                 <th>Cliente</th>
                 <th>Plano</th>
-                <th>Início</th>
+                <th>InÃ­cio</th>
                 <th>Vencimento</th>
                 <th>Aplicativos</th>
                 <th>Dispositivos</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th>AÃ§Ãµes</th>
             </tr>
         </thead>
         <tbody>${linhas}</tbody>
@@ -5976,7 +6054,7 @@ function resumoFinanceiro(pagamentos = []) {
     });
 }
 
-function agruparFinanceiro(pagamentos = [], campo, fallback = 'Não informado') {
+function agruparFinanceiro(pagamentos = [], campo, fallback = 'NÃ£o informado') {
     const grupos = pagamentos
         .filter(pagamento => !pagamento.excluidoEm)
         .reduce((mapa, pagamento) => {
@@ -6006,7 +6084,7 @@ function financeiroBreakdownCard({ titulo, nota, itens = [], icone = 'financeiro
                 <div class="revenue-value">${escapar(formatarMoeda(item.total))}</div>
             </div>`;
         }).join('')
-        : '<div class="empty">Nenhum pagamento válido encontrado neste filtro.</div>';
+        : '<div class="empty">Nenhum pagamento vÃ¡lido encontrado neste filtro.</div>';
 
     return `<section class="panel revenue-card">
         <div class="revenue-head">
@@ -6064,7 +6142,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <div class="cell-title">${escapar(formatarDataHoraCurta(vencimento))}</div>
                 <div class="cell-muted">${escapar(textoTempoRestante(vencimento))}</div>
             </td>
-            <td data-label="Ações">
+            <td data-label="AÃ§Ãµes">
                 <div class="actions">
                     ${linkWhats ?`<a class="button secondary icon-only" href="${escapar(linkWhats)}" target="_blank" rel="noopener" title="Chamar no WhatsApp">${icon('whats')}</a>` : ''}
                     <a class="button secondary icon-only" href="/clientes/${escapar(cliente.id)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
@@ -6080,7 +6158,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                 <div class="subtitle">${escapar(inadimplentes.quantidade || 0)} cliente(s), estimativa mensal ${escapar(formatarMoeda(inadimplentes.valorMensal || 0))}</div>
             </div>
             <div class="actions">
-                <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobrança para clientes vencidos que ainda não receberam cobrança deste vencimento?');">
+                <form method="post" action="/clientes/cobrar-vencidos" onsubmit="return confirm('Enviar cobranÃ§a para clientes vencidos que ainda nÃ£o receberam cobranÃ§a deste vencimento?');">
                     <button class="button green" type="submit">${icon('whats')} Cobrar vencidos</button>
                 </form>
                 <a class="button secondary" href="/clientes/todos?status=inadimplente">Ver todos ${icon('arrow')}</a>
@@ -6092,7 +6170,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
                     <th>Cliente</th>
                     <th>Plano</th>
                     <th>Vencimento</th>
-                    <th>Ações</th>
+                    <th>AÃ§Ãµes</th>
                 </tr>
             </thead>
             <tbody>${linhas || '<tr><td colspan="4" class="empty">Nenhum cliente vencido encontrado.</td></tr>'}</tbody>
@@ -6103,7 +6181,7 @@ function painelInadimplentesFinanceiro(inadimplentes = {}) {
 function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, clientes = [] }) {
     const resumo = resumoFinanceiro(pagamentos);
     const urlExportar = montarUrlComFiltros('/financeiro/exportar.csv', filtros);
-    const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'Não informado');
+    const porPagamento = agruparFinanceiro(pagamentos, 'formaPagamento', 'NÃ£o informado');
     const porPlano = agruparFinanceiro(pagamentos, 'plano', 'Sem plano');
     const inadimplentes = resumoInadimplentes(clientes);
     const linhas = paginacaoFinanceiro.itens.length
@@ -6124,10 +6202,10 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
             <td data-label="Pagamento">${escapar(pagamento.formaPagamento || '-')}</td>
             <td data-label="Vencimento">${escapar(formatarDataHoraCurta(pagamento.vencimentoNovo))}</td>
             <td data-label="Status">
-                ${pagamento.excluidoEm ?'<span class="badge red">Removido</span>' : '<span class="badge green">Válido</span>'}
+                ${pagamento.excluidoEm ?'<span class="badge red">Removido</span>' : '<span class="badge green">VÃ¡lido</span>'}
                 ${pagamento.excluidoEm ?`<div class="cell-muted">${escapar(formatarDataHoraCurta(pagamento.excluidoEm))}</div>` : ''}
             </td>
-            <td data-label="Ações">
+            <td data-label="AÃ§Ãµes">
                 <a class="button secondary icon-only" href="/clientes/${escapar(pagamento.clienteId)}/editar#renovar" title="Abrir cliente">${icon('edit')}</a>
             </td>
         </tr>`).join('')
@@ -6135,11 +6213,11 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
 
     return `<section class="page-title">
         <h1>Financeiro</h1>
-        <div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div>
+        <div class="subtitle">Pagamentos recebidos, removidos e conferÃªncia da receita</div>
     </section>
 
     <section class="metrics">
-        ${metricCard({ label: 'Recebido válido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Recebido vÃ¡lido', valor: formatarMoeda(resumo.totalValido), nota: `${resumo.validos} pagamento(s)`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Removido', valor: formatarMoeda(resumo.totalRemovido), nota: `${resumo.removidos} pagamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Registros', valor: resumo.totalRegistros, nota: 'No filtro atual', tipo: 'info', icone: 'info' })}
         ${metricCard({ label: 'Inadimplentes', valor: inadimplentes.quantidade, nota: formatarMoeda(inadimplentes.valorMensal), tipo: 'orange', icone: 'alert' })}
@@ -6148,13 +6226,13 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     <section class="finance-breakdown-grid">
         ${financeiroBreakdownCard({
             titulo: 'Por forma de pagamento',
-            nota: 'Somente pagamentos válidos no filtro atual',
+            nota: 'Somente pagamentos vÃ¡lidos no filtro atual',
             itens: porPagamento,
             icone: 'financeiro'
         })}
         ${financeiroBreakdownCard({
             titulo: 'Por plano',
-            nota: 'Somente pagamentos válidos no filtro atual',
+            nota: 'Somente pagamentos vÃ¡lidos no filtro atual',
             itens: porPlano,
             icone: 'planos'
         })}
@@ -6170,7 +6248,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
         <input type="date" name="dataFim" value="${escapar(filtros.dataFim || '')}" title="Data final">
         <select name="status" onchange="this.form.submit()">
             ${[
-                ['validos', 'Válidos'],
+                ['validos', 'VÃ¡lidos'],
                 ['removidos', 'Removidos'],
                 ['todos', 'Todos']
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === filtros.status ?'selected' : ''}>${texto}</option>`).join('')}
@@ -6192,7 +6270,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
                     <th>Pagamento</th>
                     <th>Vencimento</th>
                     <th>Status</th>
-                    <th>Ações</th>
+                    <th>AÃ§Ãµes</th>
                 </tr>
             </thead>
             <tbody>${linhas}</tbody>
@@ -6242,7 +6320,7 @@ function telaPlanos(planos) {
 function formularioPlano(plano = {}) {
     return `<section class="page-title">
         <h1>${plano.id ?'Editar Tipo de Plano' : 'Novo Tipo de Plano'}</h1>
-        <div class="subtitle">Exemplo: Mensal com 30 dias de duração</div>
+        <div class="subtitle">Exemplo: Mensal com 30 dias de duraÃ§Ã£o</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/planos/salvar">
@@ -6278,14 +6356,14 @@ function variaveisDisponiveis() {
 
     return `<section class="panel" style="margin-bottom: 24px;">
         <div class="vars">
-            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variáveis disponíveis</strong>
+            <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} VariÃ¡veis disponÃ­veis</strong>
             ${variaveis.map(([token, descricao]) => `<span><span class="var-token">${escapar(token)}</span> <span class="helper">- ${escapar(descricao)}</span></span>`).join('')}
         </div>
     </section>`;
 }
 
 function chipPlano(modelo) {
-    const label = modelo.plano === 'padrao' ? 'Padrão (todos os planos)' : modelo.plano === 'campanha' ? 'Campanha' : modelo.plano;
+    const label = modelo.plano === 'padrao' ? 'PadrÃ£o (todos os planos)' : modelo.plano === 'campanha' ? 'Campanha' : modelo.plano;
     return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
 }
 
@@ -6357,26 +6435,26 @@ function telaModelos({ modelos, config }) {
 function formularioModelo(modelo = {}) {
     return `<section class="page-title">
         <h1>${modelo.id ?'Editar Modelo' : 'Novo Modelo'}</h1>
-        <div class="subtitle">Use variáveis para personalizar cada mensagem enviada</div>
+        <div class="subtitle">Use variÃ¡veis para personalizar cada mensagem enviada</div>
     </section>
     ${variaveisDisponiveis()}
     <section class="panel">
         <form class="fields" method="post" action="/modelos/salvar">
             ${modelo.id ?`<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
-            ${campo({ nome: 'titulo', label: 'Título', valor: modelo.titulo })}
+            ${campo({ nome: 'titulo', label: 'TÃ­tulo', valor: modelo.titulo })}
             ${campo({
                 nome: 'plano',
                 label: 'Plano',
                 valor: modelo.plano || 'padrao',
                 opcoes: [
-                    { valor: 'padrao', texto: 'Padrão (todos os planos)' },
+                    { valor: 'padrao', texto: 'PadrÃ£o (todos os planos)' },
                     { valor: 'campanha', texto: 'Campanha' },
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
                     { valor: 'semestral', texto: 'Semestral' },
                     { valor: 'anual', texto: 'Anual' },
-                    { valor: 'aniversario', texto: 'Aniversário' },
-                    { valor: 'cobranca', texto: 'Cobrança' }
+                    { valor: 'aniversario', texto: 'AniversÃ¡rio' },
+                    { valor: 'cobranca', texto: 'CobranÃ§a' }
                 ]
             })}
             ${campo({
@@ -6466,7 +6544,7 @@ function formularioApp(app = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
-            ${areaTexto({ nome: 'descricao', label: 'Descrição / painéis e dispositivos compatíveis', valor: app.descricao })}
+            ${areaTexto({ nome: 'descricao', label: 'DescriÃ§Ã£o / painÃ©is e dispositivos compatÃ­veis', valor: app.descricao })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar app</button>
                 <a class="button secondary" href="/apps">Cancelar</a>
@@ -6557,8 +6635,8 @@ function telaPaineis(paineis, paginacaoPaineis = null) {
     return `<section class="page-title">
         <div class="toolbar" style="align-items:flex-start;">
             <div>
-                <h1>Painéis</h1>
-                <div class="subtitle">${paginacaoPaineis?.total ?? paineis.length} painéis cadastrados</div>
+                <h1>PainÃ©is</h1>
+                <div class="subtitle">${paginacaoPaineis?.total ?? paineis.length} painÃ©is cadastrados</div>
             </div>
             <a class="button" href="/paineis/novo">${icon('plus')} Novo Painel</a>
         </div>
@@ -6594,11 +6672,11 @@ function painelSaudeRobo(status = {}) {
     const verificacaoSaude = status.verificacaoSaudeWhatsApp || {};
     const recuperacaoWhatsApp = status.recuperacaoWhatsApp || {};
     const atendimentosHumanos = status.atendimentosHumanos || [];
-    const classeRisco = risco.nivel === 'alto' ? 'red' : risco.nivel === 'atenção' ? 'orange' : 'green';
+    const classeRisco = risco.nivel === 'alto' ? 'red' : risco.nivel === 'atenÃ§Ã£o' ? 'orange' : 'green';
     const pausas = atendimentosHumanos.length
         ? atendimentosHumanos.slice(0, 6).map(item => `<div class="note-item">
             <strong>${escapar(item.nome || item.telefone)}</strong>
-            <span>${escapar(item.telefone)} &middot; pausado até ${escapar(formatarDataHoraCurta(item.pausaAte))}${item.expirada ?' &middot; expirada' : ''}</span>
+            <span>${escapar(item.telefone)} &middot; pausado atÃ© ${escapar(formatarDataHoraCurta(item.pausaAte))}${item.expirada ?' &middot; expirada' : ''}</span>
         </div>`).join('')
         : '<div class="empty">Nenhum atendimento manual pausado agora.</div>';
 
@@ -6618,15 +6696,15 @@ function painelSaudeRobo(status = {}) {
         <table>
             <tbody>
                 <tr><td><strong>WhatsApp</strong></td><td>${whatsapp.conectado ?'Conectado' : 'Desconectado'}${saudeRobo.numeroConectado ?` em ${escapar(saudeRobo.numeroConectado)}` : ''}</td></tr>
-                <tr><td><strong>Risco do WhatsApp</strong></td><td><span class="badge ${classeRisco}">${escapar(risco.nivel || 'baixo')}</span> ${escapar(risco.recomendacao || 'Operação normal.')}</td></tr>
-                <tr><td><strong>Diagnóstico da sessão</strong></td><td>${verificacaoSaude.verificadoEm ?`${verificacaoSaude.ok ?'Saudável' : 'Atenção'} (${escapar(verificacaoSaude.estado || '-')}) em ${escapar(formatarDataHoraCurta(verificacaoSaude.verificadoEm))}${verificacaoSaude.erro ?` &middot; ${escapar(verificacaoSaude.erro)}` : ''}` : 'Ainda não verificado pelo monitor'}</td></tr>
-                <tr><td><strong>Recuperação automática</strong></td><td>${recuperacaoWhatsApp.iniciadoEm ?`${escapar(recuperacaoWhatsApp.tipo || '-')}: ${escapar(recuperacaoWhatsApp.status || '-')}, ${escapar(formatarDataHoraCurta(recuperacaoWhatsApp.iniciadoEm))}${recuperacaoWhatsApp.motivo ?` &middot; ${escapar(recuperacaoWhatsApp.motivo)}` : ''}${recuperacaoWhatsApp.erro ?` &middot; erro: ${escapar(recuperacaoWhatsApp.erro)}` : ''}` : 'Nenhuma recuperação automática executada'}</td></tr>
-                <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} pendente(s)${fila.ultimoEnvioEm ?`, último envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
-                <tr><td><strong>Última mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
-                <tr><td><strong>Última resposta do robô</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
-                <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o último início</td></tr>
+                <tr><td><strong>Risco do WhatsApp</strong></td><td><span class="badge ${classeRisco}">${escapar(risco.nivel || 'baixo')}</span> ${escapar(risco.recomendacao || 'OperaÃ§Ã£o normal.')}</td></tr>
+                <tr><td><strong>DiagnÃ³stico da sessÃ£o</strong></td><td>${verificacaoSaude.verificadoEm ?`${verificacaoSaude.ok ?'SaudÃ¡vel' : 'AtenÃ§Ã£o'} (${escapar(verificacaoSaude.estado || '-')}) em ${escapar(formatarDataHoraCurta(verificacaoSaude.verificadoEm))}${verificacaoSaude.erro ?` &middot; ${escapar(verificacaoSaude.erro)}` : ''}` : 'Ainda nÃ£o verificado pelo monitor'}</td></tr>
+                <tr><td><strong>RecuperaÃ§Ã£o automÃ¡tica</strong></td><td>${recuperacaoWhatsApp.iniciadoEm ?`${escapar(recuperacaoWhatsApp.tipo || '-')}: ${escapar(recuperacaoWhatsApp.status || '-')}, ${escapar(formatarDataHoraCurta(recuperacaoWhatsApp.iniciadoEm))}${recuperacaoWhatsApp.motivo ?` &middot; ${escapar(recuperacaoWhatsApp.motivo)}` : ''}${recuperacaoWhatsApp.erro ?` &middot; erro: ${escapar(recuperacaoWhatsApp.erro)}` : ''}` : 'Nenhuma recuperaÃ§Ã£o automÃ¡tica executada'}</td></tr>
+                <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} pendente(s)${fila.ultimoEnvioEm ?`, Ãºltimo envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
+                <tr><td><strong>Ãšltima mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o Ãºltimo inÃ­cio'}</td></tr>
+                <tr><td><strong>Ãšltima resposta do robÃ´</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o Ãºltimo inÃ­cio'}</td></tr>
+                <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o Ãºltimo inÃ­cio</td></tr>
                 <tr><td><strong>Eventos ignorados</strong></td><td>${escapar(saudeRobo.eventosIgnoradosTotal || 0)} (${escapar(saudeRobo.eventosInternosIgnoradosTotal || 0)} internos, ${escapar(saudeRobo.conversasNaoIndividuaisIgnoradasTotal || 0)} grupos/newsletters)</td></tr>
-                <tr><td><strong>Memória do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
+                <tr><td><strong>MemÃ³ria do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
             </tbody>
         </table>
         ${risco.pontos?.length ?`<div class="notice" style="margin:16px 20px 0;">${risco.pontos.map(escapar).join(' ')}</div>` : ''}
@@ -6647,27 +6725,27 @@ function resumoImportacaoClientes(importacao = {}) {
     const validos = Number(preview.criar || 0) + Number(preview.atualizar || 0);
     const podeConfirmar = validos > 0;
     const avisoConfirmacao = podeConfirmar
-        ? `<div class="notice" style="border-color:#fde68a;background:#fffbeb;color:#92400e;">Atenção: nesta etapa os clientes ainda não foram gravados. Clique em Confirmar importação para salvar ${validos} cliente(s) válido(s) no sistema.${preview.ignorar ?` ${preview.ignorar} linha(s) com erro serão ignoradas.` : ''}</div>`
+        ? `<div class="notice" style="border-color:#fde68a;background:#fffbeb;color:#92400e;">AtenÃ§Ã£o: nesta etapa os clientes ainda nÃ£o foram gravados. Clique em Confirmar importaÃ§Ã£o para salvar ${validos} cliente(s) vÃ¡lido(s) no sistema.${preview.ignorar ?` ${preview.ignorar} linha(s) com erro serÃ£o ignoradas.` : ''}</div>`
         : '';
 
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Pré-visualização da importação</h2>
+                <h2 class="panel-title">PrÃ©-visualizaÃ§Ã£o da importaÃ§Ã£o</h2>
                 <div class="subtitle">${preview.total} linha(s): ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar</div>
             </div>
-            ${podeConfirmar ?`<form method="post" action="/manutencao/importar-clientes/confirmar" onsubmit="return confirm('Confirmar importação?Um backup automático será criado antes de gravar.');">
+            ${podeConfirmar ?`<form method="post" action="/manutencao/importar-clientes/confirmar" onsubmit="return confirm('Confirmar importaÃ§Ã£o?Um backup automÃ¡tico serÃ¡ criado antes de gravar.');">
                 <input type="hidden" name="token" value="${escapar(token)}">
-                <button class="button green" type="submit">${icon('check')} Confirmar importação</button>
+                <button class="button green" type="submit">${icon('check')} Confirmar importaÃ§Ã£o</button>
             </form>` : ''}
         </div>
-        ${preview.ignorar ?'<div class="notice">Existem linhas com erro. Você pode confirmar para importar somente os clientes válidos ou corrigir o CSV e validar novamente.</div>' : '<div class="notice">Tudo certo para importar. O sistema criará um backup antes de gravar.</div>'}
+        ${preview.ignorar ?'<div class="notice">Existem linhas com erro. VocÃª pode confirmar para importar somente os clientes vÃ¡lidos ou corrigir o CSV e validar novamente.</div>' : '<div class="notice">Tudo certo para importar. O sistema criarÃ¡ um backup antes de gravar.</div>'}
         ${avisoConfirmacao}
         <table>
             <thead>
                 <tr>
                     <th>Linha</th>
-                    <th>Ação</th>
+                    <th>AÃ§Ã£o</th>
                     <th>Cliente</th>
                     <th>WhatsApp</th>
                     <th>Plano</th>
@@ -6693,32 +6771,32 @@ function telaSimuladorRobo({ nome = 'Cliente Teste', intencao = 'menu', resultad
     const cenarios = {
         menu: [
             ['Cliente', 'oi'],
-            ['Robô', 'Boas-vindas com opções: cliente, teste grátis ou planos.']
+            ['RobÃ´', 'Boas-vindas com opÃ§Ãµes: cliente, teste grÃ¡tis ou planos.']
         ],
         teste: [
             ['Cliente', 'quero teste'],
-            ['Robô', 'Pergunta o nome e depois o dispositivo.'],
+            ['RobÃ´', 'Pergunta o nome e depois o dispositivo.'],
             ['Cliente', 'Amanda'],
-            ['Robô', 'Mostra opções de Smart TV, TV Box, Android, iPhone ou computador.']
+            ['RobÃ´', 'Mostra opÃ§Ãµes de Smart TV, TV Box, Android, iPhone ou computador.']
         ],
         pix: [
             ['Cliente', 'me manda o pix'],
-            ['Robô', 'Identifica intenção de pagamento e direciona para planos/renovação.']
+            ['RobÃ´', 'Identifica intenÃ§Ã£o de pagamento e direciona para planos/renovaÃ§Ã£o.']
         ],
         suporte: [
-            ['Cliente', 'não está funcionando'],
-            ['Robô', 'Pausa o atendimento automático e orienta aguardar um atendente.']
+            ['Cliente', 'nÃ£o estÃ¡ funcionando'],
+            ['RobÃ´', 'Pausa o atendimento automÃ¡tico e orienta aguardar um atendente.']
         ],
         renovacao: [
             ['Cliente', 'quero renovar'],
-            ['Robô', 'Inicia renovação e pede o usuário do painel para localizar o cadastro.']
+            ['RobÃ´', 'Inicia renovaÃ§Ã£o e pede o usuÃ¡rio do painel para localizar o cadastro.']
         ]
     };
     const passos = resultado || cenarios[intencao] || cenarios.menu;
 
     return `<section class="page-title">
-        <h1>Simular conversa do robô</h1>
-        <div class="subtitle">Demonstração interna: nada é enviado pelo WhatsApp.</div>
+        <h1>Simular conversa do robÃ´</h1>
+        <div class="subtitle">DemonstraÃ§Ã£o interna: nada Ã© enviado pelo WhatsApp.</div>
     </section>
     <section class="panel" style="margin-bottom:24px;">
         <form class="fields" method="post" action="/manutencao/simular-robo">
@@ -6727,10 +6805,10 @@ function telaSimuladorRobo({ nome = 'Cliente Teste', intencao = 'menu', resultad
                 <select name="intencao">
                     ${[
                         ['menu', 'Boas-vindas'],
-                        ['teste', 'Teste grátis'],
+                        ['teste', 'Teste grÃ¡tis'],
                         ['pix', 'Pedido de PIX'],
                         ['suporte', 'Problema/suporte'],
-                        ['renovacao', 'Renovação']
+                        ['renovacao', 'RenovaÃ§Ã£o']
                     ].map(([valor, texto]) => `<option value="${valor}" ${intencao === valor ?'selected' : ''}>${texto}</option>`).join('')}
                 </select>
             </label>
@@ -6743,8 +6821,8 @@ function telaSimuladorRobo({ nome = 'Cliente Teste', intencao = 'menu', resultad
     <section class="panel">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Resultado da simulação</h2>
-                <div class="subtitle">Fluxo que você pode mostrar em venda ou treinamento.</div>
+                <h2 class="panel-title">Resultado da simulaÃ§Ã£o</h2>
+                <div class="subtitle">Fluxo que vocÃª pode mostrar em venda ou treinamento.</div>
             </div>
         </div>
         <div style="padding:20px;display:grid;gap:10px;">
@@ -6767,27 +6845,27 @@ function telaManutencao(status = {}, opcoes = {}) {
         ?`${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
     const notaLicenca = licenca.vitalicia && licenca.status === 'ativa'
-        ?'Licença vitalícia, sem data de vencimento'
+        ?'LicenÃ§a vitalÃ­cia, sem data de vencimento'
         : licenca.status === 'ativa'
             ?`${licenca.diasRestantes} dia(s) restantes`
         : licenca.status === 'vencendo'
             ?`Vence em ${licenca.diasRestantes} dia(s)`
             : licenca.status === 'vencida'
-                ?`Vencida há ${Math.abs(licenca.diasRestantes)} dia(s)`
-                : 'Informe a licença';
+                ?`Vencida hÃ¡ ${Math.abs(licenca.diasRestantes)} dia(s)`
+                : 'Informe a licenÃ§a';
 
     const manutencaoRestrita = manutencaoRestritaCliente();
 
     return `<section class="page-title">
-        <h1>Manutenção</h1>
-        <div class="subtitle">Status, backup e preparação para instalação comercial individual</div>
+        <h1>ManutenÃ§Ã£o</h1>
+        <div class="subtitle">Status, backup e preparaÃ§Ã£o para instalaÃ§Ã£o comercial individual</div>
     </section>
 
     <section class="metrics" style="margin-bottom:24px;">
-        ${metricCard({ label: 'Versão', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
+        ${metricCard({ label: 'VersÃ£o', valor: status.versao || '-', nota: status.nome || 'Sistema', tipo: 'info', icone: 'info' })}
         ${metricCard({ label: 'WhatsApp', valor: whatsapp.conectado ?'Conectado' : 'Desconectado', nota: whatsapp.status || '-', tipo: whatsapp.conectado ?'green' : 'red', icone: 'whats' })}
-        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ?'Encontrado' : 'Não encontrado', tipo: status.bancoExiste ?'green' : 'red', icone: 'planos' })}
-        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o último início', tipo: 'orange', icone: 'refresh' })}
+        ${metricCard({ label: 'Banco de dados', valor: status.bancoTamanhoFormatado || '-', nota: status.bancoExiste ?'Encontrado' : 'NÃ£o encontrado', tipo: status.bancoExiste ?'green' : 'red', icone: 'planos' })}
+        ${metricCard({ label: 'Tempo online', valor: formatarUptime(status.uptimeSegundos), nota: 'Desde o Ãºltimo inÃ­cio', tipo: 'orange', icone: 'refresh' })}
     </section>
 
     ${painelSaudeRobo(status)}
@@ -6795,40 +6873,40 @@ function telaManutencao(status = {}, opcoes = {}) {
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Diagnóstico do sistema</h2>
-                <div class="subtitle">Verifique os serviços essenciais antes de abrir um chamado de suporte</div>
+                <h2 class="panel-title">DiagnÃ³stico do sistema</h2>
+                <div class="subtitle">Verifique os serviÃ§os essenciais antes de abrir um chamado de suporte</div>
             </div>
             <form method="post" action="/manutencao/diagnostico">
-                <button class="button" type="submit">${icon('manutencao')} Executar diagnóstico</button>
+                <button class="button" type="submit">${icon('manutencao')} Executar diagnÃ³stico</button>
             </form>
         </div>
         ${diagnostico?.verificacoes?.length ?`<table>
             <thead>
-                <tr><th>Verificação</th><th>Resultado</th><th>Detalhes</th></tr>
+                <tr><th>VerificaÃ§Ã£o</th><th>Resultado</th><th>Detalhes</th></tr>
             </thead>
             <tbody>
                 ${diagnostico.verificacoes.map(item => `<tr>
                     <td>${escapar(item.nome)}</td>
-                    <td><span class="badge ${item.status === 'ok' ?'ok' : item.status === 'atencao' ?'warn' : 'error'}">${item.status === 'ok' ?'Saudável' : item.status === 'atencao' ?'Atenção' : 'Erro'}</span></td>
+                    <td><span class="badge ${item.status === 'ok' ?'ok' : item.status === 'atencao' ?'warn' : 'error'}">${item.status === 'ok' ?'SaudÃ¡vel' : item.status === 'atencao' ?'AtenÃ§Ã£o' : 'Erro'}</span></td>
                     <td>${escapar(item.mensagem)}</td>
                 </tr>`).join('')}
             </tbody>
         </table>
-        <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnóstico ainda não foi executado.</div>'}
+        <div class="notice">${escapar(diagnostico.mensagem || '')} Executado em ${escapar(formatarDataHoraCurta(diagnostico.criadoEm))}.</div>` : '<div class="empty">O diagnÃ³stico ainda nÃ£o foi executado.</div>'}
     </section>`}
 
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Acesso ao painel</h2>
-                <div class="subtitle">Salve o usuário e a senha no banco para não perder ao reiniciar o PM2</div>
+                <div class="subtitle">Salve o usuÃ¡rio e a senha no banco para nÃ£o perder ao reiniciar o PM2</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/acesso" style="padding-top:0;">
-            ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
+            ${campo({ nome: 'painelUsuario', label: 'UsuÃ¡rio do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
             ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Deixe em branco para manter a atual"' })}
             ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Repita a nova senha"' })}
-            <div class="notice full">Depois de alterar, faça login novamente com o novo acesso.</div>
+            <div class="notice full">Depois de alterar, faÃ§a login novamente com o novo acesso.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar acesso</button>
             </div>
@@ -6838,13 +6916,13 @@ function telaManutencao(status = {}, opcoes = {}) {
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Configuração do robô</h2>
-                <div class="subtitle">Identidade, gatilhos, imagens e atalhos usados nas respostas automáticas desta instalação</div>
+                <h2 class="panel-title">ConfiguraÃ§Ã£o do robÃ´</h2>
+                <div class="subtitle">Identidade, gatilhos, imagens e atalhos usados nas respostas automÃ¡ticas desta instalaÃ§Ã£o</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
-            ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preço, teste"' })}
+            ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robÃ´', valor: status.config?.roboPalavrasChave || 'oi, ola, olÃ¡, menu, Planos, planos, Plano, plano, preÃ§o, preco, teste, grÃ¡tis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preÃ§o, teste"' })}
             ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             <label>Resposta humanizada
                 <select name="roboRespostaHumanizadaAtiva">
@@ -6852,35 +6930,35 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <option value="0" ${String(status.config?.roboRespostaHumanizadaAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
                 </select>
             </label>
-            ${campo({ nome: 'roboRespostaTempoMinimoSegundos', label: 'Tempo mínimo para responder (segundos)', valor: status.config?.roboRespostaTempoMinimoSegundos || '3', tipo: 'number', attrs: 'min="0" max="60" required' })}
-            ${campo({ nome: 'roboRespostaTempoMaximoSegundos', label: 'Tempo máximo para responder (segundos)', valor: status.config?.roboRespostaTempoMaximoSegundos || '8', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            ${campo({ nome: 'roboRespostaTempoMinimoSegundos', label: 'Tempo mÃ­nimo para responder (segundos)', valor: status.config?.roboRespostaTempoMinimoSegundos || '3', tipo: 'number', attrs: 'min="0" max="60" required' })}
+            ${campo({ nome: 'roboRespostaTempoMaximoSegundos', label: 'Tempo mÃ¡ximo para responder (segundos)', valor: status.config?.roboRespostaTempoMaximoSegundos || '8', tipo: 'number', attrs: 'min="0" max="60" required' })}
             <label>Fila de mensagens do WhatsApp
                 <select name="roboFilaMensagensAtiva">
                     <option value="1" ${String(status.config?.roboFilaMensagensAtiva ?? '1') === '1' ?'selected' : ''}>Ligada</option>
                     <option value="0" ${String(status.config?.roboFilaMensagensAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
                 </select>
             </label>
-            ${campo({ nome: 'roboFilaIntervaloMinimoSegundos', label: 'Intervalo mínimo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMinimoSegundos || '2', tipo: 'number', attrs: 'min="0" max="120" required' })}
-            ${campo({ nome: 'roboFilaIntervaloMaximoSegundos', label: 'Intervalo máximo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMaximoSegundos || '5', tipo: 'number', attrs: 'min="0" max="180" required' })}
-            ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
-            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
+            ${campo({ nome: 'roboFilaIntervaloMinimoSegundos', label: 'Intervalo mÃ­nimo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMinimoSegundos || '2', tipo: 'number', attrs: 'min="0" max="120" required' })}
+            ${campo({ nome: 'roboFilaIntervaloMaximoSegundos', label: 'Intervalo mÃ¡ximo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMaximoSegundos || '5', tipo: 'number', attrs: 'min="0" max="180" required' })}
+            ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando nÃ£o houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
+            <div class="notice full">O robÃ´ usa este nome nas boas-vindas, menus, planos, renovaÃ§Ãµes e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
             <div class="actions full">
-                <button class="button" type="submit">${icon('check')} Salvar configuração do robô</button>
+                <button class="button" type="submit">${icon('check')} Salvar configuraÃ§Ã£o do robÃ´</button>
                 <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
                 <a class="button secondary" href="/planos">${icon('planos')} Editar planos</a>
                 <a class="button secondary" href="/qr">${icon('whats')} Ver WhatsApp</a>
                 <a class="button secondary" href="/manutencao/simular-robo">${icon('refresh')} Simular conversa</a>
             </div>
         </form>
-        <div class="notice" style="margin:0 20px 18px;">Envie imagens leves, preferencialmente JPG ou PNG em 1080x1080 para cards e 1200x628 para banners. O envio ao WhatsApp aguarda até 30 segundos.</div>
+        <div class="notice" style="margin:0 20px 18px;">Envie imagens leves, preferencialmente JPG ou PNG em 1080x1080 para cards e 1200x628 para banners. O envio ao WhatsApp aguarda atÃ© 30 segundos.</div>
         <div class="cards-grid" style="display:grid;gap:12px;padding:0 20px 20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">
             ${campoImagemRobo(status.config, 'imagemRoboMenu', 'Boas-vindas / menu')}
             ${campoImagemRobo(status.config, 'imagemRoboPlanos', 'Planos e valores')}
-            ${campoImagemRobo(status.config, 'imagemRoboTeste', 'Teste grátis')}
+            ${campoImagemRobo(status.config, 'imagemRoboTeste', 'Teste grÃ¡tis')}
             ${campoImagemRobo(status.config, 'imagemRoboTesteLiberado', 'Teste liberado')}
-            ${campoImagemRobo(status.config, 'imagemRoboRenovacao', 'Renovação')}
-            ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'Ativação')}
-            ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opções inválidas')}
+            ${campoImagemRobo(status.config, 'imagemRoboRenovacao', 'RenovaÃ§Ã£o')}
+            ${campoImagemRobo(status.config, 'imagemRoboAtivacao', 'AtivaÃ§Ã£o')}
+            ${campoImagemRobo(status.config, 'imagemRoboErro', 'Erros e opÃ§Ãµes invÃ¡lidas')}
             ${campoImagemRobo(status.config, 'imagemRoboEncerramento', 'Encerramento')}
         </div>
     </section>`}
@@ -6888,22 +6966,22 @@ function telaManutencao(status = {}, opcoes = {}) {
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Licença da instalação</h2>
-                <div class="subtitle">Controle comercial da instalação individual deste cliente</div>
+                <h2 class="panel-title">LicenÃ§a da instalaÃ§Ã£o</h2>
+                <div class="subtitle">Controle comercial da instalaÃ§Ã£o individual deste cliente</div>
             </div>
-            <span class="badge ${licenca.status === 'vencida' ?'red' : licenca.status === 'vencendo' ?'orange' : licenca.status === 'ativa' ?'green' : ''}">${escapar(licenca.rotulo || 'Não configurada')}</span>
+            <span class="badge ${licenca.status === 'vencida' ?'red' : licenca.status === 'vencendo' ?'orange' : licenca.status === 'ativa' ?'green' : ''}">${escapar(licenca.rotulo || 'NÃ£o configurada')}</span>
         </div>
         <table><tbody>
             <tr><th>Cliente / Empresa</th><td>${escapar(licenca.cliente || '-')}</td></tr>
             <tr><th>Tipo</th><td>${escapar(licenca.rotulo || '-')}</td></tr>
-            <tr><th>Ativação</th><td>${escapar(licenca.ativacao || '-')}</td></tr>
+            <tr><th>AtivaÃ§Ã£o</th><td>${escapar(licenca.ativacao || '-')}</td></tr>
             <tr><th>Vencimento</th><td>${escapar(licenca.vitalicia ?'Sem vencimento' : licenca.vencimento || '-')}</td></tr>
-            <tr><th>Instalação</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
+            <tr><th>InstalaÃ§Ã£o</th><td>${escapar(licenca.instalacaoId || '-')}</td></tr>
         </tbody></table>
         <div class="actions" style="padding:18px 20px;">
             ${instalacaoAdministrador()
-                ?`<a class="button" href="/licenca">${icon('check')} Gerenciar licença</a>`
-                : `<a class="button secondary" href="/licenca">${icon('check')} Ver licença</a>`}
+                ?`<a class="button" href="/licenca">${icon('check')} Gerenciar licenÃ§a</a>`
+                : `<a class="button secondary" href="/licenca">${icon('check')} Ver licenÃ§a</a>`}
             <span class="notice">${escapar(notaLicenca)}</span>
         </div>
     </section>
@@ -6912,15 +6990,15 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">PIX de recebimento</h2>
-                <div class="subtitle">Dados usados para gerar o QR Code bancário enviado aos clientes</div>
+                <div class="subtitle">Dados usados para gerar o QR Code bancÃ¡rio enviado aos clientes</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/pix" style="padding-top:0;">
-            ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"' })}
+            ${campo({ nome: 'pixChave', label: 'Chave PIX recebedora', valor: status.config?.pixChave || '', attrs: 'required placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatÃ³ria"' })}
             ${campo({ nome: 'pixNome', label: 'Nome do recebedor', valor: status.config?.pixNome || '', attrs: 'required maxlength="25" placeholder="Nome que aparece no banco"' })}
             ${campo({ nome: 'pixCidade', label: 'Cidade do recebedor', valor: status.config?.pixCidade || '', attrs: 'required maxlength="15" placeholder="Cidade"' })}
-            ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
-            <div class="notice full">O QR Code será gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
+            ${campo({ nome: 'pixTxid', label: 'IdentificaÃ§Ã£o do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
+            <div class="notice full">O QR Code serÃ¡ gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>
             </div>
@@ -6931,19 +7009,19 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Monitoramento comercial</h2>
-                <div class="subtitle">Backup automático, retenção e alerta quando o WhatsApp ficar desconectado</div>
+                <div class="subtitle">Backup automÃ¡tico, retenÃ§Ã£o e alerta quando o WhatsApp ficar desconectado</div>
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/monitoramento" style="padding-top:0;">
             <label class="toggle-line">
                 <input type="checkbox" name="backupAutomaticoAtivo" value="1" ${String(status.config?.backupAutomaticoAtivo) === '1' ?'checked' : ''}>
-                <span>Ativar backup automático diário</span>
+                <span>Ativar backup automÃ¡tico diÃ¡rio</span>
             </label>
-            ${campo({ nome: 'backupAutomaticoHora', label: 'Horário do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
-            ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
-            ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
+            ${campo({ nome: 'backupAutomaticoHora', label: 'HorÃ¡rio do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
+            ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automÃ¡ticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
+            ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar apÃ³s desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
-            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca são apagados pela retenção automática.</div>
+            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca sÃ£o apagados pela retenÃ§Ã£o automÃ¡tica.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -6955,7 +7033,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backup dos dados</h2>
-                <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
+                <div class="subtitle">Gere uma cÃ³pia do banco antes de atualizar ou fazer manutenÃ§Ã£o</div>
             </div>
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
@@ -6966,7 +7044,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Pasta dos dados</th><td>${escapar(status.dataDir || '-')}</td></tr>
                 <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
-                <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
+                <tr><th>Ãšltimo backup</th><td>${escapar(ultimoBackup)}</td></tr>
             </tbody>
         </table>
     </section>`}
@@ -6975,7 +7053,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Importar clientes CSV</h2>
-                <div class="subtitle">Baixe o modelo, envie a planilha para validar e confirme somente depois da pré-visualização</div>
+                <div class="subtitle">Baixe o modelo, envie a planilha para validar e confirme somente depois da prÃ©-visualizaÃ§Ã£o</div>
             </div>
             <a class="button secondary" href="/manutencao/clientes-modelo.csv">${icon('planos')} Baixar modelo CSV</a>
         </div>
@@ -6983,7 +7061,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             <label class="full">Arquivo CSV
                 <input type="file" name="arquivo" accept=".csv,text/csv" required>
             </label>
-            <div class="notice full">A importação atualiza clientes com o mesmo WhatsApp e cria os que ainda não existem. Antes de gravar, o sistema mostra uma prévia e cria backup automático.</div>
+            <div class="notice full">A importaÃ§Ã£o atualiza clientes com o mesmo WhatsApp e cria os que ainda nÃ£o existem. Antes de gravar, o sistema mostra uma prÃ©via e cria backup automÃ¡tico.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('search')} Validar CSV</button>
             </div>
@@ -7005,7 +7083,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <th>Arquivo</th>
                     <th>Tamanho</th>
                     <th>Data</th>
-                    ${manutencaoRestrita ?'' : '<th>Ações</th>'}
+                    ${manutencaoRestrita ?'' : '<th>AÃ§Ãµes</th>'}
                 </tr>
             </thead>
             <tbody>
@@ -7014,7 +7092,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
                     ${manutencaoRestrita ?'' : `<td>
-                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
+                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup?O sistema criarÃ¡ uma cÃ³pia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
@@ -7028,7 +7106,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Eventos do sistema</h2>
-                <div class="subtitle">Últimos backups, alertas e recuperações registrados</div>
+                <div class="subtitle">Ãšltimos backups, alertas e recuperaÃ§Ãµes registrados</div>
             </div>
         </div>
         ${eventos.length ?`<table>
@@ -7036,7 +7114,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr>
                     <th>Data</th>
                     <th>Tipo</th>
-                    <th>Nível</th>
+                    <th>NÃ­vel</th>
                     <th>Mensagem</th>
                 </tr>
             </thead>
@@ -7055,7 +7133,7 @@ function telaManutencao(status = {}, opcoes = {}) {
 function formularioPainel(painel = {}) {
     return `<section class="page-title">
         <h1>${painel.id ?'Editar Painel' : 'Novo Painel'}</h1>
-        <div class="subtitle">Cadastre os painéis usados no controle dos clientes</div>
+        <div class="subtitle">Cadastre os painÃ©is usados no controle dos clientes</div>
     </section>
     <section class="panel">
         <form class="fields" method="post" action="/paineis/salvar">
@@ -7195,7 +7273,7 @@ router.post('/crm/salvar', async (req, res) => {
 router.post('/crm/:id/historico', async (req, res) => {
     try {
         await adicionarHistoricoLead(req.params.id, req.body.texto || '', 'nota');
-        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent('Histórico atualizado.')}`);
+        return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent('HistÃ³rico atualizado.')}`);
     } catch (err) {
         return res.redirect(`/crm/${req.params.id}/editar?mensagem=${encodeURIComponent(err.message)}`);
     }
@@ -7411,7 +7489,7 @@ router.get('/preparacao-comercial', async (req, res) => {
     ]);
 
     await renderizar(res, {
-        titulo: 'Preparação comercial',
+        titulo: 'PreparaÃ§Ã£o comercial',
         conteudo: telaPreparacaoComercial({
             config,
             clientes,
@@ -7462,7 +7540,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes?mensagem=Cliente não encontrado');
+        return res.redirect('/clientes?mensagem=Cliente nÃ£o encontrado');
     }
 
     const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo] = await Promise.all([
@@ -7497,7 +7575,7 @@ router.get('/clientes/:id/pagamentos/:pagamentoId/editar', async (req, res) => {
     ]);
 
     if (!cliente || !pagamento) {
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento não encontrado para edição.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento nÃ£o encontrado para ediÃ§Ã£o.'));
     }
 
     await renderizar(res, {
@@ -7533,12 +7611,12 @@ router.post('/clientes/salvar', async (req, res) => {
         });
 
         const mensagemAlerta = alertas.length
-            ?'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
+            ?'Cliente salvo. AtenÃ§Ã£o: existe histÃ³rico problemÃ¡tico para nome ou telefone parecido.'
             : 'Cliente salvo com sucesso';
 
         if (adicionandoNota && clienteSalvo?.id) {
             return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, novaNota
-                ?'Nota adicionada ao histórico e cliente salvo'
+                ?'Nota adicionada ao histÃ³rico e cliente salvo'
                 : 'Cliente salvo. Nenhuma nota foi informada.'));
         }
 
@@ -7550,8 +7628,8 @@ router.post('/clientes/salvar', async (req, res) => {
 
         if (novoCadastro && clienteSalvo?.id) {
             const mensagemNovoCliente = alertas.length
-                ? `${mensagemAlerta} Use o botão abaixo para enviar a confirmação da assinatura.`
-                : 'Cliente cadastrado com sucesso. Use o botão abaixo para enviar a confirmação da assinatura.';
+                ? `${mensagemAlerta} Use o botÃ£o abaixo para enviar a confirmaÃ§Ã£o da assinatura.`
+                : 'Cliente cadastrado com sucesso. Use o botÃ£o abaixo para enviar a confirmaÃ§Ã£o da assinatura.';
             return res.redirect(`${montarUrlClienteMensagem(clienteSalvo.id, mensagemNovoCliente)}#confirmacao-assinatura`);
         }
 
@@ -7579,11 +7657,11 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect(montarUrlListaClientesMensagem('Cliente não encontrado.'));
+        return res.redirect(montarUrlListaClientesMensagem('Cliente nÃ£o encontrado.'));
     }
 
     if (clienteEhTeste(cliente)) {
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'A confirmação de assinatura não é usada para clientes de teste grátis.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'A confirmaÃ§Ã£o de assinatura nÃ£o Ã© usada para clientes de teste grÃ¡tis.'));
     }
 
     const faltando = [];
@@ -7595,7 +7673,7 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
     if (faltando.length) {
         return res.redirect(montarUrlClienteMensagem(
             cliente.id,
-            `Preencha antes de enviar a confirmação: ${faltando.join(', ')}.`
+            `Preencha antes de enviar a confirmaÃ§Ã£o: ${faltando.join(', ')}.`
         ));
     }
 
@@ -7615,7 +7693,7 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
             clienteId: cliente.id,
             motivo: 'WhatsApp desconectado'
         });
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. A confirmação não foi enviada.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado. A confirmaÃ§Ã£o nÃ£o foi enviada.'));
     }
 
     try {
@@ -7630,7 +7708,7 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
         );
 
         if (!envio) {
-            throw new Error('O WhatsApp não confirmou o envio da mensagem.');
+            throw new Error('O WhatsApp nÃ£o confirmou o envio da mensagem.');
         }
 
         // Mensagem registrada pelo fallback de WhatsApp.
@@ -7658,13 +7736,13 @@ router.post('/clientes/:id/enviar-confirmacao-assinatura', async (req, res) => {
             pagamentoId: pagamentoFinanceiro?.pagamentoId,
             financeiroCriado: pagamentoFinanceiro?.criado
         });
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Confirmação da assinatura enviada ao cliente com sucesso.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'ConfirmaÃ§Ã£o da assinatura enviada ao cliente com sucesso.'));
     } catch (err) {
         logControleClientes('Erro ao enviar confirmacao de assinatura', {
             clienteId: cliente.id,
             erro: err.message
         });
-        return res.redirect(montarUrlClienteMensagem(cliente.id, `Não foi possível enviar a confirmação: ${err.message}`));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `NÃ£o foi possÃ­vel enviar a confirmaÃ§Ã£o: ${err.message}`));
     }
 });
 
@@ -7673,14 +7751,14 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
         const cliente = await buscarClientePorId(req.params.id);
 
         if (!cliente) {
-            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Cliente não encontrado.'));
+            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Cliente nÃ£o encontrado.'));
         }
 
         const status = getStatusWhatsApp();
         const client = getClient();
 
         if (!client || !status.conectado) {
-            return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado para enviar o PIX do plano.'));
+            return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado para enviar o PIX do plano.'));
         }
 
         const planoBase = buscarPlanoPorNome(cliente.plano) || {
@@ -7696,7 +7774,7 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
         });
 
         if (!enviado) {
-            throw new Error('Não foi possível enviar o QR Code PIX.');
+            throw new Error('NÃ£o foi possÃ­vel enviar o QR Code PIX.');
         }
 
         await adicionarNotaCliente(
@@ -7717,7 +7795,7 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
             clienteId: req.params.id,
             erro: err.message
         });
-        return res.redirect(montarUrlClienteMensagem(req.params.id, `Não foi possível enviar o PIX do plano: ${err.message}`));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, `NÃ£o foi possÃ­vel enviar o PIX do plano: ${err.message}`));
     }
 });
 
@@ -7738,7 +7816,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
         const renovacaoRecente = renovacoesRecentes.get(chaveRenovacao);
 
         if (renovacaoRecente && agora - renovacaoRecente < RENOVACAO_SUBMISSAO_DUPLICADA_MS) {
-            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Renovação já estava sendo registrada. O envio duplicado foi ignorado.'));
+            return res.redirect(montarUrlClienteMensagem(req.params.id, 'RenovaÃ§Ã£o jÃ¡ estava sendo registrada. O envio duplicado foi ignorado.'));
         }
 
         renovacoesRecentes.set(chaveRenovacao, agora);
@@ -7749,9 +7827,9 @@ router.post('/clientes/:id/renovar', async (req, res) => {
         });
         const clienteAtualizado = resultado.cliente;
         const deveEnviar = Boolean(req.body.enviarMensagem);
-        let mensagemRetorno = 'Renovação registrada com sucesso';
+        let mensagemRetorno = 'RenovaÃ§Ã£o registrada com sucesso';
 
-        logControleClientes('Renovação registrada', {
+        logControleClientes('RenovaÃ§Ã£o registrada', {
             clienteId: clienteAtualizado?.id,
             nome: clienteAtualizado?.nome,
             plano: resultado.plano,
@@ -7765,7 +7843,7 @@ router.post('/clientes/:id/renovar', async (req, res) => {
 
             if (!client || !status.conectado) {
                 await marcarPagamentoMensagem(resultado.pagamentoId, false, 'WhatsApp desconectado');
-                mensagemRetorno = 'Renovação registrada, mas o WhatsApp não está conectado para enviar a confirmação.';
+                mensagemRetorno = 'RenovaÃ§Ã£o registrada, mas o WhatsApp nÃ£o estÃ¡ conectado para enviar a confirmaÃ§Ã£o.';
             } else {
                 try {
                     const mensagem = montarMensagemRenovacaoConfirmada(clienteAtualizado, resultado);
@@ -7773,11 +7851,11 @@ router.post('/clientes/:id/renovar', async (req, res) => {
                         client,
                         clienteAtualizado.telefone,
                         mensagem,
-                        'Envio de renovação confirmada'
+                        'Envio de renovaÃ§Ã£o confirmada'
                     );
 
                     await marcarPagamentoMensagem(resultado.pagamentoId, true);
-                    mensagemRetorno = 'Renovação registrada e confirmação enviada ao cliente.';
+                    mensagemRetorno = 'RenovaÃ§Ã£o registrada e confirmaÃ§Ã£o enviada ao cliente.';
                     logControleClientes('Renovacao enviada ao cliente', {
                         clienteId: clienteAtualizado.id,
                         destino: envioWhatsApp.destino,
@@ -7786,8 +7864,8 @@ router.post('/clientes/:id/renovar', async (req, res) => {
                     });
                 } catch (erroEnvio) {
                     await marcarPagamentoMensagem(resultado.pagamentoId, false, erroEnvio.message);
-                    mensagemRetorno = `Renovação registrada, mas não foi possível enviar a confirmação: ${erroEnvio.message}`;
-                    logControleClientes('Erro ao enviar renovação', {
+                    mensagemRetorno = `RenovaÃ§Ã£o registrada, mas nÃ£o foi possÃ­vel enviar a confirmaÃ§Ã£o: ${erroEnvio.message}`;
+                    logControleClientes('Erro ao enviar renovaÃ§Ã£o', {
                         clienteId: clienteAtualizado.id,
                         erro: erroEnvio.message
                     });
@@ -7811,17 +7889,17 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         const cliente = await buscarClientePorId(req.params.id);
 
         if (!cliente) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente não encontrado.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente nÃ£o encontrado.')}`);
         }
 
         if (!clientePodeReceberReativacao(cliente)) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Este cliente não está vencido para receber reativação.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Este cliente nÃ£o estÃ¡ vencido para receber reativaÃ§Ã£o.')}`);
         }
 
         const planoPix = buscarPlanoPorNome(cliente.plano);
 
         if (!planoPix) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente não possui QR Code configurado para reativação.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('O plano deste cliente nÃ£o possui QR Code configurado para reativaÃ§Ã£o.')}`);
         }
 
         const pixCliente = prepararPlanoPixCliente(cliente, planoPix);
@@ -7829,7 +7907,7 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         const client = getClient();
 
         if (!client || !status.conectado) {
-            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp não está conectado para enviar a reativação.')}`);
+            return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('WhatsApp nÃ£o estÃ¡ conectado para enviar a reativaÃ§Ã£o.')}`);
         }
 
         const mensagem = montarMensagemReativacaoCliente(cliente, pixCliente);
@@ -7847,10 +7925,10 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
         });
 
         if (!qrEnviado) {
-            throw new Error('A mensagem foi enviada, mas não foi possível enviar o QR Code PIX.');
+            throw new Error('A mensagem foi enviada, mas nÃ£o foi possÃ­vel enviar o QR Code PIX.');
         }
 
-        await adicionarNotaCliente(cliente.id, `Mensagem de reativação com QR Code enviada para o plano ${cliente.plano}.`);
+        await adicionarNotaCliente(cliente.id, `Mensagem de reativaÃ§Ã£o com QR Code enviada para o plano ${cliente.plano}.`);
         logControleClientes('Reativacao enviada ao cliente', {
             clienteId: cliente.id,
             nome: cliente.nome,
@@ -7860,13 +7938,13 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
             ack: envioWhatsApp.ack
         });
 
-        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativação com QR Code enviada ao cliente.')}`);
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Mensagem de reativaÃ§Ã£o com QR Code enviada ao cliente.')}`);
     } catch (err) {
         logControleClientes('Erro ao enviar reativacao', {
             clienteId: req.params.id,
             erro: err.message
         });
-        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(`Erro ao enviar reativação: ${err.message}`)}`);
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent(`Erro ao enviar reativaÃ§Ã£o: ${err.message}`)}`);
     }
 });
 
@@ -7879,7 +7957,7 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) =>
             valor: pagamento.valorTotal
         });
 
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histórico financeiro.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento removido do histÃ³rico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao remover pagamento', {
             clienteId: req.params.id,
@@ -7899,7 +7977,7 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => 
             valor: pagamento.valorTotal
         });
 
-        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histórico financeiro.'));
+        return res.redirect(montarUrlClienteMensagem(req.params.id, 'Pagamento atualizado no histÃ³rico financeiro.'));
     } catch (err) {
         logControleClientes('Erro ao editar pagamento', {
             clienteId: req.params.id,
@@ -7913,9 +7991,9 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => 
 router.post('/clientes/:id/pagamentos/:pagamentoId/mensagem-enviada', async (req, res) => {
     try {
         await marcarPagamentoMensagem(req.params.pagamentoId, true);
-        await adicionarNotaCliente(req.params.id, 'Confirmação de renovação marcada manualmente como enviada.');
+        await adicionarNotaCliente(req.params.id, 'ConfirmaÃ§Ã£o de renovaÃ§Ã£o marcada manualmente como enviada.');
 
-        return res.redirect(`${montarUrlClienteMensagem(req.params.id, 'Mensagem marcada como enviada no histórico.')}#renovar`);
+        return res.redirect(`${montarUrlClienteMensagem(req.params.id, 'Mensagem marcada como enviada no histÃ³rico.')}#renovar`);
     } catch (err) {
         logControleClientes('Erro ao marcar mensagem de pagamento como enviada', {
             clienteId: req.params.id,
@@ -7930,7 +8008,7 @@ router.post('/clientes/:id/notas', async (req, res) => {
     try {
         await adicionarNotaCliente(req.params.id, req.body.texto || req.body.notaPadrao);
         logControleClientes('Nota adicionada', { clienteId: req.params.id });
-        res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histórico do cliente'));
+        res.redirect(montarUrlClienteMensagem(req.params.id, 'Nota adicionada ao histÃ³rico do cliente'));
     } catch (err) {
         logControleClientes('Erro ao adicionar nota', {
             clienteId: req.params.id,
@@ -7944,14 +8022,14 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
+        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
     }
 
     const status = getStatusWhatsApp();
     const client = getClient();
 
     if (!client || !status.conectado) {
-        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. Bônus não aplicado.'));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp nÃ£o estÃ¡ conectado. BÃ´nus nÃ£o aplicado.'));
     }
 
     try {
@@ -7959,7 +8037,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         const aniversarioPendente = clienteAniversarioPendente(cliente);
         const saldoAplicavel = (Number.parseInt(cliente.bonusMeses || 0, 10) || 0) + (aniversarioPendente ? 1 : 0);
         if (!Number.isInteger(meses) || meses < 1 || meses > saldoAplicavel) {
-            throw new Error(`Saldo de bônus insuficiente. Disponível: ${saldoAplicavel}.`);
+            throw new Error(`Saldo de bÃ´nus insuficiente. DisponÃ­vel: ${saldoAplicavel}.`);
         }
 
         const resultadoEnvio = {
@@ -7986,7 +8064,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         const clienteAtualizado = resultado.cliente;
 
         if (String(req.body.observacaoBonus || '').trim()) {
-            await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
+            await adicionarNotaCliente(cliente.id, `ObservaÃ§Ã£o da bonificaÃ§Ã£o: ${req.body.observacaoBonus}`);
         }
 
         logControleClientes('Bonus aplicado e enviado ao cliente', {
@@ -8000,7 +8078,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             vencimento: resultado.dataVencimento
         });
 
-        return res.redirect(montarUrlClienteMensagem(cliente.id, `Bônus aplicado: ${resultado.meses} mês(es). Mensagem enviada ao cliente.`));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `BÃ´nus aplicado: ${resultado.meses} mÃªs(es). Mensagem enviada ao cliente.`));
     } catch (err) {
         logControleClientes('Erro ao aplicar bonus', {
             clienteId: cliente.id,
@@ -8034,7 +8112,7 @@ router.get('/planos/:id/editar', async (req, res) => {
     const plano = await buscarTipoPlanoPorId(req.params.id);
 
     if (!plano) {
-        return res.redirect('/planos?mensagem=Plano não encontrado');
+        return res.redirect('/planos?mensagem=Plano nÃ£o encontrado');
     }
 
     await renderizar(res, {
@@ -8061,7 +8139,7 @@ router.post('/planos/salvar', async (req, res) => {
 router.post('/planos/:id/excluir', async (req, res) => {
     try {
         await removerTipoPlano(req.params.id);
-        res.redirect('/planos?mensagem=Plano excluído');
+        res.redirect('/planos?mensagem=Plano excluÃ­do');
     } catch (err) {
         res.redirect(`/planos?mensagem=${encodeURIComponent(`Erro ao excluir plano: ${err.message}`)}`);
     }
@@ -8093,7 +8171,7 @@ router.get('/apps/:id/editar', async (req, res) => {
     const app = await buscarAppPorId(req.params.id);
 
     if (!app) {
-        return res.redirect('/apps?mensagem=App não encontrado');
+        return res.redirect('/apps?mensagem=App nÃ£o encontrado');
     }
 
     await renderizar(res, {
@@ -8120,7 +8198,7 @@ router.post('/apps/salvar', async (req, res) => {
 router.post('/apps/:id/excluir', async (req, res) => {
     try {
         await removerApp(req.params.id);
-        res.redirect('/apps?mensagem=App excluído');
+        res.redirect('/apps?mensagem=App excluÃ­do');
     } catch (err) {
         res.redirect(`/apps?mensagem=${encodeURIComponent(`Erro ao excluir app: ${err.message}`)}`);
     }
@@ -8152,7 +8230,7 @@ router.get('/dispositivos/:id/editar', async (req, res) => {
     const dispositivo = await buscarDispositivoPorId(req.params.id);
 
     if (!dispositivo) {
-        return res.redirect('/dispositivos?mensagem=Dispositivo não encontrado');
+        return res.redirect('/dispositivos?mensagem=Dispositivo nÃ£o encontrado');
     }
 
     await renderizar(res, {
@@ -8179,7 +8257,7 @@ router.post('/dispositivos/salvar', async (req, res) => {
 router.post('/dispositivos/:id/excluir', async (req, res) => {
     try {
         await removerDispositivo(req.params.id);
-        res.redirect('/dispositivos?mensagem=Dispositivo excluído');
+        res.redirect('/dispositivos?mensagem=Dispositivo excluÃ­do');
     } catch (err) {
         res.redirect(`/dispositivos?mensagem=${encodeURIComponent(`Erro ao excluir dispositivo: ${err.message}`)}`);
     }
@@ -8192,7 +8270,7 @@ router.get('/paineis', async (req, res) => {
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
-        titulo: 'Painéis',
+        titulo: 'PainÃ©is',
         conteudo: telaPaineis(paineis, paginacaoPaineis),
         mensagem,
         ativo: 'paineis'
@@ -8211,7 +8289,7 @@ router.get('/paineis/:id/editar', async (req, res) => {
     const painel = await buscarPainelPorId(req.params.id);
 
     if (!painel) {
-        return res.redirect('/paineis?mensagem=Painel não encontrado');
+        return res.redirect('/paineis?mensagem=Painel nÃ£o encontrado');
     }
 
     await renderizar(res, {
@@ -8238,7 +8316,7 @@ router.post('/paineis/salvar', async (req, res) => {
 router.post('/paineis/:id/excluir', async (req, res) => {
     try {
         await removerPainel(req.params.id);
-        res.redirect('/paineis?mensagem=Painel excluído');
+        res.redirect('/paineis?mensagem=Painel excluÃ­do');
     } catch (err) {
         res.redirect(`/paineis?mensagem=${encodeURIComponent(`Erro ao excluir painel: ${err.message}`)}`);
     }
@@ -8248,7 +8326,7 @@ router.get('/manutencao', async (req, res) => {
     const status = await obterStatusSistema(getStatusWhatsApp());
 
     await renderizar(res, {
-        titulo: 'Manutenção',
+        titulo: 'ManutenÃ§Ã£o',
         conteudo: telaManutencao(status),
         mensagem: req.query.mensagem || '',
         ativo: 'manutencao'
@@ -8257,7 +8335,7 @@ router.get('/manutencao', async (req, res) => {
 
 router.get('/manutencao/simular-robo', async (req, res) => {
     await renderizar(res, {
-        titulo: 'Simular conversa do robô',
+        titulo: 'Simular conversa do robÃ´',
         conteudo: telaSimuladorRobo(),
         ativo: 'manutencao'
     });
@@ -8265,12 +8343,12 @@ router.get('/manutencao/simular-robo', async (req, res) => {
 
 router.post('/manutencao/simular-robo', async (req, res) => {
     await renderizar(res, {
-        titulo: 'Simular conversa do robô',
+        titulo: 'Simular conversa do robÃ´',
         conteudo: telaSimuladorRobo({
             nome: req.body.nome || 'Cliente Teste',
             intencao: req.body.intencao || 'menu'
         }),
-        mensagem: 'Simulação gerada sem enviar mensagem real.',
+        mensagem: 'SimulaÃ§Ã£o gerada sem enviar mensagem real.',
         ativo: 'manutencao'
     });
 });
@@ -8293,11 +8371,11 @@ router.post('/manutencao/backup', bloquearManutencaoRestritaCliente, async (req,
 router.post('/manutencao/diagnostico', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         const resultado = await executarDiagnosticoSistema(getStatusWhatsApp(), testarWebhookAlertas);
-        logControleClientes('Diagnóstico do sistema executado', { status: resultado.status });
+        logControleClientes('DiagnÃ³stico do sistema executado', { status: resultado.status });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(resultado.mensagem)}`);
     } catch (err) {
-        logControleClientes('Erro ao executar diagnóstico do sistema', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
+        logControleClientes('Erro ao executar diagnÃ³stico do sistema', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnÃ³stico: ${err.message}`)}`);
     }
 });
 
@@ -8325,7 +8403,7 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
         });
 
         await renderizar(res, {
-            titulo: 'Manutenção',
+            titulo: 'ManutenÃ§Ã£o',
             conteudo: telaManutencao(status, { importacao: { preview, token } }),
             mensagem: `CSV validado: ${preview.criar} criar, ${preview.atualizar} atualizar, ${preview.ignorar} ignorar`,
             ativo: 'manutencao'
@@ -8338,9 +8416,9 @@ router.post('/manutencao/importar-clientes', async (req, res) => {
         const status = await obterStatusSistema(getStatusWhatsApp());
 
         await renderizar(res, {
-            titulo: 'Manutenção',
+            titulo: 'ManutenÃ§Ã£o',
             conteudo: telaManutencao(status),
-            mensagem: err.message || 'Não foi possível validar o CSV.',
+            mensagem: err.message || 'NÃ£o foi possÃ­vel validar o CSV.',
             ativo: 'manutencao'
         });
     }
@@ -8360,7 +8438,7 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
         });
 
         if (!itensValidos.length) {
-            throw new Error('Não há clientes válidos para importar.');
+            throw new Error('NÃ£o hÃ¡ clientes vÃ¡lidos para importar.');
         }
 
         const backup = await criarBackupManual();
@@ -8384,12 +8462,12 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
             backup: backup.nome
         });
 
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Importação concluída: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`ImportaÃ§Ã£o concluÃ­da: ${criados} criado(s), ${atualizados} atualizado(s). Backup: ${backup.nome}`)}`);
     } catch (err) {
         logControleClientes('Erro ao importar clientes via CSV', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'Não foi possível importar os clientes.')}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message || 'NÃ£o foi possÃ­vel importar os clientes.')}`);
     }
 });
 
@@ -8400,7 +8478,7 @@ router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (r
             backup: resultado.restaurado,
             backupAnterior: resultado.backupAnterior
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma cópia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup restaurado: ${resultado.restaurado}. Foi criada uma cÃ³pia do banco anterior: ${resultado.backupAnterior}. Reinicie o PM2 para recarregar tudo.`)}`);
     } catch (err) {
         logControleClientes('Erro ao restaurar backup', {
             backup: req.body.backup,
@@ -8413,17 +8491,17 @@ router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (r
 router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
         await atualizarLicencaComercial(req.body);
-        logControleClientes('Licença da instalação atualizada', {
+        logControleClientes('LicenÃ§a da instalaÃ§Ã£o atualizada', {
             cliente: req.body.licencaCliente,
             vencimento: req.body.licencaVencimento,
             tipo: req.body.licencaTipo
         });
-        res.redirect('/manutencao?mensagem=Licença salva com sucesso');
+        res.redirect('/manutencao?mensagem=LicenÃ§a salva com sucesso');
     } catch (err) {
-        logControleClientes('Erro ao salvar licença da instalação', {
+        logControleClientes('Erro ao salvar licenÃ§a da instalaÃ§Ã£o', {
             erro: err.message
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licença: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar licenÃ§a: ${err.message}`)}`);
     }
 });
 
@@ -8433,10 +8511,10 @@ router.post('/manutencao/robo', bloquearManutencaoRestritaCliente, async (req, r
         logControleClientes('Configuracao do robo atualizada', {
             nomeEmpresa: req.body.nomeEmpresaRobo
         });
-        res.redirect('/manutencao?mensagem=Configuração do robô salva com sucesso');
+        res.redirect('/manutencao?mensagem=ConfiguraÃ§Ã£o do robÃ´ salva com sucesso');
     } catch (err) {
-        logControleClientes('Erro ao salvar configuração do robô', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuração do robô: ${err.message}`)}`);
+        logControleClientes('Erro ao salvar configuraÃ§Ã£o do robÃ´', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar configuraÃ§Ã£o do robÃ´: ${err.message}`)}`);
     }
 });
 
@@ -8467,10 +8545,10 @@ router.post('/manutencao/robo/imagem/:chave', bloquearManutencaoRestritaCliente,
             chave,
             arquivo: nomeArquivo
         });
-        res.redirect('/manutencao?mensagem=Imagem do robô atualizada com sucesso');
+        res.redirect('/manutencao?mensagem=Imagem do robÃ´ atualizada com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar imagem do robo', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robô: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar imagem do robÃ´: ${err.message}`)}`);
     }
 });
 
@@ -8488,10 +8566,10 @@ router.post('/manutencao/robo/imagem/:chave/limpar', bloquearManutencaoRestritaC
             arquivo: arquivoAnterior,
             arquivoRemovido
         });
-        res.redirect('/manutencao?mensagem=Imagem removida das mensagens do robô');
+        res.redirect('/manutencao?mensagem=Imagem removida das mensagens do robÃ´');
     } catch (err) {
         logControleClientes('Erro ao remover imagem do robo', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao remover imagem do robô: ${err.message}`)}`);
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao remover imagem do robÃ´: ${err.message}`)}`);
     }
 });
 
@@ -8573,7 +8651,7 @@ router.get('/modelos/novo', async (req, res) => {
             plano: 'padrao',
             cor: 'blue',
             ativo: 1,
-            texto: 'Olá, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
+            texto: 'OlÃ¡, *{{nome}}!*\n\nSeu plano *{{plano}}* vence em *{{dias}} dia(s)*, no dia *{{vencimento}}*.\n\nEntre em contato para renovar.'
         }),
         ativo: 'modelos'
     });
@@ -8583,7 +8661,7 @@ router.get('/modelos/:id/editar', async (req, res) => {
     const modelo = await buscarModeloPorId(req.params.id);
 
     if (!modelo) {
-        return res.redirect('/modelos?mensagem=Modelo não encontrado');
+        return res.redirect('/modelos?mensagem=Modelo nÃ£o encontrado');
     }
 
     await renderizar(res, {
@@ -8609,7 +8687,7 @@ router.post('/modelos/salvar', async (req, res) => {
 
 router.post('/modelos/:id/excluir', async (req, res) => {
     await removerModelo(req.params.id);
-    res.redirect('/modelos?mensagem=Modelo excluído');
+    res.redirect('/modelos?mensagem=Modelo excluÃ­do');
 });
 
 router.post('/configuracoes/painel', async (req, res) => {
@@ -8649,7 +8727,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
     if (!cliente) {
-        return res.redirect('/clientes/todos?mensagem=Cliente não encontrado');
+        return res.redirect('/clientes/todos?mensagem=Cliente nÃ£o encontrado');
     }
 
     const status = getStatusWhatsApp();
@@ -8660,7 +8738,7 @@ router.post('/clientes/:id/enviar-teste-liberado', async (req, res) => {
             clienteId: cliente.id,
             motivo: 'WhatsApp desconectado'
         });
-        return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp não está conectado`);
+        return res.redirect(`/clientes/${cliente.id}/editar?mensagem=WhatsApp nÃ£o estÃ¡ conectado`);
     }
 
     const acesso = primeiroAcessoApp(cliente);
@@ -8925,7 +9003,7 @@ router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
 
 router.post('/clientes/:id/excluir', async (req, res) => {
     await removerCliente(req.params.id);
-    res.redirect('/clientes/todos?mensagem=Cliente excluído');
+    res.redirect('/clientes/todos?mensagem=Cliente excluÃ­do');
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {
@@ -8954,10 +9032,10 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
         const totalEnviados = enviados + aniversarios + enviadosUmaHora + enviadosVencidosDias;
         const totalIgnorados = ignorados + ignoradosUmaHora + ignoradosVencidosDias;
         const mensagem = totalEnviados
-            ?`${enviados} aviso(s) de renovação, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversário(s) enviado(s).`
-            : 'Nenhum aviso novo para enviar agora. Os avisos podem já ter sido enviados para este vencimento.';
+            ?`${enviados} aviso(s) de renovaÃ§Ã£o, ${enviadosUmaHora} aviso(s) de 1 hora, ${enviadosVencidosDias} aviso(s) de vencidos 2/5 dias e ${aniversarios} aniversÃ¡rio(s) enviado(s).`
+            : 'Nenhum aviso novo para enviar agora. Os avisos podem jÃ¡ ter sido enviados para este vencimento.';
 
-        console.log(`[dashboard] Disparo manual concluído: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
+        console.log(`[dashboard] Disparo manual concluÃ­do: renovacao=${enviados}, umaHora=${enviadosUmaHora}, vencidosDias=${enviadosVencidosDias}, aniversarios=${aniversarios}, ignorados=${totalIgnorados}.`);
         logControleClientes('Disparo manual de avisos concluido', {
             renovacao: enviados,
             umaHora: enviadosUmaHora,
@@ -9055,7 +9133,7 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
     const client = getClient();
 
     if (!client || !status.conectado) {
-        return res.redirect(`/financeiro?mensagem=${encodeURIComponent('WhatsApp não está conectado.')}`);
+        return res.redirect(`/financeiro?mensagem=${encodeURIComponent('WhatsApp nÃ£o estÃ¡ conectado.')}`);
     }
 
     const clientes = await listarClientesVencidosParaCobranca(CODIGO_COBRANCA_VENCIDO);
@@ -9081,7 +9159,7 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
             );
             enviados += 1;
             await registrarAvisoRenovacaoProgramado(cliente.id, vencimento, CODIGO_COBRANCA_VENCIDO);
-            await adicionarNotaCliente(cliente.id, `Cobrança de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
+            await adicionarNotaCliente(cliente.id, `CobranÃ§a de vencido enviada pelo WhatsApp para o vencimento ${vencimento}.`);
             logControleClientes('Cobranca de vencido enviada', {
                 clienteId: cliente.id,
                 destino: envioWhatsApp.destino,
@@ -9097,9 +9175,8 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
         }
     }
 
-    res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobrança(s) enviada(s), ${ignorados} ignorada(s).`)}`);
+    res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobranÃ§a(s) enviada(s), ${ignorados} ignorada(s).`)}`);
 });
 
 module.exports = router;
-
 
