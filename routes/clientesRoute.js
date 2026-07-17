@@ -95,9 +95,13 @@ const {
     criarCampanha,
     atualizarCampanha,
     registrarItemCampanha,
+    atualizarItemCampanha,
     buscarCampanha,
     listarCampanhas,
-    listarItensCampanha
+    listarItensCampanha,
+    listarItensCampanhaPorStatus,
+    contarItensCampanhaPorStatus,
+    buscarCampanhaRetomavel
 } = require('../services/campanhasService');
 const menuRenovacao = require('../menus/renovacao');
 const { agoraSaoPauloInput, formatarDataHoraBrasil, partesDataHora } = require('../utils/dataHora');
@@ -3959,6 +3963,50 @@ function resumoNomesCampanha(lista = [], limite = 8) {
     return `${nomes.join(', ')}${restante ? ` e mais ${restante}` : ''}`;
 }
 
+function clienteDeItemCampanha(item = {}) {
+    return {
+        ...item,
+        id: item.clienteId || item.id,
+        nome: item.nome || item.clienteNome || 'Cliente sem nome',
+        telefone: item.telefone || '',
+        status: item.clienteStatus || item.status || '',
+        atualizadoEm: item.clienteAtualizadoEm || item.atualizadoEm || ''
+    };
+}
+
+function detalhesCampanha(campanha = {}) {
+    try {
+        return campanha?.detalhes ? JSON.parse(campanha.detalhes) : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+async function carregarResumoCampanhaNaMemoria(campanha) {
+    if (!campanha) return;
+
+    const detalhes = detalhesCampanha(campanha);
+    const totais = await contarItensCampanhaPorStatus(campanha.id);
+    const porStatus = Object.fromEntries(totais.map(item => [item.status, Number(item.total || 0)]));
+
+    campanhaAmizadeExecucao.id = campanha.id;
+    campanhaAmizadeExecucao.enviados = porStatus.enviado || 0;
+    campanhaAmizadeExecucao.ignorados = (porStatus.ignorado || 0) + (porStatus.erro || 0);
+    campanhaAmizadeExecucao.erros = porStatus.erro || Number(campanha.erros || 0);
+    campanhaAmizadeExecucao.jaEnviados = porStatus.ja_enviado || 0;
+    campanhaAmizadeExecucao.total = Number(campanha.total || Object.values(porStatus).reduce((soma, valor) => soma + valor, 0));
+    campanhaAmizadeExecucao.loteAtual = Number(campanha.loteAtual || 0);
+    campanhaAmizadeExecucao.totalLotes = Number(campanha.totalLotes || 0);
+    campanhaAmizadeExecucao.proximoLoteEm = campanha.proximoLoteEm || '';
+    campanhaAmizadeExecucao.iniciadaEm = campanha.iniciadaEm || '';
+    campanhaAmizadeExecucao.finalizadaEm = campanha.finalizadaEm || '';
+    campanhaAmizadeExecucao.mensagem = campanha.mensagem || 'Campanha carregada para retomada.';
+    campanhaAmizadeExecucao.erro = detalhes.erro || '';
+    campanhaAmizadeExecucao.clientesEnviados = Array.isArray(detalhes.enviados) ? detalhes.enviados : [];
+    campanhaAmizadeExecucao.clientesIgnorados = Array.isArray(detalhes.ignorados) ? detalhes.ignorados : [];
+    campanhaAmizadeExecucao.clientesJaEnviados = Array.isArray(detalhes.jaEnviados) ? detalhes.jaEnviados : [];
+}
+
 async function sincronizarCampanhaAtual(status = 'em_andamento', extras = {}) {
     if (!campanhaAmizadeExecucao.id) return null;
     const erros = Object.prototype.hasOwnProperty.call(extras, 'erros')
@@ -4176,12 +4224,13 @@ async function enviarCampanhaAmizadeManualPorId(clienteId, descricao = 'Campanha
     }
 }
 
-async function executarCampanhaAmizadeEmLotes() {
+async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
     const statusInicial = getStatusWhatsApp();
     const client = getClient();
     const config = await obterConfiguracoes();
     const telefoneInstalacao = telefoneCampanhaAmizade(statusInicial, config);
     let imagemCampanha = null;
+    const retomar = Boolean(opcoes.retomar);
 
     if (!client || !statusInicial.conectado) {
         throw new Error('WhatsApp nao esta conectado.');
@@ -4194,43 +4243,64 @@ async function executarCampanhaAmizadeEmLotes() {
     imagemCampanha = await criarImagemCampanhaAmizade(telefoneInstalacao, config);
 
     try {
-        const todosClientes = await listarClientesAtivosComerciais();
-        const clientesElegiveis = [];
+        let clientesElegiveis = [];
 
-        campanhaAmizadeExecucao.total = todosClientes.length;
-        await sincronizarCampanhaAtual('em_andamento');
+        if (retomar) {
+            const campanha = await buscarCampanha(campanhaAmizadeExecucao.id);
+            await carregarResumoCampanhaNaMemoria(campanha);
+            const pendentes = await listarItensCampanhaPorStatus(campanhaAmizadeExecucao.id, 'pendente', 5000);
+            clientesElegiveis = pendentes.map((item) => ({
+                ...clienteDeItemCampanha(item),
+                _campanhaItemId: item.id
+            })).filter(cliente => cliente.id);
+            campanhaAmizadeExecucao.mensagem = `Campanha retomada: ${clientesElegiveis.length} cliente(s) pendente(s).`;
+        } else {
+            const todosClientes = await listarClientesAtivosComerciais();
 
-        for (const cliente of todosClientes) {
-            const telefone = normalizarTelefoneClienteWhatsApp(cliente);
+            campanhaAmizadeExecucao.total = todosClientes.length;
+            await sincronizarCampanhaAtual('em_andamento');
 
-            if (!telefone || clienteEhTeste(cliente)) {
-                const motivo = clienteEhTeste(cliente) ? 'teste' : 'sem telefone';
-                campanhaAmizadeExecucao.ignorados += 1;
-                registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, motivo);
-                await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+            for (const cliente of todosClientes) {
+                const telefone = normalizarTelefoneClienteWhatsApp(cliente);
+
+                if (!telefone || clienteEhTeste(cliente)) {
+                    const motivo = clienteEhTeste(cliente) ? 'teste' : 'sem telefone';
+                    campanhaAmizadeExecucao.ignorados += 1;
+                    registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, motivo);
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        status: 'ignorado',
+                        motivo
+                    });
+                    continue;
+                }
+
+                if (await campanhaAmizadeJaEnviada(cliente.id)) {
+                    campanhaAmizadeExecucao.jaEnviados += 1;
+                    registrarClienteCampanha(campanhaAmizadeExecucao.clientesJaEnviados, cliente, 'ja enviado');
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        status: 'ja_enviado',
+                        motivo: 'ja enviado anteriormente'
+                    });
+                    continue;
+                }
+
+                const itemId = await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
                     telefone,
-                    status: 'ignorado',
-                    motivo
+                    status: 'pendente',
+                    motivo: 'aguardando envio'
                 });
-                continue;
-            }
-
-            if (await campanhaAmizadeJaEnviada(cliente.id)) {
-                campanhaAmizadeExecucao.jaEnviados += 1;
-                registrarClienteCampanha(campanhaAmizadeExecucao.clientesJaEnviados, cliente, 'ja enviado');
-                await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
-                    telefone,
-                    status: 'ja_enviado',
-                    motivo: 'ja enviado anteriormente'
+                clientesElegiveis.push({
+                    ...cliente,
+                    _campanhaItemId: itemId
                 });
-                continue;
             }
-
-            clientesElegiveis.push(cliente);
         }
 
+        const totalElegivel = campanhaAmizadeExecucao.enviados + clientesElegiveis.length;
         campanhaAmizadeExecucao.totalLotes = Math.max(1, Math.ceil(clientesElegiveis.length / CAMPANHA_AMIZADE_LOTE_TAMANHO));
-        campanhaAmizadeExecucao.mensagem = `Campanha em andamento: 0 de ${clientesElegiveis.length} cliente(s) elegivel(is) enviados.`;
+        campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${totalElegivel} cliente(s) elegivel(is) enviados.`;
         await sincronizarCampanhaAtual('em_andamento');
 
         for (let indice = 0; indice < clientesElegiveis.length; indice += CAMPANHA_AMIZADE_LOTE_TAMANHO) {
@@ -4269,10 +4339,10 @@ async function executarCampanhaAmizadeEmLotes() {
                     await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada pelo WhatsApp.');
                     campanhaAmizadeExecucao.enviados += 1;
                     registrarClienteCampanha(campanhaAmizadeExecucao.clientesEnviados, cliente);
-                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
-                        telefone,
+                    await atualizarItemCampanha(cliente._campanhaItemId, {
                         destino: envioCampanha?.destino || telefone,
                         status: 'enviado',
+                        motivo: '',
                         enviadoEm: new Date().toISOString()
                     });
                 } catch (err) {
@@ -4283,8 +4353,7 @@ async function executarCampanhaAmizadeEmLotes() {
                     campanhaAmizadeExecucao.ignorados += 1;
                     campanhaAmizadeExecucao.erros += 1;
                     registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, err.message);
-                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
-                        telefone,
+                    await atualizarItemCampanha(cliente._campanhaItemId, {
                         status: 'erro',
                         motivo: err.message
                     });
@@ -4295,7 +4364,7 @@ async function executarCampanhaAmizadeEmLotes() {
                     });
                 }
 
-                campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${clientesElegiveis.length} cliente(s) elegivel(is) enviados.`;
+                campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${totalElegivel} cliente(s) elegivel(is) enviados.`;
                 await sincronizarCampanhaAtual('em_andamento');
             }
 
@@ -6180,8 +6249,9 @@ function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
     </div>`;
 }
 
-function telaCampanhas({ campanhas = [], campanha = null, itens = [] }) {
+function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRetomavel = null }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
+    const retomavel = !ativa && campanhaRetomavel ? campanhaRetomavel : null;
     const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
     const totalEnviados = campanhas.reduce((soma, item) => soma + Number(item.enviados || 0), 0);
     const totalErros = campanhas.reduce((soma, item) => soma + Number(item.erros || 0), 0);
@@ -6214,6 +6284,22 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [] }) {
             Ignorados: ${escapar(resumoNomesCampanha(ativa.clientesIgnorados) || '-')}<br>
             Ja tinham recebido: ${escapar(resumoNomesCampanha(ativa.clientesJaEnviados) || '-')}
         </div>
+    </section>` : ''}
+    ${retomavel ? `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Campanha pendente encontrada</h2>
+                <div class="subtitle">Existe uma campanha interrompida com clientes ainda pendentes. Retome para continuar sem reenviar para quem ja recebeu.</div>
+                <div class="helper">Campanha #${escapar(retomavel.id)} - ${escapar(textoStatusCampanha(retomavel.status))}</div>
+            </div>
+            <span class="badge orange">Pendente</span>
+        </div>
+        <div class="notice warn">Use retomar campanha antes de iniciar outro disparo. O sistema usa a fila salva no banco e continua apenas os pendentes.</div>
+        <form method="post" action="/campanhas/amizade/retomar" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+            <input type="hidden" name="campanhaId" value="${escapar(retomavel.id)}">
+            <input type="hidden" name="retorno" value="/campanhas">
+            <button class="button green" type="submit">${icon('refresh')} Retomar campanha</button>
+        </form>
     </section>` : ''}
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -7823,10 +7909,11 @@ router.get('/campanhas', async (req, res) => {
     const idSelecionado = req.query.id || campanhas[0]?.id;
     const campanha = idSelecionado ? await buscarCampanha(idSelecionado) : null;
     const itens = campanha ? await listarItensCampanha(campanha.id, 300) : [];
+    const campanhaRetomavel = campanhaAmizadeExecucao.emAndamento ? null : await buscarCampanhaRetomavel();
 
     await renderizar(res, {
         titulo: 'Campanhas',
-        conteudo: telaCampanhas({ campanhas, campanha, itens }),
+        conteudo: telaCampanhas({ campanhas, campanha, itens, campanhaRetomavel }),
         mensagem: req.query.mensagem || '',
         ativo: 'campanhas'
     });
@@ -9715,6 +9802,112 @@ function retornoCampanha(req) {
     return retorno === '/clientes' ? '/clientes' : '/campanhas';
 }
 
+function iniciarExecucaoCampanhaAmizade(config, opcoes = {}) {
+    setImmediate(() => {
+        executarCampanhaAmizadeEmLotes(opcoes)
+            .catch((err) => {
+                if (err.campanhaCancelada) {
+                    campanhaAmizadeExecucao.cancelada = true;
+                    campanhaAmizadeExecucao.canceladaEm = campanhaAmizadeExecucao.canceladaEm || new Date().toISOString();
+                    campanhaAmizadeExecucao.mensagem = `Campanha cancelada: ${campanhaAmizadeExecucao.enviados} enviado(s), ${campanhaAmizadeExecucao.ignorados} ignorado(s), ${campanhaAmizadeExecucao.jaEnviados} ja tinham recebido.`;
+                    sincronizarCampanhaAtual('cancelada', {
+                        finalizadaEm: new Date().toISOString()
+                    });
+                    logControleClientes('Campanha amizade cancelada pelo painel', {
+                        enviados: campanhaAmizadeExecucao.enviados,
+                        ignorados: campanhaAmizadeExecucao.ignorados,
+                        jaEnviados: campanhaAmizadeExecucao.jaEnviados
+                    });
+                    return;
+                }
+
+                campanhaAmizadeExecucao.erro = err.message;
+                campanhaAmizadeExecucao.erros = Math.max(1, Number(campanhaAmizadeExecucao.erros || 0));
+                campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}. Retome depois que o WhatsApp estabilizar.`;
+                sincronizarCampanhaAtual('interrompida', {
+                    erros: campanhaAmizadeExecucao.erros
+                });
+                logControleClientes('Campanha amizade interrompida', { erro: err.message });
+            })
+            .finally(() => {
+                campanhaAmizadeExecucao.emAndamento = false;
+                campanhaAmizadeExecucao.pausada = false;
+                campanhaAmizadeExecucao.finalizadaEm = new Date().toISOString();
+                campanhaAmizadeExecucao.proximoLoteEm = '';
+                const statusFinal = campanhaAmizadeExecucao.cancelada ? 'cancelada' : campanhaAmizadeExecucao.erro ? 'interrompida' : 'concluida';
+                sincronizarCampanhaAtual(statusFinal, {
+                    finalizadaEm: campanhaAmizadeExecucao.finalizadaEm
+                });
+                enviarWebhook(config.alertaWebhookUrl, {
+                    tipo: campanhaAmizadeExecucao.cancelada ? 'campanha_cancelada' : campanhaAmizadeExecucao.erro ? 'campanha_interrompida' : 'campanha_concluida',
+                    nivel: campanhaAmizadeExecucao.cancelada ? 'aviso' : campanhaAmizadeExecucao.erro ? 'erro' : 'sucesso',
+                    mensagem: campanhaAmizadeExecucao.mensagem,
+                    data: campanhaAmizadeExecucao.finalizadaEm,
+                    detalhes: {
+                        campanhaId: campanhaAmizadeExecucao.id,
+                        enviados: campanhaAmizadeExecucao.enviados,
+                        ignorados: campanhaAmizadeExecucao.ignorados,
+                        jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+                        erro: campanhaAmizadeExecucao.erro || ''
+                    }
+                });
+            });
+    });
+}
+
+router.post('/campanhas/amizade/retomar', async (req, res) => {
+    const retorno = retornoCampanha(req);
+
+    if (campanhaAmizadeExecucao.emAndamento) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Campanha ja esta em andamento. Aguarde finalizar antes de retomar outra.')}`);
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+    const config = await obterConfiguracoes();
+
+    if (!client || !status.conectado) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('WhatsApp nao esta conectado. Reconecte antes de retomar a campanha.')}`);
+    }
+
+    if (!fs.existsSync(obterImagemBaseCampanhaAmizade(config))) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Imagem da campanha nao encontrada. Gere o pacote novamente.')}`);
+    }
+
+    const campanhaId = Number(req.body?.campanhaId || 0);
+    const campanha = await buscarCampanhaRetomavel(campanhaId || null);
+
+    if (!campanha) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Nenhuma campanha pendente encontrada para retomar.')}`);
+    }
+
+    limparStatusCampanhaAmizade();
+    await carregarResumoCampanhaNaMemoria(campanha);
+    campanhaAmizadeExecucao.emAndamento = true;
+    campanhaAmizadeExecucao.pausada = false;
+    campanhaAmizadeExecucao.cancelada = false;
+    campanhaAmizadeExecucao.erro = '';
+    campanhaAmizadeExecucao.finalizadaEm = '';
+    campanhaAmizadeExecucao.mensagem = 'Campanha retomada. O sistema vai enviar somente os clientes pendentes.';
+    await sincronizarCampanhaAtual('em_andamento');
+    await enviarWebhook(config.alertaWebhookUrl, {
+        tipo: 'campanha_retomada_apos_reinicio',
+        nivel: 'info',
+        mensagem: campanhaAmizadeExecucao.mensagem,
+        data: new Date().toISOString(),
+        detalhes: {
+            campanhaId: campanhaAmizadeExecucao.id,
+            enviados: campanhaAmizadeExecucao.enviados,
+            ignorados: campanhaAmizadeExecucao.ignorados,
+            jaEnviados: campanhaAmizadeExecucao.jaEnviados
+        }
+    });
+
+    iniciarExecucaoCampanhaAmizade(config, { retomar: true });
+
+    return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Campanha retomada. O envio continuara apenas para clientes pendentes.')}`);
+});
+
 router.post('/campanhas/amizade/pausar', async (req, res) => {
     if (!campanhaAmizadeExecucao.emAndamento) {
         return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Nenhuma campanha em andamento para pausar.')}`);
@@ -9847,57 +10040,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
             }
         });
 
-        setImmediate(() => {
-            executarCampanhaAmizadeEmLotes()
-                .catch((err) => {
-                    if (err.campanhaCancelada) {
-                        campanhaAmizadeExecucao.cancelada = true;
-                        campanhaAmizadeExecucao.canceladaEm = campanhaAmizadeExecucao.canceladaEm || new Date().toISOString();
-                        campanhaAmizadeExecucao.mensagem = `Campanha cancelada: ${campanhaAmizadeExecucao.enviados} enviado(s), ${campanhaAmizadeExecucao.ignorados} ignorado(s), ${campanhaAmizadeExecucao.jaEnviados} ja tinham recebido.`;
-                        sincronizarCampanhaAtual('cancelada', {
-                            finalizadaEm: new Date().toISOString()
-                        });
-                        logControleClientes('Campanha amizade cancelada pelo painel', {
-                            enviados: campanhaAmizadeExecucao.enviados,
-                            ignorados: campanhaAmizadeExecucao.ignorados,
-                            jaEnviados: campanhaAmizadeExecucao.jaEnviados
-                        });
-                        return;
-                    }
-
-                    campanhaAmizadeExecucao.erro = err.message;
-                    campanhaAmizadeExecucao.erros = Math.max(1, Number(campanhaAmizadeExecucao.erros || 0));
-                    campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}`;
-                    sincronizarCampanhaAtual('erro', {
-                        erros: campanhaAmizadeExecucao.erros,
-                        finalizadaEm: new Date().toISOString()
-                    });
-                    logControleClientes('Campanha amizade interrompida', { erro: err.message });
-                })
-                .finally(() => {
-                    campanhaAmizadeExecucao.emAndamento = false;
-                    campanhaAmizadeExecucao.pausada = false;
-                    campanhaAmizadeExecucao.finalizadaEm = new Date().toISOString();
-                    campanhaAmizadeExecucao.proximoLoteEm = '';
-                    const statusFinal = campanhaAmizadeExecucao.cancelada ? 'cancelada' : campanhaAmizadeExecucao.erro ? 'erro' : 'concluida';
-                    sincronizarCampanhaAtual(statusFinal, {
-                        finalizadaEm: campanhaAmizadeExecucao.finalizadaEm
-                    });
-                    enviarWebhook(config.alertaWebhookUrl, {
-                        tipo: campanhaAmizadeExecucao.cancelada ? 'campanha_cancelada' : campanhaAmizadeExecucao.erro ? 'campanha_erro' : 'campanha_concluida',
-                        nivel: campanhaAmizadeExecucao.cancelada ? 'aviso' : campanhaAmizadeExecucao.erro ? 'erro' : 'sucesso',
-                        mensagem: campanhaAmizadeExecucao.mensagem,
-                        data: campanhaAmizadeExecucao.finalizadaEm,
-                        detalhes: {
-                            campanhaId: campanhaAmizadeExecucao.id,
-                            enviados: campanhaAmizadeExecucao.enviados,
-                            ignorados: campanhaAmizadeExecucao.ignorados,
-                            jaEnviados: campanhaAmizadeExecucao.jaEnviados,
-                            erro: campanhaAmizadeExecucao.erro || ''
-                        }
-                    });
-                });
-        });
+        iniciarExecucaoCampanhaAmizade(config);
     } catch (err) {
         logControleClientes('Erro ao preparar campanha amizade', { erro: err.message });
         campanhaAmizadeExecucao.emAndamento = false;
