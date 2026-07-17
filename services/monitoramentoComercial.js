@@ -2,6 +2,8 @@ const {
     obterConfiguracoes,
     salvarConfiguracao
 } = require('./configuracoesPainel');
+const os = require('os');
+const pacote = require('../package.json');
 const {
     criarBackupAutomatico,
     limparBackupsAutomaticos
@@ -40,6 +42,36 @@ function agoraSaoPaulo() {
     };
 }
 
+function montarPayloadWebhook(evento = {}) {
+    const agora = agoraSaoPaulo();
+    const detalhes = evento.detalhes && typeof evento.detalhes === 'object'
+        ? evento.detalhes
+        : {};
+
+    return {
+        content: evento.mensagem || 'Evento do Controle de Clientes',
+        sistema: 'Controle de Clientes Julian Play',
+        app: pacote.name || 'julian-play',
+        versao: pacote.version || '',
+        ambiente: process.env.NODE_ENV || 'production',
+        servidor: os.hostname(),
+        pid: process.pid,
+        porta: process.env.PORT || process.env.APP_PORT || '',
+        timezone: 'America/Sao_Paulo',
+        data: evento.data || agora.iso,
+        dataSaoPaulo: agora.iso,
+        dataServidor: new Date().toISOString(),
+        tipo: evento.tipo || 'evento',
+        nivel: evento.nivel || 'info',
+        mensagem: evento.mensagem || '',
+        statusWhatsApp: evento.statusWhatsApp || null,
+        detalhes: {
+            ...detalhes,
+            origem: detalhes.origem || 'monitoramento_comercial'
+        }
+    };
+}
+
 async function enviarWebhook(url, evento) {
     if (!url) return false;
 
@@ -47,10 +79,7 @@ async function enviarWebhook(url, evento) {
         const resposta = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                content: evento.mensagem,
-                ...evento
-            }),
+            body: JSON.stringify(montarPayloadWebhook(evento)),
             signal: AbortSignal.timeout(15000)
         });
 
@@ -318,5 +347,6 @@ module.exports = {
     iniciarMonitoramentoComercial,
     executarMonitoramento,
     agoraSaoPaulo,
+    enviarWebhook,
     testarWebhookAlertas
 };

@@ -90,7 +90,15 @@ const {
     listarPlanosComerciais,
     montarPlanosPadraoComerciais
 } = require('../services/pixService');
-const { testarWebhookAlertas } = require('../services/monitoramentoComercial');
+const { testarWebhookAlertas, enviarWebhook } = require('../services/monitoramentoComercial');
+const {
+    criarCampanha,
+    atualizarCampanha,
+    registrarItemCampanha,
+    buscarCampanha,
+    listarCampanhas,
+    listarItensCampanha
+} = require('../services/campanhasService');
 const menuRenovacao = require('../menus/renovacao');
 const { agoraSaoPauloInput, formatarDataHoraBrasil, partesDataHora } = require('../utils/dataHora');
 const {
@@ -123,11 +131,13 @@ const RENOVACAO_SUBMISSAO_DUPLICADA_MS = 120000;
 const mensagensWhatsAppRecentes = new Map();
 const renovacoesRecentes = new Map();
 const campanhaAmizadeExecucao = {
+    id: null,
     emAndamento: false,
     iniciadaEm: '',
     finalizadaEm: '',
     enviados: 0,
     ignorados: 0,
+    erros: 0,
     jaEnviados: 0,
     total: 0,
     loteAtual: 0,
@@ -2473,6 +2483,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
                 <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
                 <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
+                <a class="navlink ${ativo === 'campanhas' ?'active' : ''}" href="/campanhas">${icon('whats')} Campanhas</a>
                 <a class="navlink ${ativo === 'planos' ?'active' : ''}" href="/planos">${icon('planos')} Planos</a>
                 <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ?'active' : ''}" href="/apps">${icon('apps')} Apps</a>
@@ -3901,11 +3912,13 @@ async function simularDigitacaoDestino(client, destino, minimoMs, maximoMs) {
 
 function limparStatusCampanhaAmizade() {
     Object.assign(campanhaAmizadeExecucao, {
+        id: null,
         emAndamento: false,
         iniciadaEm: '',
         finalizadaEm: '',
         enviados: 0,
         ignorados: 0,
+        erros: 0,
         jaEnviados: 0,
         total: 0,
         loteAtual: 0,
@@ -3936,6 +3949,37 @@ function resumoNomesCampanha(lista = [], limite = 8) {
 
     if (!nomes.length) return '';
     return `${nomes.join(', ')}${restante ? ` e mais ${restante}` : ''}`;
+}
+
+async function sincronizarCampanhaAtual(status = 'em_andamento', extras = {}) {
+    if (!campanhaAmizadeExecucao.id) return null;
+    const erros = Object.prototype.hasOwnProperty.call(extras, 'erros')
+        ? Number(extras.erros || 0)
+        : Number(campanhaAmizadeExecucao.erros || 0);
+
+    return atualizarCampanha(campanhaAmizadeExecucao.id, {
+        status,
+        total: campanhaAmizadeExecucao.total,
+        enviados: campanhaAmizadeExecucao.enviados,
+        ignorados: campanhaAmizadeExecucao.ignorados,
+        jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+        erros,
+        loteAtual: campanhaAmizadeExecucao.loteAtual,
+        totalLotes: campanhaAmizadeExecucao.totalLotes,
+        proximoLoteEm: campanhaAmizadeExecucao.proximoLoteEm,
+        mensagem: campanhaAmizadeExecucao.mensagem,
+        detalhes: {
+            enviados: campanhaAmizadeExecucao.clientesEnviados,
+            ignorados: campanhaAmizadeExecucao.clientesIgnorados,
+            jaEnviados: campanhaAmizadeExecucao.clientesJaEnviados,
+            erros: campanhaAmizadeExecucao.erros || 0,
+            erro: campanhaAmizadeExecucao.erro || ''
+        },
+        ...extras
+    }).catch((err) => {
+        console.log(`[clientes] Nao foi possivel atualizar campanha ${campanhaAmizadeExecucao.id}: ${err.message}`);
+        return null;
+    });
 }
 
 function executarPowerShell(args) {
@@ -4111,19 +4155,31 @@ async function executarCampanhaAmizadeEmLotes() {
         const clientesElegiveis = [];
 
         campanhaAmizadeExecucao.total = todosClientes.length;
+        await sincronizarCampanhaAtual('em_andamento');
 
         for (const cliente of todosClientes) {
             const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
             if (!telefone || clienteEhTeste(cliente)) {
+                const motivo = clienteEhTeste(cliente) ? 'teste' : 'sem telefone';
                 campanhaAmizadeExecucao.ignorados += 1;
-                registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, clienteEhTeste(cliente) ? 'teste' : 'sem telefone');
+                registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, motivo);
+                await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                    telefone,
+                    status: 'ignorado',
+                    motivo
+                });
                 continue;
             }
 
             if (await campanhaAmizadeJaEnviada(cliente.id)) {
                 campanhaAmizadeExecucao.jaEnviados += 1;
                 registrarClienteCampanha(campanhaAmizadeExecucao.clientesJaEnviados, cliente, 'ja enviado');
+                await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                    telefone,
+                    status: 'ja_enviado',
+                    motivo: 'ja enviado anteriormente'
+                });
                 continue;
             }
 
@@ -4132,6 +4188,7 @@ async function executarCampanhaAmizadeEmLotes() {
 
         campanhaAmizadeExecucao.totalLotes = Math.max(1, Math.ceil(clientesElegiveis.length / CAMPANHA_AMIZADE_LOTE_TAMANHO));
         campanhaAmizadeExecucao.mensagem = `Campanha em andamento: 0 de ${clientesElegiveis.length} cliente(s) elegivel(is) enviados.`;
+        await sincronizarCampanhaAtual('em_andamento');
 
         for (let indice = 0; indice < clientesElegiveis.length; indice += CAMPANHA_AMIZADE_LOTE_TAMANHO) {
             const statusAtual = getStatusWhatsApp();
@@ -4143,13 +4200,14 @@ async function executarCampanhaAmizadeEmLotes() {
             const lote = clientesElegiveis.slice(indice, indice + CAMPANHA_AMIZADE_LOTE_TAMANHO);
             campanhaAmizadeExecucao.loteAtual = Math.floor(indice / CAMPANHA_AMIZADE_LOTE_TAMANHO) + 1;
             campanhaAmizadeExecucao.proximoLoteEm = '';
+            await sincronizarCampanhaAtual('em_andamento');
 
             for (const cliente of lote) {
                 const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
                 try {
                     const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao));
-                    await enviarImagemWhatsAppComFallback(
+                    const envioCampanha = await enviarImagemWhatsAppComFallback(
                         client,
                         telefone,
                         imagemCampanha.arquivo,
@@ -4166,13 +4224,25 @@ async function executarCampanhaAmizadeEmLotes() {
                     await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada pelo WhatsApp.');
                     campanhaAmizadeExecucao.enviados += 1;
                     registrarClienteCampanha(campanhaAmizadeExecucao.clientesEnviados, cliente);
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        destino: envioCampanha?.destino || telefone,
+                        status: 'enviado',
+                        enviadoEm: new Date().toISOString()
+                    });
                 } catch (err) {
                     if (/WhatsApp nao esta conectado|WhatsApp desconectou|detached Frame|Execution context|Protocol|Runtime\.callFunctionOn/i.test(err.message || '')) {
                         throw err;
                     }
 
                     campanhaAmizadeExecucao.ignorados += 1;
+                    campanhaAmizadeExecucao.erros += 1;
                     registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, err.message);
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        status: 'erro',
+                        motivo: err.message
+                    });
                     logControleClientes('Erro ao enviar campanha amizade em lote', {
                         clienteId: cliente.id,
                         telefone,
@@ -4181,6 +4251,7 @@ async function executarCampanhaAmizadeEmLotes() {
                 }
 
                 campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${clientesElegiveis.length} cliente(s) elegivel(is) enviados.`;
+                await sincronizarCampanhaAtual('em_andamento');
             }
 
             const aindaTemLote = indice + CAMPANHA_AMIZADE_LOTE_TAMANHO < clientesElegiveis.length;
@@ -4192,11 +4263,13 @@ async function executarCampanhaAmizadeEmLotes() {
                 );
                 campanhaAmizadeExecucao.proximoLoteEm = new Date(Date.now() + intervaloLoteMs).toISOString();
                 campanhaAmizadeExecucao.mensagem = `Lote ${campanhaAmizadeExecucao.loteAtual} concluido. Proximo lote em aproximadamente ${textoIntervaloSegundos(intervaloLoteMs)}.`;
+                await sincronizarCampanhaAtual('em_andamento');
                 await esperar(intervaloLoteMs);
             }
         }
 
         campanhaAmizadeExecucao.mensagem = `Campanha concluida: ${campanhaAmizadeExecucao.enviados} enviado(s), ${campanhaAmizadeExecucao.ignorados} ignorado(s), ${campanhaAmizadeExecucao.jaEnviados} ja tinham recebido.`;
+        await sincronizarCampanhaAtual('concluida', { finalizadaEm: new Date().toISOString() });
         logControleClientes('Campanha amizade que vale presente concluida em lotes', {
             enviados: campanhaAmizadeExecucao.enviados,
             ignorados: campanhaAmizadeExecucao.ignorados,
@@ -6021,6 +6094,104 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }
     </nav>`;
 }
 
+function classeStatusCampanha(status) {
+    const valor = String(status || '').toLowerCase();
+
+    if (['concluida', 'sucesso'].includes(valor)) return 'green';
+    if (['erro', 'interrompida'].includes(valor)) return 'red';
+    if (['em_andamento', 'preparando'].includes(valor)) return 'orange';
+    return 'blue';
+}
+
+function textoStatusCampanha(status) {
+    const mapa = {
+        em_andamento: 'Em andamento',
+        preparando: 'Preparando',
+        concluida: 'Concluida',
+        erro: 'Erro',
+        rascunho: 'Rascunho'
+    };
+
+    return mapa[String(status || '').toLowerCase()] || (status || '-');
+}
+
+function telaCampanhas({ campanhas = [], campanha = null, itens = [] }) {
+    const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
+    const totalAtivas = campanhas.filter(item => String(item.status || '') === 'em_andamento').length;
+    const totalEnviados = campanhas.reduce((soma, item) => soma + Number(item.enviados || 0), 0);
+    const totalErros = campanhas.reduce((soma, item) => soma + Number(item.erros || 0), 0);
+    const totalIgnorados = campanhas.reduce((soma, item) => soma + Number(item.ignorados || 0), 0);
+    const campanhaSelecionada = campanha || campanhas[0] || null;
+
+    return `<section class="page-title">
+        <h1>Campanhas</h1>
+        <div class="subtitle">Acompanhe envios, lotes, clientes enviados e erros de campanha.</div>
+    </section>
+    <section class="metrics dashboard-metrics">
+        ${metricCard({ label: 'Em andamento', valor: totalAtivas, nota: ativa ? `Lote ${ativa.loteAtual || 0} de ${ativa.totalLotes || 0}` : 'Nenhuma fila ativa', tipo: ativa ? 'orange' : 'green', icone: 'whats' })}
+        ${metricCard({ label: 'Enviadas', valor: totalEnviados, nota: 'Total historico', tipo: 'green', icone: 'check' })}
+        ${metricCard({ label: 'Ignoradas', valor: totalIgnorados, nota: 'Teste, sem telefone ou ja enviado', tipo: totalIgnorados ? 'orange' : 'info', icone: 'alert' })}
+        ${metricCard({ label: 'Erros', valor: totalErros, nota: 'Falhas registradas', tipo: totalErros ? 'red' : 'green', icone: 'close' })}
+    </section>
+    ${ativa ? `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Campanha em execucao</h2>
+                <div class="subtitle">${escapar(ativa.mensagem || 'Envio em andamento.')}</div>
+                ${ativa.proximoLoteEm ? `<div class="helper">Proximo lote: ${escapar(formatarDataHoraCurta(ativa.proximoLoteEm))}</div>` : ''}
+            </div>
+            <span class="badge orange">Nao iniciar outro envio</span>
+        </div>
+        <div class="notice warn">O processo esta sendo executado. O botao de disparo fica bloqueado ate o fim para evitar duplicidade.</div>
+        <div class="helper" style="margin-top:10px;">
+            Enviados: ${escapar(resumoNomesCampanha(ativa.clientesEnviados) || '-')}<br>
+            Ignorados: ${escapar(resumoNomesCampanha(ativa.clientesIgnorados) || '-')}<br>
+            Ja tinham recebido: ${escapar(resumoNomesCampanha(ativa.clientesJaEnviados) || '-')}
+        </div>
+    </section>` : ''}
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Campanhas registradas</h2>
+                <div class="subtitle">${campanhas.length} campanha(s) no historico.</div>
+            </div>
+            <a class="button green" href="/clientes">${icon('whats')} Disparar pelo painel</a>
+        </div>
+        ${campanhas.length ? `<div class="table-wrap"><table>
+            <thead><tr><th>Campanha</th><th>Status</th><th>Inicio</th><th>Resultado</th><th>Proximo lote</th><th>Acoes</th></tr></thead>
+            <tbody>${campanhas.map(item => `<tr>
+                <td><strong>${escapar(item.nome)}</strong><div class="helper">${escapar(item.publico || '')}</div></td>
+                <td><span class="badge ${classeStatusCampanha(item.status)}">${escapar(textoStatusCampanha(item.status))}</span></td>
+                <td>${escapar(formatarDataHoraCurta(item.iniciadaEm || item.criadoEm))}</td>
+                <td>${Number(item.enviados || 0)} enviado(s), ${Number(item.ignorados || 0)} ignorado(s), ${Number(item.jaEnviados || 0)} repetido(s), ${Number(item.erros || 0)} erro(s)</td>
+                <td>${item.proximoLoteEm ? escapar(formatarDataHoraCurta(item.proximoLoteEm)) : '-'}</td>
+                <td><a class="button secondary" href="/campanhas?id=${escapar(item.id)}">Detalhes</a></td>
+            </tr>`).join('')}</tbody>
+        </table></div>` : '<div class="empty">Nenhuma campanha registrada ainda.</div>'}
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Clientes da campanha</h2>
+                <div class="subtitle">${campanhaSelecionada ? escapar(campanhaSelecionada.nome) : 'Selecione uma campanha para ver os clientes.'}</div>
+            </div>
+            ${campanhaSelecionada ? `<span class="badge ${classeStatusCampanha(campanhaSelecionada.status)}">${escapar(textoStatusCampanha(campanhaSelecionada.status))}</span>` : ''}
+        </div>
+        ${campanhaSelecionada && itens.length ? `<div class="table-wrap"><table>
+            <thead><tr><th>Cliente</th><th>Telefone</th><th>Status</th><th>Destino</th><th>Data</th><th>Motivo</th></tr></thead>
+            <tbody>${itens.map(item => `<tr>
+                <td><strong>${escapar(item.clienteNome || '-')}</strong></td>
+                <td>${escapar(item.telefone || '-')}</td>
+                <td><span class="badge ${item.status === 'enviado' ? 'green' : item.status === 'erro' ? 'red' : 'orange'}">${escapar(item.status || '-')}</span></td>
+                <td>${escapar(item.destino || '-')}</td>
+                <td>${escapar(formatarDataHoraCurta(item.enviadoEm || item.criadoEm))}</td>
+                <td>${escapar(item.motivo || '-')}</td>
+            </tr>`).join('')}</tbody>
+        </table></div>` : '<div class="empty">Nenhum cliente registrado para esta campanha.</div>'}
+    </section>
+    ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
+}
+
 function receitaMensalCard(receita) {
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
@@ -6115,6 +6286,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                <a class="button secondary" href="/campanhas">Ver campanhas</a>
                 <form method="post" action="/clientes/disparar-amizade-presente-cliente" onsubmit="return confirm('Enviar a campanha somente para o cliente selecionado?');" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <select name="clienteId" required style="min-width:220px;">
                         <option value="">Enviar para 1 cliente...</option>
@@ -7575,6 +7747,21 @@ router.get('/clientes', async (req, res) => {
         conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial),
         mensagem,
         ativo: 'painel'
+    });
+});
+
+router.get('/campanhas', async (req, res) => {
+    desativarCache(res);
+    const campanhas = await listarCampanhas(40);
+    const idSelecionado = req.query.id || campanhas[0]?.id;
+    const campanha = idSelecionado ? await buscarCampanha(idSelecionado) : null;
+    const itens = campanha ? await listarItensCampanha(campanha.id, 300) : [];
+
+    await renderizar(res, {
+        titulo: 'Campanhas',
+        conteudo: telaCampanhas({ campanhas, campanha, itens }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'campanhas'
     });
 });
 
@@ -9475,27 +9662,76 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
 
     try {
         limparStatusCampanhaAmizade();
+        const campanha = await criarCampanha({
+            nome: 'Amizade que vale presente',
+            modeloChave: 'campanha_amizade_presente',
+            publico: 'Clientes ativos, exceto testes',
+            imagem: path.basename(obterImagemBaseCampanhaAmizade(config)),
+            status: 'em_andamento',
+            iniciadaEm: new Date().toISOString(),
+            mensagem: 'Campanha iniciada. Enviando em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos.'
+        });
+
+        campanhaAmizadeExecucao.id = campanha?.id || null;
         campanhaAmizadeExecucao.emAndamento = true;
         campanhaAmizadeExecucao.iniciadaEm = new Date().toISOString();
         campanhaAmizadeExecucao.mensagem = 'Campanha iniciada. Enviando em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos.';
+        await enviarWebhook(config.alertaWebhookUrl, {
+            tipo: 'campanha_iniciada',
+            nivel: 'info',
+            mensagem: campanhaAmizadeExecucao.mensagem,
+            data: campanhaAmizadeExecucao.iniciadaEm,
+            detalhes: {
+                campanhaId: campanhaAmizadeExecucao.id,
+                nome: 'Amizade que vale presente',
+                loteTamanho: CAMPANHA_AMIZADE_LOTE_TAMANHO,
+                intervaloLotesSegundos: [150, 210]
+            }
+        });
 
         setImmediate(() => {
             executarCampanhaAmizadeEmLotes()
                 .catch((err) => {
                     campanhaAmizadeExecucao.erro = err.message;
+                    campanhaAmizadeExecucao.erros = Math.max(1, Number(campanhaAmizadeExecucao.erros || 0));
                     campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}`;
+                    sincronizarCampanhaAtual('erro', {
+                        erros: campanhaAmizadeExecucao.erros,
+                        finalizadaEm: new Date().toISOString()
+                    });
                     logControleClientes('Campanha amizade interrompida', { erro: err.message });
                 })
                 .finally(() => {
                     campanhaAmizadeExecucao.emAndamento = false;
                     campanhaAmizadeExecucao.finalizadaEm = new Date().toISOString();
                     campanhaAmizadeExecucao.proximoLoteEm = '';
+                    const statusFinal = campanhaAmizadeExecucao.erro ? 'erro' : 'concluida';
+                    sincronizarCampanhaAtual(statusFinal, {
+                        finalizadaEm: campanhaAmizadeExecucao.finalizadaEm
+                    });
+                    enviarWebhook(config.alertaWebhookUrl, {
+                        tipo: campanhaAmizadeExecucao.erro ? 'campanha_erro' : 'campanha_concluida',
+                        nivel: campanhaAmizadeExecucao.erro ? 'erro' : 'sucesso',
+                        mensagem: campanhaAmizadeExecucao.mensagem,
+                        data: campanhaAmizadeExecucao.finalizadaEm,
+                        detalhes: {
+                            campanhaId: campanhaAmizadeExecucao.id,
+                            enviados: campanhaAmizadeExecucao.enviados,
+                            ignorados: campanhaAmizadeExecucao.ignorados,
+                            jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+                            erro: campanhaAmizadeExecucao.erro || ''
+                        }
+                    });
                 });
         });
     } catch (err) {
         logControleClientes('Erro ao preparar campanha amizade', { erro: err.message });
         campanhaAmizadeExecucao.emAndamento = false;
         campanhaAmizadeExecucao.erro = err.message;
+        await sincronizarCampanhaAtual('erro', {
+            erros: 1,
+            finalizadaEm: new Date().toISOString()
+        });
         return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao preparar campanha: ${err.message}`)}`);
     }
 
