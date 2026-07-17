@@ -37,6 +37,32 @@ function TestarAdministrador {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function ExecutarPm2Opcional([string[]]$argumentos) {
+    $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
+    if (-not $pm2) {
+        return
+    }
+
+    $acaoAnterior = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $pm2.Source @argumentos *> $null
+    } catch {
+        # O processo pode nao existir ou ja estar parado.
+    } finally {
+        $ErrorActionPreference = $acaoAnterior
+        $global:LASTEXITCODE = 0
+    }
+}
+
+function PararPm2Local([string]$nomeProcesso) {
+    ExecutarPm2Opcional @('stop', $nomeProcesso)
+    ExecutarPm2Opcional @('delete', $nomeProcesso)
+    ExecutarPm2Opcional @('save', '--force')
+    ExecutarPm2Opcional @('kill')
+    Start-Sleep -Seconds 5
+}
+
 function ConfigurarNomeLocal([string]$nomeLocal) {
     if ([string]::IsNullOrWhiteSpace($nomeLocal) -or -not (TestarAdministrador)) {
         return $false
@@ -68,13 +94,13 @@ function ObterPastaBaseInstalacao([string]$pastaInstalacao) {
 function PararProcessosDaInstalacao([string]$pastaInstalacao) {
     $pastaNormalizada = [IO.Path]::GetFullPath($pastaInstalacao).TrimEnd('\')
     $pastaBusca = $pastaNormalizada.Replace('\', '\\')
-    $processos = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+    $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
             $_.ProcessId -ne $PID -and
-            $_.Name -in @('node.exe', 'chrome.exe', 'msedge.exe') -and
+            $_.Name -in @('node.exe', 'chrome.exe', 'msedge.exe', 'cmd.exe', 'powershell.exe', 'pwsh.exe') -and
             $_.CommandLine -and
             ($_.CommandLine -like "*$pastaNormalizada*" -or $_.CommandLine -like "*$pastaBusca*")
-        }
+        })
 
     foreach ($processo in $processos) {
         try {
@@ -84,22 +110,26 @@ function PararProcessosDaInstalacao([string]$pastaInstalacao) {
             Write-Host "Aviso: nao foi possivel encerrar $($processo.Name) $($processo.ProcessId): $($_.Exception.Message)" -ForegroundColor Yellow
         }
     }
+
+    if ($processos.Count -gt 0) {
+        Start-Sleep -Seconds 3
+    }
 }
 
 function TrocarPastaInstalacaoComTentativas([string]$pastaAtual, [string]$pastaNova, [string]$backupApp) {
-    for ($tentativa = 1; $tentativa -le 5; $tentativa++) {
+    for ($tentativa = 1; $tentativa -le 8; $tentativa++) {
         try {
             Move-Item -LiteralPath $pastaAtual -Destination $backupApp -Force
             Move-Item -LiteralPath $pastaNova -Destination $pastaAtual -Force
             return
         } catch {
-            if ($tentativa -ge 5) {
+            if ($tentativa -ge 8) {
                 throw
             }
 
-            Write-Host "Arquivo em uso durante a troca. Tentativa $tentativa/5; aguardando e limpando processos do painel..." -ForegroundColor Yellow
+            Write-Host "Arquivo em uso durante a troca. Tentativa $tentativa/8; aguardando e limpando processos do painel..." -ForegroundColor Yellow
             PararProcessosDaInstalacao $pastaAtual
-            Start-Sleep -Seconds (2 + $tentativa)
+            Start-Sleep -Seconds (3 + $tentativa)
         }
     }
 }
@@ -154,8 +184,7 @@ $backupApp = Join-Path $PastaBase "app-backup-atualizacao-$data"
 $pastaTemporaria = Join-Path $PastaBase "app-novo-$data"
 
 Etapa 'Parando o painel local'
-& $pm2.Source stop $NomeProcesso 2>$null | Out-Host
-Start-Sleep -Seconds 3
+PararPm2Local $NomeProcesso
 PararProcessosDaInstalacao $PastaInstalacao
 
 try {
