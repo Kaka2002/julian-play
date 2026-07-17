@@ -325,15 +325,31 @@ async function enviarQRCodePIX(message, plano, options = {}) {
     return enviarQRCodePIXParaDestino(message.client, destino, plano, options);
 }
 
+function descreverConfiguracaoPix(configPix) {
+    if (!configPix) {
+        return 'pixConfigurado=nao config=nao_lida';
+    }
+
+    return [
+        `pixConfigurado=${configPix.chave && configPix.nome && configPix.cidade ? 'sim' : 'nao'}`,
+        `chave=${configPix.chave ? 'sim' : 'nao'}`,
+        `nome=${configPix.nome ? 'sim' : 'nao'}`,
+        `cidade=${configPix.cidade ? 'sim' : 'nao'}`
+    ].join(' ');
+}
+
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
+    let planoPix = null;
+    let configPix = null;
+
     try {
-        const planoPix = normalizarPlanoPix(plano);
+        planoPix = normalizarPlanoPix(plano);
 
         if (planoPix.valorNumero <= 0) {
             throw new Error(`O plano ${plano?.nome || ''} esta sem valor de cobranca configurado.`);
         }
 
-        const configPix = await obterConfiguracaoPix();
+        configPix = await obterConfiguracaoPix();
         const media = await gerarQRCodeAutomatico(planoPix, configPix);
         const caption = legendaPixPorContexto(planoPix, options, configPix);
         console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destino);
@@ -352,7 +368,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         registrarMensagemDoRobo(enviada);
         return true;
     } catch (error) {
-        console.error(`Erro ao gerar QR Code PIX: ${error.message}`);
+        console.error(`[pix] Erro ao gerar/enviar QR Code PIX | destino=${destino || 'sem_destino'} plano=${planoPix?.nome || plano?.nome || 'sem_plano'} valor=${planoPix?.valor || plano?.valor || 'sem_valor'} ${descreverConfiguracaoPix(configPix)} erro=${error.message}`);
 
         try {
             await comTimeout(
