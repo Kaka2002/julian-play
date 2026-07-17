@@ -134,6 +134,66 @@ function TrocarPastaInstalacaoComTentativas([string]$pastaAtual, [string]$pastaN
     }
 }
 
+function ExecutarRobocopy([string]$origem, [string]$destino, [string[]]$argumentosExtras) {
+    $robocopy = Join-Path $env:SystemRoot 'System32\robocopy.exe'
+    if (-not (Test-Path -LiteralPath $robocopy)) {
+        throw 'Robocopy nao encontrado no Windows.'
+    }
+
+    & $robocopy $origem $destino @argumentosExtras | Out-Host
+    $codigo = $LASTEXITCODE
+    $global:LASTEXITCODE = 0
+
+    if ($codigo -gt 7) {
+        throw "Robocopy terminou com codigo $codigo."
+    }
+}
+
+function AtualizarPastaInstalacaoEmUso([string]$pastaAtual, [string]$pastaNova, [string]$backupApp) {
+    $pastasIgnoradas = @(
+        'node_modules',
+        '.git',
+        '.wwebjs_auth',
+        '.wwebjs_cache',
+        '.wwebjs_auth_backup',
+        '.wwebjs_cache_backup',
+        'backups',
+        'outputs'
+    )
+
+    $arquivosIgnorados = @(
+        'clientes.db',
+        '*.log',
+        '*.pid'
+    )
+
+    Write-Host "Criando copia de seguranca da instalacao atual em $backupApp" -ForegroundColor Yellow
+    New-Item -ItemType Directory -Path $backupApp -Force | Out-Null
+    $argumentosBackup = @('/E', '/R:1', '/W:1', '/NFL', '/NDL', '/NP', '/XD') + $pastasIgnoradas + @('/XF') + $arquivosIgnorados
+    ExecutarRobocopy $pastaAtual $backupApp $argumentosBackup
+
+    Write-Host 'Copiando arquivos atualizados sem mover a pasta principal...' -ForegroundColor Yellow
+    $argumentosAtualizacao = @('/E', '/R:3', '/W:2', '/NFL', '/NDL', '/NP', '/XD') + $pastasIgnoradas + @('/XF') + $arquivosIgnorados
+    ExecutarRobocopy $pastaNova $pastaAtual $argumentosAtualizacao
+}
+
+function RestaurarOuReabrirPainelLocal([string]$pastaInstalacao, [string]$backupApp, [string]$nomeProcesso, [int]$porta, [string]$pastaDados) {
+    if ((Test-Path -LiteralPath $backupApp) -and -not (Test-Path -LiteralPath $pastaInstalacao)) {
+        Write-Host 'Restaurando versao anterior...' -ForegroundColor Yellow
+        Move-Item -LiteralPath $backupApp -Destination $pastaInstalacao -Force
+    }
+
+    $instaladorAtual = Join-Path $pastaInstalacao 'install-windows.ps1'
+    if (Test-Path -LiteralPath $instaladorAtual) {
+        Write-Host 'Reabrindo o painel local...' -ForegroundColor Yellow
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $instaladorAtual -Porta $porta -NomeProcesso $nomeProcesso -PastaDados $pastaDados
+        $global:LASTEXITCODE = 0
+        return
+    }
+
+    ExecutarPm2Opcional @('restart', $nomeProcesso, '--update-env')
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote atualizado ao fornecedor.'
@@ -210,7 +270,7 @@ try {
     CopiarSeExistir (Join-Path $PastaInstalacao '.env') (Join-Path $pastaTemporaria '.env')
 
     Etapa 'Trocando arquivos do sistema'
-    TrocarPastaInstalacaoComTentativas $PastaInstalacao $pastaTemporaria $backupApp
+    AtualizarPastaInstalacaoEmUso $PastaInstalacao $pastaTemporaria $backupApp
 
     $instalador = Join-Path $PastaInstalacao 'install-windows.ps1'
     if (-not (Test-Path -LiteralPath $instalador)) {
@@ -233,13 +293,7 @@ try {
 } catch {
     Write-Host "`nFalha na atualizacao: $($_.Exception.Message)" -ForegroundColor Red
 
-    if ((Test-Path -LiteralPath $backupApp) -and -not (Test-Path -LiteralPath $PastaInstalacao)) {
-        Write-Host 'Restaurando versao anterior...' -ForegroundColor Yellow
-        Move-Item -LiteralPath $backupApp -Destination $PastaInstalacao -Force
-        & $pm2.Source restart $NomeProcesso 2>$null | Out-Host
-    } elseif (Test-Path -LiteralPath $PastaInstalacao) {
-        & $pm2.Source restart $NomeProcesso 2>$null | Out-Host
-    }
+    RestaurarOuReabrirPainelLocal $PastaInstalacao $backupApp $NomeProcesso $Porta $PastaDados
 
     throw
 } finally {
