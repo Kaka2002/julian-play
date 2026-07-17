@@ -65,6 +65,45 @@ function ObterPastaBaseInstalacao([string]$pastaInstalacao) {
     return $base
 }
 
+function PararProcessosDaInstalacao([string]$pastaInstalacao) {
+    $pastaNormalizada = [IO.Path]::GetFullPath($pastaInstalacao).TrimEnd('\')
+    $pastaBusca = $pastaNormalizada.Replace('\', '\\')
+    $processos = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ProcessId -ne $PID -and
+            $_.Name -in @('node.exe', 'chrome.exe', 'msedge.exe') -and
+            $_.CommandLine -and
+            ($_.CommandLine -like "*$pastaNormalizada*" -or $_.CommandLine -like "*$pastaBusca*")
+        }
+
+    foreach ($processo in $processos) {
+        try {
+            Write-Host "Encerrando processo preso da instalacao: $($processo.Name) $($processo.ProcessId)" -ForegroundColor Yellow
+            Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
+        } catch {
+            Write-Host "Aviso: nao foi possivel encerrar $($processo.Name) $($processo.ProcessId): $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    }
+}
+
+function TrocarPastaInstalacaoComTentativas([string]$pastaAtual, [string]$pastaNova, [string]$backupApp) {
+    for ($tentativa = 1; $tentativa -le 5; $tentativa++) {
+        try {
+            Move-Item -LiteralPath $pastaAtual -Destination $backupApp -Force
+            Move-Item -LiteralPath $pastaNova -Destination $pastaAtual -Force
+            return
+        } catch {
+            if ($tentativa -ge 5) {
+                throw
+            }
+
+            Write-Host "Arquivo em uso durante a troca. Tentativa $tentativa/5; aguardando e limpando processos do painel..." -ForegroundColor Yellow
+            PararProcessosDaInstalacao $pastaAtual
+            Start-Sleep -Seconds (2 + $tentativa)
+        }
+    }
+}
+
 $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote atualizado ao fornecedor.'
@@ -117,6 +156,7 @@ $pastaTemporaria = Join-Path $PastaBase "app-novo-$data"
 Etapa 'Parando o painel local'
 & $pm2.Source stop $NomeProcesso 2>$null | Out-Host
 Start-Sleep -Seconds 3
+PararProcessosDaInstalacao $PastaInstalacao
 
 try {
     Etapa 'Extraindo pacote atualizado'
@@ -141,8 +181,7 @@ try {
     CopiarSeExistir (Join-Path $PastaInstalacao '.env') (Join-Path $pastaTemporaria '.env')
 
     Etapa 'Trocando arquivos do sistema'
-    Move-Item -LiteralPath $PastaInstalacao -Destination $backupApp -Force
-    Move-Item -LiteralPath $pastaTemporaria -Destination $PastaInstalacao -Force
+    TrocarPastaInstalacaoComTentativas $PastaInstalacao $pastaTemporaria $backupApp
 
     $instalador = Join-Path $PastaInstalacao 'install-windows.ps1'
     if (-not (Test-Path -LiteralPath $instalador)) {
