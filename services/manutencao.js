@@ -42,19 +42,20 @@ function minutosDesde(valor) {
 function calcularRiscoWhatsApp(statusWhatsApp = {}, fila = {}) {
     const pontos = [];
     let score = 0;
+    const conectado = Boolean(statusWhatsApp.conectado);
 
-    if (!statusWhatsApp.conectado) {
+    if (!conectado) {
         score += statusWhatsApp.temQr ? 2 : 3;
         pontos.push(statusWhatsApp.temQr ? 'Aguardando leitura de QR Code.' : 'WhatsApp desconectado.');
     }
 
     const minutosQr = minutosDesde(statusWhatsApp.ultimoQrEm);
-    if (minutosQr !== null && minutosQr <= 30) {
+    if (!conectado && minutosQr !== null && minutosQr <= 30) {
         score += 1;
         pontos.push(`QR Code gerado há ${minutosQr} minuto(s).`);
     }
 
-    if (Number(statusWhatsApp.eventosInternosIgnoradosTotal || 0) > 50) {
+    if (!conectado && Number(statusWhatsApp.eventosInternosIgnoradosTotal || 0) > 50) {
         score += 1;
         pontos.push('Muitos eventos internos ignorados nesta execução.');
     }
@@ -198,7 +199,7 @@ async function executarDiagnosticoSistema(statusWhatsApp = {}, testarWebhook = n
             verificacoes.push(criarResultadoDiagnostico('Webhook', 'erro', err.message));
         }
     } else {
-        verificacoes.push(criarResultadoDiagnostico('Webhook', 'atencao', 'Nenhum webhook configurado.'));
+        verificacoes.push(criarResultadoDiagnostico('Webhook', 'ok', 'Webhook opcional nao configurado.'));
     }
 
     const temErro = verificacoes.some(item => item.status === 'erro');
