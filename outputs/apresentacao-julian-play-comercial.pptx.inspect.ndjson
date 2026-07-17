@@ -1,0 +1,264 @@
+{"kind":"deck","id":"pr/9esj5s","name":"Deck"}
+{"kind":"layout","layoutId":"e25c29d8-5efd-4a8f-b90d-c97bff380834","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"fc1b0d68-7a0b-47bf-861f-7f130b4d7f22","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/ohdob5","slide":1,"title":"SISTEMA COMERCIAL PARA IPTV E P2P","textShapes":7}
+{"kind":"shape","id":"sh/kvy5w3u1","slide":1,"bbox":[0,0,1280,720]}
+{"kind":"shape","id":"sh/mx07ydc7","slide":1,"bbox":[82,180,330,36]}
+{"kind":"textbox","id":"sh/7y9oridc","slide":1,"text":"SISTEMA COMERCIAL PARA IPTV E P2P","textPreview":"SISTEMA COMERCIAL PARA IPTV E P2P","textChars":33,"textLines":1,"bbox":[98,188,298,20]}
+{"kind":"textbox","id":"sh/8zip0nux","slide":1,"text":"Julian Play","textPreview":"Julian Play","textChars":11,"textLines":1,"bbox":[82,236,520,70]}
+{"kind":"textbox","id":"sh/90r6t8vi","slide":1,"text":"Controle de clientes, robô WhatsApp, financeiro, campanhas e licenças em uma única operação.","textPreview":"Controle de clientes, robô WhatsApp, financeiro, campanhas e licenças em uma única operação.","textChars":92,"textLines":1,"bbox":[84,322,640,92]}
+{"kind":"shape","id":"sh/21wnm9wn","slide":1,"bbox":[82,500,360,142]}
+{"kind":"textbox","id":"sh/n25ofed8","slide":1,"text":"Do cadastro à renovação","textPreview":"Do cadastro à renovação","textChars":23,"textLines":1,"bbox":[106,520,312,28]}
+{"kind":"shape","id":"sh/3a9g3a9k","slide":1,"bbox":[106,560,54,4]}
+{"kind":"textbox","id":"sh/i90fu5sf","slide":1,"text":"Menos retrabalho e mais controle para vender, atender e cobrar.","textPreview":"Menos retrabalho e mais controle para vender, atender e cobrar.","textChars":63,"textLines":1,"bbox":[106,578,312,48]}
+{"kind":"shape","id":"sh/5wry5krq","slide":1,"bbox":[470,500,380,142]}
+{"kind":"textbox","id":"sh/4vixwfa5","slide":1,"text":"Servidor ou instalação local","textPreview":"Servidor ou instalação local","textChars":28,"textLines":1,"bbox":[494,520,332,28]}
+{"kind":"shape","id":"sh/v6pwza9o","slide":1,"bbox":[494,560,54,4]}
+{"kind":"textbox","id":"sh/u5gfq5s3","slide":1,"text":"Você controla a licença e o cliente usa o painel onde preferir.","textPreview":"Você controla a licença e o cliente usa o painel onde preferir.","textChars":63,"textLines":1,"bbox":[494,578,332,48]}
+{"kind":"image","id":"im/69sr2psj","slide":1,"name":"","geometry":"rect","alt":"ChatGPT Image 30 de jun. de 2026, 15_39_09.png","bbox":[0,0,1280,720]}
+{"kind":"image","id":"im/sba94fap","slide":1,"name":"","geometry":"rect","alt":"Logo.png","bbox":[82,70,84,84]}
+{"kind":"notes","id":"nt/ohdob5","slide":1,"text":"Abertura: apresente o Julian Play como uma solução completa para quem vende IPTV e P2P. Reforce que o objetivo é reduzir trabalho manual e organizar a operação."}
+{"kind":"slide","id":"sl/wyadct","slide":2,"title":"JULIAN PLAY","textShapes":10}
+{"kind":"shape","id":"sh/4zehg3y9","slide":2,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/3e5g7yho","slide":2,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/d47id8zq","slide":2,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/s3ehk3yl","slide":2,"text":"O problema que o sistema resolve","textPreview":"O problema que o sistema resolve","textChars":32,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/r250byh0","slide":2,"text":"Antes do Julian Play, a operação costuma ficar espalhada entre planilhas, WhatsApp, painéis de apps, anotações e cobranças manuais.","textPreview":"Antes do Julian Play, a operação costuma ficar espalhada entre planilhas, WhatsApp, painéis de apps, anotações e cobranças manuais.","textChars":131,"textLines":1,"bbox":[72,172,760,70]}
+{"kind":"shape","id":"sh/q1wzitgf","slide":2,"bbox":[72,286,342,142]}
+{"kind":"textbox","id":"sh/187ihsz2","slide":2,"text":"Cliente vence e ninguém vê","textPreview":"Cliente vence e ninguém vê","textChars":26,"textLines":1,"bbox":[96,306,294,28]}
+{"kind":"shape","id":"sh/07yhonyh","slide":2,"bbox":[96,346,54,4]}
+{"kind":"textbox","id":"sh/i5gna5kz","slide":2,"text":"Avisos dependem da memória e podem atrasar a renovação.","textPreview":"Avisos dependem da memória e podem atrasar a renovação.","textChars":55,"textLines":1,"bbox":[96,364,294,48]}
+{"kind":"shape","id":"sh/j6p4jalk","slide":2,"bbox":[460,286,342,142]}
+{"kind":"textbox","id":"sh/k7y5cf25","slide":2,"text":"Histórico fica perdido","textPreview":"Histórico fica perdido","textChars":22,"textLines":1,"bbox":[484,306,294,28]}
+{"kind":"shape","id":"sh/58rmlk3a","slide":2,"bbox":[484,346,54,4]}
+{"kind":"textbox","id":"sh/690nepkv","slide":2,"text":"Conversas, pagamentos e alterações ficam fora do cadastro.","textPreview":"Conversas, pagamentos e alterações ficam fora do cadastro.","textChars":58,"textLines":1,"bbox":[484,364,294,48]}
+{"kind":"shape","id":"sh/7a94nulg","slide":2,"bbox":[848,286,342,142]}
+{"kind":"textbox","id":"sh/sbi5gf21","slide":2,"text":"Entrega sem padrão","textPreview":"Entrega sem padrão","textChars":18,"textLines":1,"bbox":[872,306,294,28]}
+{"kind":"shape","id":"sh/tcrmpk3m","slide":2,"bbox":[872,346,54,4]}
+{"kind":"textbox","id":"sh/mdw32l4r","slide":2,"text":"Cada instalação pode sair de um jeito, dificultando suporte.","textPreview":"Cada instalação pode sair de um jeito, dificultando suporte.","textChars":60,"textLines":1,"bbox":[872,364,294,48]}
+{"kind":"shape","id":"sh/ne54bqlc","slide":2,"bbox":[72,500,1118,104]}
+{"kind":"textbox","id":"sh/bilkjm14","slide":2,"text":"A proposta é simples: transformar a rotina comercial em um fluxo padronizado, visível e fácil de acompanhar.","textPreview":"A proposta é simples: transformar a rotina comercial em um fluxo padronizado, visível e fácil de acompanhar.","textChars":108,"textLines":1,"bbox":[112,528,980,44]}
+{"kind":"image","id":"im/j6lgfml8","slide":2,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/wyadct","slide":2,"text":"Mostre a dor do cliente: trabalho manual, perda de controle e falta de rastreabilidade. Em seguida, posicione o sistema como centralizador."}
+{"kind":"slide","id":"sl/13a80o","slide":3,"title":"JULIAN PLAY","textShapes":17}
+{"kind":"shape","id":"sh/udk3at8r","slide":3,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/hgv2l8ri","slide":3,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/7atkfe9g","slide":3,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/6pkj6t8v","slide":3,"text":"Painel de controle para decidir rápido","textPreview":"Painel de controle para decidir rápido","textChars":38,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/tcb2hor6","slide":3,"text":"A tela inicial mostra o que exige atenção: clientes ativos, vencimentos próximos, receita recorrente, campanhas e status do atendimento.","textPreview":"A tela inicial mostra o que exige atenção: clientes ativos, vencimentos próximos, receita recorrente, campanhas e status do atendimento.","textChars":136,"textLines":1,"bbox":[72,170,870,62]}
+{"kind":"shape","id":"sh/sb2l8jq1","slide":3,"bbox":[72,278,235,125]}
+{"kind":"shape","id":"sh/jm9kbe94","slide":3,"bbox":[72,278,5,125]}
+{"kind":"textbox","id":"sh/il0j298j","slide":3,"text":"Clientes ativos","textPreview":"Clientes ativos","textChars":15,"textLines":1,"bbox":[92,298,150,22]}
+{"kind":"textbox","id":"sh/s3mdgbmx","slide":3,"text":"9","textPreview":"9","textChars":1,"textLines":1,"bbox":[92,326,160,40]}
+{"kind":"textbox","id":"sh/t4vepg3i","slide":3,"text":"base atual","textPreview":"base atual","textChars":10,"textLines":1,"bbox":[92,369,180,22]}
+{"kind":"shape","id":"sh/614vu147","slide":3,"bbox":[332,278,235,125]}
+{"kind":"shape","id":"sh/r2dcn6ls","slide":3,"bbox":[332,278,5,125]}
+{"kind":"textbox","id":"sh/4zmdsrm1","slide":3,"text":"Vencem em 7 dias","textPreview":"Vencem em 7 dias","textChars":16,"textLines":1,"bbox":[352,298,150,22]}
+{"kind":"textbox","id":"sh/50vulwnm","slide":3,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[352,326,160,40]}
+{"kind":"textbox","id":"sh/ixkvq14v","slide":3,"text":"precisam atenção","textPreview":"precisam atenção","textChars":16,"textLines":1,"bbox":[352,369,180,22]}
+{"kind":"shape","id":"sh/jydcjm5g","slide":3,"bbox":[592,278,235,125]}
+{"kind":"shape","id":"sh/ov6dovm5","slide":3,"bbox":[592,278,5,125]}
+{"kind":"textbox","id":"sh/pwfex03q","slide":3,"text":"Receita mensal","textPreview":"Receita mensal","textChars":14,"textLines":1,"bbox":[612,298,150,22]}
+{"kind":"textbox","id":"sh/xcvuhgvu","slide":3,"text":"R$ 283","textPreview":"R$ 283","textChars":6,"textLines":1,"bbox":[612,326,160,40]}
+{"kind":"textbox","id":"sh/cb2d8ve9","slide":3,"text":"recorrente","textPreview":"recorrente","textChars":10,"textLines":1,"bbox":[612,369,180,22]}
+{"kind":"shape","id":"sh/batcfqd4","slide":3,"bbox":[852,278,235,125]}
+{"kind":"shape","id":"sh/apkv6lwj","slide":3,"bbox":[852,278,5,125]}
+{"kind":"textbox","id":"sh/pobudgvy","slide":3,"text":"Atendimentos","textPreview":"Atendimentos","textChars":12,"textLines":1,"bbox":[872,298,150,22]}
+{"kind":"textbox","id":"sh/on2d4bed","slide":3,"text":"0","textPreview":"0","textChars":1,"textLines":1,"bbox":[872,326,160,40]}
+{"kind":"textbox","id":"sh/nmtcb6ds","slide":3,"text":"urgentes","textPreview":"urgentes","textChars":8,"textLines":1,"bbox":[872,369,180,22]}
+{"kind":"shape","id":"sh/2lkv21w7","slide":3,"bbox":[72,462,1118,116]}
+{"kind":"textbox","id":"sh/1kbu9wvm","slide":3,"text":"Resultado comercial","textPreview":"Resultado comercial","textChars":19,"textLines":1,"bbox":[108,492,280,26]}
+{"kind":"textbox","id":"sh/0jid0beh","slide":3,"text":"Você sabe quem precisa renovar, quem está ativo, quanto está entrando e qual ação deve ser feita primeiro.","textPreview":"Você sabe quem precisa renovar, quem está ativo, quanto está entrando e qual ação deve ser feita primeiro.","textChars":106,"textLines":1,"bbox":[108,530,940,38]}
+{"kind":"image","id":"im/tsb21w3a","slide":3,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/13a80o","slide":3,"text":"Explique que o painel tira o dono da operação do modo 'procurar problema' e coloca no modo 'agir no que importa'."}
+{"kind":"slide","id":"sl/d8kchz","slide":4,"title":"JULIAN PLAY","textShapes":15}
+{"kind":"shape","id":"sh/m9oji5sj","slide":4,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/9cf2d0ru","slide":4,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/zmdk7q9s","slide":4,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/el4jels7","slide":4,"text":"Cadastro completo do cliente","textPreview":"Cadastro completo do cliente","textChars":28,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/l8f290ry","slide":4,"text":"Cada cliente concentra dados pessoais, plano, vencimento, apps, dispositivos, painel, acesso IPTV, tags e histórico.","textPreview":"Cada cliente concentra dados pessoais, plano, vencimento, apps, dispositivos, painel, acesso IPTV, tags e histórico.","textChars":116,"textLines":1,"bbox":[72,170,820,58]}
+{"kind":"shape","id":"sh/0nm1gvad","slide":4,"bbox":[72,278,320,142]}
+{"kind":"textbox","id":"sh/jihkju9w","slide":4,"text":"Plano e vencimento","textPreview":"Plano e vencimento","textChars":18,"textLines":1,"bbox":[96,298,272,28]}
+{"kind":"shape","id":"sh/ih83qpsb","slide":4,"bbox":[96,338,54,4]}
+{"kind":"textbox","id":"sh/w36dofe9","slide":4,"text":"Controle dias, valor, status, início e renovação.","textPreview":"Controle dias, valor, status, início e renovação.","textChars":49,"textLines":1,"bbox":[96,356,272,48]}
+{"kind":"shape","id":"sh/x4fehkvu","slide":4,"bbox":[422,278,320,142]}
+{"kind":"textbox","id":"sh/a1ovm5w3","slide":4,"text":"Apps e dispositivos","textPreview":"Apps e dispositivos","textChars":19,"textLines":1,"bbox":[446,298,272,28]}
+{"kind":"shape","id":"sh/v2xwfado","slide":4,"bbox":[446,338,54,4]}
+{"kind":"textbox","id":"sh/8zmdkved","slide":4,"text":"Registre onde o cliente usa e quais apps estão instalados.","textPreview":"Registre onde o cliente usa e quais apps estão instalados.","textChars":58,"textLines":1,"bbox":[446,356,272,48]}
+{"kind":"shape","id":"sh/90ved0vy","slide":4,"bbox":[772,278,320,142]}
+{"kind":"textbox","id":"sh/mx4vi5w7","slide":4,"text":"Tags e origem","textPreview":"Tags e origem","textChars":13,"textLines":1,"bbox":[796,298,272,28]}
+{"kind":"shape","id":"sh/nydwbqxs","slide":4,"bbox":[796,338,54,4]}
+{"kind":"textbox","id":"sh/0vmdgve1","slide":4,"text":"Separe VIP, bom pagador, indicação, teste e outros grupos.","textPreview":"Separe VIP, bom pagador, indicação, teste e outros grupos.","textChars":58,"textLines":1,"bbox":[796,356,272,48]}
+{"kind":"shape","id":"sh/lwve90fm","slide":4,"bbox":[72,456,320,142]}
+{"kind":"textbox","id":"sh/1snudc7a","slide":4,"text":"WhatsApp internacional","textPreview":"WhatsApp internacional","textChars":22,"textLines":1,"bbox":[96,476,272,28]}
+{"kind":"shape","id":"sh/0retkr65","slide":4,"bbox":[96,516,54,4]}
+{"kind":"textbox","id":"sh/fq5cbmpk","slide":4,"text":"DDI por país para atender Brasil, EUA, Canadá e outros.","textPreview":"DDI por país para atender Brasil, EUA, Canadá e outros.","textChars":55,"textLines":1,"bbox":[96,534,272,48]}
+{"kind":"shape","id":"sh/epcbihoz","slide":4,"bbox":[422,456,320,142]}
+{"kind":"textbox","id":"sh/d43u9c7e","slide":4,"text":"Ações rápidas","textPreview":"Ações rápidas","textChars":13,"textLines":1,"bbox":[446,476,272,28]}
+{"kind":"shape","id":"sh/s3utg76t","slide":4,"bbox":[446,516,54,4]}
+{"kind":"textbox","id":"sh/r2lc72p8","slide":4,"text":"Enviar PIX, cobrança, abrir WhatsApp, renovar e ver histórico.","textPreview":"Enviar PIX, cobrança, abrir WhatsApp, renovar e ver histórico.","textChars":62,"textLines":1,"bbox":[446,534,272,48]}
+{"kind":"shape","id":"sh/q1cbexon","slide":4,"bbox":[772,456,320,142]}
+{"kind":"textbox","id":"sh/xk7ulw7i","slide":4,"text":"Histórico único","textPreview":"Histórico único","textChars":15,"textLines":1,"bbox":[796,476,272,28]}
+{"kind":"shape","id":"sh/czydsb6d","slide":4,"bbox":[796,516,54,4]}
+{"kind":"textbox","id":"sh/at8zq90j","slide":4,"text":"Financeiro, robô, atendimentos e notas em uma linha do tempo.","textPreview":"Financeiro, robô, atendimentos e notas em uma linha do tempo.","textChars":61,"textLines":1,"bbox":[796,534,272,48]}
+{"kind":"image","id":"im/10j6xw72","slide":4,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/d8kchz","slide":4,"text":"Mostre que o cadastro é o coração do sistema: ele evita voltar em vários lugares para saber quem é o cliente e o que foi combinado."}
+{"kind":"slide","id":"sl/1pa8c2","slide":5,"title":"JULIAN PLAY","textShapes":18}
+{"kind":"shape","id":"sh/hwnyh43q","slide":5,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/u9wz6p4z","slide":5,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/87uh4fmt","slide":5,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/t83ydk3e","slide":5,"text":"Robô WhatsApp para atendimento e cobrança","textPreview":"Robô WhatsApp para atendimento e cobrança","textChars":41,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/65cf2543","slide":5,"text":"O robô responde clientes, envia vencimentos, PIX, orientações de instalação, campanhas e mensagens configuradas no painel.","textPreview":"O robô responde clientes, envia vencimentos, PIX, orientações de instalação, campanhas e mensagens configuradas no painel.","textChars":122,"textLines":1,"bbox":[72,170,840,58]}
+{"kind":"shape","id":"sh/76lgbal8","slide":5,"bbox":[112,300,54,54]}
+{"kind":"textbox","id":"sh/s3yhgjmd","slide":5,"text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[112,314,54,24]}
+{"kind":"shape","id":"sh/d47ipo3i","slide":5,"bbox":[174,326,130,3]}
+{"kind":"textbox","id":"sh/ps3idk3u","slide":5,"text":"Cliente chama","textPreview":"Cliente chama","textChars":13,"textLines":1,"bbox":[70,374,140,34]}
+{"kind":"textbox","id":"sh/oruh4f2p","slide":5,"text":"O robô identifica a intenção: PIX, renovação, teste ou suporte.","textPreview":"O robô identifica a intenção: PIX, renovação, teste ou suporte.","textChars":63,"textLines":1,"bbox":[56,416,168,64]}
+{"kind":"shape","id":"sh/3ql0bal4","slide":5,"bbox":[316,300,54,54]}
+{"kind":"textbox","id":"sh/2pcz25kj","slide":5,"text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[316,314,54,24]}
+{"kind":"shape","id":"sh/1oji903y","slide":5,"bbox":[378,326,130,3]}
+{"kind":"textbox","id":"sh/gnah0v2d","slide":5,"text":"Sistema consulta","textPreview":"Sistema consulta","textChars":16,"textLines":1,"bbox":[274,374,140,34]}
+{"kind":"textbox","id":"sh/fm107als","slide":5,"text":"Busca plano, vencimento, cliente e configurações.","textPreview":"Busca plano, vencimento, cliente e configurações.","textChars":49,"textLines":1,"bbox":[260,416,168,64]}
+{"kind":"shape","id":"sh/elszy5k7","slide":5,"bbox":[520,300,54,54]}
+{"kind":"textbox","id":"sh/lknil432","slide":5,"text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[520,314,54,24]}
+{"kind":"shape","id":"sh/0je1cz2h","slide":5,"bbox":[582,326,130,3]}
+{"kind":"textbox","id":"sh/4z6t47e5","slide":5,"text":"Resposta sai","textPreview":"Resposta sai","textChars":12,"textLines":1,"bbox":[478,374,140,34]}
+{"kind":"textbox","id":"sh/50fuxcvq","slide":5,"text":"Mensagem com texto, imagem ou QR Code conforme o fluxo.","textPreview":"Mensagem com texto, imagem ou QR Code conforme o fluxo.","textChars":55,"textLines":1,"bbox":[464,416,168,64]}
+{"kind":"shape","id":"sh/id4b2xwz","slide":5,"bbox":[724,300,54,54]}
+{"kind":"textbox","id":"sh/jyxcv2xk","slide":5,"text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[724,314,54,24]}
+{"kind":"shape","id":"sh/wbmt0net","slide":5,"bbox":[786,326,130,3]}
+{"kind":"textbox","id":"sh/hcvutsfe","slide":5,"text":"Histórico grava","textPreview":"Histórico grava","textChars":15,"textLines":1,"bbox":[682,374,140,34]}
+{"kind":"textbox","id":"sh/u94byxw3","slide":5,"text":"Tudo fica registrado no cliente e no painel.","textPreview":"Tudo fica registrado no cliente e no painel.","textChars":44,"textLines":1,"bbox":[668,416,168,64]}
+{"kind":"shape","id":"sh/vadsrixo","slide":5,"bbox":[928,300,54,54]}
+{"kind":"textbox","id":"sh/87mtwnex","slide":5,"text":"5","textPreview":"5","textChars":1,"textLines":1,"bbox":[928,314,54,24]}
+{"kind":"textbox","id":"sh/98vapsfi","slide":5,"text":"Humano assume","textPreview":"Humano assume","textChars":13,"textLines":1,"bbox":[886,374,140,34]}
+{"kind":"textbox","id":"sh/b2tczih4","slide":5,"text":"Quando necessário, o robô pausa o atendimento automático.","textPreview":"Quando necessário, o robô pausa o atendimento automático.","textChars":57,"textLines":1,"bbox":[872,416,168,64]}
+{"kind":"image","id":"im/itozad8n","slide":5,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/1pa8c2","slide":5,"text":"Explique que o robô não substitui o dono do negócio; ele filtra o repetitivo e dá escala com registro."}
+{"kind":"slide","id":"sl/sjr0v6","slide":6,"title":"JULIAN PLAY","textShapes":7}
+{"kind":"shape","id":"sh/36h0re1s","slide":6,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/47qhkjid","slide":6,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/uhozep0b","slide":6,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/vix0nu1w","slide":6,"text":"Financeiro com PIX, renovação e rastreio","textPreview":"Financeiro com PIX, renovação e rastreio","textChars":40,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/g36hgzih","slide":6,"text":"O financeiro ajuda a cobrar, registrar pagamentos, confirmar renovação e visualizar valores por plano e forma de pagamento.","textPreview":"O financeiro ajuda a cobrar, registrar pagamentos, confirmar renovação e visualizar valores por plano e forma de pagamento.","textChars":123,"textLines":1,"bbox":[72,170,850,58]}
+{"kind":"shape","id":"sh/h4fip4j2","slide":6,"bbox":[72,270,520,255]}
+{"kind":"textbox","id":"sh/edsjqt0f","slide":6,"text":"Fluxo de renovação","textPreview":"Fluxo de renovação","textChars":18,"textLines":1,"bbox":[108,302,350,32]}
+{"kind":"textbox","id":"sh/fy10zy10","slide":6,"text":"1. Escolha o plano\n2. O sistema preenche dias e valor\n3. Registre a forma de pagamento\n4. Envie confirmação pelo WhatsApp\n5. O histórico financeiro fica salvo","textPreview":"1. Escolha o plano | 2. O sistema preenche dias e valor | 3. Registre a forma de pagamento | 4. Envie confirmação pelo WhatsApp | 5. O hi...","textChars":158,"textLines":5,"bbox":[108,354,420,150]}
+{"kind":"shape","id":"sh/v29cry1o","slide":6,"bbox":[640,270,480,255]}
+{"kind":"textbox","id":"sh/a10bit03","slide":6,"text":"Benefício","textPreview":"Benefício","textChars":9,"textLines":1,"bbox":[676,302,300,32]}
+{"kind":"textbox","id":"sh/x4butoju","slide":6,"text":"Menos erro de valor, menos duplicidade de envio e mais confiança na cobrança.","textPreview":"Menos erro de valor, menos duplicidade de envio e mais confiança na cobrança.","textChars":77,"textLines":1,"bbox":[676,360,370,92]}
+{"kind":"image","id":"im/o3edcz65","slide":6,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/sjr0v6","slide":6,"text":"Reforce que o financeiro evita problemas comuns: valor errado, renovação duplicada, cobrança sem registro e falta de histórico."}
+{"kind":"slide","id":"sl/d0isoh","slide":7,"title":"JULIAN PLAY","textShapes":11}
+{"kind":"shape","id":"sh/ju9kbuhk","slide":7,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/kvil4zi5","slide":7,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/a5g3y50n","slide":7,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/b6pk7ah8","slide":7,"text":"Campanhas e CRM para vender mais","textPreview":"Campanhas e CRM para vender mais","textChars":32,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/w7yl0fit","slide":7,"text":"O sistema permite campanhas com imagem, envio de teste individual, disparo em lote controlado e CRM para acompanhar interessados.","textPreview":"O sistema permite campanhas com imagem, envio de teste individual, disparo em lote controlado e CRM para acompanhar interessados.","textChars":129,"textLines":1,"bbox":[72,170,850,58]}
+{"kind":"shape","id":"sh/m1w3u50r","slide":7,"bbox":[500,260,330,142]}
+{"kind":"textbox","id":"sh/n25k3ahc","slide":7,"text":"Disparo protegido","textPreview":"Disparo protegido","textChars":17,"textLines":1,"bbox":[524,280,282,28]}
+{"kind":"shape","id":"sh/7ehczed4","slide":7,"bbox":[524,320,54,4]}
+{"kind":"textbox","id":"sh/6d8bq9cj","slide":7,"text":"Envio em lotes para reduzir risco de travar o WhatsApp.","textPreview":"Envio em lotes para reduzir risco de travar o WhatsApp.","textChars":55,"textLines":1,"bbox":[524,338,282,48]}
+{"kind":"shape","id":"sh/tgju1ova","slide":7,"bbox":[860,260,330,142]}
+{"kind":"textbox","id":"sh/8fatsjup","slide":7,"text":"Modelo editável","textPreview":"Modelo editável","textChars":15,"textLines":1,"bbox":[884,280,282,28]}
+{"kind":"shape","id":"sh/v21c3ytg","slide":7,"bbox":[884,320,54,4]}
+{"kind":"textbox","id":"sh/u1sbutcv","slide":7,"text":"Texto configurado em modelos e imagem definida em manutenção.","textPreview":"Texto configurado em modelos e imagem definida em manutenção.","textChars":61,"textLines":1,"bbox":[884,338,282,48]}
+{"kind":"shape","id":"sh/h4ju5ob6","slide":7,"bbox":[500,438,330,142]}
+{"kind":"textbox","id":"sh/g3atw3u1","slide":7,"text":"CRM de vendas","textPreview":"CRM de vendas","textChars":13,"textLines":1,"bbox":[524,458,282,28]}
+{"kind":"shape","id":"sh/b6xsrudw","slide":7,"bbox":[524,498,54,4]}
+{"kind":"textbox","id":"sh/alobipcb","slide":7,"text":"Registre leads, retorno, status e motivo de perda.","textPreview":"Registre leads, retorno, status e motivo de perda.","textChars":50,"textLines":1,"bbox":[524,516,282,48]}
+{"kind":"shape","id":"sh/ydgnm10b","slide":7,"bbox":[860,438,330,142]}
+{"kind":"textbox","id":"sh/zepof6hw","slide":7,"text":"Teste antes de enviar","textPreview":"Teste antes de enviar","textChars":21,"textLines":1,"bbox":[884,458,282,28]}
+{"kind":"shape","id":"sh/0fy5obih","slide":7,"bbox":[884,498,54,4]}
+{"kind":"textbox","id":"sh/lg76hwz2","slide":7,"text":"Envie para um cliente e valide a campanha antes do lote.","textPreview":"Envie para um cliente e valide a campanha antes do lote.","textChars":56,"textLines":1,"bbox":[884,516,282,48]}
+{"kind":"image","id":"im/krilkb61","slide":7,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"image","id":"im/8v2lov6x","slide":7,"name":"","geometry":"roundRect","alt":"amizade-presente.png","bbox":[72,260,360,360]}
+{"kind":"notes","id":"nt/d0isoh","slide":7,"text":"Conte que campanha grande exige cuidado. O sistema já prepara envio em lote e teste individual, mas campanhas oficiais via API podem ser o próximo nível."}
+{"kind":"slide","id":"sl/tx4q6s","slide":8,"title":"JULIAN PLAY","textShapes":8}
+{"kind":"shape","id":"sh/ud87ylgj","slide":8,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/hgz690fu","slide":8,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/7aho36xs","slide":8,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/69o7u1g7","slide":8,"text":"Instalação local ou hospedada no servidor","textPreview":"Instalação local ou hospedada no servidor","textChars":41,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/tcz65gfy","slide":8,"text":"Você pode manter clientes no seu servidor ou entregar uma instalação local licenciada no computador do cliente.","textPreview":"Você pode manter clientes no seu servidor ou entregar uma instalação local licenciada no computador do cliente.","textChars":111,"textLines":1,"bbox":[72,170,850,58]}
+{"kind":"shape","id":"sh/8bqpwbyd","slide":8,"bbox":[72,270,500,260]}
+{"kind":"textbox","id":"sh/r618faxw","slide":8,"text":"Servidor","textPreview":"Servidor","textChars":8,"textLines":1,"bbox":[112,310,250,38]}
+{"kind":"textbox","id":"sh/q5s765gr","slide":8,"text":"Ideal para centralizar várias instalações, acompanhar clientes e operar com domínio próprio.","textPreview":"Ideal para centralizar várias instalações, acompanhar clientes e operar com domínio próprio.","textChars":92,"textLines":1,"bbox":[112,372,380,88]}
+{"kind":"shape","id":"sh/8bmxgvm9","slide":8,"bbox":[640,270,500,260]}
+{"kind":"textbox","id":"sh/9wvyp03e","slide":8,"text":"Local","textPreview":"Local","textChars":5,"textLines":1,"bbox":[680,310,250,38]}
+{"kind":"textbox","id":"sh/m94fel43","slide":8,"text":"Ideal para cliente usar no próprio computador, com licença controlada por você.","textPreview":"Ideal para cliente usar no próprio computador, com licença controlada por você.","textChars":79,"textLines":1,"bbox":[680,372,380,88]}
+{"kind":"shape","id":"sh/7adgnqlo","slide":8,"bbox":[388,584,500,36]}
+{"kind":"textbox","id":"sh/k72xcbmx","slide":8,"text":"Licença por ID de instalação e chave da máquina","textPreview":"Licença por ID de instalação e chave da máquina","textChars":47,"textLines":1,"bbox":[404,592,468,20]}
+{"kind":"image","id":"im/58zqxwj6","slide":8,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/tx4q6s","slide":8,"text":"Explique que isso aumenta a oferta comercial: você pode vender o serviço hospedado ou liberar instalação local controlada."}
+{"kind":"slide","id":"sl/t2hdkr","slide":9,"title":"JULIAN PLAY","textShapes":16}
+{"kind":"shape","id":"sh/z2ls32t0","slide":9,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/03u9wnal","slide":9,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/m5cryxsr","slide":9,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/nqls72tc","slide":9,"text":"Painel Mestre para controlar instalações","textPreview":"Painel Mestre para controlar instalações","textChars":40,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/oret07ax","slide":9,"text":"O Painel Mestre acompanha instalações comerciais, licenças locais, validade, status, saúde do robô e necessidades de atenção.","textPreview":"O Painel Mestre acompanha instalações comerciais, licenças locais, validade, status, saúde do robô e necessidades de atenção.","textChars":125,"textLines":1,"bbox":[72,170,900,58]}
+{"kind":"shape","id":"sh/9sna9cbi","slide":9,"bbox":[72,278,235,125]}
+{"kind":"shape","id":"sh/atwb2hsn","slide":9,"bbox":[72,278,5,125]}
+{"kind":"textbox","id":"sh/bu5sbmt8","slide":9,"text":"Licenças locais","textPreview":"Licenças locais","textChars":15,"textLines":1,"bbox":[92,298,150,22]}
+{"kind":"textbox","id":"sh/fmh4bmpg","slide":9,"text":"Ativas","textPreview":"Ativas","textChars":6,"textLines":1,"bbox":[92,326,160,40]}
+{"kind":"textbox","id":"sh/el83ihov","slide":9,"text":"controle por máquina","textPreview":"controle por máquina","textChars":20,"textLines":1,"bbox":[92,369,180,22]}
+{"kind":"shape","id":"sh/1ozmdw7m","slide":9,"bbox":[332,278,235,125]}
+{"kind":"shape","id":"sh/0nqlkr61","slide":9,"bbox":[332,278,5,125]}
+{"kind":"textbox","id":"sh/ryx47mp4","slide":9,"text":"Instalações","textPreview":"Instalações","textChars":11,"textLines":1,"bbox":[352,298,150,22]}
+{"kind":"textbox","id":"sh/qxo3ehoz","slide":9,"text":"Servidor","textPreview":"Servidor","textChars":8,"textLines":1,"bbox":[352,326,160,40]}
+{"kind":"textbox","id":"sh/dkzm9w7a","slide":9,"text":"clientes isolados","textPreview":"clientes isolados","textChars":17,"textLines":1,"bbox":[352,369,180,22]}
+{"kind":"shape","id":"sh/sj6lgr6p","slide":9,"bbox":[592,278,235,125]}
+{"kind":"shape","id":"sh/bu14j6po","slide":9,"bbox":[592,278,5,125]}
+{"kind":"textbox","id":"sh/atsna1o3","slide":9,"text":"Renovações","textPreview":"Renovações","textChars":10,"textLines":1,"bbox":[612,298,150,22]}
+{"kind":"textbox","id":"sh/69c7i58b","slide":9,"text":"Código","textPreview":"Código","textChars":6,"textLines":1,"bbox":[612,326,160,40]}
+{"kind":"textbox","id":"sh/7aloba9w","slide":9,"text":"envio ao cliente","textPreview":"envio ao cliente","textChars":16,"textLines":1,"bbox":[612,369,180,22]}
+{"kind":"shape","id":"sh/8bepkfqh","slide":9,"bbox":[852,278,235,125]}
+{"kind":"shape","id":"sh/tcn6dkr2","slide":9,"bbox":[852,278,5,125]}
+{"kind":"textbox","id":"sh/udw7mp87","slide":9,"text":"Atenção","textPreview":"Atenção","textChars":7,"textLines":1,"bbox":[872,298,150,22]}
+{"kind":"textbox","id":"sh/ve58fu9s","slide":9,"text":"Prioridades","textPreview":"Prioridades","textChars":11,"textLines":1,"bbox":[872,326,160,40]}
+{"kind":"textbox","id":"sh/gfepozqd","slide":9,"text":"o que revisar","textPreview":"o que revisar","textChars":13,"textLines":1,"bbox":[872,369,180,22]}
+{"kind":"shape","id":"sh/hgnqh4ry","slide":9,"bbox":[72,468,1118,92]}
+{"kind":"textbox","id":"sh/ahs7al83","slide":9,"text":"Você decide quando liberar, renovar, suspender, transferir ou acompanhar uma instalação.","textPreview":"Você decide quando liberar, renovar, suspender, transferir ou acompanhar uma instalação.","textChars":88,"textLines":1,"bbox":[112,498,960,35]}
+{"kind":"image","id":"im/onm1w7mt","slide":9,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/t2hdkr","slide":9,"text":"Aqui o foco é mostrar controle do fornecedor: o cliente local não fica solto; a licença continua sob administração."}
+{"kind":"slide","id":"sl/bak6ud","slide":10,"title":"JULIAN PLAY","textShapes":13}
+{"kind":"shape","id":"sh/p0vm9ob6","slide":10,"bbox":[0,0,1280,78]}
+{"kind":"shape","id":"sh/2dknytcf","slide":10,"bbox":[760,0,520,78]}
+{"kind":"textbox","id":"sh/c3m543uh","slide":10,"text":"JULIAN PLAY","textPreview":"JULIAN PLAY","textChars":11,"textLines":1,"bbox":[108,24,220,22]}
+{"kind":"textbox","id":"sh/d4vmd8b2","slide":10,"text":"Manutenção, backup e diagnóstico","textPreview":"Manutenção, backup e diagnóstico","textChars":32,"textLines":1,"bbox":[72,112,820,44]}
+{"kind":"textbox","id":"sh/q14n2tcb","slide":10,"text":"O sistema inclui saúde do robô, logs, diagnóstico, backup dos dados, troca de imagens do robô, configuração de mensagens e webhook.","textPreview":"O sistema inclui saúde do robô, logs, diagnóstico, backup dos dados, troca de imagens do robô, configuração de mensagens e webhook.","textChars":131,"textLines":1,"bbox":[72,170,900,58]}
+{"kind":"shape","id":"sh/b2d4bytw","slide":10,"bbox":[72,278,330,142]}
+{"kind":"textbox","id":"sh/s72lszud","slide":10,"text":"Saúde do robô","textPreview":"Saúde do robô","textChars":13,"textLines":1,"bbox":[96,298,282,28]}
+{"kind":"shape","id":"sh/t8bm14by","slide":10,"bbox":[96,338,54,4]}
+{"kind":"textbox","id":"sh/14za9grm","slide":10,"text":"Mostra conexão, risco, fila, última resposta e eventos ignorados.","textPreview":"Mostra conexão, risco, fila, última resposta e eventos ignorados.","textChars":65,"textLines":1,"bbox":[96,356,282,48]}
+{"kind":"shape","id":"sh/03q9gba1","slide":10,"bbox":[432,278,330,142]}
+{"kind":"textbox","id":"sh/z2hs769g","slide":10,"text":"Backup e restauração","textPreview":"Backup e restauração","textChars":20,"textLines":1,"bbox":[456,298,282,28]}
+{"kind":"shape","id":"sh/e18relsv","slide":10,"bbox":[456,338,54,4]}
+{"kind":"textbox","id":"sh/98jad0ri","slide":10,"text":"Gere cópias antes de manutenção, atualização ou importação.","textPreview":"Gere cópias antes de manutenção, atualização ou importação.","textChars":59,"textLines":1,"bbox":[456,356,282,48]}
+{"kind":"shape","id":"sh/o7atkvax","slide":10,"bbox":[792,278,330,142]}
+{"kind":"textbox","id":"sh/n6hsbq9c","slide":10,"text":"Diagnóstico","textPreview":"Diagnóstico","textChars":11,"textLines":1,"bbox":[816,298,282,28]}
+{"kind":"shape","id":"sh/m58bilsr","slide":10,"bbox":[816,338,54,4]}
+{"kind":"textbox","id":"sh/xwjah0re","slide":10,"text":"Banco, PIX, licença, WhatsApp, webhook e acesso administrativo.","textPreview":"Banco, PIX, licença, WhatsApp, webhook e acesso administrativo.","textChars":63,"textLines":1,"bbox":[816,356,282,48]}
+{"kind":"shape","id":"sh/wvatova9","slide":10,"bbox":[252,456,330,142]}
+{"kind":"textbox","id":"sh/gfidkji5","slide":10,"text":"Webhook","textPreview":"Webhook","textChars":7,"textLines":1,"bbox":[276,476,282,28]}
+{"kind":"shape","id":"sh/h0rut4zq","slide":10,"bbox":[276,516,54,4]}
+{"kind":"textbox","id":"sh/ud0vi90z","slide":10,"text":"Integrações futuras com dados do cliente, financeiro e eventos do robô.","textPreview":"Integrações futuras com dados do cliente, financeiro e eventos do robô.","textChars":71,"textLines":1,"bbox":[276,534,282,48]}
+{"kind":"shape","id":"sh/ve9crehk","slide":10,"bbox":[612,456,330,142]}
+{"kind":"textbox","id":"sh/432dojih","slide":10,"text":"Suporte mais simples","textPreview":"Suporte mais simples","textChars":20,"textLines":1,"bbox":[636,476,282,28]}
+{"kind":"shape","id":"sh/54buxoz2","slide":10,"bbox":[636,516,54,4]}
+{"kind":"textbox","id":"sh/i10vm90b","slide":10,"text":"Botões de recuperação evitam depender de comandos no PowerShell.","textPreview":"Botões de recuperação evitam depender de comandos no PowerShell.","textChars":64,"textLines":1,"bbox":[636,534,282,48]}
+{"kind":"image","id":"im/mxkva1k3","slide":10,"name":"","geometry":"rect","alt":"Logo.png","bbox":[54,18,42,42]}
+{"kind":"notes","id":"nt/bak6ud","slide":10,"text":"Apresente manutenção como diferencial profissional: menos suporte manual, mais autonomia para diagnosticar e recuperar."}
+{"kind":"slide","id":"sl/erb75s","slide":11,"title":"Julian Play","textShapes":6}
+{"kind":"shape","id":"sh/epw7a9cn","slide":11,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/grypcjut","slide":11,"text":"Julian Play","textPreview":"Julian Play","textChars":11,"textLines":1,"bbox":[84,186,520,70]}
+{"kind":"textbox","id":"sh/rm58zutc","slide":11,"text":"Um painel para vender, atender, cobrar e controlar sua operação com padrão profissional.","textPreview":"Um painel para vender, atender, cobrar e controlar sua operação com padrão profissional.","textChars":88,"textLines":1,"bbox":[86,282,700,90]}
+{"kind":"shape","id":"sh/6lw769cr","slide":11,"bbox":[86,430,310,36]}
+{"kind":"textbox","id":"sh/tonq14b2","slide":11,"text":"Demonstração comercial pronta","textPreview":"Demonstração comercial pronta","textChars":29,"textLines":1,"bbox":[102,438,278,20]}
+{"kind":"shape","id":"sh/snep8zuh","slide":11,"bbox":[420,430,310,36]}
+{"kind":"textbox","id":"sh/bi98bytg","slide":11,"text":"Instalação local controlada","textPreview":"Instalação local controlada","textChars":27,"textLines":1,"bbox":[436,438,278,20]}
+{"kind":"shape","id":"sh/qhg7itcv","slide":11,"bbox":[754,430,300,36]}
+{"kind":"textbox","id":"sh/snidofqd","slide":11,"text":"Robô WhatsApp integrado","textPreview":"Robô WhatsApp integrado","textChars":23,"textLines":1,"bbox":[770,438,268,20]}
+{"kind":"shape","id":"sh/torexkry","slide":11,"bbox":[86,560,690,72]}
+{"kind":"textbox","id":"sh/6l0vm587","slide":11,"text":"Próximo passo: marcar uma demonstração e mostrar o fluxo completo ao vivo.","textPreview":"Próximo passo: marcar uma demonstração e mostrar o fluxo completo ao vivo.","textChars":74,"textLines":1,"bbox":[118,584,620,30]}
+{"kind":"image","id":"im/crqhg3ap","slide":11,"name":"","geometry":"rect","alt":"Logo.png","bbox":[84,74,82,82]}
+{"kind":"notes","id":"nt/erb75s","slide":11,"text":"Fechamento: convide para demonstração. Se for vídeo, terminar com chamada direta para contato."}

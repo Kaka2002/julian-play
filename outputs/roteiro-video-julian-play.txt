@@ -1,0 +1,54 @@
+ROTEIRO DE VIDEO - JULIAN PLAY
+
+Duração sugerida: 2 a 3 minutos
+Formato: demonstração narrada com imagens do painel e cortes rápidos entre telas
+
+1. Abertura
+Texto/narração:
+"Se você vende IPTV ou P2P e ainda controla clientes por WhatsApp, planilha e anotações, o Julian Play foi criado para organizar sua operação em um painel completo."
+Imagem sugerida: tela do painel inicial com a marca Julian Play.
+
+2. Dor do cliente
+Texto/narração:
+"Com muitos clientes, fica fácil esquecer vencimentos, perder históricos, cobrar valor errado ou repetir atendimento manual."
+Imagem sugerida: lista de clientes e painel de vencimentos.
+
+3. Painel de controle
+Texto/narração:
+"Na tela inicial você acompanha clientes ativos, vencimentos próximos, receita recorrente, campanhas e pontos de atenção."
+Imagem sugerida: dashboard com cartões.
+
+4. Cadastro completo
+Texto/narração:
+"Cada cliente tem plano, vencimento, apps, dispositivos, tags, origem, financeiro e histórico em um só lugar."
+Imagem sugerida: tela editar cliente e ações rápidas.
+
+5. Robô WhatsApp
+Texto/narração:
+"O robô envia avisos, PIX, mensagens de renovação, orientações e campanhas. Quando o atendimento humano entra, ele pode pausar automaticamente."
+Imagem sugerida: tela de saúde do robô e histórico unificado.
+
+6. Financeiro e PIX
+Texto/narração:
+"As renovações ficam registradas, com valor, forma de pagamento, novo vencimento e confirmação enviada ao cliente."
+Imagem sugerida: financeiro e renovar cliente.
+
+7. Campanhas e CRM
+Texto/narração:
+"Também é possível trabalhar campanhas com imagem, teste individual e envio em lote controlado, além de acompanhar interessados no CRM."
+Imagem sugerida: campanha de indicação e CRM.
+
+8. Instalação local e painel mestre
+Texto/narração:
+"Você pode operar no servidor ou liberar instalação local para o cliente, mantendo o controle da licença pelo Painel Mestre."
+Imagem sugerida: licença local e Painel Mestre.
+
+9. Manutenção e segurança
+Texto/narração:
+"O sistema tem diagnóstico, backup, saúde do WhatsApp, logs, webhook e recuperação para reduzir suporte manual."
+Imagem sugerida: manutenção e diagnóstico.
+
+10. Fechamento
+Texto/narração:
+"Julian Play: um sistema para vender, atender, cobrar e controlar sua operação com mais profissionalismo. Solicite uma demonstração."
+Imagem sugerida: tela final com logo Julian Play.
