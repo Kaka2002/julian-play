@@ -133,7 +133,11 @@ const renovacoesRecentes = new Map();
 const campanhaAmizadeExecucao = {
     id: null,
     emAndamento: false,
+    pausada: false,
+    cancelada: false,
     iniciadaEm: '',
+    pausadaEm: '',
+    canceladaEm: '',
     finalizadaEm: '',
     enviados: 0,
     ignorados: 0,
@@ -3914,7 +3918,11 @@ function limparStatusCampanhaAmizade() {
     Object.assign(campanhaAmizadeExecucao, {
         id: null,
         emAndamento: false,
+        pausada: false,
+        cancelada: false,
         iniciadaEm: '',
+        pausadaEm: '',
+        canceladaEm: '',
         finalizadaEm: '',
         enviados: 0,
         ignorados: 0,
@@ -3973,13 +3981,48 @@ async function sincronizarCampanhaAtual(status = 'em_andamento', extras = {}) {
             ignorados: campanhaAmizadeExecucao.clientesIgnorados,
             jaEnviados: campanhaAmizadeExecucao.clientesJaEnviados,
             erros: campanhaAmizadeExecucao.erros || 0,
-            erro: campanhaAmizadeExecucao.erro || ''
+            erro: campanhaAmizadeExecucao.erro || '',
+            pausada: Boolean(campanhaAmizadeExecucao.pausada),
+            cancelada: Boolean(campanhaAmizadeExecucao.cancelada),
+            pausadaEm: campanhaAmizadeExecucao.pausadaEm || '',
+            canceladaEm: campanhaAmizadeExecucao.canceladaEm || ''
         },
         ...extras
     }).catch((err) => {
         console.log(`[clientes] Nao foi possivel atualizar campanha ${campanhaAmizadeExecucao.id}: ${err.message}`);
         return null;
     });
+}
+
+function erroCampanhaCancelada() {
+    const err = new Error('Campanha cancelada pelo painel.');
+    err.campanhaCancelada = true;
+    return err;
+}
+
+async function aguardarCampanhaAmizadeLiberada() {
+    if (campanhaAmizadeExecucao.cancelada) {
+        throw erroCampanhaCancelada();
+    }
+
+    while (campanhaAmizadeExecucao.pausada) {
+        campanhaAmizadeExecucao.mensagem = 'Campanha pausada. Clique em continuar para retomar os envios.';
+        await sincronizarCampanhaAtual('pausada');
+        await esperar(5000);
+
+        if (campanhaAmizadeExecucao.cancelada) {
+            throw erroCampanhaCancelada();
+        }
+    }
+}
+
+async function aguardarIntervaloCampanhaAmizade(intervaloMs) {
+    const fim = Date.now() + intervaloMs;
+
+    while (Date.now() < fim) {
+        await aguardarCampanhaAmizadeLiberada();
+        await esperar(Math.min(5000, Math.max(250, fim - Date.now())));
+    }
 }
 
 function executarPowerShell(args) {
@@ -4191,6 +4234,7 @@ async function executarCampanhaAmizadeEmLotes() {
         await sincronizarCampanhaAtual('em_andamento');
 
         for (let indice = 0; indice < clientesElegiveis.length; indice += CAMPANHA_AMIZADE_LOTE_TAMANHO) {
+            await aguardarCampanhaAmizadeLiberada();
             const statusAtual = getStatusWhatsApp();
 
             if (!statusAtual.conectado) {
@@ -4203,6 +4247,7 @@ async function executarCampanhaAmizadeEmLotes() {
             await sincronizarCampanhaAtual('em_andamento');
 
             for (const cliente of lote) {
+                await aguardarCampanhaAmizadeLiberada();
                 const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
                 try {
@@ -4264,7 +4309,7 @@ async function executarCampanhaAmizadeEmLotes() {
                 campanhaAmizadeExecucao.proximoLoteEm = new Date(Date.now() + intervaloLoteMs).toISOString();
                 campanhaAmizadeExecucao.mensagem = `Lote ${campanhaAmizadeExecucao.loteAtual} concluido. Proximo lote em aproximadamente ${textoIntervaloSegundos(intervaloLoteMs)}.`;
                 await sincronizarCampanhaAtual('em_andamento');
-                await esperar(intervaloLoteMs);
+                await aguardarIntervaloCampanhaAmizade(intervaloLoteMs);
             }
         }
 
@@ -6098,8 +6143,8 @@ function classeStatusCampanha(status) {
     const valor = String(status || '').toLowerCase();
 
     if (['concluida', 'sucesso'].includes(valor)) return 'green';
-    if (['erro', 'interrompida'].includes(valor)) return 'red';
-    if (['em_andamento', 'preparando'].includes(valor)) return 'orange';
+    if (['erro', 'interrompida', 'cancelada'].includes(valor)) return 'red';
+    if (['em_andamento', 'preparando', 'pausada', 'cancelando'].includes(valor)) return 'orange';
     return 'blue';
 }
 
@@ -6107,6 +6152,9 @@ function textoStatusCampanha(status) {
     const mapa = {
         em_andamento: 'Em andamento',
         preparando: 'Preparando',
+        pausada: 'Pausada',
+        cancelando: 'Cancelando',
+        cancelada: 'Cancelada',
         concluida: 'Concluida',
         erro: 'Erro',
         rascunho: 'Rascunho'
@@ -6115,9 +6163,26 @@ function textoStatusCampanha(status) {
     return mapa[String(status || '').toLowerCase()] || (status || '-');
 }
 
+function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
+    const acao = campanhaAmizadeExecucao.pausada ? 'continuar' : 'pausar';
+    const texto = campanhaAmizadeExecucao.pausada ? 'Continuar campanha' : 'Pausar campanha';
+    const classe = campanhaAmizadeExecucao.pausada ? 'green' : 'secondary';
+
+    return `<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <form method="post" action="/campanhas/amizade/${acao}">
+            <input type="hidden" name="retorno" value="${escapar(retorno)}">
+            <button class="button ${classe}" type="submit">${texto}</button>
+        </form>
+        <form method="post" action="/campanhas/amizade/cancelar" onsubmit="return confirm('Cancelar a campanha em andamento? Os clientes ainda nao enviados ficarao pendentes.');">
+            <input type="hidden" name="retorno" value="${escapar(retorno)}">
+            <button class="button danger" type="submit">Cancelar campanha</button>
+        </form>
+    </div>`;
+}
+
 function telaCampanhas({ campanhas = [], campanha = null, itens = [] }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
-    const totalAtivas = campanhas.filter(item => String(item.status || '') === 'em_andamento').length;
+    const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
     const totalEnviados = campanhas.reduce((soma, item) => soma + Number(item.enviados || 0), 0);
     const totalErros = campanhas.reduce((soma, item) => soma + Number(item.erros || 0), 0);
     const totalIgnorados = campanhas.reduce((soma, item) => soma + Number(item.ignorados || 0), 0);
@@ -6143,6 +6208,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [] }) {
             <span class="badge orange">Nao iniciar outro envio</span>
         </div>
         <div class="notice warn">O processo esta sendo executado. O botao de disparo fica bloqueado ate o fim para evitar duplicidade.</div>
+        ${controlesCampanhaAmizadeHtml('/campanhas')}
         <div class="helper" style="margin-top:10px;">
             Enviados: ${escapar(resumoNomesCampanha(ativa.clientesEnviados) || '-')}<br>
             Ignorados: ${escapar(resumoNomesCampanha(ativa.clientesIgnorados) || '-')}<br>
@@ -6284,6 +6350,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
                 <h2 class="panel-title">Campanha de indicação</h2>
                 <div class="subtitle">Dispare a arte "Amizade que vale presente" para clientes ativos, exceto testes.</div>
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
+                ${campanhaEmAndamento ? controlesCampanhaAmizadeHtml('/clientes') : ''}
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <a class="button secondary" href="/campanhas">Ver campanhas</a>
@@ -9643,6 +9710,95 @@ router.post('/clientes/verificar-renovacoes', async (req, res) => {
     }
 });
 
+function retornoCampanha(req) {
+    const retorno = String(req.body?.retorno || '').trim();
+    return retorno === '/clientes' ? '/clientes' : '/campanhas';
+}
+
+router.post('/campanhas/amizade/pausar', async (req, res) => {
+    if (!campanhaAmizadeExecucao.emAndamento) {
+        return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Nenhuma campanha em andamento para pausar.')}`);
+    }
+
+    const config = await obterConfiguracoes();
+    campanhaAmizadeExecucao.pausada = true;
+    campanhaAmizadeExecucao.pausadaEm = new Date().toISOString();
+    campanhaAmizadeExecucao.mensagem = 'Campanha pausada. Clique em continuar para retomar os envios.';
+    await sincronizarCampanhaAtual('pausada');
+    await enviarWebhook(config.alertaWebhookUrl, {
+        tipo: 'campanha_pausada',
+        nivel: 'aviso',
+        mensagem: campanhaAmizadeExecucao.mensagem,
+        data: campanhaAmizadeExecucao.pausadaEm,
+        detalhes: {
+            campanhaId: campanhaAmizadeExecucao.id,
+            enviados: campanhaAmizadeExecucao.enviados,
+            ignorados: campanhaAmizadeExecucao.ignorados,
+            jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+            loteAtual: campanhaAmizadeExecucao.loteAtual,
+            totalLotes: campanhaAmizadeExecucao.totalLotes
+        }
+    });
+
+    return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Campanha pausada. Os envios restantes ficam aguardando continuidade.')}`);
+});
+
+router.post('/campanhas/amizade/continuar', async (req, res) => {
+    if (!campanhaAmizadeExecucao.emAndamento) {
+        return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Nenhuma campanha em andamento para continuar.')}`);
+    }
+
+    const config = await obterConfiguracoes();
+    campanhaAmizadeExecucao.pausada = false;
+    campanhaAmizadeExecucao.mensagem = 'Campanha retomada. Os proximos envios continuam respeitando os lotes e intervalos.';
+    await sincronizarCampanhaAtual('em_andamento');
+    await enviarWebhook(config.alertaWebhookUrl, {
+        tipo: 'campanha_retomada',
+        nivel: 'info',
+        mensagem: campanhaAmizadeExecucao.mensagem,
+        data: new Date().toISOString(),
+        detalhes: {
+            campanhaId: campanhaAmizadeExecucao.id,
+            enviados: campanhaAmizadeExecucao.enviados,
+            ignorados: campanhaAmizadeExecucao.ignorados,
+            jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+            loteAtual: campanhaAmizadeExecucao.loteAtual,
+            totalLotes: campanhaAmizadeExecucao.totalLotes
+        }
+    });
+
+    return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Campanha retomada.')}`);
+});
+
+router.post('/campanhas/amizade/cancelar', async (req, res) => {
+    if (!campanhaAmizadeExecucao.emAndamento) {
+        return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Nenhuma campanha em andamento para cancelar.')}`);
+    }
+
+    const config = await obterConfiguracoes();
+    campanhaAmizadeExecucao.cancelada = true;
+    campanhaAmizadeExecucao.pausada = false;
+    campanhaAmizadeExecucao.canceladaEm = new Date().toISOString();
+    campanhaAmizadeExecucao.mensagem = 'Cancelamento solicitado. O envio sera encerrado no proximo ponto seguro.';
+    await sincronizarCampanhaAtual('cancelando');
+    await enviarWebhook(config.alertaWebhookUrl, {
+        tipo: 'campanha_cancelamento_solicitado',
+        nivel: 'aviso',
+        mensagem: campanhaAmizadeExecucao.mensagem,
+        data: campanhaAmizadeExecucao.canceladaEm,
+        detalhes: {
+            campanhaId: campanhaAmizadeExecucao.id,
+            enviados: campanhaAmizadeExecucao.enviados,
+            ignorados: campanhaAmizadeExecucao.ignorados,
+            jaEnviados: campanhaAmizadeExecucao.jaEnviados,
+            loteAtual: campanhaAmizadeExecucao.loteAtual,
+            totalLotes: campanhaAmizadeExecucao.totalLotes
+        }
+    });
+
+    return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Cancelamento solicitado. Aguarde o encerramento seguro da campanha.')}`);
+});
+
 router.post('/clientes/disparar-amizade-presente', async (req, res) => {
     const status = getStatusWhatsApp();
     const client = getClient();
@@ -9674,6 +9830,8 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
 
         campanhaAmizadeExecucao.id = campanha?.id || null;
         campanhaAmizadeExecucao.emAndamento = true;
+        campanhaAmizadeExecucao.pausada = false;
+        campanhaAmizadeExecucao.cancelada = false;
         campanhaAmizadeExecucao.iniciadaEm = new Date().toISOString();
         campanhaAmizadeExecucao.mensagem = 'Campanha iniciada. Enviando em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos.';
         await enviarWebhook(config.alertaWebhookUrl, {
@@ -9692,6 +9850,21 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
         setImmediate(() => {
             executarCampanhaAmizadeEmLotes()
                 .catch((err) => {
+                    if (err.campanhaCancelada) {
+                        campanhaAmizadeExecucao.cancelada = true;
+                        campanhaAmizadeExecucao.canceladaEm = campanhaAmizadeExecucao.canceladaEm || new Date().toISOString();
+                        campanhaAmizadeExecucao.mensagem = `Campanha cancelada: ${campanhaAmizadeExecucao.enviados} enviado(s), ${campanhaAmizadeExecucao.ignorados} ignorado(s), ${campanhaAmizadeExecucao.jaEnviados} ja tinham recebido.`;
+                        sincronizarCampanhaAtual('cancelada', {
+                            finalizadaEm: new Date().toISOString()
+                        });
+                        logControleClientes('Campanha amizade cancelada pelo painel', {
+                            enviados: campanhaAmizadeExecucao.enviados,
+                            ignorados: campanhaAmizadeExecucao.ignorados,
+                            jaEnviados: campanhaAmizadeExecucao.jaEnviados
+                        });
+                        return;
+                    }
+
                     campanhaAmizadeExecucao.erro = err.message;
                     campanhaAmizadeExecucao.erros = Math.max(1, Number(campanhaAmizadeExecucao.erros || 0));
                     campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}`;
@@ -9703,15 +9876,16 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
                 })
                 .finally(() => {
                     campanhaAmizadeExecucao.emAndamento = false;
+                    campanhaAmizadeExecucao.pausada = false;
                     campanhaAmizadeExecucao.finalizadaEm = new Date().toISOString();
                     campanhaAmizadeExecucao.proximoLoteEm = '';
-                    const statusFinal = campanhaAmizadeExecucao.erro ? 'erro' : 'concluida';
+                    const statusFinal = campanhaAmizadeExecucao.cancelada ? 'cancelada' : campanhaAmizadeExecucao.erro ? 'erro' : 'concluida';
                     sincronizarCampanhaAtual(statusFinal, {
                         finalizadaEm: campanhaAmizadeExecucao.finalizadaEm
                     });
                     enviarWebhook(config.alertaWebhookUrl, {
-                        tipo: campanhaAmizadeExecucao.erro ? 'campanha_erro' : 'campanha_concluida',
-                        nivel: campanhaAmizadeExecucao.erro ? 'erro' : 'sucesso',
+                        tipo: campanhaAmizadeExecucao.cancelada ? 'campanha_cancelada' : campanhaAmizadeExecucao.erro ? 'campanha_erro' : 'campanha_concluida',
+                        nivel: campanhaAmizadeExecucao.cancelada ? 'aviso' : campanhaAmizadeExecucao.erro ? 'erro' : 'sucesso',
                         mensagem: campanhaAmizadeExecucao.mensagem,
                         data: campanhaAmizadeExecucao.finalizadaEm,
                         detalhes: {
