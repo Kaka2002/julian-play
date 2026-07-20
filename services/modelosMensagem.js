@@ -381,9 +381,17 @@ function ajustarModeloAvisoAmanha(texto) {
         .replace('Seu plano *{{plano}}* vence amanha, dia *{{vencimento}}*.', 'Seu plano {{plano}} vence amanhã, dia {{vencimento}}.');
 }
 
-function aplicarVariaveis(texto, variaveis) {
-    return String(texto || '').replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, chave) => {
-        return variaveis[chave] ?? '';
+function aplicarVariaveis(texto, variaveis = {}) {
+    const mapa = Object.entries(variaveis).reduce((acc, [chave, valor]) => {
+        acc[String(chave).toLowerCase()] = valor;
+        return acc;
+    }, {});
+
+    return String(texto || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_, chave) => {
+        if (Object.prototype.hasOwnProperty.call(variaveis, chave)) {
+            return variaveis[chave] ?? '';
+        }
+        return mapa[String(chave).toLowerCase()] ?? '';
     });
 }
 

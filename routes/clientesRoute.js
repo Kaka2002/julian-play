@@ -1706,6 +1706,15 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 800;
         }
 
+        button.var-token {
+            cursor: pointer;
+        }
+
+        button.var-token:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
         .model-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(260px, 1fr));
@@ -2744,11 +2753,11 @@ function editorMensagemModelo(valor = '') {
             const search = document.getElementById('emojiSearch');
             if (!picker || !toggle || !textarea) return;
 
-            const inserirEmoji = (emoji) => {
+            const inserirTexto = (texto) => {
                 const inicio = textarea.selectionStart ?? textarea.value.length;
                 const fim = textarea.selectionEnd ?? textarea.value.length;
-                textarea.value = textarea.value.slice(0, inicio) + emoji + textarea.value.slice(fim);
-                const pos = inicio + emoji.length;
+                textarea.value = textarea.value.slice(0, inicio) + texto + textarea.value.slice(fim);
+                const pos = inicio + texto.length;
                 textarea.focus();
                 textarea.setSelectionRange(pos, pos);
             };
@@ -2761,7 +2770,11 @@ function editorMensagemModelo(valor = '') {
             picker.addEventListener('click', (event) => {
                 const botao = event.target.closest('button[data-emoji]');
                 if (!botao) return;
-                inserirEmoji(botao.dataset.emoji || '');
+                inserirTexto(botao.dataset.emoji || '');
+            });
+
+            document.querySelectorAll('button[data-variable-token]').forEach(botao => {
+                botao.addEventListener('click', () => inserirTexto(botao.dataset.variableToken || ''));
             });
 
             if (search) {
@@ -7068,19 +7081,25 @@ function formularioPlano(plano = {}) {
     </section>`;
 }
 
-function variaveisDisponiveis() {
+function variaveisDisponiveis(clicavel = false) {
     const variaveis = [
         ['{{nome}}', 'Primeiro nome do cliente'],
         ['{{plano}}', 'Tipo do plano'],
         ['{{vencimento}}', 'Data de vencimento'],
         ['{{dias}}', 'Dias restantes ou vencidos'],
-        ['{{valor}}', 'Valor do plano']
+        ['{{valor}}', 'Valor do plano'],
+        ['{{telefoneWhatsApp}}', 'WhatsApp da instalação usado em campanhas']
     ];
 
     return `<section class="panel" style="margin-bottom: 24px;">
         <div class="vars">
             <strong style="display:inline-flex;align-items:center;gap:8px;">${icon('info')} Variáveis disponíveis</strong>
-            ${variaveis.map(([token, descricao]) => `<span><span class="var-token">${escapar(token)}</span> <span class="helper">- ${escapar(descricao)}</span></span>`).join('')}
+            ${variaveis.map(([token, descricao]) => {
+                const tokenHtml = clicavel
+                    ? `<button class="var-token" type="button" data-variable-token="${escapar(token)}" title="Inserir ${escapar(token)} no texto">${escapar(token)}</button>`
+                    : `<span class="var-token">${escapar(token)}</span>`;
+                return `<span>${tokenHtml} <span class="helper">- ${escapar(descricao)}</span></span>`;
+            }).join('')}
         </div>
     </section>`;
 }
@@ -7160,7 +7179,7 @@ function formularioModelo(modelo = {}) {
         <h1>${modelo.id ?'Editar Modelo' : 'Novo Modelo'}</h1>
         <div class="subtitle">Use variáveis para personalizar cada mensagem enviada</div>
     </section>
-    ${variaveisDisponiveis()}
+    ${variaveisDisponiveis(true)}
     <section class="panel">
         <form class="fields" method="post" action="/modelos/salvar">
             ${modelo.id ?`<input type="hidden" name="id" value="${escapar(modelo.id)}">` : ''}
