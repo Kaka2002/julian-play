@@ -2,7 +2,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 const { enfileirarEnvio } = require('./filaMensagensService');
 
-const JANELA_DUPLICADO_MS = 45000;
+const JANELA_DUPLICADO_MS = 5 * 60 * 1000;
 const enviosRecentes = new Map();
 
 function chaveEnvio(to, texto) {
@@ -60,7 +60,11 @@ async function enviarMensagem(client, to, texto) {
             () => client.sendMessage(to, texto),
             'Envio de mensagem automatica'
         );
-        registrarMensagemDoRobo(enviada);
+        if (enviada) {
+            registrarMensagemDoRobo(enviada);
+        } else {
+            console.log(`Mensagem automatica sem confirmacao do WhatsApp para ${to}; tratando como enviada para evitar duplicidade.`);
+        }
         enviosRecentes.set(chave, {
             enviadoEm: Date.now(),
             emAndamento: false

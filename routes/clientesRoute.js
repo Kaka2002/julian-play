@@ -131,7 +131,7 @@ const { enfileirarEnvio } = require('../services/filaMensagensService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 
 const router = express.Router();
-const WHATSAPP_ENVIO_DUPLICADO_MS = 45000;
+const WHATSAPP_ENVIO_DUPLICADO_MS = 5 * 60 * 1000;
 const RENOVACAO_SUBMISSAO_DUPLICADA_MS = 120000;
 const mensagensWhatsAppRecentes = new Map();
 const renovacoesRecentes = new Map();
@@ -3801,7 +3801,15 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             );
 
             if (!envio) {
-                throw new Error('O WhatsApp nao confirmou o envio da mensagem.');
+                console.warn(`[clientes] ${descricao} sem confirmacao do WhatsApp para ${destino}; tratando como enviado para evitar duplicidade.`);
+                confirmarEnvioWhatsApp(chaveEnvio, null);
+
+                return {
+                    destino,
+                    mensagemId: '',
+                    ack: undefined,
+                    semConfirmacao: true
+                };
             }
 
             registrarMensagemDoRobo(envio);
