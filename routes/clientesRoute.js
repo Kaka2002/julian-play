@@ -3737,6 +3737,39 @@ async function resolverDestinoWhatsApp(client, telefone) {
     return destinos[0];
 }
 
+function obterEnvioWhatsAppRecente(chaveEnvio) {
+    const envioRecente = mensagensWhatsAppRecentes.get(chaveEnvio);
+
+    if (!envioRecente) {
+        return null;
+    }
+
+    if (Date.now() - envioRecente.enviadoEm >= WHATSAPP_ENVIO_DUPLICADO_MS) {
+        mensagensWhatsAppRecentes.delete(chaveEnvio);
+        return null;
+    }
+
+    return envioRecente;
+}
+
+function reservarEnvioWhatsApp(chaveEnvio) {
+    mensagensWhatsAppRecentes.set(chaveEnvio, {
+        enviadoEm: Date.now(),
+        mensagemId: '',
+        ack: undefined,
+        emAndamento: true
+    });
+}
+
+function confirmarEnvioWhatsApp(chaveEnvio, envio) {
+    mensagensWhatsAppRecentes.set(chaveEnvio, {
+        enviadoEm: Date.now(),
+        mensagemId: envio?.id?._serialized || '',
+        ack: envio?.ack,
+        emAndamento: false
+    });
+}
+
 async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, descricao = 'Envio pelo WhatsApp') {
     const destinos = await resolverDestinosWhatsApp(client, telefone);
     let ultimoErro = null;
@@ -3744,10 +3777,9 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
     for (const destino of destinos) {
         try {
             const chaveEnvio = `${destino}|${mensagem}`;
-            const agora = Date.now();
-            const envioRecente = mensagensWhatsAppRecentes.get(chaveEnvio);
+            const envioRecente = obterEnvioWhatsAppRecente(chaveEnvio);
 
-            if (envioRecente && agora - envioRecente.enviadoEm < WHATSAPP_ENVIO_DUPLICADO_MS) {
+            if (envioRecente) {
                 console.warn(`[clientes] ${descricao} ignorado: mensagem duplicada recente para ${destino}.`);
                 return {
                     destino,
@@ -3757,6 +3789,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
                 };
             }
 
+            reservarEnvioWhatsApp(chaveEnvio);
             registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
@@ -3772,11 +3805,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             }
 
             registrarMensagemDoRobo(envio);
-            mensagensWhatsAppRecentes.set(chaveEnvio, {
-                enviadoEm: Date.now(),
-                mensagemId: envio.id?._serialized || '',
-                ack: envio.ack
-            });
+            confirmarEnvioWhatsApp(chaveEnvio, envio);
 
             return {
                 destino,
@@ -3799,10 +3828,9 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
     for (const destino of destinos) {
         try {
             const chaveEnvio = `${destino}|${arquivoImagem}|${legenda}`;
-            const agora = Date.now();
-            const envioRecente = mensagensWhatsAppRecentes.get(chaveEnvio);
+            const envioRecente = obterEnvioWhatsAppRecente(chaveEnvio);
 
-            if (envioRecente && agora - envioRecente.enviadoEm < WHATSAPP_ENVIO_DUPLICADO_MS) {
+            if (envioRecente) {
                 console.warn(`[clientes] ${descricao} ignorado: imagem duplicada recente para ${destino}.`);
                 return {
                     destino,
@@ -3812,6 +3840,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                 };
             }
 
+            reservarEnvioWhatsApp(chaveEnvio);
             const media = MessageMedia.fromFilePath(arquivoImagem);
             registrarEnvioDoRobo(destino, legenda);
             const envio = await aguardarComTimeout(
@@ -3852,11 +3881,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
             }
 
             registrarMensagemDoRobo(envio);
-            mensagensWhatsAppRecentes.set(chaveEnvio, {
-                enviadoEm: Date.now(),
-                mensagemId: envio.id?._serialized || '',
-                ack: envio.ack
-            });
+            confirmarEnvioWhatsApp(chaveEnvio, envio);
 
             return {
                 destino,
