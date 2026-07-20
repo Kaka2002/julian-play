@@ -44,7 +44,8 @@ const {
     removerModelo,
     montarMensagemPorModelo,
     montarMensagemCobrancaVencido,
-    montarMensagemCampanhaAmizade
+    montarMensagemCampanhaAmizade,
+    montarMensagemModeloManual
 } = require('../services/modelosMensagem');
 const {
     obterConfiguracoes,
@@ -5079,12 +5080,63 @@ function acoesRapidasCliente(cliente = {}) {
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
                 <button class="button green" type="submit">${icon('whats')} Enviar vencimento</button>
             </form>
+            <a class="button secondary" href="/clientes/${escapar(cliente.id)}/enviar-modelo">${icon('modelos')} Enviar modelo</a>
             <a class="button" href="#renovar">${icon('refresh')} Renovar</a>
             <a class="button secondary" href="#atendimentos">${icon('atendimento')} Atendimento</a>
             <a class="button secondary" href="#historico-unificado">${icon('info')} Histórico</a>
             ${linkWhatsApp ?`<a class="button secondary" href="${linkWhatsApp}" target="_blank" rel="noopener">${icon('whats')} Abrir WhatsApp</a>` : ''}
             <a class="button secondary" href="/clientes/todos">${icon('clientes')} Lista</a>
         </div>
+    </section>`;
+}
+
+function telaEnviarModeloCliente({ cliente = {}, modelos = [] }) {
+    const clienteId = escapar(cliente.id);
+    const nomeCliente = escapar(cliente.nome || 'cliente');
+    const opcoes = modelos.map(modelo => {
+        const titulo = escapar(modelo.titulo || `Modelo ${modelo.id}`);
+        const plano = escapar(modelo.plano || 'padrão');
+        const texto = escapar(rotuloCurto(String(modelo.texto || '').replace(/\s+/g, ' '), 260));
+
+        return `<label class="note-item" style="cursor:pointer;">
+            <div style="display:flex;align-items:flex-start;gap:12px;">
+                <input type="radio" name="modeloId" value="${escapar(modelo.id)}" required style="margin-top:4px;">
+                <div>
+                    <strong>${titulo}</strong>
+                    <p>Plano/tipo: ${plano}</p>
+                    <p>${texto || 'Modelo sem texto cadastrado.'}</p>
+                </div>
+            </div>
+        </label>`;
+    }).join('');
+
+    return `<section class="page-title">
+        <div class="toolbar" style="align-items:flex-start;">
+            <div>
+                <h1>Enviar modelo</h1>
+                <div class="subtitle">Escolha uma mensagem pronta para enviar agora ao cliente ${nomeCliente}</div>
+            </div>
+            <a class="button secondary" href="/clientes/${clienteId}/editar">${icon('arrow')} Voltar ao cliente</a>
+        </div>
+    </section>
+    <section class="panel">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">${nomeCliente}</h2>
+                <div class="subtitle">${escapar(cliente.telefone || 'WhatsApp não informado')}</div>
+            </div>
+            <span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span>
+        </div>
+        <form method="post" action="/clientes/${clienteId}/enviar-modelo" onsubmit="return confirm('Enviar o modelo escolhido para ${nomeCliente}?');">
+            <div style="padding:20px;display:grid;gap:12px;">
+                <div class="notice">As variáveis do modelo serão preenchidas automaticamente com os dados deste cliente antes do envio.</div>
+                ${modelos.length ?opcoes : '<div class="empty">Nenhum modelo ativo encontrado. Cadastre ou ative um modelo em Modelos de Mensagem.</div>'}
+                <div class="actions">
+                    <button class="button green" type="submit" ${modelos.length ?'' : 'disabled'}>${icon('whats')} Enviar modelo escolhido</button>
+                    <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
+                </div>
+            </div>
+        </form>
     </section>`;
 }
 
@@ -6554,6 +6606,7 @@ function tabelaClientes(clientes) {
                 <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-campanha-amizade" onsubmit="return confirm('Enviar a campanha Amizade que vale presente somente para este cliente?');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar campanha de indicação">${icon('whats')}</button>
                 </form>
+                <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/enviar-modelo" title="Enviar modelo">${icon('modelos')}</a>
                 ${clienteTesteExpirado(cliente) ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-planos-teste-expirado" onsubmit="return confirm('Enviar a tela de planos para este teste expirado? Esta acao so deve ser usada uma vez.');">
                     <button class="button icon-only icon-action green" type="submit" title="Enviar planos do teste expirado">${icon('planos')}</button>
                 </form>` : ''}
@@ -8295,6 +8348,26 @@ router.get('/clientes/novo', async (req, res) => {
     });
 });
 
+router.get('/clientes/:id/enviar-modelo', async (req, res) => {
+    const [cliente, modelos] = await Promise.all([
+        buscarClientePorId(req.params.id),
+        listarModelos()
+    ]);
+
+    if (!cliente) {
+        return res.redirect('/clientes?mensagem=Cliente não encontrado');
+    }
+
+    const modelosAtivos = modelos.filter(modelo => Number(modelo.ativo) !== 0);
+
+    await renderizar(res, {
+        titulo: 'Enviar modelo',
+        conteudo: telaEnviarModeloCliente({ cliente, modelos: modelosAtivos }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'clientes'
+    });
+});
+
 router.get('/clientes/:id/editar', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
@@ -9655,6 +9728,72 @@ router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlListaClientesMensagem(`Erro ao enviar planos: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/enviar-modelo', async (req, res) => {
+    const cliente = await buscarClientePorId(req.params.id);
+
+    if (!cliente) {
+        return res.redirect(montarUrlListaClientesMensagem('Cliente nao encontrado.'));
+    }
+
+    const modeloId = String(req.body?.modeloId || '').trim();
+    if (!modeloId) {
+        return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('Escolha um modelo para enviar.')}`);
+    }
+
+    const modelo = await buscarModeloPorId(modeloId);
+    if (!modelo || Number(modelo.ativo) === 0) {
+        return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('Modelo nao encontrado ou inativo.')}`);
+    }
+
+    const status = getStatusWhatsApp();
+    const client = getClient();
+
+    if (!client || !status.conectado) {
+        return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
+    }
+
+    try {
+        const config = await obterConfiguracoes();
+        const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+        const dias = vencimento ? calcularDiasRestantes(vencimento) : '';
+        const telefoneInstalacao = telefoneCampanhaAmizade(status, config);
+        const mensagem = await montarMensagemModeloManual(cliente, modelo, {
+            dias,
+            telefoneWhatsApp: formatarTelefoneCampanha(telefoneInstalacao)
+        });
+
+        if (!String(mensagem || '').trim()) {
+            return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('Este modelo esta sem mensagem cadastrada.')}`);
+        }
+
+        const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
+            `Envio manual do modelo ${modelo.titulo || modelo.id}`
+        );
+
+        await adicionarNotaCliente(cliente.id, `Modelo "${modelo.titulo || modelo.id}" enviado manualmente pelo WhatsApp.`);
+        logControleClientes('Modelo manual enviado ao cliente', {
+            clienteId: cliente.id,
+            modeloId: modelo.id,
+            modeloTitulo: modelo.titulo,
+            destino: envioWhatsApp.destino,
+            mensagemId: envioWhatsApp.mensagemId,
+            ack: envioWhatsApp.ack
+        });
+
+        return res.redirect(montarUrlClienteMensagem(cliente.id, `Modelo "${modelo.titulo || modelo.id}" enviado para ${cliente.nome}.`));
+    } catch (err) {
+        logControleClientes('Erro ao enviar modelo manual', {
+            clienteId: cliente.id,
+            modeloId: modelo.id,
+            erro: err.message
+        });
+        return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent(`Erro ao enviar modelo: ${err.message}`)}`);
     }
 });
 

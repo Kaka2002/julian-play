@@ -517,6 +517,25 @@ async function montarMensagemCobrancaVencido(cliente) {
     return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'cobranca_vencido').texto, variaveis);
 }
 
+function montarVariaveisCliente(cliente = {}, opcoes = {}) {
+    const diasInformados = opcoes.dias === undefined || opcoes.dias === null || opcoes.dias === ''
+        ? ''
+        : Math.abs(Number(opcoes.dias) || 0);
+
+    return {
+        nome: primeiroNome(cliente.nome),
+        plano: cliente.plano || 'assinatura',
+        vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
+        dias: diasInformados,
+        valor: cliente.valorPlano || cliente.valor || '',
+        telefoneWhatsApp: opcoes.telefoneWhatsApp || 'o WhatsApp da instalação'
+    };
+}
+
+async function montarMensagemModeloManual(cliente, modelo, opcoes = {}) {
+    return aplicarVariaveis(modelo?.texto || '', montarVariaveisCliente(cliente, opcoes));
+}
+
 module.exports = {
     listarModelos,
     buscarModeloPorId,
@@ -527,6 +546,7 @@ module.exports = {
     montarMensagemAniversario,
     montarMensagemCobrancaVencido,
     montarMensagemCampanhaAmizade,
+    montarMensagemModeloManual,
     normalizarPlano,
     aplicarVariaveis,
     modelosPadrao
