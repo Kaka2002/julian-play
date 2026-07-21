@@ -7601,7 +7601,7 @@ function painelSaudeRobo(status = {}) {
                 <tr><td><strong>Memória do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
             </tbody>
         </table>
-        <div style="padding:18px 20px 0;border-top:1px solid #eef2f7;">
+        ${!instalacaoAdministrador() ?`<div style="padding:18px 20px 0;border-top:1px solid #eef2f7;">
             <form method="post" action="/manutencao/whatsapp/numero" onsubmit="return confirm('Ao trocar o numero, a sessao atual sera encerrada e um novo QR Code sera gerado. Continuar?')" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:end;">
                 <label style="display:grid;gap:6px;font-weight:700;">WhatsApp do robo
                     <input type="text" name="numeroWhatsappRobo" value="${escapar(numeroRoboExibido)}" placeholder="5511999999999" inputmode="numeric" required>
@@ -7609,7 +7609,7 @@ function painelSaudeRobo(status = {}) {
                 <div class="subtitle" style="align-self:center;">Use DDI + DDD + numero. Exemplo: 5511999999999. Ao salvar, o sistema abre um novo QR Code.</div>
                 <button class="button primary" type="submit">${icon('refresh')} Salvar numero e gerar QR Code</button>
             </form>
-        </div>
+        </div>` : ''}
         ${risco.pontos?.length ?`<div class="notice" style="margin:16px 20px 0;">${risco.pontos.map(escapar).join(' ')}</div>` : ''}
         <div style="padding:18px 20px 20px;">
             <h3 style="margin:0 0 10px;">Atendimentos humanos pausados</h3>
@@ -10013,6 +10013,10 @@ router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
 });
 
 router.post('/manutencao/whatsapp/numero', async (req, res) => {
+    if (instalacaoAdministrador()) {
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent('A troca do WhatsApp desta instalacao deve ser feita pelo Painel Mestre.')}`);
+    }
+
     try {
         const numero = validarNumeroWhatsappRobo(req.body.numeroWhatsappRobo);
         salvarNumeroWhatsappRoboConfigurado(numero);
