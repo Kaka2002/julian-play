@@ -32,8 +32,8 @@ const DIGITACAO_ATIVA = process.env.DIGITACAO_ATIVA !== 'false';
 const ENVIO_TIMEOUT_MS = Number(process.env.ENVIO_TIMEOUT_MS || 90000);
 const ATENDIMENTO_HUMANO_TIMEOUT_MS = Number(process.env.ATENDIMENTO_HUMANO_TIMEOUT_MS || 30 * 60 * 1000);
 const imagensRespostas = {
-    menu: 'Logo 1_7.png',
-    planos: 'Plano.png',
+    menu: null,
+    planos: null,
     teste: null,
     testeLiberado: null,
     renovacao: null,
@@ -45,17 +45,10 @@ const RODAPE_ATENDIMENTO = 'Digite *sair* para encerrar o atendimento.';
 
 async function obterPerfilRobo() {
     const config = await obterConfiguracoes().catch(() => ({}));
-    const usarImagensPadrao = !String(process.env.LICENSE_CUSTOMER_NAME || '').trim();
-    const nomeEmpresa = (
-        config.nomeEmpresaRobo ||
-        config.licencaCliente ||
-        process.env.LICENSE_CUSTOMER_NAME ||
-        config.nomeSistema ||
-        'JULIAN PLAY'
-    ).trim();
+    const nomeEmpresa = String(config.nomeEmpresaRobo || '').trim();
     const imagemConfigurada = (chave, padrao = '') => {
         if (String(config[`${chave}Desativada`] || '') === '1') return '';
-        return config[chave] || (usarImagensPadrao ? padrao : '');
+        return config[chave] || padrao || '';
     };
 
     return {

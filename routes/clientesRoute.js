@@ -7824,7 +7824,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
-            ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || status.config?.licencaCliente || status.config?.nomeSistema || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
+            ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
             ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preço, teste"' })}
             ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             <label>Resposta humanizada

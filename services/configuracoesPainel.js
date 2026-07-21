@@ -21,7 +21,6 @@ function buscarTodos(sql, params = []) {
 
 async function obterConfiguracoes() {
     const rows = await buscarTodos('SELECT chave, valor FROM configuracoes');
-    const instalacaoCliente = Boolean(String(process.env.LICENSE_CUSTOMER_NAME || '').trim());
     const config = {
         nomeSistema: 'Controle de Cliente IPTV e P2P',
         logoUrl: '',
@@ -40,9 +39,9 @@ async function obterConfiguracoes() {
         licencaServidorUrl: '',
         licencaUltimaConsultaRemota: '',
         licencaMachineFingerprint: '',
-        nomeEmpresaRobo: process.env.LICENSE_CUSTOMER_NAME || process.env.NOME_EMPRESA_ROBO || 'JULIAN PLAY',
-        imagemRoboMenu: instalacaoCliente ? '' : 'Logo 1_7.png',
-        imagemRoboPlanos: instalacaoCliente ? '' : 'Plano.png',
+        nomeEmpresaRobo: '',
+        imagemRoboMenu: '',
+        imagemRoboPlanos: '',
         imagemRoboTeste: '',
         imagemRoboTesteLiberado: '',
         imagemRoboRenovacao: '',
@@ -50,10 +49,10 @@ async function obterConfiguracoes() {
         imagemRoboErro: '',
         imagemRoboEncerramento: '',
         imagemCampanhaAmizade: '',
-        pixChave: instalacaoCliente ? '' : (process.env.CHAVE_PIX || '61319147704'),
-        pixNome: instalacaoCliente ? '' : (process.env.PIX_NOME || 'JULIAN PLAY'),
-        pixCidade: instalacaoCliente ? '' : (process.env.PIX_CIDADE || 'SAO PAULO'),
-        pixTxid: instalacaoCliente ? '' : (process.env.PIX_TXID || 'JULIANPLAY'),
+        pixChave: '',
+        pixNome: '',
+        pixCidade: '',
+        pixTxid: '',
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
