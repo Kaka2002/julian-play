@@ -7922,7 +7922,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'mercadoPagoWebhookSecret', label: 'Assinatura secreta do webhook (opcional)', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.mercadoPagoWebhookSecret ?'Configurada — deixe vazio para manter' : 'Copie em Suas integrações > Webhooks'}"` })}
             ${campo({ nome: 'mercadoPagoWebhookUrl', label: 'URL HTTPS do webhook', valor: status.config?.mercadoPagoWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://seu-dominio/webhooks/mercado-pago"' })}
             ${campo({ nome: 'mercadoPagoEmailPagador', label: 'E-mail padrão do pagador', valor: status.config?.mercadoPagoEmailPagador || '', tipo: 'email', attrs: 'placeholder="pagamentos@suaempresa.com.br"' })}
-            <div class="notice full">No Mercado Pago, ative o evento <strong>Pagamentos</strong>. Antes de renovar, o sistema consulta o pagamento diretamente na API, confere referência, status e valor e ignora notificações duplicadas.</div>
+            <div class="notice full">No Mercado Pago, ative o evento <strong>Pagamentos</strong>. Antes de renovar, o sistema consulta o pagamento diretamente na API, confere referência, status e valor e ignora notificações duplicadas. Cobranças criadas, pagamentos aprovados, divergências e falhas também serão enviados ao webhook do Monitoramento comercial.</div>
             <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar provedor PIX</button></div>
         </form>
     </section>

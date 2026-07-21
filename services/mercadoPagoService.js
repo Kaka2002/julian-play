@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../database/sqlite');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { buscarClientePorId, renovarCliente } = require('./clientes');
+const { registrarEventoSistema } = require('./eventosSistema');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -25,6 +26,16 @@ function moedaNumero(valor) {
 
 function moedaTexto(valor) {
     return Number(valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function notificarEventoPix(config, tipo, nivel, mensagem, detalhes = {}) {
+    await registrarEventoSistema('pix', nivel, mensagem, detalhes).catch(err => {
+        console.error(`[mercado-pago] Falha ao registrar evento PIX: ${err.message}`);
+    });
+    if (config?.alertaWebhookUrl) {
+        const { enviarWebhook } = require('./monitoramentoComercial');
+        await enviarWebhook(config.alertaWebhookUrl, { tipo, nivel, mensagem, detalhes });
+    }
 }
 
 async function requisicaoMercadoPago(caminho, accessToken, opcoes = {}) {
@@ -109,6 +120,13 @@ async function criarCobrancaMercadoPago(plano = {}, opcoes = {}) {
              WHERE referencia = ?`,
             [String(pagamento.id), pagamento.status || 'pending', dadosPix.qr_code, referencia]
         );
+        await notificarEventoPix(
+            config,
+            'pix_cobranca_criada',
+            'info',
+            `PIX Mercado Pago gerado para ${cliente.nome}: ${planoNome}, R$ ${moedaTexto(valorTotalNumero)}.`,
+            { clienteId, cliente: cliente.nome, plano: planoNome, valor: moedaTexto(valorTotalNumero), mercadoPagoPagamentoId: String(pagamento.id) }
+        );
         return {
             referencia,
             pagamentoId: String(pagamento.id),
@@ -120,6 +138,13 @@ async function criarCobrancaMercadoPago(plano = {}, opcoes = {}) {
         await executar(
             `UPDATE cobrancas_pix SET status = 'erro', erro = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE referencia = ?`,
             [err.message, referencia]
+        );
+        await notificarEventoPix(
+            config,
+            'pix_cobranca_erro',
+            'erro',
+            `Falha ao gerar PIX Mercado Pago para ${cliente.nome}: ${err.message}`,
+            { clienteId, cliente: cliente.nome, plano: planoNome, valor: moedaTexto(valorTotalNumero) }
         );
         throw err;
     }
@@ -148,6 +173,14 @@ async function processarPagamentoMercadoPago(provedorPagamentoId) {
     if (Math.abs(valorEsperado - valorRecebido) > 0.009) {
         await executar(`UPDATE cobrancas_pix SET status = 'valor_divergente', erro = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
             [`Esperado ${valorEsperado}; recebido ${valorRecebido}`, cobranca.id]);
+        const clienteDivergente = await buscarClientePorId(cobranca.clienteId);
+        await notificarEventoPix(
+            config,
+            'pix_valor_divergente',
+            'alerta',
+            `PIX com valor divergente para ${clienteDivergente?.nome || `cliente ${cobranca.clienteId}`}: esperado R$ ${moedaTexto(valorEsperado)}, recebido R$ ${moedaTexto(valorRecebido)}.`,
+            { clienteId: cobranca.clienteId, plano: cobranca.plano, valorEsperado: moedaTexto(valorEsperado), valorRecebido: moedaTexto(valorRecebido), mercadoPagoPagamentoId: String(pagamento.id) }
+        );
         throw new Error('Valor recebido diverge da cobranca registrada.');
     }
 
@@ -174,9 +207,23 @@ async function processarPagamentoMercadoPago(provedorPagamentoId) {
             `UPDATE cobrancas_pix SET status = 'aprovado', pagamentoId = ?, aprovadoEm = ?, erro = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
             [renovacao.pagamentoId, pagamento.date_approved || new Date().toISOString(), cobranca.id]
         );
+        await notificarEventoPix(
+            config,
+            'pix_pagamento_aprovado',
+            'sucesso',
+            `PIX aprovado e cliente renovado: ${renovacao.cliente?.nome || cobranca.clienteId}, ${renovacao.plano}, R$ ${renovacao.valorTotal}. Novo vencimento: ${renovacao.vencimentoNovo}.`,
+            { clienteId: cobranca.clienteId, cliente: renovacao.cliente?.nome || '', plano: renovacao.plano, valor: renovacao.valorTotal, vencimentoNovo: renovacao.vencimentoNovo, mercadoPagoPagamentoId: String(pagamento.id) }
+        );
         return { aprovado: true, renovacao, cobranca: { ...cobranca, status: 'aprovado' } };
     } catch (err) {
         await executar(`UPDATE cobrancas_pix SET status = 'erro_renovacao', erro = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`, [err.message, cobranca.id]);
+        await notificarEventoPix(
+            config,
+            'pix_renovacao_erro',
+            'erro',
+            `PIX aprovado, mas a renovacao automatica falhou para o cliente ${cobranca.clienteId}: ${err.message}`,
+            { clienteId: cobranca.clienteId, plano: cobranca.plano, valor: cobranca.valorTotal, mercadoPagoPagamentoId: String(pagamento.id) }
+        );
         throw err;
     }
 }
