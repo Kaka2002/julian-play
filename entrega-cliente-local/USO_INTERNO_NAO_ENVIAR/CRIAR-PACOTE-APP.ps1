@@ -35,6 +35,7 @@ function DeveIgnorarCaminho($item) {
     if ($nome -like '*.sqlite3') { return $true }
     if ($nome -like '*.log') { return $true }
     if ($nome -like '.julian-*-install.json') { return $true }
+    if ($nome -eq 'AGENTS.md') { return $true }
 
     return $false
 }
