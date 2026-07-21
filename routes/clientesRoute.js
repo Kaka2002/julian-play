@@ -3905,8 +3905,72 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
     throw ultimoErro || new Error('Nao foi possivel enviar a imagem pelo WhatsApp.');
 }
 
+function caminhoConfigInstalacaoLocal() {
+    return path.join(process.cwd(), '.julian-play-install.json');
+}
+
+function lerConfigInstalacaoLocal() {
+    try {
+        const arquivo = caminhoConfigInstalacaoLocal();
+        if (!fs.existsSync(arquivo)) return {};
+        return JSON.parse(fs.readFileSync(arquivo, 'utf8').replace(/^\uFEFF/, ''));
+    } catch (err) {
+        return {};
+    }
+}
+
+function normalizarNumeroWhatsappRobo(valor) {
+    const telefone = normalizarTelefone(valor) || String(valor || '').replace(/\D/g, '');
+    if (telefone && telefone.length >= 10 && telefone.length <= 15) return telefone;
+    return '';
+}
+
+function obterNumeroWhatsappRoboConfigurado(configInformada = null) {
+    const configArquivo = lerConfigInstalacaoLocal();
+    const config = configInformada || {};
+    const candidatos = [
+        config.whatsappRoboNumero,
+        config.numeroWhatsappRobo,
+        configArquivo.whatsappRoboNumero,
+        configArquivo.numeroWhatsappRobo,
+        config.whatsappTelefone,
+        config.whatsappNumero,
+        configArquivo.whatsappTelefone,
+        configArquivo.whatsappNumero,
+        config.licencaTelefone,
+        config.telefoneResponsavel
+    ];
+
+    for (const candidato of candidatos) {
+        const telefone = normalizarNumeroWhatsappRobo(candidato);
+        if (telefone) return telefone;
+    }
+
+    return '';
+}
+
+function validarNumeroWhatsappRobo(valor) {
+    const telefone = String(valor || '').replace(/\D/g, '');
+    if (telefone.length < 10 || telefone.length > 15) {
+        throw new Error('Informe o WhatsApp com DDI, DDD e numero. Exemplo: 5511999999999.');
+    }
+    return telefone;
+}
+
+function salvarNumeroWhatsappRoboConfigurado(numero) {
+    const arquivo = caminhoConfigInstalacaoLocal();
+    const config = lerConfigInstalacaoLocal();
+    config.whatsappRoboNumero = numero;
+    config.numeroWhatsappRobo = numero;
+    config.whatsappTelefone = numero;
+    config.whatsappNumero = numero;
+    fs.writeFileSync(arquivo, JSON.stringify(config, null, 4), 'utf8');
+    return config;
+}
+
 function telefoneCampanhaAmizade(status = {}, config = {}) {
     const candidatos = [
+        obterNumeroWhatsappRoboConfigurado(config),
         status.numeroConectado,
         config.licencaTelefone,
         config.telefoneResponsavel,
@@ -3915,7 +3979,7 @@ function telefoneCampanhaAmizade(status = {}, config = {}) {
     ];
 
     for (const candidato of candidatos) {
-        const telefone = normalizarTelefone(candidato);
+        const telefone = normalizarNumeroWhatsappRobo(candidato);
         if (telefone) return telefone;
     }
 
@@ -7500,6 +7564,8 @@ function painelSaudeRobo(status = {}) {
     const verificacaoSaude = status.verificacaoSaudeWhatsApp || {};
     const recuperacaoWhatsApp = status.recuperacaoWhatsApp || {};
     const atendimentosHumanos = status.atendimentosHumanos || [];
+    const numeroRoboConfigurado = obterNumeroWhatsappRoboConfigurado();
+    const numeroRoboExibido = numeroRoboConfigurado || normalizarNumeroWhatsappRobo(saudeRobo.numeroConectado || '') || '';
     const classeRisco = risco.nivel === 'alto' ? 'red' : risco.nivel === 'atenção' ? 'orange' : 'green';
     const pausas = atendimentosHumanos.length
         ? atendimentosHumanos.slice(0, 6).map(item => `<div class="note-item">
@@ -7535,6 +7601,15 @@ function painelSaudeRobo(status = {}) {
                 <tr><td><strong>Memória do processo</strong></td><td>${escapar(status.memoria?.rssFormatado || '-')} em uso, heap ${escapar(status.memoria?.heapUsadoFormatado || '-')} de ${escapar(status.memoria?.heapTotalFormatado || '-')}</td></tr>
             </tbody>
         </table>
+        <div style="padding:18px 20px 0;border-top:1px solid #eef2f7;">
+            <form method="post" action="/manutencao/whatsapp/numero" onsubmit="return confirm('Ao trocar o numero, a sessao atual sera encerrada e um novo QR Code sera gerado. Continuar?')" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:end;">
+                <label style="display:grid;gap:6px;font-weight:700;">WhatsApp do robo
+                    <input type="text" name="numeroWhatsappRobo" value="${escapar(numeroRoboExibido)}" placeholder="5511999999999" inputmode="numeric" required>
+                </label>
+                <div class="subtitle" style="align-self:center;">Use DDI + DDD + numero. Exemplo: 5511999999999. Ao salvar, o sistema abre um novo QR Code.</div>
+                <button class="button primary" type="submit">${icon('refresh')} Salvar numero e gerar QR Code</button>
+            </form>
+        </div>
         ${risco.pontos?.length ?`<div class="notice" style="margin:16px 20px 0;">${risco.pontos.map(escapar).join(' ')}</div>` : ''}
         <div style="padding:18px 20px 20px;">
             <h3 style="margin:0 0 10px;">Atendimentos humanos pausados</h3>
@@ -9934,6 +10009,27 @@ router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao gerar novo QR Code: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/whatsapp/numero', async (req, res) => {
+    try {
+        const numero = validarNumeroWhatsappRobo(req.body.numeroWhatsappRobo);
+        salvarNumeroWhatsappRoboConfigurado(numero);
+        const resultado = await gerarNovoQrCodeWhatsApp({ motivo: `Numero do WhatsApp do robo alterado para ${numero} pelo painel de manutencao` });
+
+        logControleClientes('Numero do WhatsApp do robo alterado', {
+            numero,
+            status: resultado.status,
+            authDataPath: resultado.authDataPath
+        });
+
+        res.redirect('/qr');
+    } catch (err) {
+        logControleClientes('Erro ao alterar numero do WhatsApp do robo', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao alterar WhatsApp do robo: ${err.message}`)}`);
     }
 });
 
