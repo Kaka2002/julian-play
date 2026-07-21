@@ -53,6 +53,11 @@ async function obterConfiguracoes() {
         pixNome: '',
         pixCidade: '',
         pixTxid: '',
+        pixProvedor: 'manual',
+        mercadoPagoAccessToken: '',
+        mercadoPagoWebhookSecret: '',
+        mercadoPagoWebhookUrl: '',
+        mercadoPagoEmailPagador: '',
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
@@ -204,6 +209,32 @@ async function salvarConfiguracoesPix(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesProvedorPix(dados = {}) {
+    const provedor = String(dados.pixProvedor || 'manual').trim().toLowerCase();
+    const permitidos = new Set(['manual', 'mercado_pago']);
+    if (!permitidos.has(provedor)) throw new Error('Provedor PIX invalido.');
+
+    const configAtual = await obterConfiguracoes();
+    const accessTokenInformado = String(dados.mercadoPagoAccessToken || '').trim();
+    const webhookSecretInformado = String(dados.mercadoPagoWebhookSecret || '').trim();
+    const webhookUrl = String(dados.mercadoPagoWebhookUrl || '').trim();
+    const emailPagador = String(dados.mercadoPagoEmailPagador || '').trim().toLowerCase();
+    const accessToken = accessTokenInformado || String(configAtual.mercadoPagoAccessToken || '');
+    const webhookSecret = webhookSecretInformado || String(configAtual.mercadoPagoWebhookSecret || '');
+
+    if (provedor === 'mercado_pago' && !accessToken) throw new Error('Informe o Access Token do Mercado Pago.');
+    if (provedor === 'mercado_pago' && !webhookUrl) throw new Error('Informe a URL HTTPS publica do webhook do Mercado Pago.');
+    if (webhookUrl && !/^https:\/\//i.test(webhookUrl)) throw new Error('A URL do webhook do Mercado Pago precisa usar HTTPS.');
+    if (emailPagador && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPagador)) throw new Error('Informe um e-mail padrao valido para o pagador.');
+
+    await salvarConfiguracao('pixProvedor', provedor);
+    await salvarConfiguracao('mercadoPagoAccessToken', accessToken);
+    await salvarConfiguracao('mercadoPagoWebhookSecret', webhookSecret);
+    await salvarConfiguracao('mercadoPagoWebhookUrl', webhookUrl);
+    await salvarConfiguracao('mercadoPagoEmailPagador', emailPagador);
+    return obterConfiguracoes();
+}
+
 async function salvarConfiguracoesMonitoramento(dados = {}) {
     const hora = String(dados.backupAutomaticoHora || '03:00').trim();
     const retencao = Math.max(1, Math.min(365, Number.parseInt(dados.backupRetencaoDias || 30, 10) || 30));
@@ -234,6 +265,7 @@ module.exports = {
     salvarConfiguracoesRobo,
     salvarImagemRobo,
     salvarConfiguracoesPix,
+    salvarConfiguracoesProvedorPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 };

@@ -6,6 +6,7 @@ const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
+const webhookRoute = require('./routes/webhookRoute');
 const {
     iniciarWhatsApp,
     encerrarWhatsApp,
@@ -105,6 +106,7 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/tenant-assets', express.static(path.join(DATA_DIR, 'assets')));
 app.use('/', authRoute);
 app.use('/api/admin', adminInternoRoute);
+app.use('/', webhookRoute);
 
 app.get('/health', (req, res) => {
     const whatsapp = getStatusWhatsApp();

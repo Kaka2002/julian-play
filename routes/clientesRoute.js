@@ -53,6 +53,7 @@ const {
     salvarConfiguracoesRobo,
     salvarImagemRobo,
     salvarConfiguracoesPix,
+    salvarConfiguracoesProvedorPix,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
@@ -5909,6 +5910,7 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
             <div class="actions full"><button class="button" type="submit">${icon('plus')} Abrir atendimento</button></div>
         </form>
     </section>
+
     <section class="panel">
         <div class="panel-head">
             <div>
@@ -7909,6 +7911,22 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>
 
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div><h2 class="panel-title">Confirmação automática do PIX</h2><div class="subtitle">Cada instalação escolhe seu próprio provedor; o PIX manual continua disponível</div></div>
+            <span class="badge ${status.config?.pixProvedor === 'mercado_pago' ?'green' : ''}">${status.config?.pixProvedor === 'mercado_pago' ?'Mercado Pago ativo' : 'Modo manual'}</span>
+        </div>
+        <form class="fields" method="post" action="/manutencao/pix-provedor" style="padding-top:0;">
+            <label>Provedor de confirmação<select name="pixProvedor"><option value="manual" ${status.config?.pixProvedor !== 'mercado_pago' ?'selected' : ''}>PIX manual / outro banco</option><option value="mercado_pago" ${status.config?.pixProvedor === 'mercado_pago' ?'selected' : ''}>Mercado Pago</option></select></label>
+            ${campo({ nome: 'mercadoPagoAccessToken', label: 'Access Token do Mercado Pago', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.mercadoPagoAccessToken ?'Configurado — deixe vazio para manter' : 'APP_USR-...'}"` })}
+            ${campo({ nome: 'mercadoPagoWebhookSecret', label: 'Assinatura secreta do webhook (opcional)', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.mercadoPagoWebhookSecret ?'Configurada — deixe vazio para manter' : 'Copie em Suas integrações > Webhooks'}"` })}
+            ${campo({ nome: 'mercadoPagoWebhookUrl', label: 'URL HTTPS do webhook', valor: status.config?.mercadoPagoWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://seu-dominio/webhooks/mercado-pago"' })}
+            ${campo({ nome: 'mercadoPagoEmailPagador', label: 'E-mail padrão do pagador', valor: status.config?.mercadoPagoEmailPagador || '', tipo: 'email', attrs: 'placeholder="pagamentos@suaempresa.com.br"' })}
+            <div class="notice full">No Mercado Pago, ative o evento <strong>Pagamentos</strong>. Antes de renovar, o sistema consulta o pagamento diretamente na API, confere referência, status e valor e ignora notificações duplicadas.</div>
+            <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar provedor PIX</button></div>
+        </form>
+    </section>
+
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -8710,7 +8728,13 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
 
         const enviado = await enviarQRCodePIXParaDestino(client, destino, planoPix, {
             tipo: 'renovacao',
-            nomeCliente: cliente.nome || 'cliente'
+            nomeCliente: cliente.nome || 'cliente',
+            clienteId: cliente.id,
+            plano: cliente.plano,
+            tipoPlanoId: cliente.tipoPlanoId,
+            diasContrato: cliente.diasContrato,
+            valorPlano: cliente.valorPlano,
+            assinaturaApp: '0,00'
         });
 
         if (!enviado) {
@@ -8861,7 +8885,13 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
 
         const qrEnviado = await enviarQRCodePIXParaDestino(client, destino, pixCliente.plano, {
             tipo: 'renovacao',
-            nomeCliente: cliente.nome
+            nomeCliente: cliente.nome,
+            clienteId: cliente.id,
+            plano: cliente.plano,
+            tipoPlanoId: cliente.tipoPlanoId,
+            diasContrato: cliente.diasContrato,
+            valorPlano: pixCliente.valorPlano,
+            assinaturaApp: pixCliente.incluirApp ? pixCliente.valorApp : '0,00'
         });
 
         if (!qrEnviado) {
@@ -9531,6 +9561,17 @@ router.post('/manutencao/pix', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar PIX: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/pix-provedor', async (req, res) => {
+    try {
+        await salvarConfiguracoesProvedorPix(req.body);
+        logControleClientes('Provedor de confirmacao PIX atualizado', { provedor: req.body.pixProvedor });
+        res.redirect('/manutencao?mensagem=Provedor PIX salvo com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar provedor PIX', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar provedor PIX: ${err.message}`)}`);
     }
 });
 

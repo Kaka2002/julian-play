@@ -1212,7 +1212,13 @@ Seu atendimento será encaminhado para um atendente finalizar a renovação.`, i
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano, {
             tipo: 'renovacao',
-            nomeCliente: conversa.usuarioPainel
+            nomeCliente: conversa.usuarioPainel,
+            clienteId: conversa.clienteId,
+            plano: plano.nome,
+            tipoPlanoId: plano.id,
+            diasContrato: plano.dias,
+            valorPlano: plano.valor,
+            assinaturaApp: '0,00'
         });
         return;
     }

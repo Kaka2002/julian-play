@@ -135,6 +135,26 @@ Variavel opcional:
 
 - `MONITOR_INTERVALO_MS`: intervalo do monitor em milissegundos. Padrao: `60000`.
 
+## Confirmacao automatica de PIX com Mercado Pago
+
+Na tela `/manutencao`, a instalacao pode manter o modo **PIX manual / outro banco** ou selecionar **Mercado Pago**. Cada instalacao possui suas proprias credenciais; configurar Mercado Pago em uma instancia nao altera as demais.
+
+Para ativar, informe o Access Token de producao, um e-mail padrao de pagador e a URL publica HTTPS da propria instalacao terminada em:
+
+```text
+/webhooks/mercado-pago
+```
+
+Exemplo:
+
+```text
+https://cliente.seudominio.com/webhooks/mercado-pago
+```
+
+Em **Suas integracoes > Webhooks** no Mercado Pago, ative o evento **Pagamentos**. As cobrancas de renovacao vinculadas a um cliente passam a usar QR Code dinamico. Ao receber uma notificacao, o sistema consulta o pagamento diretamente na API do Mercado Pago, confere referencia, status e valor, registra uma unica renovacao e envia a confirmacao pelo WhatsApp.
+
+Instalacoes locais sem uma URL HTTPS publica devem permanecer no modo PIX manual.
+
 ## Logs no Windows
 
 Se os logs aparecerem com acentos quebrados no PowerShell, mude a sessao para UTF-8 antes de abrir os logs:

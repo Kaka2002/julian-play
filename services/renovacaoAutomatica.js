@@ -388,7 +388,13 @@ async function verificarClientesVencidosPorDias({ getClient, getStatusWhatsApp }
                     if (planoPix) {
                         await enviarQRCodePIXParaDestino(client, destino, planoPix, {
                             tipo: 'renovacao',
-                            nomeCliente: nomeCliente(cliente)
+                            nomeCliente: nomeCliente(cliente),
+                            clienteId: cliente.id,
+                            plano: cliente.plano,
+                            tipoPlanoId: cliente.tipoPlanoId,
+                            diasContrato: cliente.diasContrato,
+                            valorPlano: cliente.valorPlano,
+                            assinaturaApp: '0,00'
                         });
                     }
 

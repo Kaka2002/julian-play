@@ -4,6 +4,7 @@ const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPr
 const { enfileirarEnvio } = require('./filaMensagensService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { listarTiposPlanos } = require('./tiposPlanos');
+const { criarCobrancaMercadoPago } = require('./mercadoPagoService');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '';
 const PIX_NOME = process.env.PIX_NOME || '';
@@ -303,6 +304,19 @@ function legendaPixPorContexto(plano, options = {}, configPix = configuracaoPixP
     return legendaPix(plano, configPix);
 }
 
+function legendaPixMercadoPago(plano, options = {}) {
+    return `💳 *PIX${options.tipo === 'renovacao' ?' - RENOVAÇÃO' : ''} ${plano.nome}*
+━━━━━━━━━━━━━━━━━━━━
+${options.nomeCliente ?`👤 *Cliente:* ${options.nomeCliente}\n` : ''}💰 *Valor:* R$ ${plano.valor}
+
+📲 Abra o aplicativo do seu banco, escolha PIX, leia o QR Code e confirme o pagamento.
+
+✅ A confirmação é automática. Não é necessário enviar comprovante.
+
+*0* - Voltar ao menu principal
+${RODAPE_ATENDIMENTO}`;
+}
+
 async function gerarQRCodeAutomatico(plano, configPix = configuracaoPixPadrao()) {
     const planoPix = normalizarPlanoPix(plano);
     const pixCopiaECola = gerarPixCopiaECola(planoPix, configPix);
@@ -350,8 +364,13 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         }
 
         configPix = await obterConfiguracaoPix();
-        const media = await gerarQRCodeAutomatico(planoPix, configPix);
-        const caption = legendaPixPorContexto(planoPix, options, configPix);
+        const cobrancaAutomatica = await criarCobrancaMercadoPago(planoPix, options);
+        const media = cobrancaAutomatica
+            ? new MessageMedia('image/png', cobrancaAutomatica.qrCodeBase64, planoPix.arquivoQr)
+            : await gerarQRCodeAutomatico(planoPix, configPix);
+        const caption = cobrancaAutomatica
+            ? legendaPixMercadoPago(planoPix, options)
+            : legendaPixPorContexto(planoPix, options, configPix);
         console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destino);
         registrarEnvioDoRobo(destino, caption);
 

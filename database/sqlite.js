@@ -236,6 +236,33 @@ db.serialize(() => {
     `);
 
     db.run(`
+        CREATE TABLE IF NOT EXISTS cobrancas_pix (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            referencia TEXT NOT NULL UNIQUE,
+            provedor TEXT NOT NULL DEFAULT 'manual',
+            provedorPagamentoId TEXT UNIQUE,
+            clienteId INTEGER NOT NULL,
+            plano TEXT NOT NULL,
+            tipoPlanoId INTEGER,
+            diasContrato INTEGER NOT NULL DEFAULT 0,
+            valorPlano TEXT,
+            assinaturaApp TEXT,
+            valorTotal TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pendente',
+            qrCode TEXT,
+            erro TEXT,
+            pagamentoId INTEGER,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            aprovadoEm TEXT,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE,
+            FOREIGN KEY(pagamentoId) REFERENCES cliente_pagamentos(id) ON DELETE SET NULL
+        )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_cobrancas_pix_cliente ON cobrancas_pix(clienteId, criadoEm DESC)');
+    db.run('CREATE INDEX IF NOT EXISTS idx_cobrancas_pix_provedor_pagamento ON cobrancas_pix(provedor, provedorPagamentoId)');
+
+    db.run(`
         CREATE TABLE IF NOT EXISTS cliente_interacoes_robo (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             clienteId INTEGER,
