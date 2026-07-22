@@ -13,6 +13,8 @@ param(
 
     [switch]$AbrirFirewall,
 
+    [switch]$InstalacaoLocal,
+
     [switch]$PularDependencias
 )
 
@@ -218,6 +220,7 @@ $configInstalacao = [ordered]@{
     trialDays = $AvaliacaoDias
     licenseAdminToken = $codigoFornecedor
     licensePublicKey = $chavePublicaLicenca
+    installMode = if ($InstalacaoLocal -or $NomeProcesso -eq 'julian-play-cliente' -or ($null -ne $configAnterior -and $configAnterior.installMode -eq 'local')) { 'local' } else { 'server' }
 }
 $jsonInstalacao = $configInstalacao | ConvertTo-Json
 $utf8SemBom = New-Object System.Text.UTF8Encoding($false)
@@ -303,6 +306,7 @@ if ($ocupantes.Count -gt 0) {
 $env:JULIAN_PLAY_APP_NAME = $NomeProcesso
 $env:JULIAN_PLAY_PORT = [string]$Porta
 $env:JULIAN_PLAY_DATA_DIR = $PastaDados
+$env:JULIAN_PLAY_INSTALL_MODE = [string]$configInstalacao.installMode
 
 & $pm2.Source start (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
 if ($LASTEXITCODE -ne 0) {

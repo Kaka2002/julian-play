@@ -288,6 +288,7 @@ function configuracaoPm2(instalacao, senhaHash) {
             env: {
                 NODE_ENV: 'production',
                 JULIAN_PLAY_APP_NAME: instalacao.processoPm2,
+                JULIAN_PLAY_INSTALL_MODE: 'server',
                 PORT: String(instalacao.porta),
                 DATA_DIR: instalacao.pastaDados,
                 PANEL_USER: instalacao.usuarioPainel,

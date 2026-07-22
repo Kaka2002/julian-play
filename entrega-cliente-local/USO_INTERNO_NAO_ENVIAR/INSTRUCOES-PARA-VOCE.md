@@ -32,6 +32,7 @@ Essa pasta deve conter:
 - `ABRIR-PAINEL.ps1`
 - `LEIA-PRIMEIRO.md`
 - `PASSO-A-PASSO-CLIENTE.md`
+- `CONFIGURAR-MERCADO-PAGO.md`
 - `CHECKLIST-SUPORTE.md`
 
 ## 3. Depois Que O Cliente Instalar

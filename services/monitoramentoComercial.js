@@ -328,6 +328,10 @@ async function executarMonitoramento(controles = {}) {
 
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
+        if (config.pixProvedor === 'mercado_pago' && config.mercadoPagoAccessToken) {
+            const { verificarCobrancasPendentesMercadoPago } = require('./mercadoPagoService');
+            await verificarCobrancasPendentesMercadoPago();
+        }
     } catch (err) {
         console.log(`Monitoramento comercial: ${err.message}`);
     } finally {

@@ -192,7 +192,8 @@ $argumentos = @(
     '-File', $instalador,
     '-Porta', [string]$Porta,
     '-NomeProcesso', 'julian-play-cliente',
-    '-PastaDados', $PastaDados
+    '-PastaDados', $PastaDados,
+    '-InstalacaoLocal'
 )
 
 if (TestarAdministrador) {

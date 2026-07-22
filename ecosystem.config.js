@@ -32,6 +32,7 @@ module.exports = {
                 JULIAN_PLAY_APP_NAME: appName,
                 PORT: String(process.env.JULIAN_PLAY_PORT || process.env.PORT || settings.port || 10000),
                 DATA_DIR: dataDir,
+                JULIAN_PLAY_INSTALL_MODE: process.env.JULIAN_PLAY_INSTALL_MODE || settings.installMode || 'server',
                 LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',
                 LICENSE_PUBLIC_KEY: process.env.LICENSE_PUBLIC_KEY || settings.licensePublicKey || '',
                 LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0)

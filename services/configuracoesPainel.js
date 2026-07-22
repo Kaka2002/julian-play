@@ -223,7 +223,6 @@ async function salvarConfiguracoesProvedorPix(dados = {}) {
     const webhookSecret = webhookSecretInformado || String(configAtual.mercadoPagoWebhookSecret || '');
 
     if (provedor === 'mercado_pago' && !accessToken) throw new Error('Informe o Access Token do Mercado Pago.');
-    if (provedor === 'mercado_pago' && !webhookUrl) throw new Error('Informe a URL HTTPS publica do webhook do Mercado Pago.');
     if (webhookUrl && !/^https:\/\//i.test(webhookUrl)) throw new Error('A URL do webhook do Mercado Pago precisa usar HTTPS.');
     if (emailPagador && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPagador)) throw new Error('Informe um e-mail padrao valido para o pagador.');
 

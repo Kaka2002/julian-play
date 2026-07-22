@@ -20,6 +20,7 @@ Na pasta recebida, confira se existem estes arquivos:
 
 - `LEIA-PRIMEIRO.md`
 - `PASSO-A-PASSO-CLIENTE.md`
+- `CONFIGURAR-MERCADO-PAGO.md`
 - `1-VERIFICAR-COMPUTADOR.bat`
 - `2-INSTALAR-PAINEL.bat`
 - `3-ABRIR-PAINEL.bat`

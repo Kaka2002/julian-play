@@ -19,6 +19,12 @@ function buscarUm(sql, params = []) {
     }));
 }
 
+function buscarTodos(sql, params = []) {
+    return db.ready.then(() => new Promise((resolve, reject) => {
+        db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows || []));
+    }));
+}
+
 function moedaNumero(valor) {
     const numero = Number(String(valor || '0').replace(/\./g, '').replace(',', '.'));
     return Number.isFinite(numero) ? numero : 0;
@@ -228,4 +234,32 @@ async function processarPagamentoMercadoPago(provedorPagamentoId) {
     }
 }
 
-module.exports = { criarCobrancaMercadoPago, processarPagamentoMercadoPago };
+async function verificarCobrancasPendentesMercadoPago() {
+    const config = await obterConfiguracoes();
+    if (config.pixProvedor !== 'mercado_pago' || !config.mercadoPagoAccessToken) {
+        return { verificadas: 0, aprovadas: 0, erros: 0 };
+    }
+
+    const cobrancas = await buscarTodos(
+        `SELECT provedorPagamentoId FROM cobrancas_pix
+         WHERE provedor = 'mercado_pago'
+           AND status IN ('pending', 'in_process', 'authorized')
+           AND provedorPagamentoId IS NOT NULL
+         ORDER BY datetime(criadoEm) ASC
+         LIMIT 30`
+    );
+    let aprovadas = 0;
+    let erros = 0;
+    for (const cobranca of cobrancas) {
+        try {
+            const resultado = await processarPagamentoMercadoPago(cobranca.provedorPagamentoId);
+            if (resultado.aprovado) aprovadas += 1;
+        } catch (err) {
+            erros += 1;
+            console.error(`[mercado-pago] Falha ao verificar cobranca ${cobranca.provedorPagamentoId}: ${err.message}`);
+        }
+    }
+    return { verificadas: cobrancas.length, aprovadas, erros };
+}
+
+module.exports = { criarCobrancaMercadoPago, processarPagamentoMercadoPago, verificarCobrancasPendentesMercadoPago };
