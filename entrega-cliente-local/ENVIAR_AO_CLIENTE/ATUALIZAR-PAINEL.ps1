@@ -186,7 +186,7 @@ function RestaurarOuReabrirPainelLocal([string]$pastaInstalacao, [string]$backup
     $instaladorAtual = Join-Path $pastaInstalacao 'install-windows.ps1'
     if (Test-Path -LiteralPath $instaladorAtual) {
         Write-Host 'Reabrindo o painel local...' -ForegroundColor Yellow
-        & powershell -NoProfile -ExecutionPolicy Bypass -File $instaladorAtual -Porta $porta -NomeProcesso $nomeProcesso -PastaDados $pastaDados
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $instaladorAtual -Porta $porta -NomeProcesso $nomeProcesso -PastaDados $pastaDados -InstalacaoLocal
         $global:LASTEXITCODE = 0
         return
     }
@@ -278,7 +278,7 @@ try {
     }
 
     Etapa 'Aplicando atualizacao'
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $instalador -Porta $Porta -NomeProcesso $NomeProcesso -PastaDados $PastaDados
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $instalador -Porta $Porta -NomeProcesso $NomeProcesso -PastaDados $PastaDados -InstalacaoLocal
     if ($LASTEXITCODE -ne 0) {
         throw "Atualizacao terminou com codigo $LASTEXITCODE."
     }

@@ -142,6 +142,26 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
     }
 }
 
+function LiberarPortaInstalacaoLocal([int]$porta) {
+    for ($tentativaPorta = 1; $tentativaPorta -le 10; $tentativaPorta++) {
+        $ocupantesLocais = @(Get-NetTCPConnection -LocalPort $porta -State Listen -ErrorAction SilentlyContinue)
+        if ($ocupantesLocais.Count -eq 0) { return }
+
+        $pidsLocais = @($ocupantesLocais | Select-Object -ExpandProperty OwningProcess -Unique)
+        foreach ($pidLocal in $pidsLocais) {
+            $processoLocal = Get-Process -Id $pidLocal -ErrorAction SilentlyContinue
+            if (-not $processoLocal) { continue }
+            if ($processoLocal.ProcessName -ne 'node') {
+                throw "A porta $porta esta ocupada pelo processo $($processoLocal.ProcessName) PID $pidLocal, que nao pertence ao painel Node.js."
+            }
+
+            Write-Host "Encerrando processo Node antigo da instalacao local na porta $porta (PID $pidLocal)." -ForegroundColor Yellow
+            Stop-Process -Id $pidLocal -Force -ErrorAction Stop
+        }
+        Start-Sleep -Seconds 1
+    }
+}
+
 if (-not (Test-Path -LiteralPath (Join-Path $diretorioProjeto 'package.json'))) {
     throw 'Execute este instalador dentro da pasta completa do julian-play.'
 }
@@ -261,6 +281,10 @@ if (Test-Path -LiteralPath $arquivoMasterProcessos) {
 }
 EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
 
+if ($configInstalacao.installMode -eq 'local') {
+    LiberarPortaInstalacaoLocal $Porta
+}
+
 $ocupantes = @(Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)
 if ($ocupantes.Count -gt 0) {
     $pids = ($ocupantes | Select-Object -ExpandProperty OwningProcess -Unique) -join ', '
@@ -296,6 +320,10 @@ if (-not $pm2) {
 Etapa 'Configurando uma unica instancia no PM2'
 ExecutarPm2Opcional $pm2 @('delete', $NomeProcesso)
 Start-Sleep -Seconds 2
+
+if ($configInstalacao.installMode -eq 'local') {
+    LiberarPortaInstalacaoLocal $Porta
+}
 
 $ocupantes = @(Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)
 if ($ocupantes.Count -gt 0) {
