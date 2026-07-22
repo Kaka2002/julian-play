@@ -37,6 +37,33 @@ function TestarAdministrador {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function GarantirAdministrador {
+    if (TestarAdministrador) { return }
+
+    Write-Host 'A atualizacao precisa de permissao de administrador para encerrar o painel antigo.' -ForegroundColor Yellow
+    Write-Host 'Confirme a janela de permissao do Windows para continuar.' -ForegroundColor Yellow
+
+    $argumentosElevados = @(
+        '-NoProfile',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$PSCommandPath`"",
+        '-Porta', [string]$Porta,
+        '-PastaInstalacao', "`"$PastaInstalacao`"",
+        '-PastaDados', "`"$PastaDados`"",
+        '-NomeProcesso', "`"$NomeProcesso`"",
+        '-NomeLocal', "`"$NomeLocal`""
+    )
+
+    try {
+        $processoElevado = Start-Process powershell.exe -Verb RunAs -ArgumentList $argumentosElevados -Wait -PassThru
+        exit $processoElevado.ExitCode
+    } catch {
+        throw 'A permissao de administrador foi cancelada. Execute novamente e clique em Sim na janela do Windows.'
+    }
+}
+
+GarantirAdministrador
+
 function ExecutarPm2Opcional([string[]]$argumentos) {
     $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
     if (-not $pm2) {
