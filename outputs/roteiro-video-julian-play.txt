@@ -30,8 +30,8 @@ Imagem sugerida: tela de saúde do robô e histórico unificado.
 
 6. Financeiro e PIX
 Texto/narração:
-"As renovações ficam registradas, com valor, forma de pagamento, novo vencimento e confirmação enviada ao cliente."
-Imagem sugerida: financeiro e renovar cliente.
+"Com a confirmação automática do PIX pelo Mercado Pago, o sistema identifica o pagamento, renova o vencimento, registra o financeiro e avisa o cliente pelo WhatsApp. O recurso funciona tanto no servidor quanto na instalação local."
+Imagem sugerida: configuração do Mercado Pago, QR Code PIX e mensagem de pagamento confirmado.
 
 7. Campanhas e CRM
 Texto/narração:

@@ -295,15 +295,16 @@ async function main() {
   // Slide 6
   {
     const slide = presentation.slides.add();
-    await addHeader(slide, "Financeiro com PIX, renovação e rastreio");
-    addText(slide, "O financeiro ajuda a cobrar, registrar pagamentos, confirmar renovação e visualizar valores por plano e forma de pagamento.", { left: 72, top: 170, width: 850, height: 58 }, { fontSize: 21, color: colors.muted });
+    await addHeader(slide, "PIX confirmado e renovação automática");
+    addText(slide, "Com Mercado Pago, o sistema gera a cobrança, identifica a aprovação, renova o cliente e envia a confirmação pelo WhatsApp.", { left: 72, top: 170, width: 920, height: 58 }, { fontSize: 21, color: colors.muted });
     addBox(slide, { left: 72, top: 270, width: 520, height: 255 });
-    addText(slide, "Fluxo de renovação", { left: 108, top: 302, width: 350, height: 32 }, { fontSize: 25, bold: true });
-    addText(slide, "1. Escolha o plano\n2. O sistema preenche dias e valor\n3. Registre a forma de pagamento\n4. Envie confirmação pelo WhatsApp\n5. O histórico financeiro fica salvo", { left: 108, top: 354, width: 420, height: 150 }, { fontSize: 22, color: colors.ink });
+    addText(slide, "Fluxo automático do PIX", { left: 108, top: 302, width: 350, height: 32 }, { fontSize: 25, bold: true });
+    addText(slide, "1. Gere o QR Code do plano\n2. O cliente realiza o PIX\n3. Mercado Pago confirma\n4. O vencimento é renovado\n5. O WhatsApp avisa o cliente", { left: 108, top: 354, width: 420, height: 150 }, { fontSize: 22, color: colors.ink });
     addBox(slide, { left: 640, top: 270, width: 480, height: 255 }, "#F0FDF4", "#BBF7D0");
     addText(slide, "Benefício", { left: 676, top: 302, width: 300, height: 32 }, { fontSize: 25, bold: true, color: colors.green });
-    addText(slide, "Menos erro de valor, menos duplicidade de envio e mais confiança na cobrança.", { left: 676, top: 360, width: 370, height: 92 }, { fontSize: 25, bold: true, color: colors.ink });
-    slide.speakerNotes.textFrame.setText("Reforce que o financeiro evita problemas comuns: valor errado, renovação duplicada, cobrança sem registro e falta de histórico.");
+    addText(slide, "Menos conferência manual, renovação sem atraso e confirmação automática para o cliente.", { left: 676, top: 350, width: 390, height: 112 }, { fontSize: 25, bold: true, color: colors.ink });
+    addPill(slide, "Servidor: webhook  |  Local: consulta segura", 670, 480, 420, colors.green);
+    slide.speakerNotes.textFrame.setText("Mostre o novo fluxo do PIX: o QR Code é gerado pelo sistema, o Mercado Pago confirma a aprovação, o cadastro é renovado e o cliente recebe a mensagem no WhatsApp. Explique que funciona no servidor e na instalação local.");
   }
 
   // Slide 7
@@ -424,8 +425,8 @@ Imagem sugerida: tela de saúde do robô e histórico unificado.
 
 6. Financeiro e PIX
 Texto/narração:
-"As renovações ficam registradas, com valor, forma de pagamento, novo vencimento e confirmação enviada ao cliente."
-Imagem sugerida: financeiro e renovar cliente.
+"Com a confirmação automática do PIX pelo Mercado Pago, o sistema identifica o pagamento, renova o vencimento, registra o financeiro e avisa o cliente pelo WhatsApp. O recurso funciona tanto no servidor quanto na instalação local."
+Imagem sugerida: configuração do Mercado Pago, QR Code PIX e mensagem de pagamento confirmado.
 
 7. Campanhas e CRM
 Texto/narração:
