@@ -154,6 +154,7 @@ const server = app.listen(PORT, () => {
     iniciarWhatsApp();
     iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
     iniciarMonitoramentoComercial({
+        getClient,
         getStatusWhatsApp,
         verificarSaudeWhatsApp,
         recuperarWhatsAppAutomaticamente

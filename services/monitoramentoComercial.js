@@ -9,6 +9,7 @@ const {
     limparBackupsAutomaticos
 } = require('./manutencao');
 const { registrarEventoSistema } = require('./eventosSistema');
+const { marcarPagamentoMensagem } = require('./clientes');
 
 const INTERVALO_MS = Number(process.env.MONITOR_INTERVALO_MS || 60000);
 
@@ -19,6 +20,38 @@ let alertaDesconexaoEnviado = false;
 let reinicioSuaveTentado = false;
 let novoQrTentado = false;
 let ultimaAcaoRecuperacaoEm = 0;
+
+function destinoWhatsapp(telefone) {
+    const numero = String(telefone || '').replace(/\D/g, '');
+    return numero ? `${numero}@c.us` : '';
+}
+
+async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {}) {
+    if (!statusWhatsApp.conectado || typeof controles.getClient !== 'function') return;
+    const client = controles.getClient();
+    if (!client) return;
+
+    const { listarConfirmacoesPixPendentes } = require('./mercadoPagoService');
+    const confirmacoes = await listarConfirmacoesPixPendentes();
+
+    for (const confirmacao of confirmacoes) {
+        const destino = destinoWhatsapp(confirmacao.telefone);
+        if (!destino) {
+            await marcarPagamentoMensagem(confirmacao.pagamentoId, false, 'Cliente sem telefone valido para WhatsApp.');
+            continue;
+        }
+
+        const mensagem = `✅ *PAGAMENTO PIX CONFIRMADO*\n\nOlá, *${confirmacao.nome || 'cliente'}*! Seu pagamento foi confirmado automaticamente.\n\n*Plano:* ${confirmacao.plano}\n*Valor:* R$ ${confirmacao.valorTotal}\n*Novo vencimento:* ${confirmacao.vencimentoNovo}\n\nObrigado!`;
+        try {
+            await client.sendMessage(destino, mensagem);
+            await marcarPagamentoMensagem(confirmacao.pagamentoId, true, '');
+            console.log(`[mercado-pago] Confirmacao do PIX enviada ao cliente ${confirmacao.clienteId}.`);
+        } catch (err) {
+            await marcarPagamentoMensagem(confirmacao.pagamentoId, false, err.message);
+            console.error(`[mercado-pago] PIX confirmado, mas a mensagem ao cliente ${confirmacao.clienteId} falhou: ${err.message}`);
+        }
+    }
+}
 
 function agoraSaoPaulo() {
     const partes = new Intl.DateTimeFormat('en-CA', {
@@ -328,9 +361,14 @@ async function executarMonitoramento(controles = {}) {
 
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
-        if (config.pixProvedor === 'mercado_pago' && config.mercadoPagoAccessToken) {
+        if (
+            process.env.JULIAN_PLAY_INSTALL_MODE === 'local'
+            && config.pixProvedor === 'mercado_pago'
+            && config.mercadoPagoAccessToken
+        ) {
             const { verificarCobrancasPendentesMercadoPago } = require('./mercadoPagoService');
             await verificarCobrancasPendentesMercadoPago();
+            await enviarConfirmacoesPixPendentes(controles, statusWhatsApp);
         }
     } catch (err) {
         console.log(`Monitoramento comercial: ${err.message}`);

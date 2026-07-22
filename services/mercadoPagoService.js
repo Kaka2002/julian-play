@@ -262,4 +262,27 @@ async function verificarCobrancasPendentesMercadoPago() {
     return { verificadas: cobrancas.length, aprovadas, erros };
 }
 
-module.exports = { criarCobrancaMercadoPago, processarPagamentoMercadoPago, verificarCobrancasPendentesMercadoPago };
+async function listarConfirmacoesPixPendentes(limite = 30) {
+    return buscarTodos(
+        `SELECT cobranca.id AS cobrancaId, cobranca.pagamentoId, cobranca.plano,
+                cobranca.valorTotal, cobranca.aprovadoEm,
+                pagamento.vencimentoNovo, cliente.id AS clienteId,
+                cliente.nome, cliente.telefone
+         FROM cobrancas_pix cobranca
+         INNER JOIN cliente_pagamentos pagamento ON pagamento.id = cobranca.pagamentoId
+         INNER JOIN clientes cliente ON cliente.id = cobranca.clienteId
+         WHERE cobranca.provedor = 'mercado_pago'
+           AND cobranca.status = 'aprovado'
+           AND COALESCE(pagamento.mensagemEnviada, 0) = 0
+         ORDER BY datetime(cobranca.atualizadoEm) ASC
+         LIMIT ?`,
+        [Math.max(1, Math.min(100, Number(limite) || 30))]
+    );
+}
+
+module.exports = {
+    criarCobrancaMercadoPago,
+    processarPagamentoMercadoPago,
+    verificarCobrancasPendentesMercadoPago,
+    listarConfirmacoesPixPendentes
+};
