@@ -880,7 +880,8 @@ function temaVisualMestre() {
     body::before{content:"";position:fixed;left:clamp(18px,3.2vw,64px);top:132px;width:clamp(220px,14vw,300px);height:calc(100vh - 158px);background:url('/assets/julian-play-fundo-painel.png') center top / contain no-repeat;opacity:.22;pointer-events:none;z-index:0;filter:saturate(1.1) contrast(1.06)}
     main{position:relative;z-index:1}
     main > .topbar:first-child{align-items:center;background:var(--brand-gradient);color:#fff;border:1px solid rgba(255,255,255,.26);border-radius:16px;box-shadow:0 22px 55px rgba(4,27,79,.22);padding:22px 24px;margin-bottom:18px;overflow:hidden;position:relative}
-    main > .topbar:first-child::after{content:"";position:absolute;inset:auto -80px -120px auto;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.13)}
+    main > .topbar:first-child::after{content:"";position:absolute;inset:auto -80px -120px auto;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.13);pointer-events:none}
+    main > .topbar:first-child > *{position:relative;z-index:1}
     main > .topbar:first-child h1,main > .topbar:first-child .sub{color:#fff}
     main > .topbar:first-child .sub{opacity:.86}
     main > .topbar:first-child .version-pill{background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.28)}
