@@ -5295,6 +5295,14 @@ function rotuloCurto(valor = '', limite = 18) {
     return `${texto.slice(0, limite - 3)}...`;
 }
 
+function modeloManualEnviaPix(modelo = {}) {
+    const identificacao = [modelo.chave, modelo.titulo]
+        .map(valor => String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase())
+        .join(' ');
+
+    return /(venc|renova|cobran|expirad)/.test(identificacao);
+}
+
 function acoesRapidasCliente(cliente = {}) {
     if (!cliente.id) return '';
 
@@ -10065,17 +10073,51 @@ router.post('/clientes/:id/enviar-modelo', async (req, res) => {
             `Envio manual do modelo ${modelo.titulo || modelo.id}`
         );
 
-        await adicionarNotaCliente(cliente.id, `Modelo "${modelo.titulo || modelo.id}" enviado manualmente pelo WhatsApp.`);
+        let pixEnviado = null;
+        let erroPix = '';
+        if (modeloManualEnviaPix(modelo)) {
+            try {
+                const planoPix = await prepararPlanoPixPlanoAtual(cliente);
+                pixEnviado = planoPix?.valorNumero > 0
+                    ? await enviarQRCodePIXParaDestino(client, envioWhatsApp.destino, planoPix, {
+                        tipo: 'renovacao',
+                        nomeCliente: cliente.nome || 'cliente',
+                        clienteId: cliente.id,
+                        plano: cliente.plano,
+                        tipoPlanoId: cliente.tipoPlanoId,
+                        diasContrato: cliente.diasContrato,
+                        valorPlano: planoPix.valor,
+                        assinaturaApp: '0,00'
+                    })
+                    : false;
+                if (!pixEnviado) erroPix = 'Plano sem valor ou falha no envio do QR Code.';
+            } catch (err) {
+                pixEnviado = false;
+                erroPix = err.message;
+            }
+        }
+
+        await adicionarNotaCliente(
+            cliente.id,
+            `Modelo "${modelo.titulo || modelo.id}" enviado manualmente pelo WhatsApp.${pixEnviado === true ?' PIX do plano enviado em seguida.' : pixEnviado === false ?` PIX não enviado: ${erroPix}` : ''}`
+        );
         logControleClientes('Modelo manual enviado ao cliente', {
             clienteId: cliente.id,
             modeloId: modelo.id,
             modeloTitulo: modelo.titulo,
             destino: envioWhatsApp.destino,
             mensagemId: envioWhatsApp.mensagemId,
-            ack: envioWhatsApp.ack
+            ack: envioWhatsApp.ack,
+            pixEnviado,
+            erroPix
         });
 
-        return res.redirect(montarUrlClienteMensagem(cliente.id, `Modelo "${modelo.titulo || modelo.id}" enviado para ${cliente.nome}.`));
+        const mensagemRetorno = pixEnviado === true
+            ? `Modelo "${modelo.titulo || modelo.id}" e PIX do plano enviados para ${cliente.nome}.`
+            : pixEnviado === false
+                ? `Modelo enviado para ${cliente.nome}, mas não foi possível enviar o PIX do plano.`
+                : `Modelo "${modelo.titulo || modelo.id}" enviado para ${cliente.nome}.`;
+        return res.redirect(montarUrlClienteMensagem(cliente.id, mensagemRetorno));
     } catch (err) {
         logControleClientes('Erro ao enviar modelo manual', {
             clienteId: cliente.id,
