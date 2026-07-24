@@ -1872,6 +1872,126 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 800;
         }
 
+        .model-send-body {
+            padding: 24px;
+        }
+
+        .model-send-body .notice {
+            margin-bottom: 20px;
+        }
+
+        .model-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 16px;
+        }
+
+        .model-choice {
+            position: relative;
+            min-height: 190px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 20px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: linear-gradient(180deg, #fff, #f8fafc);
+            cursor: pointer;
+            transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease, background .16s ease;
+        }
+
+        .model-choice:hover {
+            transform: translateY(-2px);
+            border-color: #93b4ff;
+            box-shadow: 0 12px 28px rgba(37, 87, 214, .12);
+        }
+
+        .model-choice:has(input:checked) {
+            border-color: #3672ed;
+            background: linear-gradient(180deg, #f7faff, #edf4ff);
+            box-shadow: 0 0 0 3px rgba(54, 114, 237, .13), 0 14px 30px rgba(37, 87, 214, .14);
+        }
+
+        .model-choice input[type="radio"] {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 22px;
+            height: 22px;
+            margin: 0;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+
+        .model-choice-head {
+            min-width: 0;
+            padding-right: 36px;
+        }
+
+        .model-choice-title {
+            display: block;
+            color: var(--ink);
+            font-size: 17px;
+            line-height: 1.3;
+            font-weight: 900;
+        }
+
+        .model-choice-plan {
+            display: inline-flex;
+            margin-top: 9px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            background: #eaf0ff;
+            color: #2956bd;
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .03em;
+        }
+
+        .model-choice-preview {
+            flex: 1;
+            margin: 0;
+            padding-top: 13px;
+            border-top: 1px solid #e4eaf3;
+            color: #556176;
+            font-size: 14px;
+            line-height: 1.5;
+            font-weight: 650;
+        }
+
+        .model-send-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 22px;
+            padding-top: 20px;
+            border-top: 1px solid var(--line);
+        }
+
+        .model-client-head {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .model-client-icon {
+            width: 46px;
+            height: 46px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #e7efff, #effcff);
+            color: #285bd3;
+        }
+
+        .model-client-icon svg {
+            width: 23px;
+            height: 23px;
+        }
+
         .form-section {
             margin-top: 10px;
             padding-top: 22px;
@@ -2481,6 +2601,23 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
             .device-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .model-send-body {
+                padding: 16px;
+            }
+
+            .model-choice-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .model-send-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .model-send-actions .button {
+                width: 100%;
             }
         }
     </style>
@@ -5194,17 +5331,15 @@ function telaEnviarModeloCliente({ cliente = {}, modelos = [] }) {
     const opcoes = modelos.map(modelo => {
         const titulo = escapar(modelo.titulo || `Modelo ${modelo.id}`);
         const plano = escapar(modelo.plano || 'padrão');
-        const texto = escapar(rotuloCurto(String(modelo.texto || '').replace(/\s+/g, ' '), 260));
+        const texto = escapar(rotuloCurto(String(modelo.texto || '').replace(/\s+/g, ' '), 210));
 
-        return `<label class="note-item" style="cursor:pointer;">
-            <div style="display:flex;align-items:flex-start;gap:12px;">
-                <input type="radio" name="modeloId" value="${escapar(modelo.id)}" required style="margin-top:4px;">
-                <div>
-                    <strong>${titulo}</strong>
-                    <p>Plano/tipo: ${plano}</p>
-                    <p>${texto || 'Modelo sem texto cadastrado.'}</p>
-                </div>
-            </div>
+        return `<label class="model-choice">
+            <input type="radio" name="modeloId" value="${escapar(modelo.id)}" required>
+            <span class="model-choice-head">
+                <span class="model-choice-title">${titulo}</span>
+                <span class="model-choice-plan">${plano}</span>
+            </span>
+            <span class="model-choice-preview">${texto || 'Modelo sem texto cadastrado.'}</span>
         </label>`;
     }).join('');
 
@@ -5219,19 +5354,22 @@ function telaEnviarModeloCliente({ cliente = {}, modelos = [] }) {
     </section>
     <section class="panel">
         <div class="panel-head">
-            <div>
-                <h2 class="panel-title">${nomeCliente}</h2>
-                <div class="subtitle">${escapar(cliente.telefone || 'WhatsApp não informado')}</div>
+            <div class="model-client-head">
+                <span class="model-client-icon">${icon('whats')}</span>
+                <div>
+                    <h2 class="panel-title">${nomeCliente}</h2>
+                    <div class="subtitle">${escapar(cliente.telefone || 'WhatsApp não informado')}</div>
+                </div>
             </div>
             <span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span>
         </div>
         <form method="post" action="/clientes/${clienteId}/enviar-modelo" onsubmit="return confirm('Enviar o modelo escolhido para ${nomeCliente}?');">
-            <div style="padding:20px;display:grid;gap:12px;">
+            <div class="model-send-body">
                 <div class="notice">As variáveis do modelo serão preenchidas automaticamente com os dados deste cliente antes do envio.</div>
-                ${modelos.length ?opcoes : '<div class="empty">Nenhum modelo ativo encontrado. Cadastre ou ative um modelo em Modelos de Mensagem.</div>'}
-                <div class="actions">
-                    <button class="button green" type="submit" ${modelos.length ?'' : 'disabled'}>${icon('whats')} Enviar modelo escolhido</button>
+                ${modelos.length ?`<div class="model-choice-grid">${opcoes}</div>` : '<div class="empty">Nenhum modelo ativo encontrado. Cadastre ou ative um modelo em Modelos de Mensagem.</div>'}
+                <div class="model-send-actions">
                     <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
+                    <button class="button green" type="submit" ${modelos.length ?'' : 'disabled'}>${icon('whats')} Enviar modelo escolhido</button>
                 </div>
             </div>
         </form>
