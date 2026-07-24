@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node supervisor.js",
     "start:bot": "node bot.js",
-    "demo:seed": "node scripts/seed-demo.js"
+    "demo:seed": "node scripts/seed-demo.js",
+    "test": "node --test --test-concurrency=1 tests/perfis-configuracoes.test.js tests/permissoes.test.js tests/pix-vencimentos.test.js tests/backup-atualizacao.test.js"
   },
   "dependencies": {
     "@puppeteer/browsers": "^2.2.3",

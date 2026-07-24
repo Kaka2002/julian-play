@@ -77,10 +77,10 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     }
 
     AdicionarProcessoJulian $nomes $nomePrincipal
-    AdicionarProcessoJulian $nomes 'julian-master'
 
     $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
     if (Test-Path -LiteralPath $arquivoMaster) {
+        AdicionarProcessoJulian $nomes 'julian-master'
         try {
             $configMaster = Get-Content -LiteralPath $arquivoMaster -Raw | ConvertFrom-Json
             if ($configMaster.clientsDir -and (Test-Path -LiteralPath $configMaster.clientsDir)) {
