@@ -5,6 +5,7 @@ const path = require('path');
 const packageInfo = require('../package.json');
 const masterDb = require('./db');
 const { verificarSenha } = require('../services/passwordService');
+const { csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp } = require('../services/securityService');
 const { gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
 const { dataHojeSaoPaulo, adicionarDias } = require('../services/licencaCalculo');
 const { formatarDataHoraBrasil } = require('../utils/dataHora');
@@ -46,8 +47,13 @@ const DURACAO_SESSAO_MS = 8 * 60 * 60 * 1000;
 const LIMITE_RECONEXAO_WHATSAPP_SEGUNDOS = 5 * 60;
 const MENSAGEM_RECONEXAO_WHATSAPP = 'O rob\u00f4 n\u00e3o reconectou ao WhatsApp. Fa\u00e7a a reconex\u00e3o para retornar ao funcionamento normal.';
 const sessoes = new Map();
+const tentativasLogin = new Map();
+const MAX_TENTATIVAS_LOGIN = Number(process.env.MASTER_LOGIN_MAX_ATTEMPTS || 5);
+const BLOQUEIO_LOGIN_MS = Number(process.env.MASTER_LOGIN_LOCK_MINUTES || 15) * 60000;
 
 app.use(express.urlencoded({ extended: false }));
+app.use(cabecalhosSeguranca);
+app.use(csrfMiddleware({ isento: req => req.path.startsWith('/api/') || req.is('application/json') }));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 app.disable('x-powered-by');
 
@@ -117,6 +123,8 @@ function destinoSeguro(destino) {
 
 function paginaLogin(opcoes = {}) {
     const destino = destinoSeguro(opcoes.destino || '/');
+    const captcha = criarCaptcha();
+    const doisFatores = Boolean(String(process.env.MASTER_TOTP_SECRET || '').trim());
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login - Painel Mestre</title><style>
     *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif;display:grid;place-items:center}.login{width:min(460px,calc(100% - 30px));background:#fff;border:1px solid #e2e6ed;border-radius:10px;box-shadow:0 20px 50px rgba(15,23,42,.12);padding:30px}.brand{font-weight:900;font-size:20px;margin-bottom:28px}h1{font-size:38px;margin:0 0 8px}.sub{color:#697386;font-size:18px;line-height:1.35;margin-bottom:24px}.erro{padding:13px;border-radius:8px;background:#ffe5e7;color:#c52e35;font-weight:800;margin-bottom:16px}label{display:grid;gap:7px;font-weight:800;margin-top:16px}input{border:1px solid #dfe3ea;border-radius:8px;padding:13px;font:inherit;font-weight:700}button{width:100%;border:0;border-radius:8px;padding:14px;margin-top:24px;background:#4368e8;color:#fff;font:inherit;font-weight:900;cursor:pointer}.small{margin-top:18px;color:#697386;font-size:14px}
     </style></head><body><form class="login" method="post" action="/login">
@@ -127,6 +135,9 @@ function paginaLogin(opcoes = {}) {
       <input type="hidden" name="destino" value="${escapar(destino)}">
       <label>Usu&aacute;rio<input name="usuario" autocomplete="username" autofocus required></label>
       <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
+      ${doisFatores ?'<label>Código de autenticação em duas etapas<input name="codigoTotp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required></label>' : ''}
+      <input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
+      <label>Confirmação humana: ${escapar(captcha.pergunta)}<input name="captchaResposta" inputmode="numeric" autocomplete="off" required></label>
       <button type="submit">Acessar painel</button>
       <div class="small">Depois do login, sua sess&atilde;o fica ativa neste navegador.</div>
     </form></body></html>`;
@@ -186,6 +197,11 @@ function formatarTempoOnline(segundos) {
 function normalizarTelefone(valor) {
     return String(valor || '').replace(/\D/g, '');
 }
+
+function chaveLoginMestre(req, usuario) { return `${req.ip || req.socket?.remoteAddress || 'desconhecido'}:${String(usuario||'').toLowerCase()}`; }
+function bloqueioLoginMestre(chave) { const r=tentativasLogin.get(chave); if(!r)return null;if(r.bloqueadoAte>Date.now())return r;if(Date.now()-r.inicio>BLOQUEIO_LOGIN_MS)tentativasLogin.delete(chave);return null; }
+function falhaLoginMestre(chave) { const atual=tentativasLogin.get(chave);const r=atual&&Date.now()-atual.inicio<BLOQUEIO_LOGIN_MS?atual:{tentativas:0,inicio:Date.now(),bloqueadoAte:0};r.tentativas++;if(r.tentativas>=MAX_TENTATIVAS_LOGIN)r.bloqueadoAte=Date.now()+BLOQUEIO_LOGIN_MS;tentativasLogin.set(chave,r); }
+function auditarMestre(req, tipo, mensagem) { masterDb.ready.then(()=>masterDb.run('INSERT INTO eventos_instalacao(instalacaoId,tipo,mensagem,detalhes) VALUES(NULL,?,?,?)',[tipo,mensagem,JSON.stringify({ip:req.ip||req.socket?.remoteAddress||'',usuario:String(req.body?.usuario||'')})])).catch(err=>console.log(`Auditoria mestre falhou: ${err.message}`)); }
 
 function instalacaoAdministradora(item = {}) {
     return ['admin', 'administrador', 'fornecedor'].includes(String(item.perfilLicenca || '').trim().toLowerCase());
@@ -1673,12 +1689,27 @@ app.post('/login', (req, res) => {
     const hashEsperado = process.env.MASTER_PASSWORD_HASH || '';
     const usuario = String(req.body.usuario || '').trim();
     const senha = String(req.body.senha || '');
+    const chave = chaveLoginMestre(req, usuario);
+    const bloqueio = bloqueioLoginMestre(chave);
 
     if (!usuarioEsperado || !hashEsperado) {
         return res.status(503).send('Painel Mestre sem credenciais. Execute install-master-windows.ps1.');
     }
 
+    if (bloqueio) return res.status(429).send(paginaLogin({ destino: req.body.destino, erro: 'Muitas tentativas. Aguarde o bloqueio temporario.' }));
+    if (!validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta)) {
+        falhaLoginMestre(chave); auditarMestre(req, 'seguranca_login', 'CAPTCHA invalido no Painel Mestre.');
+        return res.status(401).send(paginaLogin({ destino: req.body.destino, erro: 'Confirmacao humana invalida ou expirada.' }));
+    }
+    const segredoTotp = String(process.env.MASTER_TOTP_SECRET || '').trim();
+    if (segredoTotp && !validarTotp(segredoTotp, req.body.codigoTotp)) {
+        falhaLoginMestre(chave); auditarMestre(req, 'seguranca_login', 'Codigo 2FA invalido no Painel Mestre.');
+        return res.status(401).send(paginaLogin({ destino: req.body.destino, erro: 'Codigo de autenticacao em duas etapas invalido.' }));
+    }
+
     if (usuario === usuarioEsperado && verificarSenha(senha, hashEsperado)) {
+        tentativasLogin.delete(chave);
+        auditarMestre(req, 'seguranca_login', 'Login realizado no Painel Mestre.');
         const token = criarSessao(usuario);
         res.setHeader('Set-Cookie', montarCookieSessao(token, req));
         return res.redirect(destinoSeguro(req.body.destino || '/'));
@@ -1730,6 +1761,9 @@ async function gerarCodigoLicencaLocalPorRequest(req) {
     if (licencaMesmaMaquina) {
         throw new Error(`Esta máquina já possui licença ativa para ${licencaMesmaMaquina.cliente}. Use Transferir na licença existente ou apague/suspenda a licença antiga antes de gerar outra.`);
     }
+
+    falhaLoginMestre(chave);
+    auditarMestre(req, 'seguranca_login', 'Falha de autenticacao no Painel Mestre.');
 
     const tipoSalvo = tipo.startsWith('avaliacao_') ? 'avaliacao' : tipo;
     const vencimento = tipo === 'vitalicia'

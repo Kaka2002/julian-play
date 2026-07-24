@@ -1,0 +1,7 @@
+const db=require('../database/sqlite');
+function run(sql,p=[]){return db.ready.then(()=>new Promise((ok,no)=>db.run(sql,p,function(e){e?no(e):ok({changes:this.changes})})))}
+function get(sql,p=[]){return db.ready.then(()=>new Promise((ok,no)=>db.get(sql,p,(e,r)=>e?no(e):ok(r))))}
+async function bloqueioAtual(chave,janelaMs){const r=await get('SELECT * FROM tentativas_login WHERE chave=?',[chave]);if(!r)return null;if(Number(r.bloqueadoAte)>Date.now())return r;if(Number(r.bloqueadoAte)||Date.now()-Number(r.inicio)>janelaMs)await run('DELETE FROM tentativas_login WHERE chave=?',[chave]);return null}
+async function registrarFalha(chave,max,janelaMs){const atual=await get('SELECT * FROM tentativas_login WHERE chave=?',[chave]);const dentro=atual&&Date.now()-Number(atual.inicio)<=janelaMs;const tentativas=(dentro?Number(atual.tentativas):0)+1;const inicio=dentro?Number(atual.inicio):Date.now();const bloqueado=tentativas>=max?Date.now()+janelaMs:0;await run(`INSERT INTO tentativas_login(chave,tentativas,inicio,bloqueadoAte,atualizadoEm) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(chave) DO UPDATE SET tentativas=excluded.tentativas,inicio=excluded.inicio,bloqueadoAte=excluded.bloqueadoAte,atualizadoEm=CURRENT_TIMESTAMP`,[chave,tentativas,inicio,bloqueado]);return{tentativas,bloqueadoAte:bloqueado}}
+function limpar(chave){return run('DELETE FROM tentativas_login WHERE chave=?',[chave])}
+module.exports={bloqueioAtual,registrarFalha,limpar};

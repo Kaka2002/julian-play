@@ -26,6 +26,8 @@ module.exports = {
             MASTER_PORT: String(settings.port || 9000),
             MASTER_USER: settings.user || '',
             MASTER_PASSWORD_HASH: settings.passwordHash || '',
+            MASTER_TOTP_SECRET: process.env.MASTER_TOTP_SECRET || settings.totpSecret || '',
+            MASTER_SESSION_SECRET: process.env.MASTER_SESSION_SECRET || settings.sessionSecret || settings.licenseAdminToken || '',
             MASTER_DATA_DIR: settings.dataDir || 'C:\\JulianPlayMaster',
             MASTER_CLIENTS_DIR: settings.clientsDir || 'C:\\JulianPlayClientes',
             MASTER_ARCHIVE_DIR: settings.archiveDir || 'C:\\JulianPlayClientes\\_arquivados',

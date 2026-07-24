@@ -61,6 +61,12 @@ async function validarLogin(usuario, senha) {
     return usuarioOk && senhaOk;
 }
 
+async function confirmarSenhaAtual(req, senha) {
+    const sessao = obterSessao(req);
+    if (!sessao || !senha) return false;
+    return validarLogin(sessao.usuario, senha);
+}
+
 function criarSessao(usuario) {
     const token = crypto.randomBytes(32).toString('hex');
     const expiraEm = Date.now() + SESSION_MS;
@@ -156,6 +162,7 @@ module.exports = {
     SESSION_HOURS,
     hashSenha,
     validarLogin,
+    confirmarSenhaAtual,
     acessoConfigurado,
     obterUsuarioConfigurado,
     criarSessao,

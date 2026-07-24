@@ -77,6 +77,11 @@ db.serialize(() => {
         )
     `);
 
+    db.run(`CREATE TABLE IF NOT EXISTS tentativas_login (
+        chave TEXT PRIMARY KEY, tentativas INTEGER DEFAULT 0, inicio INTEGER NOT NULL,
+        bloqueadoAte INTEGER DEFAULT 0, atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     db.run(`
         CREATE TABLE IF NOT EXISTS apps (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

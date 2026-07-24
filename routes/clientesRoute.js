@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { AsyncLocalStorage } = require('async_hooks');
 const { execFile } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
 const {
@@ -130,6 +131,9 @@ const {
     relatorioComercial
 } = require('../services/crmService');
 const { enfileirarEnvio } = require('../services/filaMensagensService');
+const { confirmarSenhaAtual } = require('../services/authService');
+const { registrarEventoSistema } = require('../services/eventosSistema');
+const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 const {
     salvarProtecaoWhatsapp
@@ -141,6 +145,8 @@ const {
 } = require('../services/renovacaoPainelService');
 
 const router = express.Router();
+const contextoAuditoria = new AsyncLocalStorage();
+router.use((req, res, next) => contextoAuditoria.run({ req }, next));
 const WHATSAPP_ENVIO_DUPLICADO_MS = 5 * 60 * 1000;
 const RENOVACAO_SUBMISSAO_DUPLICADA_MS = 120000;
 const mensagensWhatsAppRecentes = new Map();
@@ -3808,12 +3814,24 @@ function montarUrlListaClientesMensagem(mensagem) {
 }
 
 function logControleClientes(evento, dados = {}) {
-    const resumo = Object.entries(dados)
+    const req = contextoAuditoria.getStore()?.req;
+    const seguros = mascararSegredos(dados);
+    const auditoria = { ...seguros, ip: req?.ip || req?.socket?.remoteAddress || '', usuario: req?.usuarioPainel || '' };
+    const resumo = Object.entries(auditoria)
         .filter(([, valor]) => valor !== undefined && valor !== null && valor !== '')
         .map(([chave, valor]) => `${chave}=${valor}`)
         .join(' ');
 
     console.log(`[controle-clientes] ${evento}${resumo ?` | ${resumo}` : ''}`);
+    registrarEventoSistema('auditoria_administrativa', 'info', evento, auditoria).catch(() => {});
+}
+
+async function confirmarSenhaAcaoCritica(req, res, next) {
+    try {
+        if (await confirmarSenhaAtual(req, req.body.senhaConfirmacao)) return next();
+        logControleClientes('Acao critica recusada por senha invalida', { rota: req.path });
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Confirme sua senha atual para executar esta alteração.')}`);
+    } catch (err) { return next(err); }
 }
 
 function aguardarComTimeout(promessa, ms, descricao) {
@@ -7977,6 +7995,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
             ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Deixe em branco para manter a atual"' })}
             ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Repita a nova senha"' })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual para confirmar a alteração', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
             <div class="notice full">Depois de alterar, faça login novamente com o novo acesso.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar acesso</button>
@@ -8087,6 +8106,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'pixNome', label: 'Nome do recebedor', valor: status.config?.pixNome || '', attrs: 'required maxlength="25" placeholder="Nome que aparece no banco"' })}
             ${campo({ nome: 'pixCidade', label: 'Cidade do recebedor', valor: status.config?.pixCidade || '', attrs: 'required maxlength="15" placeholder="Cidade"' })}
             ${campo({ nome: 'pixTxid', label: 'Identificação do PIX', valor: status.config?.pixTxid || '', attrs: 'maxlength="25" placeholder="Ex: MINHAIPTV"' })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
             <div class="notice full">O QR Code será gerado automaticamente com estes dados e o valor do plano enviado ao cliente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar PIX</button>
@@ -8106,6 +8126,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'mercadoPagoWebhookUrl', label: 'URL HTTPS do webhook (opcional)', valor: status.config?.mercadoPagoWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://seu-dominio/webhooks/mercado-pago"' })}
             ${campo({ nome: 'mercadoPagoEmailPagador', label: 'E-mail padrão do pagador', valor: status.config?.mercadoPagoEmailPagador || '', tipo: 'email', attrs: 'placeholder="pagamentos@suaempresa.com.br"' })}
             ${campo({ nome: 'mercadoPagoWhatsappControle', label: 'WhatsApp para avisos de PIX (opcional)', valor: status.config?.mercadoPagoWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
             <div class="notice full">Use DDI + DDD + número no WhatsApp de controle. Quando o PIX for aprovado, o cliente será renovado, receberá a confirmação e este número também receberá um resumo. A confirmação fica registrada em <strong>Eventos do sistema</strong>. No servidor, configure o evento <strong>Pagamentos</strong> e a URL do webhook. Em instalação local, a URL pode ficar vazia: o painel consulta as cobranças pendentes automaticamente a cada minuto.</div>
             <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar provedor PIX</button></div>
         </form>
@@ -8132,6 +8153,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
             ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
             ${campo({ nome: 'alertaDiscoAtencaoGb', label: 'Disco em atenção abaixo de (GB)', valor: status.config?.alertaDiscoAtencaoGb || '8', tipo: 'number', attrs: 'min="2" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
@@ -8209,6 +8231,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                     ${manutencaoRestrita ?'' : `<td>
                         <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
+                            <input type="password" name="senhaConfirmacao" autocomplete="current-password" required placeholder="Senha atual" style="max-width:180px;">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
                     </td>`}
@@ -8268,6 +8291,7 @@ function formularioPainel(painel = {}, historico = []) {
             ] })}
             ${campo({ nome: 'timeoutSegundos', label: 'Tempo limite da API (segundos)', valor: painel.timeoutSegundos || 15, tipo: 'number', attrs: 'min="3" max="60"' })}
             ${campo({ nome: 'maxTentativas', label: 'Máximo de tentativas', valor: painel.maxTentativas || 5, tipo: 'number', attrs: 'min="1" max="10"' })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -9483,7 +9507,7 @@ router.get('/paineis/:id/editar', async (req, res) => {
     });
 });
 
-router.post('/paineis/:id/testar', async (req, res) => {
+router.post('/paineis/:id/testar', confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarPainel({ ...req.body, id: req.params.id });
         const resultado = await testarIntegracaoPainel(req.params.id);
@@ -9502,9 +9526,10 @@ router.post('/paineis/:id/renovacoes/:filaId/tentar', async (req, res) => {
     }
 });
 
-router.post('/paineis/salvar', async (req, res) => {
+router.post('/paineis/salvar', confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarPainel(req.body);
+        logControleClientes('Configuracao de painel IPTV/P2P atualizada', { painelId: req.body.id || 'novo', nome: req.body.nome, api: req.body.apiUrl ?'configurada':'vazia', token: req.body.apiToken ?'atualizado':'mantido', renovacaoAutomatica: req.body.renovacaoAutomatica });
         res.redirect('/paineis?mensagem=Painel salvo com sucesso');
     } catch (err) {
         res.status(400);
@@ -9674,7 +9699,7 @@ router.post('/manutencao/importar-clientes/confirmar', async (req, res) => {
     }
 });
 
-router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         const resultado = await restaurarBackup(req.body.backup);
         logControleClientes('Backup restaurado', {
@@ -9781,12 +9806,11 @@ router.post('/manutencao/robo/imagem/:chave/limpar', bloquearManutencaoRestritaC
     }
 });
 
-router.post('/manutencao/pix', async (req, res) => {
+router.post('/manutencao/pix', confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarConfiguracoesPix(req.body);
         logControleClientes('Configuracao PIX atualizada', {
-            chave: req.body.pixChave,
-            nome: req.body.pixNome
+            camposAlterados: 'pixChave,pixNome,pixCidade,pixTxid'
         });
         res.redirect('/manutencao?mensagem=PIX salvo com sucesso');
     } catch (err) {
@@ -9797,10 +9821,10 @@ router.post('/manutencao/pix', async (req, res) => {
     }
 });
 
-router.post('/manutencao/pix-provedor', async (req, res) => {
+router.post('/manutencao/pix-provedor', confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarConfiguracoesProvedorPix(req.body);
-        logControleClientes('Provedor de confirmacao PIX atualizado', { provedor: req.body.pixProvedor });
+        logControleClientes('Provedor de confirmacao PIX atualizado', { provedor: req.body.pixProvedor, credenciais: req.body.mercadoPagoAccessToken ?'atualizadas':'mantidas', webhook: req.body.mercadoPagoWebhookUrl ?'configurado':'vazio' });
         res.redirect('/manutencao?mensagem=Provedor PIX salvo com sucesso');
     } catch (err) {
         logControleClientes('Erro ao salvar provedor PIX', { erro: err.message });
@@ -9830,7 +9854,7 @@ router.post('/manutencao/whatsapp/protecao', async (req, res) => {
     }
 });
 
-router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, async (req, res) => {
+router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarConfiguracoesMonitoramento(req.body);
         logControleClientes('Monitoramento comercial atualizado', {
@@ -9870,7 +9894,7 @@ router.post('/manutencao/monitoramento/testar', bloquearMonitoramentoOperacional
     }
 });
 
-router.post('/manutencao/acesso', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/acesso', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
     try {
         await salvarConfiguracoesAcesso(req.body);
         logControleClientes('Acesso ao painel atualizado', {

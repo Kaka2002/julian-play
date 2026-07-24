@@ -15,6 +15,9 @@ const {
     salvarConfiguracoesAcesso,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
+const { criarCaptcha, validarCaptcha, mascararSegredos } = require('../services/securityService');
+const { registrarEventoSistema } = require('../services/eventosSistema');
+const loginPersistente = require('../services/loginSecurityService');
 
 const router = express.Router();
 const tentativasLogin = new Map();
@@ -99,7 +102,7 @@ function destinoSeguro(valor) {
     return destino;
 }
 
-function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false }) {
+function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false, captcha = criarCaptcha() }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
 
@@ -274,6 +277,10 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             <label>Senha
                 <input type="password" name="senha" autocomplete="current-password" required>
             </label>
+            <input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
+            <label>Confirmação humana: ${escapar(captcha.pergunta)}
+                <input name="captchaResposta" inputmode="numeric" autocomplete="off" required>
+            </label>
             <button type="submit">Acessar painel</button>
         </form>
         <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>`}
@@ -308,20 +315,32 @@ router.get('/login', async (req, res) => {
 router.post('/login', async (req, res) => {
     desativarCache(res);
     const next = destinoSeguro(req.body.next);
-    const bloqueio = bloqueioAtual(req, req.body.usuario);
+    const chaveLogin = chaveTentativa(req, req.body.usuario);
+    const bloqueio = bloqueioAtual(req, req.body.usuario) || await loginPersistente.bloqueioAtual(chaveLogin, BLOQUEIO_LOGIN_MS);
 
     if (bloqueio) {
         const minutos = Math.max(1, Math.ceil((bloqueio.bloqueadoAte - Date.now()) / 60000));
         return res.redirect(`/login?erro=${encodeURIComponent(`Muitas tentativas. Aguarde ${minutos} minuto(s).`)}&next=${encodeURIComponent(next)}`);
     }
 
+    if (!validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta)) {
+        registrarFalhaLogin(req, req.body.usuario);
+        await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
+        await registrarEventoSistema('seguranca_login', 'alerta', 'CAPTCHA inválido no login.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario }));
+        return res.redirect(`/login?erro=${encodeURIComponent('Confirmação humana inválida ou expirada.')}&next=${encodeURIComponent(next)}`);
+    }
+
     if (!(await validarLogin(req.body.usuario, req.body.senha))) {
         registrarFalhaLogin(req, req.body.usuario);
+        await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
+        await registrarEventoSistema('seguranca_login', 'alerta', 'Falha de autenticação.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario }));
         return res.redirect(`/login?erro=${encodeURIComponent('Usuário ou senha inválidos.')}&next=${encodeURIComponent(next)}`);
     }
 
     limparFalhasLogin(req, req.body.usuario);
+    await loginPersistente.limpar(chaveLogin);
     const sessao = criarSessao(String(req.body.usuario || '').trim());
+    await registrarEventoSistema('seguranca_login', 'info', 'Login administrativo realizado.', { ip: req.ip || req.socket?.remoteAddress, usuario: String(req.body.usuario || '').trim() });
     res.setHeader('Set-Cookie', cookieSessao(sessao.token, req));
     return res.redirect(next);
 });

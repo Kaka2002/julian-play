@@ -20,6 +20,7 @@ const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
 const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComercial');
 const { protegerPainel } = require('./services/authService');
 const { protegerLicenca } = require('./services/licencaService');
+const { csrfMiddleware, cabecalhosSeguranca } = require('./services/securityService');
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -96,13 +97,9 @@ adquirirTravaProcesso();
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-app.use((req, res, next) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-    next();
-});
+app.disable('x-powered-by');
+app.use(cabecalhosSeguranca);
+app.use(csrfMiddleware({ isento: req => req.path.startsWith('/webhooks/') || req.path.startsWith('/api/admin/') || req.is('application/json') }));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/tenant-assets', express.static(path.join(DATA_DIR, 'assets')));
 app.use('/', authRoute);
