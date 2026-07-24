@@ -14,7 +14,7 @@ const {
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
 const {
-    buscarPlanoPorNome,
+    prepararPlanoPixCliente,
     enviarQRCodePIXParaDestino,
     listarPlanosComerciais,
     montarPlanosPadraoComerciais
@@ -75,6 +75,30 @@ function montarDestinoWhatsApp(telefone) {
 
 function nomeCliente(cliente = {}) {
     return String(cliente.nome || 'cliente').trim() || 'cliente';
+}
+
+async function enviarPixAposAvisoVencimento(client, destino, cliente = {}) {
+    try {
+        const planoPix = await prepararPlanoPixCliente(cliente);
+        if (!planoPix?.valorNumero) {
+            console.log(`Renovação automática: PIX não enviado para ${nomeCliente(cliente)} porque o plano está sem valor.`);
+            return false;
+        }
+
+        return enviarQRCodePIXParaDestino(client, destino, planoPix, {
+            tipo: 'renovacao',
+            nomeCliente: nomeCliente(cliente),
+            clienteId: cliente.id,
+            plano: cliente.plano,
+            tipoPlanoId: cliente.tipoPlanoId,
+            diasContrato: cliente.diasContrato,
+            valorPlano: planoPix.valor,
+            assinaturaApp: '0,00'
+        });
+    } catch (err) {
+        console.log(`Renovação automática: aviso enviado, mas o PIX de ${nomeCliente(cliente)} falhou: ${err.message}`);
+        return false;
+    }
 }
 
 async function obterPlanosRenovacao() {
@@ -148,6 +172,7 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
             if (enviado) {
                 enviados += 1;
                 await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimento, diasAntes);
+                await enviarPixAposAvisoVencimento(client, destino, cliente);
             } else {
                 ignorados += 1;
             }
@@ -332,6 +357,7 @@ async function verificarClientesVencendoUmaHora({ getClient, getStatusWhatsApp }
             if (enviado) {
                 enviados += 1;
                 await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, AVISO_CLIENTE_UMA_HORA);
+                await enviarPixAposAvisoVencimento(client, destino, cliente);
             } else {
                 ignorados += 1;
             }
@@ -383,22 +409,8 @@ async function verificarClientesVencidosPorDias({ getClient, getStatusWhatsApp }
 
                 if (enviado) {
                     enviados += 1;
-                    const planoPix = buscarPlanoPorNome(cliente.plano);
-
-                    if (planoPix) {
-                        await enviarQRCodePIXParaDestino(client, destino, planoPix, {
-                            tipo: 'renovacao',
-                            nomeCliente: nomeCliente(cliente),
-                            clienteId: cliente.id,
-                            plano: cliente.plano,
-                            tipoPlanoId: cliente.tipoPlanoId,
-                            diasContrato: cliente.diasContrato,
-                            valorPlano: cliente.valorPlano,
-                            assinaturaApp: '0,00'
-                        });
-                    }
-
                     await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimentoEfetivo, aviso.codigo);
+                    await enviarPixAposAvisoVencimento(client, destino, cliente);
                 } else {
                     ignorados += 1;
                 }

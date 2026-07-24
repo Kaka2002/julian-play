@@ -200,6 +200,29 @@ function buscarPlanoPorNome(nomePlano) {
     return null;
 }
 
+async function prepararPlanoPixCliente(cliente = {}) {
+    const planosComerciais = await listarPlanosComerciais();
+    const nomeNormalizado = normalizarNomePlano(cliente.plano);
+    const planoBase = planosComerciais.find(plano => (
+        cliente.tipoPlanoId && Number(plano.id) === Number(cliente.tipoPlanoId)
+    )) || planosComerciais.find(plano => normalizarNomePlano(plano.nome) === nomeNormalizado)
+        || buscarPlanoPorNome(cliente.plano)
+        || { nome: cliente.plano || 'Plano', valor: cliente.valorPlano || '' };
+    const valorCliente = valorPlanoParaNumero(cliente.valorPlano);
+    const valorBase = obterValorPlanoPix(planoBase);
+    const valorNumero = valorCliente > 0 ? valorCliente : valorBase;
+    const valor = formatarValorPlano(valorNumero);
+
+    return normalizarPlanoPix({
+        ...planoBase,
+        nome: cliente.plano || planoBase.nome || 'Plano',
+        valor,
+        valorNumero,
+        valorTotal: valor,
+        valorPlano: valor
+    });
+}
+
 function normalizarCampo(valor, tamanhoMaximo) {
     return valor
         .toString()
@@ -270,6 +293,8 @@ Confira os dados antes de pagar:
 
 ✅ Depois do pagamento, envie o comprovante aqui para ativação.
 
+🔄 Se quiser trocar para outro plano, digite *planos* para ver as opções.
+
 *0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`;
 }
@@ -292,6 +317,8 @@ Confira os dados antes de pagar:
 
 ✅ Depois do pagamento, envie o comprovante aqui para renovarmos sua assinatura.
 
+🔄 Se quiser trocar para outro plano, digite *planos* para ver as opções.
+
 *0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`;
 }
@@ -312,6 +339,8 @@ ${options.nomeCliente ?`👤 *Cliente:* ${options.nomeCliente}\n` : ''}💰 *Val
 📲 Abra o aplicativo do seu banco, escolha PIX, leia o QR Code e confirme o pagamento.
 
 ✅ A confirmação é automática. Não é necessário enviar comprovante.
+
+🔄 Se quiser trocar para outro plano, digite *planos* para ver as opções.
 
 *0* - Voltar ao menu principal
 ${RODAPE_ATENDIMENTO}`;
@@ -413,6 +442,7 @@ ${RODAPE_ATENDIMENTO}`),
 module.exports = {
     buscarPlano,
     buscarPlanoPorNome,
+    prepararPlanoPixCliente,
     listarPlanosComerciais,
     montarPlanosPadraoComerciais,
     enviarQRCodePIX,

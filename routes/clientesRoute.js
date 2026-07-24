@@ -88,6 +88,7 @@ const {
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const {
     buscarPlanoPorNome,
+    prepararPlanoPixCliente: prepararPlanoPixPlanoAtual,
     enviarQRCodePIXParaDestino,
     listarPlanosComerciais,
     montarPlanosPadraoComerciais
@@ -10118,15 +10119,32 @@ router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
             'Envio manual de vencimento proximo'
         );
 
-        await adicionarNotaCliente(cliente.id, `Aviso manual de vencimento proximo enviado pelo WhatsApp para ${vencimento}.`);
+        const planoPix = await prepararPlanoPixPlanoAtual(cliente);
+        const pixEnviado = planoPix?.valorNumero > 0
+            ? await enviarQRCodePIXParaDestino(client, envioWhatsApp.destino, planoPix, {
+                tipo: 'renovacao',
+                nomeCliente: cliente.nome || 'cliente',
+                clienteId: cliente.id,
+                plano: cliente.plano,
+                tipoPlanoId: cliente.tipoPlanoId,
+                diasContrato: cliente.diasContrato,
+                valorPlano: planoPix.valor,
+                assinaturaApp: '0,00'
+            })
+            : false;
+
+        await adicionarNotaCliente(cliente.id, `Aviso manual de vencimento proximo enviado pelo WhatsApp para ${vencimento}.${pixEnviado ?' PIX do plano enviado em seguida.' : ' PIX não enviado; verifique o valor e a configuração PIX.'}`);
         logControleClientes('Aviso manual de vencimento enviado', {
             clienteId: cliente.id,
             destino: envioWhatsApp.destino,
             mensagemId: envioWhatsApp.mensagemId,
-            ack: envioWhatsApp.ack
+            ack: envioWhatsApp.ack,
+            pixEnviado
         });
 
-        return res.redirect(montarUrlListaClientesMensagem(`Aviso de vencimento enviado para ${cliente.nome}.`));
+        return res.redirect(montarUrlListaClientesMensagem(pixEnviado
+            ? `Aviso de vencimento e PIX do plano enviados para ${cliente.nome}.`
+            : `Aviso enviado para ${cliente.nome}, mas não foi possível enviar o PIX do plano.`));
     } catch (err) {
         logControleClientes('Erro ao enviar aviso manual de vencimento', {
             clienteId: cliente.id,
