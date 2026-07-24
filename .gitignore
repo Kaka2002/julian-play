@@ -12,3 +12,5 @@ config/license-public-key.pem
 entrega-cliente-local/ENVIAR_AO_CLIENTE/julian-play-app.zip
 entrega-cliente-local/ENVIAR_AO_CLIENTE.zip
 master/data/
+
+entrega-cliente-local/ENVIAR_AO_CLIENTE-*.zip
