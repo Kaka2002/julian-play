@@ -9,11 +9,11 @@ backups/
 .julian-play-install.json
 .julian-master-install.json
 config/license-public-key.pem
-entrega-cliente-local/ENVIAR_AO_CLIENTE/julian-play-app.zip
-entrega-cliente-local/ENVIAR_AO_CLIENTE/julian-play-app.zip.sha256
+# Artefatos de entrega sao sempre gerados; somente fontes e scripts ficam no Git.
+entrega-cliente-local/**/*.zip
+entrega-cliente-local/**/*.zip.sha256
+entrega-cliente-local/*.zip
+entrega-cliente-local/*.zip.sha256
 entrega-cliente-local/ENVIAR_AO_CLIENTE/INSTALAR.exe
 entrega-cliente-local/ENVIAR_AO_CLIENTE/diagnostico-suporte-*.txt
-entrega-cliente-local/ENVIAR_AO_CLIENTE.zip
 master/data/
-
-entrega-cliente-local/ENVIAR_AO_CLIENTE-*.zip

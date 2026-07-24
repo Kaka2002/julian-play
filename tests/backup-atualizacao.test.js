@@ -23,3 +23,14 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  const linhaMaster=instalar.indexOf("AdicionarProcessoJulian $nomes 'julian-master'"); const condicao=instalar.indexOf('if (Test-Path -LiteralPath $arquivoMaster)');
  assert.ok(linhaMaster>condicao,'julian-master somente deve ser incluido dentro da configuracao master');
 });
+
+test('artefatos de entrega sao versionados, ignorados e gerados no deploy',()=>{
+ const ignorados=fs.readFileSync(path.join(repoRoot,'.gitignore'),'utf8');
+ const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');
+ const gerador=fs.readFileSync(path.join(repoRoot,'entrega-cliente-local','USO_INTERNO_NAO_ENVIAR','GERAR-ARTEFATOS-ENTREGA.ps1'),'utf8');
+ assert.match(ignorados,/entrega-cliente-local\/\*\*\/\*\.zip/);
+ assert.match(deploy,/GERAR-ARTEFATOS-ENTREGA\.ps1/);
+ assert.match(gerador,/ENVIAR_AO_CLIENTE-v\$versaoSegura-\$data\.zip/);
+ assert.match(gerador,/Get-FileHash[^\n]+SHA256/);
+ assert.match(gerador,/Select-Object -Skip \$Retencao/);
+});
