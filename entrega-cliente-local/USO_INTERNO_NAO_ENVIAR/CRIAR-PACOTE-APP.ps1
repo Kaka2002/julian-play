@@ -6,6 +6,8 @@ $ErrorActionPreference = 'Stop'
 $raizProjeto = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $temporario = Join-Path $env:TEMP ("julian-play-app-{0}" -f ([guid]::NewGuid().ToString('N')))
 
+& (Join-Path $PSScriptRoot 'COMPILAR-INSTALADOR.ps1')
+
 function DeveIgnorarCaminho($item) {
     $nome = $item.Name
     $relativo = $item.FullName.Substring($raizProjeto.Length).TrimStart('\', '/')

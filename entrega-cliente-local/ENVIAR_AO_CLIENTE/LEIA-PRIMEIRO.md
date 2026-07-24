@@ -2,6 +2,12 @@
 
 Este pacote instala o painel no computador Windows do cliente.
 
+## Instalacao Mais Simples
+
+Clique duas vezes em `INSTALAR.exe`. A janela permite diagnosticar o computador, instalar, atualizar, abrir o painel, copiar o diagnostico e voltar para a versao anterior.
+
+O Windows pode mostrar `Editor desconhecido` enquanto o executavel nao possuir assinatura digital comercial. Confirme somente quando o arquivo tiver sido recebido diretamente do fornecedor.
+
 O cliente nao precisa instalar VS Code, nao precisa copiar codigo e nao deve abrir arquivos internos do sistema. Basta seguir este arquivo e executar os scripts indicados.
 
 ## Antes De Comecar
