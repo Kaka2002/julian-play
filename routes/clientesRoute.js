@@ -62,6 +62,9 @@ const { atualizarLicencaComercial, calcularEstadoLicenca, instalacaoAdministrado
 const {
     criarBackupManual,
     restaurarBackup,
+    verificarArquivoBackup,
+    exportarBackupCriptografado,
+    copiarBackupExterno,
     executarDiagnosticoSistema,
     obterStatusSistema
 } = require('../services/manutencao');
@@ -8214,6 +8217,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <div class="subtitle">${status.totalBackups || 0} backup(s) encontrado(s)</div>
             </div>
         </div>
+        ${status.backupRecente ?'' : '<div class="notice" style="margin:0 20px 18px;background:#fff2dc;color:#a76100;">Atenção: não existe backup verificado nas últimas 36 horas.</div>'}
         ${backups.length ?`<table>
             <thead>
                 <tr>
@@ -8233,6 +8237,13 @@ function telaManutencao(status = {}, opcoes = {}) {
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
                             <input type="password" name="senhaConfirmacao" autocomplete="current-password" required placeholder="Senha atual" style="max-width:180px;">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
+                        </form>
+                        <div class="subtitle" style="margin-top:8px;">Integridade: ${escapar(backup.integridade)} · teste: ${escapar(backup.restauracaoTeste)}${backup.hashSha256 ?` · SHA-256 ${escapar(backup.hashSha256.slice(0,12))}…`:''}</div>
+                        <form method="post" action="/manutencao/backups/exportar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" minlength="10" required placeholder="Senha da exportação"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar criptografado</button>
+                        </form>
+                        <form method="post" action="/manutencao/backups/copiar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" required placeholder="D:\Backups ou unidade de rede"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Copiar externamente</button>
                         </form>
                     </td>`}
                 </tr>`).join('')}
@@ -9714,6 +9725,22 @@ router.post('/manutencao/restaurar', bloquearManutencaoRestritaCliente, confirma
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao restaurar backup: ${err.message}`)}`);
     }
+});
+
+router.post('/manutencao/backups/exportar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
+    try {
+        const arquivo = await exportarBackupCriptografado(req.body.backup, req.body.senhaExportacao);
+        logControleClientes('Backup criptografado exportado', { backup:req.body.backup });
+        return res.download(arquivo, path.basename(arquivo));
+    } catch (err) { return res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message)}`); }
+});
+
+router.post('/manutencao/backups/copiar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
+    try {
+        const destino = await copiarBackupExterno(req.body.backup, req.body.pastaExterna);
+        logControleClientes('Backup copiado para armazenamento externo', { backup:req.body.backup, destino });
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup copiado para ${destino}`)}`);
+    } catch (err) { return res.redirect(`/manutencao?mensagem=${encodeURIComponent(err.message)}`); }
 });
 
 router.post('/manutencao/licenca', bloquearManutencaoRestritaCliente, async (req, res) => {

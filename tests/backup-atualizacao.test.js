@@ -5,6 +5,8 @@ test('backup e restauracao recuperam o banco anterior',()=>{
  const ambiente=criarAmbiente();
  try{
   const criado=executarIsolado(`(async()=>{const c=require('./services/configuracoesPainel');const m=require('./services/manutencao');const db=require('./database/sqlite');await c.salvarConfiguracao('nomeEmpresaRobo','Antes');const b=await m.criarBackupManual();await c.salvarConfiguracao('nomeEmpresaRobo','Depois');process.stdout.write(b.nome);db.close()})().catch(e=>{console.error(e);process.exit(1)})`,{ambiente});
+  const caminhoManifesto=path.join(ambiente.backupDir,`${criado.stdout}.json`);assert.ok(fs.existsSync(caminhoManifesto));const manifesto=JSON.parse(fs.readFileSync(caminhoManifesto,'utf8'));assert.equal(manifesto.integridade,'ok');assert.equal(manifesto.restauracaoTeste,'aprovada');assert.match(manifesto.hashSha256,/^[a-f0-9]{64}$/);assert.ok(manifesto.tamanho>0);
+  const exportado=executarIsolado(`(async()=>{const m=require('./services/manutencao');const db=require('./database/sqlite');const a=await m.exportarBackupCriptografado(${JSON.stringify(criado.stdout)},'senha-forte-teste');process.stdout.write(a);db.close()})().catch(e=>{console.error(e);process.exit(1)})`,{ambiente});const bufferCriptografado=fs.readFileSync(exportado.stdout);assert.equal(bufferCriptografado.subarray(0,8).toString(),'JPLAYBK1');assert.equal(bufferCriptografado.includes(Buffer.from('SQLite format 3')),false);
   const restaurado=executarIsolado(`(async()=>{const m=require('./services/manutencao');const db=require('./database/sqlite');process.stdout.write(JSON.stringify(await m.restaurarBackup(${JSON.stringify(criado.stdout)})));db.close()})().catch(e=>{console.error(e);process.exit(1)})`,{ambiente});
   assert.equal(JSON.parse(restaurado.stdout).restaurado,criado.stdout);
   const verificado=executarIsolado(`(async()=>{const c=require('./services/configuracoesPainel');const db=require('./database/sqlite');process.stdout.write((await c.obterConfiguracoes()).nomeEmpresaRobo);db.close()})().catch(e=>{console.error(e);process.exit(1)})`,{ambiente});
@@ -17,6 +19,7 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  const instalar=fs.readFileSync(path.join(repoRoot,'install-windows.ps1'),'utf8');
  for(const item of ['clientes.db','.wwebjs_auth','.wwebjs_cache','backups'])assert.match(atualizar,new RegExp(item.replace('.', '\\.'),'i'));
  assert.match(atualizar,/Preservando configuracao local/i);
+ assert.match(atualizar,/Get-FileHash[\s\S]*SHA256/i);
  const linhaMaster=instalar.indexOf("AdicionarProcessoJulian $nomes 'julian-master'"); const condicao=instalar.indexOf('if (Test-Path -LiteralPath $arquivoMaster)');
  assert.ok(linhaMaster>condicao,'julian-master somente deve ser incluido dentro da configuracao master');
 });

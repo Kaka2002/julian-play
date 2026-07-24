@@ -1,5 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const crypto = require('crypto');
+const sqlite3 = require('sqlite3').verbose();
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
@@ -98,16 +101,59 @@ function listarBackups() {
         .map(nome => {
             const caminho = path.join(BACKUP_DIR, nome);
             const stat = fs.statSync(caminho);
+            let manifesto = null;
+            try { manifesto = JSON.parse(fs.readFileSync(`${caminho}.json`, 'utf8')); } catch (_) { /* Backup antigo. */ }
 
             return {
                 nome,
                 caminho,
                 tamanho: stat.size,
                 tamanhoFormatado: formatarBytes(stat.size),
-                criadoEm: stat.mtime
+                criadoEm: stat.mtime,
+                integridade: manifesto?.integridade || 'nao_verificado',
+                hashSha256: manifesto?.hashSha256 || '',
+                verificadoEm: manifesto?.verificadoEm || '',
+                restauracaoTeste: manifesto?.restauracaoTeste || 'nao_testada'
             };
         })
         .sort((a, b) => b.criadoEm - a.criadoEm);
+}
+
+function hashArquivo(caminho) {
+    return new Promise((resolve, reject) => {
+        const hash = crypto.createHash('sha256');
+        fs.createReadStream(caminho).on('error', reject).on('data', bloco => hash.update(bloco)).on('end', () => resolve(hash.digest('hex')));
+    });
+}
+
+function quickCheckArquivo(caminho) {
+    return new Promise((resolve, reject) => {
+        const banco = new sqlite3.Database(caminho, sqlite3.OPEN_READONLY, (erro) => {
+            if (erro) return reject(erro);
+            banco.get('PRAGMA quick_check', (err, row) => {
+                const resultado = String(row?.quick_check || Object.values(row || {})[0] || '');
+                banco.close();
+                if (err) return reject(err);
+                if (resultado.toLowerCase() !== 'ok') return reject(new Error(resultado || 'Integridade SQLite invalida.'));
+                resolve('ok');
+            });
+        });
+    });
+}
+
+async function verificarArquivoBackup(caminho, testarRestauracao = true) {
+    const stat = fs.statSync(caminho);
+    await quickCheckArquivo(caminho);
+    let restauracaoTeste = 'nao_testada';
+    if (testarRestauracao) {
+        const temporario = path.join(os.tmpdir(), `julian-backup-test-${crypto.randomUUID()}.db`);
+        try { fs.copyFileSync(caminho, temporario); await quickCheckArquivo(temporario); restauracaoTeste = 'aprovada'; }
+        finally { try { fs.unlinkSync(temporario); } catch (_) { /* temporario opcional */ } }
+    }
+    const manifesto = { versao: 1, arquivo: path.basename(caminho), tamanho: stat.size, criadoEm: stat.mtime.toISOString(),
+        hashSha256: await hashArquivo(caminho), integridade: 'ok', restauracaoTeste, verificadoEm: new Date().toISOString() };
+    fs.writeFileSync(`${caminho}.json`, JSON.stringify(manifesto, null, 2));
+    return manifesto;
 }
 
 function calcularLicenca(config = {}) {
@@ -232,12 +278,36 @@ async function criarBackup(prefixo = 'clientes') {
     const destino = path.join(BACKUP_DIR, nome);
 
     fs.copyFileSync(db.dbPath, destino);
-
+    const manifesto = await verificarArquivoBackup(destino, true);
+    await registrarEventoSistema('backup_verificado', 'sucesso', `Backup verificado: ${nome}.`, manifesto);
     return {
         nome,
         caminho: destino,
-        tamanho: fs.statSync(destino).size
+        tamanho: fs.statSync(destino).size,
+        ...manifesto
     };
+}
+
+async function exportarBackupCriptografado(nomeBackup, senha) {
+    const nome = path.basename(String(nomeBackup || ''));
+    if (!nome.endsWith('.db') || String(senha || '').length < 10) throw new Error('Informe um backup valido e senha com pelo menos 10 caracteres.');
+    const origem = path.join(BACKUP_DIR, nome); if (!fs.existsSync(origem)) throw new Error('Backup nao encontrado.');
+    await verificarArquivoBackup(origem, true);
+    const salt=crypto.randomBytes(16), iv=crypto.randomBytes(12), chave=crypto.scryptSync(senha,salt,32), cifra=crypto.createCipheriv('aes-256-gcm',chave,iv);
+    const criptografado=Buffer.concat([cifra.update(fs.readFileSync(origem)),cifra.final()]); const tag=cifra.getAuthTag();
+    const destino=path.join(BACKUP_DIR,`${nome}.jplaybackup`);
+    fs.writeFileSync(destino,Buffer.concat([Buffer.from('JPLAYBK1'),salt,iv,tag,criptografado]));
+    await registrarEventoSistema('backup_exportado', 'info', `Backup criptografado exportado: ${path.basename(destino)}.`, { arquivo:nome, tamanho:fs.statSync(destino).size });
+    return destino;
+}
+
+async function copiarBackupExterno(nomeBackup, pastaExterna) {
+    const nome=path.basename(String(nomeBackup||'')); const origem=path.join(BACKUP_DIR,nome);
+    if(!nome.endsWith('.db')||!fs.existsSync(origem))throw new Error('Backup nao encontrado.');
+    const destinoBase=path.resolve(String(pastaExterna||'')); if(!path.isAbsolute(destinoBase))throw new Error('Informe uma pasta externa absoluta.');
+    await verificarArquivoBackup(origem,true); fs.mkdirSync(destinoBase,{recursive:true});
+    const destino=path.join(destinoBase,nome); fs.copyFileSync(origem,destino); fs.copyFileSync(`${origem}.json`,`${destino}.json`);
+    await registrarEventoSistema('backup_copia_externa','info',`Backup copiado para armazenamento externo: ${nome}.`,{destino:destinoBase}); return destino;
 }
 
 function criarBackupManual() {
@@ -259,6 +329,7 @@ function limparBackupsAutomaticos(retencaoDias = 30) {
         if (backup.criadoEm.getTime() >= limite) return;
 
         fs.unlinkSync(backup.caminho);
+        try { fs.unlinkSync(`${backup.caminho}.json`); } catch (_) { /* manifesto opcional */ }
         removidos += 1;
     });
 
@@ -277,6 +348,7 @@ async function restaurarBackup(nomeBackup) {
     if (!fs.existsSync(origem)) {
         throw new Error('Arquivo de backup nao encontrado.');
     }
+    await verificarArquivoBackup(origem, true);
 
     if (!fs.existsSync(db.dbPath)) {
         throw new Error('Banco atual não encontrado para criar cópia de segurança.');
@@ -342,6 +414,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         backupDir: BACKUP_DIR,
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
+        backupRecente: Boolean(backups[0] && Date.now() - backups[0].criadoEm.getTime() <= 36 * 60 * 60 * 1000),
         backups: backups.slice(0, 6),
         eventos,
         diagnostico,
@@ -378,4 +451,8 @@ module.exports = {
     executarDiagnosticoSistema,
     obterStatusSistema,
     formatarBytes
+    ,listarBackups
+    ,verificarArquivoBackup
+    ,exportarBackupCriptografado
+    ,copiarBackupExterno
 };

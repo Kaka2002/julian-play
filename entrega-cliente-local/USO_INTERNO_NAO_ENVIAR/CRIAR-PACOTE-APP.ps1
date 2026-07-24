@@ -81,7 +81,10 @@ if (Test-Path -LiteralPath $Destino) {
 
 New-Item -ItemType Directory -Path (Split-Path -Parent $Destino) -Force | Out-Null
 Compress-Archive -Path (Join-Path $temporario '*') -DestinationPath $Destino -Force
+$hash = (Get-FileHash -LiteralPath $Destino -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText("$Destino.sha256", "$hash  $([IO.Path]::GetFileName($Destino))`r`n", (New-Object Text.UTF8Encoding($false)))
 Remove-Item -LiteralPath $temporario -Recurse -Force
 
 Write-Host "Pacote criado: $Destino" -ForegroundColor Green
+Write-Host "SHA-256: $hash" -ForegroundColor Green
 Write-Host 'Envie ao cliente somente a pasta ENVIAR_AO_CLIENTE.' -ForegroundColor Yellow

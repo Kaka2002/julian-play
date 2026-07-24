@@ -226,6 +226,17 @@ if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote atualizado ao fornecedor.'
 }
 
+$arquivoHash = "$pacote.sha256"
+if (-not (Test-Path -LiteralPath $arquivoHash)) {
+    throw 'Arquivo de validacao julian-play-app.zip.sha256 nao encontrado. Solicite um pacote completo ao fornecedor.'
+}
+$hashEsperado = ((Get-Content -LiteralPath $arquivoHash -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+$hashAtual = (Get-FileHash -LiteralPath $pacote -Algorithm SHA256).Hash.ToLowerInvariant()
+if (-not $hashEsperado -or $hashAtual -ne $hashEsperado) {
+    throw 'O ZIP da atualizacao esta incompleto ou foi alterado. A atualizacao foi cancelada antes de tocar na instalacao.'
+}
+Write-Host "Pacote validado por SHA-256: $hashAtual" -ForegroundColor Green
+
 Etapa 'Verificando instalacao atual'
 $PastaInstalacao = [IO.Path]::GetFullPath($PastaInstalacao)
 $PastaDados = [IO.Path]::GetFullPath($PastaDados)

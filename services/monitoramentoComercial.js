@@ -6,7 +6,8 @@ const os = require('os');
 const pacote = require('../package.json');
 const {
     criarBackupAutomatico,
-    limparBackupsAutomaticos
+    limparBackupsAutomaticos,
+    listarBackups
 } = require('./manutencao');
 const { registrarEventoSistema } = require('./eventosSistema');
 const { marcarPagamentoMensagem } = require('./clientes');
@@ -19,6 +20,7 @@ let agendador = null;
 let executando = false;
 let desconectadoDesde = null;
 let alertaDesconexaoEnviado = false;
+let ultimoAlertaBackupDesatualizado = '';
 let reinicioSuaveTentado = false;
 let novoQrTentado = false;
 let ultimaAcaoRecuperacaoEm = 0;
@@ -246,6 +248,14 @@ async function testarWebhookAlertas(url) {
 }
 
 async function verificarBackup(config, agora) {
+    const ultimo = listarBackups()[0];
+    const desatualizado = !ultimo || Date.now() - ultimo.criadoEm.getTime() > 36 * 60 * 60 * 1000;
+    if (desatualizado && ultimoAlertaBackupDesatualizado !== agora.data) {
+        ultimoAlertaBackupDesatualizado = agora.data;
+        const mensagem = ultimo ?`Último backup tem mais de 36 horas: ${ultimo.nome}.` : 'Nenhum backup verificável foi encontrado.';
+        await registrarEventoSistema('backup_desatualizado', 'alerta', mensagem);
+        await enviarWebhook(config.alertaWebhookUrl, { tipo:'backup_desatualizado', nivel:'alerta', mensagem, data:agora.iso });
+    }
     if (String(config.backupAutomaticoAtivo) !== '1') return;
     if (agora.hora < String(config.backupAutomaticoHora || '03:00')) return;
     if (String(config.ultimoBackupAutomatico || '').slice(0, 10) === agora.data) return;

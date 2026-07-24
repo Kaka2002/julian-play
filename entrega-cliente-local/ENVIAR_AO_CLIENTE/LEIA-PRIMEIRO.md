@@ -144,3 +144,8 @@ Use somente o numero de WhatsApp informado na licenca.
 - Se trocar o numero do WhatsApp do robo, avise o fornecedor antes de conectar outro numero.
 - Se aparecer erro, envie print da tela ao fornecedor.
 
+# Início mais simples
+
+Abra `INICIAR-PAINEL.cmd`. O assistente reúne diagnóstico, instalação, atualização, abertura do painel, cópia do relatório de suporte e retorno à versão anterior.
+
+Antes de instalar ou atualizar, o diagnóstico verifica permissões, porta, Node.js, npm, PM2, Chrome, espaço em disco e a integridade SHA-256 do pacote.
