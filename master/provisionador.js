@@ -105,6 +105,10 @@ function consultarSaude(porta) {
                         memoriaRss: Number(dados.memoria?.rss || 0),
                         memoriaHeapUsado: Number(dados.memoria?.heapUsado || 0),
                         memoriaHeapTotal: Number(dados.memoria?.heapTotal || 0),
+                        discoLivreGb: dados.operacional?.discoLivreGb == null ? null : Number(dados.operacional.discoLivreGb),
+                        discoTotalGb: dados.operacional?.discoTotalGb == null ? null : Number(dados.operacional.discoTotalGb),
+                        memoriaLivreMb: Number(dados.operacional?.memoriaLivreMb || 0),
+                        memoriaTotalMb: Number(dados.operacional?.memoriaTotalMb || 0),
                         uptime: Number(dados.uptime || 0),
                         timestamp: String(dados.timestamp || new Date().toISOString())
                     });
@@ -162,8 +166,9 @@ async function listarInstalacoes() {
     return Promise.all(instalacoes.map(async (instalacao) => {
         const dbPath = path.join(instalacao.pastaDados, 'clientes.db');
         const usoDiscoBytes = tamanhoDiretorio(instalacao.pastaDados);
+        const armazenamento = await resumoArquivosInstalacao(instalacao.pastaDados);
         const eventosDaInstalacao = eventosRecentes.get(Number(instalacao.id)) || [];
-        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes, eventosRecentes: eventosDaInstalacao };
+        if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes, armazenamento, eventosRecentes: eventosDaInstalacao };
         try {
             const [config, saude, resumoComercial] = await Promise.all([
                 lerConfiguracoesTenant(dbPath),
@@ -173,6 +178,7 @@ async function listarInstalacoes() {
             return {
                 ...instalacao,
                 usoDiscoBytes,
+                armazenamento,
                 bancoEncontrado: true,
                 configuracoesTenant: config,
                 resumoComercial,
@@ -181,7 +187,7 @@ async function listarInstalacoes() {
                 eventosRecentes: eventosDaInstalacao
             };
         } catch (_) {
-            return { ...instalacao, usoDiscoBytes, bancoEncontrado: fs.existsSync(dbPath), eventosRecentes: eventosDaInstalacao };
+            return { ...instalacao, usoDiscoBytes, armazenamento, bancoEncontrado: fs.existsSync(dbPath), eventosRecentes: eventosDaInstalacao };
         }
     }));
 }
@@ -270,6 +276,48 @@ function tamanhoDiretorio(caminho) {
         } catch (_) { /* Arquivo pode estar em uso durante a leitura. */ }
     }
     return total;
+}
+
+function validarBancoSqlite(arquivo) {
+    return new Promise((resolve) => {
+        const banco = new sqlite3.Database(arquivo, sqlite3.OPEN_READONLY, (err) => {
+            if (err) return resolve(false);
+            banco.get('PRAGMA quick_check', (checkErr, row) => {
+                banco.close();
+                resolve(!checkErr && String(row?.quick_check || '').toLowerCase() === 'ok');
+            });
+        });
+    });
+}
+
+async function resumoArquivosInstalacao(pastaDados) {
+    const pastaBackups = path.join(pastaDados, 'backups');
+    const pastaSessao = path.join(pastaDados, '.wwebjs_auth');
+    let ultimoBackup = null;
+
+    if (fs.existsSync(pastaBackups)) {
+        const arquivos = fs.readdirSync(pastaBackups, { withFileTypes: true })
+            .filter(item => item.isFile() && /\.(db|sqlite|sqlite3)$/i.test(item.name))
+            .map(item => {
+                const arquivo = path.join(pastaBackups, item.name);
+                return { nome: item.name, arquivo, stat: fs.statSync(arquivo) };
+            })
+            .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+        if (arquivos[0]) {
+            ultimoBackup = {
+                nome: arquivos[0].nome,
+                tamanhoBytes: arquivos[0].stat.size,
+                criadoEm: arquivos[0].stat.mtime.toISOString(),
+                validado: await validarBancoSqlite(arquivos[0].arquivo)
+            };
+        }
+    }
+
+    return {
+        backupsBytes: tamanhoDiretorio(pastaBackups),
+        sessaoBytes: tamanhoDiretorio(pastaSessao),
+        ultimoBackup
+    };
 }
 
 function configuracaoPm2(instalacao, senhaHash) {
@@ -522,8 +570,11 @@ function lerResumoComercialTenant(dbPath) {
                 WHERE lower(COALESCE(status, '')) <> 'teste' AND ${whereVencimento}
                 ORDER BY datetime(replace(${vencimentoEfetivo}, 'T', ' ')) ASC
                 LIMIT 3`, [hoje, seteDias]),
-            buscarUm("SELECT COUNT(*) AS total FROM cliente_pagamentos WHERE COALESCE(excluidoEm, '') = ''")
-        ]).then(([planos, paineis, testes, testesLista, renovacoes, renovacoesLista, pagamentos]) => {
+            buscarUm("SELECT COUNT(*) AS total FROM cliente_pagamentos WHERE COALESCE(excluidoEm, '') = ''"),
+            buscarUm("SELECT COUNT(*) AS total FROM cobrancas_pix WHERE lower(COALESCE(status, 'pendente')) NOT IN ('aprovado', 'approved', 'cancelado', 'cancelled', 'rejeitado', 'rejected')"),
+            buscarUm("SELECT MAX(COALESCE(aprovadoEm, atualizadoEm)) AS data FROM cobrancas_pix WHERE lower(COALESCE(status, '')) IN ('aprovado', 'approved')"),
+            buscarUm("SELECT COUNT(*) AS total FROM eventos_sistema WHERE tipo = 'whatsapp' AND datetime(criadoEm) >= datetime('now', '-24 hours') AND (lower(mensagem) LIKE '%reinicio%' OR lower(mensagem) LIKE '%recupera%' OR lower(mensagem) LIKE '%reconect%')")
+        ]).then(([planos, paineis, testes, testesLista, renovacoes, renovacoesLista, pagamentos, cobrancasPendentes, ultimoPix, reconexoes]) => {
             db.close();
             resolve({
                 planosComValor: Number(planos?.total || 0),
@@ -532,7 +583,10 @@ function lerResumoComercialTenant(dbPath) {
                 testesVencendoLista: testesLista,
                 renovacoes7Dias: Number(renovacoes?.total || 0),
                 renovacoes7DiasLista: renovacoesLista,
-                pagamentosRegistrados: Number(pagamentos?.total || 0)
+                pagamentosRegistrados: Number(pagamentos?.total || 0),
+                cobrancasPixPendentes: Number(cobrancasPendentes?.total || 0),
+                ultimoPixConfirmadoEm: ultimoPix?.data || '',
+                reconexoesWhatsapp24h: Number(reconexoes?.total || 0)
             });
         }).catch((err) => {
             db.close(() => reject(err));
@@ -812,6 +866,47 @@ async function limparServidorSeguro(retencao = 10) {
     return { retencao: quantidade, backupsRemovidos, sessoesArquivadasRemovidas, bytesLiberados };
 }
 
+function limparArtefatosOperacionaisSeguro() {
+    const agora = Date.now();
+    const removidos = [];
+    const candidatos = [];
+    const pastaLogsPm2 = path.join(os.homedir(), '.pm2', 'logs');
+    const pastaEntrega = path.join(sourceDir, 'entrega-cliente-local');
+    const pastaTemporaria = os.tmpdir();
+
+    if (fs.existsSync(pastaLogsPm2)) {
+        for (const item of fs.readdirSync(pastaLogsPm2, { withFileTypes: true })) {
+            if (item.isFile() && /\.(gz|zip)$/i.test(item.name)) candidatos.push({ arquivo: path.join(pastaLogsPm2, item.name), dias: 15 });
+        }
+    }
+    if (fs.existsSync(pastaEntrega)) {
+        const pacotes = fs.readdirSync(pastaEntrega, { withFileTypes: true })
+            .filter(item => item.isFile() && /^ENVIAR_AO_CLIENTE-\d{8}-\d{4}\.zip$/i.test(item.name))
+            .map(item => ({ arquivo: path.join(pastaEntrega, item.name), stat: fs.statSync(path.join(pastaEntrega, item.name)) }))
+            .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+        pacotes.slice(1).forEach(item => candidatos.push({ arquivo: item.arquivo, dias: 7 }));
+    }
+    if (fs.existsSync(pastaTemporaria)) {
+        for (const item of fs.readdirSync(pastaTemporaria, { withFileTypes: true })) {
+            if (/^julian-play-app-[a-f0-9]+$/i.test(item.name)) candidatos.push({ arquivo: path.join(pastaTemporaria, item.name), dias: 2, diretorio: item.isDirectory() });
+        }
+    }
+
+    let bytesLiberados = 0;
+    for (const candidato of candidatos) {
+        try {
+            const stat = fs.statSync(candidato.arquivo);
+            if (agora - stat.mtimeMs < candidato.dias * 86400000) continue;
+            bytesLiberados += candidato.diretorio ? tamanhoDiretorio(candidato.arquivo) : stat.size;
+            if (candidato.diretorio) fs.rmSync(candidato.arquivo, { recursive: true, force: true });
+            else fs.unlinkSync(candidato.arquivo);
+            removidos.push(candidato.arquivo);
+        } catch (_) { /* Arquivo em uso ou já removido. */ }
+    }
+
+    return { removidos: removidos.length, bytesLiberados, arquivos: removidos };
+}
+
 async function resetarSenhaPainel(id, senha = '') {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -839,6 +934,12 @@ async function gerarBackupInstalacao(id) {
     await atualizarStatus(id, 'ativo', `Backup solicitado pelo Painel Mestre: ${nomeBackup}.`);
     await registrarEventoInstalacao(id, 'backup', `Backup solicitado pelo Painel Mestre: ${nomeBackup}.`);
     return nomeBackup;
+}
+
+async function enviarAlertaWhatsappInstalacao(id, destino, mensagem) {
+    const instalacao = await buscarInstalacao(id);
+    if (!instalacao) throw new Error('Instalacao administradora nao encontrada.');
+    return chamarApiInstalacao(instalacao, 'POST', '/api/admin/alerta-operacional', { destino, mensagem }, 15000);
 }
 
 async function liberarAtendimentoInstalacao(id) {
@@ -935,8 +1036,10 @@ module.exports = {
     atualizarObservacaoOperacional,
     obterRecursosServidor,
     limparServidorSeguro,
+    limparArtefatosOperacionaisSeguro,
     resetarSenhaPainel,
     gerarBackupInstalacao,
+    enviarAlertaWhatsappInstalacao,
     liberarAtendimentoInstalacao,
     obterDiagnosticoInstalacao,
     obterLogsInstalacao,

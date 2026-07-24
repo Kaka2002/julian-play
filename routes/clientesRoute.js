@@ -282,6 +282,15 @@ function manutencaoRestritaCliente() {
     return instalacaoComercialCliente() && !instalacaoAdministrador();
 }
 
+function monitoramentoOperacionalPermitido() {
+    return !manutencaoRestritaCliente() || process.env.JULIAN_PLAY_INSTALL_MODE === 'local';
+}
+
+function bloquearMonitoramentoOperacional(req, res, next) {
+    if (monitoramentoOperacionalPermitido()) return next();
+    return res.redirect(`/manutencao?mensagem=${encodeURIComponent('O monitoramento do servidor e centralizado no Painel Mestre.')}`);
+}
+
 const LOCAIS_INSTALACAO_APP = [
     'TV da sala',
     'TV do quarto',
@@ -8096,7 +8105,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>
 
-    ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
+    ${monitoramentoOperacionalPermitido() ?`<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Monitoramento comercial</h2>
@@ -8105,6 +8114,10 @@ function telaManutencao(status = {}, opcoes = {}) {
         </div>
         <form class="fields" method="post" action="/manutencao/monitoramento" style="padding-top:0;">
             <label class="toggle-line">
+                <input type="checkbox" name="alertaSaudeOperacionalAtivo" value="1" ${String(status.config?.alertaSaudeOperacionalAtivo ?? '1') === '1' ?'checked' : ''}>
+                <span>Ativar alertas preventivos de disco e memória</span>
+            </label>
+            <label class="toggle-line">
                 <input type="checkbox" name="backupAutomaticoAtivo" value="1" ${String(status.config?.backupAutomaticoAtivo) === '1' ?'checked' : ''}>
                 <span>Ativar backup automático diário</span>
             </label>
@@ -8112,13 +8125,18 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
-            <div class="notice full">Sem webhook, os alertas continuam registrados abaixo. Backups manuais nunca são apagados pela retenção automática.</div>
+            ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
+            ${campo({ nome: 'alertaDiscoAtencaoGb', label: 'Disco em atenção abaixo de (GB)', valor: status.config?.alertaDiscoAtencaoGb || '8', tipo: 'number', attrs: 'min="2" max="100" step="0.5" required' })}
+            ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
+            ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
+            ${campo({ nome: 'alertaMemoriaCriticaMb', label: 'Memória crítica abaixo de (MB)', valor: status.config?.alertaMemoriaCriticaMb || '512', tipo: 'number', attrs: 'min="128" max="32768" required' })}
+            <div class="notice full">No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas. Em instalação local, cada cliente monitora o próprio computador. Sem webhook ou WhatsApp, os eventos continuam registrados abaixo.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
             </div>
         </form>
-    </section>`}
+    </section>` : ''}
 
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -9766,7 +9784,7 @@ router.post('/manutencao/whatsapp/protecao', async (req, res) => {
     }
 });
 
-router.post('/manutencao/monitoramento', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, async (req, res) => {
     try {
         await salvarConfiguracoesMonitoramento(req.body);
         logControleClientes('Monitoramento comercial atualizado', {
@@ -9782,11 +9800,24 @@ router.post('/manutencao/monitoramento', bloquearManutencaoRestritaCliente, asyn
     }
 });
 
-router.post('/manutencao/monitoramento/testar', bloquearManutencaoRestritaCliente, async (req, res) => {
+router.post('/manutencao/monitoramento/testar', bloquearMonitoramentoOperacional, async (req, res) => {
     try {
-        await testarWebhookAlertas(req.body.alertaWebhookUrl);
-        logControleClientes('Alerta de teste enviado ao webhook');
-        res.redirect('/manutencao?mensagem=Alerta de teste enviado com sucesso');
+        const canais = [];
+        if (String(req.body.alertaWebhookUrl || '').trim()) {
+            await testarWebhookAlertas(req.body.alertaWebhookUrl);
+            canais.push('webhook');
+        }
+        const numero = String(req.body.alertaWhatsappControle || '').replace(/\D/g, '');
+        if (numero) {
+            const client = getClient();
+            const status = getStatusWhatsApp();
+            if (!client || !status.conectado) throw new Error('WhatsApp nao esta conectado para enviar o alerta de teste.');
+            await client.sendMessage(`${numero}@c.us`, '✅ *TESTE DA CENTRAL DE SAÚDE*\n\nOs alertas operacionais por WhatsApp estão configurados corretamente.');
+            canais.push('WhatsApp');
+        }
+        if (!canais.length) throw new Error('Informe um webhook ou WhatsApp de controle para testar.');
+        logControleClientes('Alerta operacional de teste enviado', { canais });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Alerta de teste enviado por ${canais.join(' e ')}.`)}`);
     } catch (err) {
         logControleClientes('Erro ao testar webhook de alertas', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao enviar teste: ${err.message}`)}`);

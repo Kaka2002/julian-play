@@ -1,7 +1,7 @@
 const express = require('express');
 const { criarBackupManual } = require('../services/manutencao');
 const { liberarAtendimentosHumanos } = require('../services/conversaService');
-const { getStatusWhatsApp } = require('../config/whatsapp');
+const { getStatusWhatsApp, getClient } = require('../config/whatsapp');
 
 const router = express.Router();
 
@@ -34,6 +34,21 @@ router.post('/backup', async (req, res) => {
 router.post('/atendimentos/liberar', (req, res) => {
     const resultado = liberarAtendimentosHumanos(req.body?.telefone);
     res.json({ ok: true, ...resultado });
+});
+
+router.post('/alerta-operacional', async (req, res) => {
+    try {
+        const destino = String(req.body?.destino || '').replace(/\D/g, '');
+        const mensagem = String(req.body?.mensagem || '').trim().slice(0, 3000);
+        const status = getStatusWhatsApp();
+        const client = getClient();
+        if (!destino || !mensagem) return res.status(400).json({ ok: false, erro: 'Destino e mensagem sao obrigatorios.' });
+        if (!client || !status.conectado) return res.status(409).json({ ok: false, erro: 'WhatsApp da instalacao administradora nao esta conectado.' });
+        const enviada = await client.sendMessage(`${destino}@c.us`, mensagem);
+        res.json({ ok: true, mensagemId: enviada?.id?._serialized || '' });
+    } catch (err) {
+        res.status(500).json({ ok: false, erro: err.message });
+    }
 });
 
 module.exports = router;

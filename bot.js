@@ -7,6 +7,7 @@ const clientesRoute = require('./routes/clientesRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
+const { medirRecursosOperacionais } = require('./services/saudeOperacionalService');
 const {
     iniciarWhatsApp,
     encerrarWhatsApp,
@@ -111,6 +112,7 @@ app.use('/', webhookRoute);
 app.get('/health', (req, res) => {
     const whatsapp = getStatusWhatsApp();
     const memoria = process.memoryUsage();
+    const recursos = medirRecursosOperacionais();
     res.status(200).json({
         ok: true,
         estado: whatsapp.conectado ? 'operacional' : 'degradado',
@@ -136,6 +138,7 @@ app.get('/health', (req, res) => {
             heapUsado: memoria.heapUsed,
             heapTotal: memoria.heapTotal
         },
+        operacional: recursos,
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });

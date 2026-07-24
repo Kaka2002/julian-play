@@ -64,6 +64,13 @@ async function obterConfiguracoes() {
         backupRetencaoDias: '30',
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
+        alertaWhatsappControle: '',
+        alertaSaudeOperacionalAtivo: '1',
+        alertaDiscoAtencaoGb: '8',
+        alertaDiscoCriticoGb: '5',
+        alertaMemoriaAtencaoMb: '1024',
+        alertaMemoriaCriticaMb: '512',
+        ultimoRelatorioSaudeSemanal: '',
         whatsappProtecaoAtiva: '0',
         whatsappProtecaoMotivo: '',
         whatsappProtecaoAtivadaEm: '',
@@ -249,6 +256,11 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     const retencao = Math.max(1, Math.min(365, Number.parseInt(dados.backupRetencaoDias || 30, 10) || 30));
     const minutos = Math.max(1, Math.min(1440, Number.parseInt(dados.alertaWhatsAppMinutos || 5, 10) || 5));
     const webhook = String(dados.alertaWebhookUrl || '').trim();
+    const whatsappControle = String(dados.alertaWhatsappControle || '').replace(/\D/g, '');
+    const discoAtencao = Math.max(2, Math.min(100, Number(dados.alertaDiscoAtencaoGb || 8)));
+    const discoCritico = Math.max(1, Math.min(discoAtencao, Number(dados.alertaDiscoCriticoGb || 5)));
+    const memoriaAtencao = Math.max(256, Math.min(32768, Number(dados.alertaMemoriaAtencaoMb || 1024)));
+    const memoriaCritica = Math.max(128, Math.min(memoriaAtencao, Number(dados.alertaMemoriaCriticaMb || 512)));
 
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
         throw new Error('Informe um horario valido para o backup automatico.');
@@ -257,12 +269,21 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     if (webhook && !/^https:\/\//i.test(webhook)) {
         throw new Error('O webhook de alerta precisa usar HTTPS.');
     }
+    if (whatsappControle && !/^\d{10,15}$/.test(whatsappControle)) {
+        throw new Error('Informe o WhatsApp de alertas com DDI, DDD e numero.');
+    }
 
     await salvarConfiguracao('backupAutomaticoAtivo', dados.backupAutomaticoAtivo ? '1' : '0');
     await salvarConfiguracao('backupAutomaticoHora', hora);
     await salvarConfiguracao('backupRetencaoDias', String(retencao));
     await salvarConfiguracao('alertaWhatsAppMinutos', String(minutos));
     await salvarConfiguracao('alertaWebhookUrl', webhook);
+    await salvarConfiguracao('alertaWhatsappControle', whatsappControle);
+    await salvarConfiguracao('alertaSaudeOperacionalAtivo', dados.alertaSaudeOperacionalAtivo ? '1' : '0');
+    await salvarConfiguracao('alertaDiscoAtencaoGb', String(discoAtencao));
+    await salvarConfiguracao('alertaDiscoCriticoGb', String(discoCritico));
+    await salvarConfiguracao('alertaMemoriaAtencaoMb', String(memoriaAtencao));
+    await salvarConfiguracao('alertaMemoriaCriticaMb', String(memoriaCritica));
 
     return obterConfiguracoes();
 }

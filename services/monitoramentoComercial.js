@@ -10,6 +10,8 @@ const {
 } = require('./manutencao');
 const { registrarEventoSistema } = require('./eventosSistema');
 const { marcarPagamentoMensagem } = require('./clientes');
+const { instalacaoAdministrador } = require('./licencaService');
+const { avaliarSaudeOperacional } = require('./saudeOperacionalService');
 
 const INTERVALO_MS = Number(process.env.MONITOR_INTERVALO_MS || 60000);
 
@@ -20,10 +22,62 @@ let alertaDesconexaoEnviado = false;
 let reinicioSuaveTentado = false;
 let novoQrTentado = false;
 let ultimaAcaoRecuperacaoEm = 0;
+let assinaturaUltimoAlertaOperacional = '';
 
 function destinoWhatsapp(telefone) {
     const numero = String(telefone || '').replace(/\D/g, '');
     return numero ? `${numero}@c.us` : '';
+}
+
+async function enviarWhatsappOperacional(config, controles, mensagem) {
+    const destino = destinoWhatsapp(config.alertaWhatsappControle);
+    if (!destino || typeof controles.getClient !== 'function') return false;
+    const client = controles.getClient();
+    if (!client) return false;
+    try {
+        await client.sendMessage(destino, mensagem);
+        return true;
+    } catch (err) {
+        console.log(`Monitoramento: falha ao enviar alerta operacional pelo WhatsApp: ${err.message}`);
+        return false;
+    }
+}
+
+function estaInstalacaoResponsavelPeloHost() {
+    return process.env.JULIAN_PLAY_INSTALL_MODE === 'local' || instalacaoAdministrador();
+}
+
+async function verificarSaudeOperacional(config, agora, controles, statusWhatsApp) {
+    if (String(config.alertaSaudeOperacionalAtivo ?? '1') !== '1') return;
+    if (!estaInstalacaoResponsavelPeloHost()) return;
+
+    const avaliacao = avaliarSaudeOperacional(config);
+    const assinatura = avaliacao.alertas.map(item => item.codigo).sort().join(',');
+
+    if (assinatura !== assinaturaUltimoAlertaOperacional) {
+        if (avaliacao.alertas.length) {
+            const mensagem = `Saude operacional ${avaliacao.nivel}: ${avaliacao.alertas.map(item => item.mensagem).join(' ')}`;
+            await registrarEventoSistema('saude_operacional', avaliacao.nivel === 'critico' ? 'erro' : 'alerta', mensagem, avaliacao);
+            await enviarWebhook(config.alertaWebhookUrl, { tipo: 'saude_operacional', nivel: avaliacao.nivel, mensagem, data: agora.iso, detalhes: avaliacao });
+            await enviarWhatsappOperacional(config, controles, `⚠️ *ALERTA OPERACIONAL*\n\n${mensagem}`);
+        } else if (assinaturaUltimoAlertaOperacional) {
+            const mensagem = `Saude operacional normalizada. Disco: ${avaliacao.recursos.discoLivreGb ?? '-'} GB livres. Memoria: ${avaliacao.recursos.memoriaLivreMb} MB livres.`;
+            await registrarEventoSistema('saude_operacional', 'sucesso', mensagem, avaliacao);
+            await enviarWebhook(config.alertaWebhookUrl, { tipo: 'saude_operacional_normalizada', nivel: 'sucesso', mensagem, data: agora.iso, detalhes: avaliacao });
+            await enviarWhatsappOperacional(config, controles, `✅ *SAÚDE NORMALIZADA*\n\n${mensagem}`);
+        }
+        assinaturaUltimoAlertaOperacional = assinatura;
+    }
+
+    const semana = `${agora.data.slice(0, 4)}-${Math.ceil(Number(agora.data.slice(5, 7)) * 4.35 + Number(agora.data.slice(8, 10)) / 7)}`;
+    const diaSemana = new Date(`${agora.data}T12:00:00`).getDay();
+    if (diaSemana === 1 && agora.hora >= '09:00' && String(config.ultimoRelatorioSaudeSemanal || '') !== semana) {
+        const mensagem = `Relatorio semanal: disco ${avaliacao.recursos.discoLivreGb ?? '-'} GB livres de ${avaliacao.recursos.discoTotalGb ?? '-'} GB; memoria ${avaliacao.recursos.memoriaLivreMb} MB livres de ${avaliacao.recursos.memoriaTotalMb} MB; WhatsApp ${statusWhatsApp.conectado ? 'conectado' : 'desconectado'}.`;
+        await registrarEventoSistema('saude_operacional', 'info', mensagem, avaliacao);
+        await enviarWebhook(config.alertaWebhookUrl, { tipo: 'relatorio_saude_semanal', nivel: avaliacao.nivel, mensagem, data: agora.iso, detalhes: avaliacao });
+        await enviarWhatsappOperacional(config, controles, `📊 *RELATÓRIO SEMANAL*\n\n${mensagem}`);
+        await salvarConfiguracao('ultimoRelatorioSaudeSemanal', semana);
+    }
 }
 
 async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {}) {
@@ -398,6 +452,7 @@ async function executarMonitoramento(controles = {}) {
         const agora = agoraSaoPaulo();
         const statusWhatsApp = typeof controles.getStatusWhatsApp === 'function' ? controles.getStatusWhatsApp() : {};
 
+        await verificarSaudeOperacional(config, agora, controles, statusWhatsApp);
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
         if (

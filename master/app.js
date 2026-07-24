@@ -27,8 +27,10 @@ const {
     atualizarObservacaoOperacional,
     obterRecursosServidor,
     limparServidorSeguro,
+    limparArtefatosOperacionaisSeguro,
     resetarSenhaPainel,
     gerarBackupInstalacao,
+    enviarAlertaWhatsappInstalacao,
     liberarAtendimentoInstalacao,
     obterDiagnosticoInstalacao,
     obterLogsInstalacao,
@@ -760,6 +762,45 @@ function secaoPrioridades(instalacoes = []) {
     </section>`;
 }
 
+function centralSaudeOperacional(instalacoes = [], recursos = {}) {
+    const discoLivre = Number(recursos.discoLivreGb);
+    const nivelDisco = recursos.discoLivreGb == null ? 'warn' : discoLivre < 5 ? 'error' : discoLivre < 8 ? 'warn' : 'ok';
+    const memoriaLivre = Number(recursos.memoriaLivreMb || 0);
+    const nivelMemoria = memoriaLivre < 512 ? 'error' : memoriaLivre < 1024 ? 'warn' : 'ok';
+    const cobrancasPendentes = instalacoes.reduce((total, item) => total + Number(item.resumoComercial?.cobrancasPixPendentes || 0), 0);
+    const reconexoes = instalacoes.reduce((total, item) => total + Number(item.resumoComercial?.reconexoesWhatsapp24h || 0), 0);
+    const semBackup = instalacoes.filter(item => item.status !== 'arquivado' && !item.armazenamento?.ultimoBackup).length;
+
+    return `<section class="panel" id="central-saude">
+        <div class="panel-head"><div><h2>Central de saúde operacional</h2><div class="sub">Disco, memória, dados por instalação, backups, PIX e estabilidade do WhatsApp</div></div></div>
+        <div class="notice">Limpeza automática segura diariamente após 04:00: remove somente logs compactados antigos, temporários próprios do instalador e ZIPs antigos de entrega. Bancos, backups atuais e sessões ativas nunca são removidos.${ultimoResultadoLimpezaOperacional ? ` Última execução: ${escapar(formatarDataHoraPainel(ultimoResultadoLimpezaOperacional.executadoEm))}, ${escapar(ultimoResultadoLimpezaOperacional.removidos)} item(ns), ${escapar(formatarBytes(ultimoResultadoLimpezaOperacional.bytesLiberados))} liberados.` : ''}</div>
+        <div class="status-grid">
+            ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, 'atenção abaixo de 8 GB; crítico abaixo de 5 GB', nivelDisco)}
+            ${cardStatusGeral('RAM livre', `${recursos.memoriaLivreMb ?? '-'} MB`, `de ${recursos.memoriaTotalMb ?? '-'} MB`, nivelMemoria)}
+            ${cardStatusGeral('PIX pendentes', cobrancasPendentes, 'cobranças aguardando confirmação', cobrancasPendentes ? 'warn' : 'ok')}
+            ${cardStatusGeral('Reconexões 24h', reconexoes, 'reinícios e recuperações do WhatsApp', reconexoes >= 5 ? 'error' : reconexoes ? 'warn' : 'ok')}
+            ${cardStatusGeral('Sem backup', semBackup, 'instalações sem cópia encontrada', semBackup ? 'warn' : 'ok')}
+        </div>
+        <table><thead><tr><th>Instalação</th><th>Dados</th><th>Backups</th><th>Sessão WhatsApp</th><th>Último backup</th><th>Último PIX</th><th>PIX pendentes</th><th>Reconexões 24h</th></tr></thead><tbody>
+            ${instalacoes.map(item => {
+                const armazenamento = item.armazenamento || {};
+                const resumo = item.resumoComercial || {};
+                const backup = armazenamento.ultimoBackup;
+                return `<tr>
+                    <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.processoPm2)}</div></td>
+                    <td>${escapar(formatarBytes(item.usoDiscoBytes || 0))}</td>
+                    <td>${escapar(formatarBytes(armazenamento.backupsBytes || 0))}</td>
+                    <td>${escapar(formatarBytes(armazenamento.sessaoBytes || 0))}</td>
+                    <td>${backup ? `<span class="badge ${backup.validado ?'ok':'error'}">${backup.validado ?'Validado':'Inválido'}</span><div class="small">${escapar(formatarDataHoraPainel(backup.criadoEm))}</div>` : '<span class="badge warn">Não encontrado</span>'}</td>
+                    <td>${resumo.ultimoPixConfirmadoEm ? escapar(formatarDataHoraPainel(resumo.ultimoPixConfirmadoEm)) : '-'}</td>
+                    <td><span class="badge ${Number(resumo.cobrancasPixPendentes || 0) ?'warn':'ok'}">${escapar(resumo.cobrancasPixPendentes || 0)}</span></td>
+                    <td><span class="badge ${Number(resumo.reconexoesWhatsapp24h || 0) >= 5 ?'error':Number(resumo.reconexoesWhatsapp24h || 0)?'warn':'ok'}">${escapar(resumo.reconexoesWhatsapp24h || 0)}</span></td>
+                </tr>`;
+            }).join('')}
+        </tbody></table>
+    </section>`;
+}
+
 function perfilInstalacaoHtml(item = {}) {
     if (!instalacaoAdministradora(item)) return '';
     return '<div class="small"><span class="badge ok">Administrador / fornecedor</span></div>';
@@ -944,8 +985,9 @@ function pagina(instalacoes, opcoes = {}) {
         ${cardStatusGeral('Licenças vencidas', statusGeral.licencasVencidas, `${statusGeral.suspensas} instalação(ões) suspensa(s)`, statusGeral.licencasVencidas || statusGeral.suspensas ? 'error' : 'ok')}
         ${cardStatusGeral('RAM livre', `${recursos.memoriaLivreMb ?? '-'} MB`, `de ${recursos.memoriaTotalMb ?? '-'} MB`, Number(recursos.memoriaLivreMb || 0) < 512 ? 'error' : Number(recursos.memoriaLivreMb || 0) < 1024 ? 'warn' : 'ok')}
         ${cardStatusGeral('Processos Chrome', recursos.processosChrome ?? '-', 'Navegadores usados pelos robôs', Number(recursos.processosChrome || 0) > 30 ? 'warn' : '')}
-        ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, recursos.discoTotalGb == null ? 'Métrica indisponível' : `de ${recursos.discoTotalGb} GB`, Number(recursos.discoLivreGb || 0) < 5 ? 'error' : 'ok')}
+        ${cardStatusGeral('Disco livre', recursos.discoLivreGb == null ? '-' : `${recursos.discoLivreGb} GB`, recursos.discoTotalGb == null ? 'Métrica indisponível' : `de ${recursos.discoTotalGb} GB`, Number(recursos.discoLivreGb || 0) < 5 ? 'error' : Number(recursos.discoLivreGb || 0) < 8 ? 'warn' : 'ok')}
     </section>
+    ${centralSaudeOperacional(instalacoes, recursos)}
     ${secaoPrioridades(instalacoes)}
     ${painelChecklistComercial(instalacoes)}
     <section class="panel" id="manutencao"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
@@ -2140,4 +2182,72 @@ app.post('/instalacoes/:id/prorrogar', async (req, res) => {
 app.post('/instalacoes/:id/arquivar', acao(arquivarInstalacao, 'Instalação arquivada.'));
 app.post('/instalacoes/:id/excluir', acao(excluirDefinitivamente, 'Instalação excluída definitivamente.'));
 
-app.listen(PORT, HOST, () => console.log(`Painel Mestre em http://${HOST}:${PORT}`));
+let ultimaLimpezaOperacional = '';
+let ultimoResultadoLimpezaOperacional = null;
+let assinaturaAlertaCentral = '';
+let ultimoRelatorioSemanalCentral = '';
+
+async function enviarNotificacaoCentral(instalacoes, mensagem) {
+    const admin = instalacoes.find(instalacaoAdministradora);
+    if (!admin) return;
+    const config = admin.configuracoesTenant || {};
+    if (config.alertaWebhookUrl) {
+        try {
+            await fetch(config.alertaWebhookUrl, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: mensagem, tipo: 'saude_operacional_mestre', mensagem })
+            });
+        } catch (err) { console.log(`Central de saude: webhook falhou: ${err.message}`); }
+    }
+    if (config.alertaWhatsappControle) {
+        try { await enviarAlertaWhatsappInstalacao(admin.id, config.alertaWhatsappControle, mensagem); }
+        catch (err) { console.log(`Central de saude: WhatsApp falhou: ${err.message}`); }
+    }
+}
+
+async function monitorarCentralSaude() {
+    const [instalacoes, recursos] = await Promise.all([listarInstalacoes(), obterRecursosServidor()]);
+    const alertas = [];
+    if (recursos.discoLivreGb != null && recursos.discoLivreGb < 5) alertas.push(`DISCO CRITICO: ${recursos.discoLivreGb} GB livres`);
+    else if (recursos.discoLivreGb != null && recursos.discoLivreGb < 8) alertas.push(`DISCO EM ATENCAO: ${recursos.discoLivreGb} GB livres`);
+    if (Number(recursos.memoriaLivreMb || 0) < 512) alertas.push(`MEMORIA CRITICA: ${recursos.memoriaLivreMb} MB livres`);
+    const instaveis = instalacoes.filter(item => Number(item.resumoComercial?.reconexoesWhatsapp24h || 0) >= 5);
+    if (instaveis.length) alertas.push(`WHATSAPP INSTAVEL: ${instaveis.map(item => item.nome).join(', ')}`);
+    const assinatura = alertas.join('|');
+    if (assinatura !== assinaturaAlertaCentral) {
+        if (alertas.length) await enviarNotificacaoCentral(instalacoes, `⚠️ *CENTRAL DE SAUDE*\n\n${alertas.join('\n')}`);
+        else if (assinaturaAlertaCentral) await enviarNotificacaoCentral(instalacoes, '✅ *CENTRAL DE SAUDE*\n\nOs recursos do servidor voltaram aos níveis normais.');
+        assinaturaAlertaCentral = assinatura;
+    }
+
+    const agora = new Date();
+    const segunda = new Date(agora); segunda.setDate(agora.getDate() - ((agora.getDay() + 6) % 7));
+    const chaveSemana = segunda.toISOString().slice(0, 10);
+    if (agora.getDay() === 1 && agora.getHours() >= 9 && ultimoRelatorioSemanalCentral !== chaveSemana) {
+        const pixPendentes = instalacoes.reduce((total, item) => total + Number(item.resumoComercial?.cobrancasPixPendentes || 0), 0);
+        const semBackup = instalacoes.filter(item => item.status !== 'arquivado' && !item.armazenamento?.ultimoBackup).length;
+        const mensagem = `📊 *RELATORIO SEMANAL DA CENTRAL*\n\nInstalacoes: ${instalacoes.length}\nDisco livre: ${recursos.discoLivreGb ?? '-'} GB\nRAM livre: ${recursos.memoriaLivreMb ?? '-'} MB\nPIX pendentes: ${pixPendentes}\nInstalacoes sem backup: ${semBackup}\nWhatsApp instavel: ${instaveis.length}`;
+        await enviarNotificacaoCentral(instalacoes, mensagem);
+        ultimoRelatorioSemanalCentral = chaveSemana;
+    }
+}
+
+async function executarLimpezaOperacionalProgramada() {
+    const agora = new Date();
+    const data = agora.toISOString().slice(0, 10);
+    if (agora.getHours() < 4 || ultimaLimpezaOperacional === data) return;
+    ultimaLimpezaOperacional = data;
+    const resultado = limparArtefatosOperacionaisSeguro();
+    ultimoResultadoLimpezaOperacional = { ...resultado, executadoEm: new Date().toISOString() };
+    if (resultado.removidos) {
+        console.log(`Saude operacional: ${resultado.removidos} artefato(s) seguro(s) removido(s), ${formatarBytes(resultado.bytesLiberados)} liberados.`);
+    }
+}
+
+app.listen(PORT, HOST, () => {
+    console.log(`Painel Mestre em http://${HOST}:${PORT}`);
+    setTimeout(() => executarLimpezaOperacionalProgramada().catch(err => console.log(`Limpeza operacional: ${err.message}`)), 30000);
+    setInterval(() => executarLimpezaOperacionalProgramada().catch(err => console.log(`Limpeza operacional: ${err.message}`)), 60 * 60 * 1000);
+    setTimeout(() => monitorarCentralSaude().catch(err => console.log(`Central de saude: ${err.message}`)), 45000);
+    setInterval(() => monitorarCentralSaude().catch(err => console.log(`Central de saude: ${err.message}`)), 5 * 60 * 1000);
+});
