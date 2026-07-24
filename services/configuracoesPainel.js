@@ -58,6 +58,7 @@ async function obterConfiguracoes() {
         mercadoPagoWebhookSecret: '',
         mercadoPagoWebhookUrl: '',
         mercadoPagoEmailPagador: '',
+        mercadoPagoWhatsappControle: '',
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
@@ -219,18 +220,23 @@ async function salvarConfiguracoesProvedorPix(dados = {}) {
     const webhookSecretInformado = String(dados.mercadoPagoWebhookSecret || '').trim();
     const webhookUrl = String(dados.mercadoPagoWebhookUrl || '').trim();
     const emailPagador = String(dados.mercadoPagoEmailPagador || '').trim().toLowerCase();
+    const whatsappControle = String(dados.mercadoPagoWhatsappControle || '').replace(/\D/g, '');
     const accessToken = accessTokenInformado || String(configAtual.mercadoPagoAccessToken || '');
     const webhookSecret = webhookSecretInformado || String(configAtual.mercadoPagoWebhookSecret || '');
 
     if (provedor === 'mercado_pago' && !accessToken) throw new Error('Informe o Access Token do Mercado Pago.');
     if (webhookUrl && !/^https:\/\//i.test(webhookUrl)) throw new Error('A URL do webhook do Mercado Pago precisa usar HTTPS.');
     if (emailPagador && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPagador)) throw new Error('Informe um e-mail padrao valido para o pagador.');
+    if (whatsappControle && !/^\d{10,15}$/.test(whatsappControle)) {
+        throw new Error('Informe o WhatsApp de controle com DDI, DDD e numero.');
+    }
 
     await salvarConfiguracao('pixProvedor', provedor);
     await salvarConfiguracao('mercadoPagoAccessToken', accessToken);
     await salvarConfiguracao('mercadoPagoWebhookSecret', webhookSecret);
     await salvarConfiguracao('mercadoPagoWebhookUrl', webhookUrl);
     await salvarConfiguracao('mercadoPagoEmailPagador', emailPagador);
+    await salvarConfiguracao('mercadoPagoWhatsappControle', whatsappControle);
     return obterConfiguracoes();
 }
 

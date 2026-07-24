@@ -280,9 +280,41 @@ async function listarConfirmacoesPixPendentes(limite = 30) {
     );
 }
 
+async function listarConfirmacoesPixControlePendentes(limite = 30) {
+    return buscarTodos(
+        `SELECT cobranca.id AS cobrancaId, cobranca.referencia,
+                cobranca.provedorPagamentoId, cobranca.plano,
+                cobranca.valorTotal, cobranca.aprovadoEm,
+                pagamento.vencimentoNovo, cliente.id AS clienteId,
+                cliente.nome, cliente.telefone
+         FROM cobrancas_pix cobranca
+         INNER JOIN cliente_pagamentos pagamento ON pagamento.id = cobranca.pagamentoId
+         INNER JOIN clientes cliente ON cliente.id = cobranca.clienteId
+         WHERE cobranca.provedor = 'mercado_pago'
+           AND cobranca.status = 'aprovado'
+           AND COALESCE(cobranca.controleMensagemEnviada, 0) = 0
+         ORDER BY datetime(cobranca.atualizadoEm) ASC
+         LIMIT ?`,
+        [Math.max(1, Math.min(100, Number(limite) || 30))]
+    );
+}
+
+function marcarConfirmacaoPixControle(cobrancaId, enviada, erro = '') {
+    return executar(
+        `UPDATE cobrancas_pix SET
+            controleMensagemEnviada = ?,
+            controleMensagemErro = ?,
+            atualizadoEm = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [enviada ? 1 : 0, String(erro || '').slice(0, 500), cobrancaId]
+    );
+}
+
 module.exports = {
     criarCobrancaMercadoPago,
     processarPagamentoMercadoPago,
     verificarCobrancasPendentesMercadoPago,
-    listarConfirmacoesPixPendentes
+    listarConfirmacoesPixPendentes,
+    listarConfirmacoesPixControlePendentes,
+    marcarConfirmacaoPixControle
 };

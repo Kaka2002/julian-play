@@ -255,6 +255,8 @@ db.serialize(() => {
             criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
             aprovadoEm TEXT,
+            controleMensagemEnviada INTEGER DEFAULT 0,
+            controleMensagemErro TEXT,
             FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE,
             FOREIGN KEY(pagamentoId) REFERENCES cliente_pagamentos(id) ON DELETE SET NULL
         )
@@ -389,7 +391,7 @@ db.serialize(() => {
             }
         });
 
-        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCatalogos(() => resolve())));
+        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCobrancasPix(() => migrarCatalogos(() => resolve()))));
     });
 });
 });
@@ -457,6 +459,43 @@ function migrarPagamentos(done) {
         }
 
         done();
+    });
+}
+
+function migrarCobrancasPix(done) {
+    db.all('PRAGMA table_info(cobrancas_pix)', (err, rows = []) => {
+        if (err) {
+            console.error('Erro ao verificar tabela cobrancas_pix:', err);
+            done();
+            return;
+        }
+
+        const existentes = new Set(rows.map(row => row.name));
+        const instalacaoExistente = !existentes.has('controleMensagemEnviada');
+        const tarefas = [];
+        if (!existentes.has('controleMensagemEnviada')) {
+            tarefas.push('ALTER TABLE cobrancas_pix ADD COLUMN controleMensagemEnviada INTEGER DEFAULT 0');
+        }
+        if (!existentes.has('controleMensagemErro')) {
+            tarefas.push('ALTER TABLE cobrancas_pix ADD COLUMN controleMensagemErro TEXT');
+        }
+
+        function proxima(indice = 0) {
+            if (indice < tarefas.length) {
+                db.run(tarefas[indice], () => proxima(indice + 1));
+                return;
+            }
+            if (instalacaoExistente) {
+                db.run(
+                    "UPDATE cobrancas_pix SET controleMensagemEnviada = 1 WHERE status = 'aprovado'",
+                    () => done()
+                );
+                return;
+            }
+            done();
+        }
+
+        proxima();
     });
 }
 

@@ -7922,7 +7922,8 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'mercadoPagoWebhookSecret', label: 'Assinatura secreta do webhook (opcional)', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.mercadoPagoWebhookSecret ?'Configurada — deixe vazio para manter' : 'Copie em Suas integrações > Webhooks'}"` })}
             ${campo({ nome: 'mercadoPagoWebhookUrl', label: 'URL HTTPS do webhook (opcional)', valor: status.config?.mercadoPagoWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://seu-dominio/webhooks/mercado-pago"' })}
             ${campo({ nome: 'mercadoPagoEmailPagador', label: 'E-mail padrão do pagador', valor: status.config?.mercadoPagoEmailPagador || '', tipo: 'email', attrs: 'placeholder="pagamentos@suaempresa.com.br"' })}
-            <div class="notice full">No servidor, configure o evento <strong>Pagamentos</strong> e a URL do webhook. Em instalação local, a URL pode ficar vazia: o painel consulta as cobranças pendentes automaticamente a cada minuto. Antes de renovar, o sistema confere referência, status e valor e ignora notificações duplicadas. Os eventos também serão enviados ao webhook do Monitoramento comercial.</div>
+            ${campo({ nome: 'mercadoPagoWhatsappControle', label: 'WhatsApp para avisos de PIX (opcional)', valor: status.config?.mercadoPagoWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
+            <div class="notice full">Use DDI + DDD + número no WhatsApp de controle. Quando o PIX for aprovado, o cliente será renovado, receberá a confirmação e este número também receberá um resumo. A confirmação fica registrada em <strong>Eventos do sistema</strong>. No servidor, configure o evento <strong>Pagamentos</strong> e a URL do webhook. Em instalação local, a URL pode ficar vazia: o painel consulta as cobranças pendentes automaticamente a cada minuto.</div>
             <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar provedor PIX</button></div>
         </form>
     </section>
@@ -8028,7 +8029,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Eventos do sistema</h2>
-                <div class="subtitle">Últimos backups, alertas e recuperações registrados</div>
+                <div class="subtitle">Últimos PIX confirmados, backups, alertas e recuperações registrados</div>
             </div>
         </div>
         ${eventos.length ?`<table>

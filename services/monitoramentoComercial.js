@@ -53,6 +53,32 @@ async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {
     }
 }
 
+async function enviarConfirmacoesPixControlePendentes(config = {}, controles = {}, statusWhatsApp = {}) {
+    const numeroControle = String(config.mercadoPagoWhatsappControle || '').replace(/\D/g, '');
+    if (!numeroControle || !statusWhatsApp.conectado || typeof controles.getClient !== 'function') return;
+    const client = controles.getClient();
+    if (!client) return;
+
+    const {
+        listarConfirmacoesPixControlePendentes,
+        marcarConfirmacaoPixControle
+    } = require('./mercadoPagoService');
+    const confirmacoes = await listarConfirmacoesPixControlePendentes();
+    const destino = destinoWhatsapp(numeroControle);
+
+    for (const confirmacao of confirmacoes) {
+        const mensagem = `💰 *PIX RECEBIDO E CONFIRMADO*\n\n*Cliente:* ${confirmacao.nome || `Cliente ${confirmacao.clienteId}`}\n*Telefone:* ${confirmacao.telefone || '-'}\n*Plano:* ${confirmacao.plano}\n*Valor:* R$ ${confirmacao.valorTotal}\n*Novo vencimento:* ${confirmacao.vencimentoNovo}\n*Mercado Pago:* ${confirmacao.provedorPagamentoId || '-'}\n\nO cliente foi renovado automaticamente.`;
+        try {
+            await client.sendMessage(destino, mensagem);
+            await marcarConfirmacaoPixControle(confirmacao.cobrancaId, true, '');
+            console.log(`[mercado-pago] Aviso de controle enviado para a cobranca ${confirmacao.cobrancaId}.`);
+        } catch (err) {
+            await marcarConfirmacaoPixControle(confirmacao.cobrancaId, false, err.message);
+            console.error(`[mercado-pago] Falha ao enviar aviso de controle da cobranca ${confirmacao.cobrancaId}: ${err.message}`);
+        }
+    }
+}
+
 function agoraSaoPaulo() {
     const partes = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo',
@@ -369,6 +395,9 @@ async function executarMonitoramento(controles = {}) {
             const { verificarCobrancasPendentesMercadoPago } = require('./mercadoPagoService');
             await verificarCobrancasPendentesMercadoPago();
             await enviarConfirmacoesPixPendentes(controles, statusWhatsApp);
+        }
+        if (config.pixProvedor === 'mercado_pago' && config.mercadoPagoWhatsappControle) {
+            await enviarConfirmacoesPixControlePendentes(config, controles, statusWhatsApp);
         }
     } catch (err) {
         console.log(`Monitoramento comercial: ${err.message}`);
