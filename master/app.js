@@ -986,7 +986,6 @@ function pagina(instalacoes, opcoes = {}) {
       <a class="button secondary" href="/logout">Sair</a>
     </div>
     <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
-    <a class="button secondary" href="/logout" style="margin-top:12px">Sair</a>
     ${menuMestre('inicio')}
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
