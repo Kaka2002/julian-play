@@ -53,7 +53,7 @@ const BLOQUEIO_LOGIN_MS = Number(process.env.MASTER_LOGIN_LOCK_MINUTES || 15) * 
 
 app.use(express.urlencoded({ extended: false }));
 app.use(cabecalhosSeguranca);
-app.use(csrfMiddleware({ isento: req => req.path.startsWith('/api/') || req.is('application/json') }));
+app.use(csrfMiddleware({ isento: req => req.path === '/logout' || req.path.startsWith('/api/') || req.is('application/json') }));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 app.disable('x-powered-by');
 
