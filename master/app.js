@@ -201,7 +201,7 @@ function normalizarTelefone(valor) {
 function chaveLoginMestre(req, usuario) { return `${req.ip || req.socket?.remoteAddress || 'desconhecido'}:${String(usuario||'').toLowerCase()}`; }
 function bloqueioLoginMestre(chave) { const r=tentativasLogin.get(chave); if(!r)return null;if(r.bloqueadoAte>Date.now())return r;if(Date.now()-r.inicio>BLOQUEIO_LOGIN_MS)tentativasLogin.delete(chave);return null; }
 function falhaLoginMestre(chave) { const atual=tentativasLogin.get(chave);const r=atual&&Date.now()-atual.inicio<BLOQUEIO_LOGIN_MS?atual:{tentativas:0,inicio:Date.now(),bloqueadoAte:0};r.tentativas++;if(r.tentativas>=MAX_TENTATIVAS_LOGIN)r.bloqueadoAte=Date.now()+BLOQUEIO_LOGIN_MS;tentativasLogin.set(chave,r); }
-function auditarMestre(req, tipo, mensagem) { masterDb.ready.then(()=>masterDb.run('INSERT INTO eventos_instalacao(instalacaoId,tipo,mensagem,detalhes) VALUES(NULL,?,?,?)',[tipo,mensagem,JSON.stringify({ip:req.ip||req.socket?.remoteAddress||'',usuario:String(req.body?.usuario||'')})])).catch(err=>console.log(`Auditoria mestre falhou: ${err.message}`)); }
+function auditarMestre(req, tipo, mensagem) { masterDb.executar('INSERT INTO eventos_instalacao(instalacaoId,tipo,mensagem,detalhes) VALUES(NULL,?,?,?)',[tipo,mensagem,JSON.stringify({ip:req.ip||req.socket?.remoteAddress||'',usuario:String(req.body?.usuario||'')})]).catch(err=>console.log(`Auditoria mestre falhou: ${err.message}`)); }
 
 function instalacaoAdministradora(item = {}) {
     return ['admin', 'administrador', 'fornecedor'].includes(String(item.perfilLicenca || '').trim().toLowerCase());
@@ -983,10 +983,10 @@ function pagina(instalacoes, opcoes = {}) {
         <div class="sub">Instala&ccedil;&otilde;es comerciais isoladas em ${escapar(baseDomain)}</div>
         <div class="version-pill">Vers&atilde;o ${escapar(versaoSistema)}</div>
       </div>
-      <form method="post" action="/logout"><button class="secondary" type="submit">Sair</button></form>
+      <a class="button secondary" href="/logout">Sair</a>
     </div>
     <h1>Painel Mestre</h1><div class="sub">Instalações comerciais isoladas em ${escapar(baseDomain)}</div>
-    <form method="post" action="/logout" style="margin-top:12px"><button class="secondary" type="submit">Sair</button></form>
+    <a class="button secondary" href="/logout" style="margin-top:12px">Sair</a>
     ${menuMestre('inicio')}
     ${opcoes.mensagem ?`<div class="notice">${escapar(opcoes.mensagem)}</div>` : ''}
     ${opcoes.erro ?`<div class="notice errorbox">${escapar(opcoes.erro)}</div>` : ''}
@@ -1721,12 +1721,15 @@ app.post('/login', (req, res) => {
     }));
 });
 
-app.post('/logout', (req, res) => {
+function finalizarSessaoMestre(req, res) {
     const token = lerCookies(req)[COOKIE_SESSAO];
     if (token) sessoes.delete(token);
     res.setHeader('Set-Cookie', montarCookieLogout());
-    res.redirect('/login');
-});
+    return res.redirect('/login');
+}
+
+app.get('/logout', finalizarSessaoMestre);
+app.post('/logout', finalizarSessaoMestre);
 
 app.use(autenticarSessao);
 
