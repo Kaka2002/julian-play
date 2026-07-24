@@ -41,15 +41,4 @@ if ($codigoAtualizacao -ne 0) {
     exit $codigoAtualizacao
 }
 
-$geradorPacote = Join-Path $PSScriptRoot 'entrega-cliente-local\USO_INTERNO_NAO_ENVIAR\GERAR-ARTEFATOS-ENTREGA.ps1'
-if (-not (Test-Path -LiteralPath $geradorPacote)) {
-    throw "Gerador do pacote de instalacao local nao encontrado: $geradorPacote"
-}
-
-Write-Host "`n==> Atualizando os arquivos de entrega ao cliente" -ForegroundColor Cyan
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $geradorPacote -Retencao 5
-if ($LASTEXITCODE -ne 0) {
-    throw "A geracao do pacote de instalacao terminou com codigo $LASTEXITCODE."
-}
-
 exit 0

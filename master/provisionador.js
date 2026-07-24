@@ -907,6 +907,39 @@ function limparArtefatosOperacionaisSeguro() {
     return { removidos: removidos.length, bytesLiberados, arquivos: removidos };
 }
 
+async function otimizarMemoriaRobos() {
+    const memoriaAntesMb = Math.round(os.freemem() / 1024 / 1024);
+    const instalacoes = await masterDb.buscarTodos(
+        "SELECT * FROM instalacoes WHERE status NOT IN ('arquivado', 'parado') ORDER BY id"
+    );
+    const reiniciadas = [];
+    const falhas = [];
+
+    for (const instalacao of instalacoes) {
+        try {
+            await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
+            reiniciadas.push(instalacao.processoPm2);
+            await atualizarStatus(instalacao.id, 'ativo', 'Robo reiniciado pela otimizacao de memoria do Painel Mestre.');
+            await registrarEventoInstalacao(instalacao.id, 'manutencao', 'Processo reiniciado para liberar memoria do servidor.');
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        } catch (err) {
+            falhas.push(`${instalacao.processoPm2}: ${err.message}`);
+        }
+    }
+
+    if (reiniciadas.length) {
+        try { await executarComando('pm2.cmd', ['save', '--force']); } catch (_) { /* Reinicios ja aplicados. */ }
+        await new Promise(resolve => setTimeout(resolve, 2500));
+    }
+
+    return {
+        memoriaAntesMb,
+        memoriaDepoisMb: Math.round(os.freemem() / 1024 / 1024),
+        reiniciadas,
+        falhas
+    };
+}
+
 async function resetarSenhaPainel(id, senha = '') {
     const instalacao = await buscarInstalacao(id);
     if (!instalacao) throw new Error('Instalação não encontrada.');
@@ -1037,6 +1070,7 @@ module.exports = {
     obterRecursosServidor,
     limparServidorSeguro,
     limparArtefatosOperacionaisSeguro,
+    otimizarMemoriaRobos,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     enviarAlertaWhatsappInstalacao,

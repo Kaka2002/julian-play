@@ -18,3 +18,13 @@ test('controle do robo fica restrito a instalacao local na interface e na rota',
     assert.match(rota,/router\.post\('\/manutencao\/robo\/parar', bloquearControleRoboLocal/);
     assert.match(rota,/spawn\(process\.execPath, argumentos/);
 });
+
+test('Painel Mestre oferece limpeza segura de disco e otimizacao de memoria',()=>{
+    const app=fs.readFileSync(path.join(repoRoot,'master','app.js'),'utf8');
+    const provisionador=fs.readFileSync(path.join(repoRoot,'master','provisionador.js'),'utf8');
+    assert.match(app,/action="\/manutencao\/limpar"/);
+    assert.match(app,/action="\/manutencao\/memoria"/);
+    assert.match(app,/app\.post\('\/manutencao\/memoria'/);
+    assert.match(provisionador,/status NOT IN \('arquivado', 'parado'\)/);
+    assert.match(provisionador,/pm2\.cmd', \['restart', instalacao\.processoPm2/);
+});

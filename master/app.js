@@ -29,6 +29,7 @@ const {
     obterRecursosServidor,
     limparServidorSeguro,
     limparArtefatosOperacionaisSeguro,
+    otimizarMemoriaRobos,
     resetarSenhaPainel,
     gerarBackupInstalacao,
     enviarAlertaWhatsappInstalacao,
@@ -1006,11 +1007,20 @@ function pagina(instalacoes, opcoes = {}) {
     ${centralSaudeOperacional(instalacoes, recursos)}
     ${secaoPrioridades(instalacoes)}
     ${painelChecklistComercial(instalacoes)}
-    <section class="panel" id="manutencao"><h2>Limpeza segura</h2><div class="sub">Mantém os backups mais recentes de cada instalação e remove somente sessões de instalações já arquivadas.</div>
-      <form class="actions" method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura? Bancos e sessões dos robôs ativos serão preservados.');">
-        <label>Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
-        <div style="align-self:end"><button type="submit">Executar limpeza segura</button></div>
-      </form>
+    <section class="panel" id="manutencao"><h2>Manutenção do servidor</h2><div class="sub">Libere disco e memória com rotinas controladas. Bancos, sessões ativas, configurações e backups mantidos nunca são apagados.</div>
+      <div class="fields" style="margin-top:18px">
+        <form method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura de disco? Bancos e sessões dos robôs ativos serão preservados.');" style="border:1px solid #e8ebf0;border-radius:10px;padding:16px">
+          <h3 style="margin-top:0">Limpar disco</h3>
+          <div class="small">Remove backups excedentes, sessões somente de instalações arquivadas, logs compactados antigos e temporários Julian Play.</div>
+          <label style="margin-top:12px">Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
+          <button type="submit" style="margin-top:12px">Executar limpeza de disco</button>
+        </form>
+        <form method="post" action="/manutencao/memoria" onsubmit="return confirm('Otimizar a memória agora? Os robôs ativos serão reiniciados um por vez e o WhatsApp poderá reconectar brevemente.');" style="border:1px solid #e8ebf0;border-radius:10px;padding:16px">
+          <h3 style="margin-top:0">Otimizar memória</h3>
+          <div class="small">Reinicia sequencialmente somente os robôs ativos para encerrar processos Chrome antigos. O Painel Mestre e processos parados não são reiniciados.</div>
+          <button class="warning" type="submit" style="margin-top:12px">Liberar memória dos robôs</button>
+        </form>
+      </div>
     </section>
     <section class="panel" id="nova-instalacao"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
       <form class="fields" method="post" action="/instalacoes">
@@ -1840,8 +1850,9 @@ app.get('/renovacoes', async (req, res) => {
 app.post('/manutencao/limpar', async (req, res) => {
     try {
         const resultado = await limparServidorSeguro(req.body.retencao);
-        const liberado = formatarBytes(resultado.bytesLiberados);
-        const mensagem = `Limpeza concluída: ${resultado.backupsRemovidos} backup(s) e ${resultado.sessoesArquivadasRemovidas} sessão(ões) arquivada(s) removidos. Espaço liberado: ${liberado}.`;
+        const operacional = limparArtefatosOperacionaisSeguro();
+        const liberado = formatarBytes(resultado.bytesLiberados + operacional.bytesLiberados);
+        const mensagem = `Limpeza concluída: ${resultado.backupsRemovidos} backup(s), ${resultado.sessoesArquivadasRemovidas} sessão(ões) arquivada(s) e ${operacional.removidos} artefato(s) operacional(is) removidos. Espaço liberado: ${liberado}.`;
         res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}`);
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
@@ -1854,6 +1865,17 @@ app.post('/instalacoes', async (req, res) => {
         res.send(await renderizarPainel({ criado }));
     } catch (err) {
         res.status(400).send(await renderizarPainel({ erro: err.detalhes || err.message }));
+    }
+});
+
+app.post('/manutencao/memoria', async (req, res) => {
+    try {
+        const resultado = await otimizarMemoriaRobos();
+        const falhas = resultado.falhas.length ? ` Falhas: ${resultado.falhas.join(' | ')}` : '';
+        const mensagem = `Otimização concluída: ${resultado.reiniciadas.length} robô(s) reiniciado(s). RAM livre antes: ${resultado.memoriaAntesMb} MB; depois: ${resultado.memoriaDepoisMb} MB.${falhas}`;
+        res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        res.redirect(`/?erro=${encodeURIComponent(err.message)}`);
     }
 });
 
