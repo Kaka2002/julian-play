@@ -58,7 +58,8 @@ async function enviarMensagem(client, to, texto) {
         registrarEnvioDoRobo(to, texto);
         const enviada = await enfileirarEnvio(
             () => client.sendMessage(to, texto),
-            'Envio de mensagem automatica'
+            'Envio de mensagem automatica',
+            { proativo: true }
         );
         if (enviada) {
             registrarMensagemDoRobo(enviada);

@@ -86,6 +86,7 @@ async function enviarPixAposAvisoVencimento(client, destino, cliente = {}) {
         }
 
         return enviarQRCodePIXParaDestino(client, destino, planoPix, {
+            proativo: true,
             tipo: 'renovacao',
             nomeCliente: nomeCliente(cliente),
             clienteId: cliente.id,

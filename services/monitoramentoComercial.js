@@ -299,6 +299,19 @@ async function recuperarWhatsAppSeNecessario(config, agora, statusWhatsApp = {},
         desconectadoMs >= minimoNovoQrMs &&
         (statusCritico || !statusWhatsApp.temQr || qrAntigo)
     ) {
+        if (String(config.whatsappBloquearNovoQrAutomatico ?? '1') === '1') {
+            novoQrTentado = true;
+            const motivo = 'Novo QR Code automatico bloqueado por seguranca. A sessao existente foi preservada; gere outro QR somente por acao manual.';
+            await registrarEventoSistema('whatsapp', 'alerta', motivo, {
+                acao: 'novo_qr_automatico_bloqueado',
+                status,
+                temQr: Boolean(statusWhatsApp.temQr),
+                data: agora.iso
+            });
+            console.log(`Monitoramento: ${motivo}`);
+            return;
+        }
+
         novoQrTentado = true;
         ultimaAcaoRecuperacaoEm = Date.now();
         const motivo = `WhatsApp sem recuperacao apos ${Math.round(desconectadoMs / 60000)} minuto(s). Novo QR Code automatico solicitado.`;

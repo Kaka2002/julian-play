@@ -42,6 +42,11 @@ function tempoAleatorio(minimoMs, maximoMs) {
 }
 
 async function executarComControle(tarefa, descricao, opcoes) {
+    if (opcoes.proativo) {
+        const { exigirEnvioProativoPermitido } = require('./protecaoWhatsappService');
+        await exigirEnvioProativoPermitido(descricao);
+    }
+
     const perfil = await obterPerfilFila(opcoes);
 
     if (perfil.ativa) {

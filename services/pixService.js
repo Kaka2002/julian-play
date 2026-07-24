@@ -406,7 +406,8 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         const enviada = await comTimeout(
             enfileirarEnvio(
                 () => client.sendMessage(destino, media, { caption }),
-                `Envio do QR Code PIX ${planoPix.nome}`
+                `Envio do QR Code PIX ${planoPix.nome}`,
+                { proativo: Boolean(options.proativo) }
             ),
             ENVIO_TIMEOUT_MS,
             'Envio do QR Code PIX'

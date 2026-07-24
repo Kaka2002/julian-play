@@ -133,7 +133,19 @@ Se o robo responder corretamente, a instalacao esta pronta.
 - Mantenha o computador ligado e com internet para o robo funcionar.
 - Se reiniciar o computador, aguarde alguns minutos para o painel voltar.
 
-## 10. Se Der Problema
+## 10. Modo De Protecao Do WhatsApp
+
+Se o WhatsApp mostrar aviso de restricao, automacao ou atividade incomum:
+
+1. Abra **Manutencao** no painel.
+2. Localize **Protecao do WhatsApp**.
+3. Marque **Pausar todos os envios proativos**.
+4. Mantenha marcada a opcao que impede apagar a sessao para gerar QR Code automaticamente.
+5. Informe o motivo e clique em **Salvar protecao**.
+
+Enquanto a protecao estiver ativa, campanhas, cobrancas e avisos programados ficam pausados. O robo ainda pode responder a clientes que enviarem mensagens. Nao gere outro QR Code nem apague a sessao sem orientacao do fornecedor.
+
+## 11. Se Der Problema
 
 Envie ao fornecedor:
 
@@ -145,7 +157,7 @@ Envie ao fornecedor:
 
 Nao apague pastas do sistema antes de falar com o fornecedor.
 
-## 11. Atualizar O Painel Quando Receber Uma Nova Versao
+## 12. Atualizar O Painel Quando Receber Uma Nova Versao
 
 Quando o fornecedor enviar uma melhoria do sistema:
 

@@ -131,6 +131,9 @@ const {
 } = require('../services/crmService');
 const { enfileirarEnvio } = require('../services/filaMensagensService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
+const {
+    salvarProtecaoWhatsapp
+} = require('../services/protecaoWhatsappService');
 
 const router = express.Router();
 const WHATSAPP_ENVIO_DUPLICADO_MS = 5 * 60 * 1000;
@@ -3933,7 +3936,8 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
                     () => client.sendMessage(destino, mensagem),
-                    descricao
+                    descricao,
+                    { proativo: true }
                 ),
                 90000,
                 descricao
@@ -4005,7 +4009,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                         return client.sendMessage(destino, media, { caption: legenda });
                     },
                     descricao,
-                    opcoes.fila || {}
+                    { ...(opcoes.fila || {}), proativo: true }
                 ),
                 120000,
                 descricao
@@ -7965,6 +7969,23 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>`}
 
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Proteção do WhatsApp</h2>
+                <div class="subtitle">Interrompe campanhas, cobranças e avisos proativos sem apagar a sessão nem impedir respostas aos clientes</div>
+            </div>
+            <span class="badge ${String(status.config?.whatsappProtecaoAtiva || '0') === '1' ?'red' : 'green'}">${String(status.config?.whatsappProtecaoAtiva || '0') === '1' ?'Proteção ativa' : 'Operação normal'}</span>
+        </div>
+        <form class="fields" method="post" action="/manutencao/whatsapp/protecao" style="padding-top:0;">
+            <label class="toggle-line"><input type="checkbox" name="whatsappProtecaoAtiva" value="1" ${String(status.config?.whatsappProtecaoAtiva || '0') === '1' ?'checked' : ''}><span>Pausar todos os envios proativos</span></label>
+            <label class="toggle-line"><input type="checkbox" name="whatsappBloquearNovoQrAutomatico" value="1" ${String(status.config?.whatsappBloquearNovoQrAutomatico ?? '1') === '1' ?'checked' : ''}><span>Nunca apagar a sessão para gerar QR Code automaticamente</span></label>
+            ${campo({ nome: 'whatsappProtecaoMotivo', label: 'Motivo / observação', valor: status.config?.whatsappProtecaoMotivo || '', attrs: 'maxlength="240" placeholder="Ex: conta temporariamente restringida pelo WhatsApp"' })}
+            <div class="notice full">Com a proteção ativa, respostas a mensagens recebidas continuam funcionando. Campanhas, modelos enviados pelo painel, avisos de vencimento, cobranças e PIX enviados junto desses avisos ficam bloqueados. Um novo QR Code continua disponível somente por ação manual.</div>
+            <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar proteção</button></div>
+        </form>
+    </section>
+
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -9720,6 +9741,28 @@ router.post('/manutencao/pix-provedor', async (req, res) => {
     } catch (err) {
         logControleClientes('Erro ao salvar provedor PIX', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar provedor PIX: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/whatsapp/protecao', async (req, res) => {
+    try {
+        const protecao = await salvarProtecaoWhatsapp({
+            whatsappProtecaoAtiva: String(req.body.whatsappProtecaoAtiva || '') === '1',
+            whatsappBloquearNovoQrAutomatico: String(req.body.whatsappBloquearNovoQrAutomatico || '') === '1',
+            whatsappProtecaoMotivo: req.body.whatsappProtecaoMotivo
+        });
+        logControleClientes('Protecao do WhatsApp atualizada', {
+            ativa: protecao.ativa,
+            bloquearNovoQrAutomatico: protecao.bloquearNovoQrAutomatico,
+            motivo: protecao.motivo
+        });
+        const mensagem = protecao.ativa
+            ? 'Protecao ativada. Envios proativos foram pausados; respostas aos clientes continuam liberadas.'
+            : 'Protecao desativada. Envios proativos voltaram a ser permitidos.';
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        logControleClientes('Erro ao salvar protecao do WhatsApp', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar protecao: ${err.message}`)}`);
     }
 });
 
