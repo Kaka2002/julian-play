@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
 const {
     listarClientes,
@@ -298,6 +298,39 @@ function manutencaoRestritaCliente() {
 
 function monitoramentoOperacionalPermitido() {
     return !manutencaoRestritaCliente() || process.env.JULIAN_PLAY_INSTALL_MODE === 'local';
+}
+
+function instalacaoLocal() {
+    return String(process.env.JULIAN_PLAY_INSTALL_MODE || '').trim().toLowerCase() === 'local';
+}
+
+function bloquearControleRoboLocal(req, res, next) {
+    if (instalacaoLocal()) return next();
+    return res.status(403).send('Controle do robô disponível somente na instalação local.');
+}
+
+function agendarControleProcessoLocal(acao) {
+    const permitidas = new Set(['restart', 'stop']);
+    if (!permitidas.has(acao)) throw new Error('Ação de processo inválida.');
+    const nomeProcesso = String(process.env.JULIAN_PLAY_APP_NAME || '').trim();
+    if (!nomeProcesso) throw new Error('Nome do processo local não configurado.');
+    const appData = String(process.env.APPDATA || '').trim();
+    if (!appData) throw new Error('APPDATA não disponível para localizar o PM2.');
+    const pm2Cli = path.join(appData, 'npm', 'node_modules', 'pm2', 'bin', 'pm2');
+    if (!fs.existsSync(pm2Cli) && !fs.existsSync(`${pm2Cli}.js`)) {
+        throw new Error('PM2 global não encontrado nesta instalação.');
+    }
+
+    setTimeout(() => {
+        const argumentos = [pm2Cli, acao, nomeProcesso];
+        if (acao === 'restart') argumentos.push('--update-env');
+        const filho = spawn(process.execPath, argumentos, {
+            detached: true,
+            windowsHide: true,
+            stdio: 'ignore'
+        });
+        filho.unref();
+    }, 700);
 }
 
 function bloquearMonitoramentoOperacional(req, res, next) {
@@ -7947,6 +7980,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 : 'Informe a licença';
 
     const manutencaoRestrita = manutencaoRestritaCliente();
+    const podeControlarRoboLocal = instalacaoLocal();
 
     return `<section class="page-title">
         <h1>Manutenção</h1>
@@ -7961,6 +7995,23 @@ function telaManutencao(status = {}, opcoes = {}) {
     </section>
 
     ${painelSaudeRobo(status)}
+
+    ${podeControlarRoboLocal ?`<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Controle do robô local</h2>
+                <div class="subtitle">Reinicie ou pare somente o processo desta instalação neste computador</div>
+            </div>
+            <div class="actions">
+                <form method="post" action="/manutencao/robo/reiniciar" onsubmit="return confirm('Reiniciar o robô desta instalação local?');">
+                    <button class="button" type="submit">${icon('refresh')} Reiniciar robô</button>
+                </form>
+                <form method="post" action="/manutencao/robo/parar" onsubmit="return confirm('Parar o robô local? O painel ficará indisponível até o processo ser iniciado novamente.');">
+                    <button class="button warning" type="submit" style="background:#ff8614;">${icon('alert')} Parar robô</button>
+                </form>
+            </div>
+        </div>
+    </section>` : ''}
 
     ${manutencaoRestrita ?'' : `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -9615,6 +9666,24 @@ router.post('/manutencao/diagnostico', bloquearManutencaoRestritaCliente, async 
     } catch (err) {
         logControleClientes('Erro ao executar diagnóstico do sistema', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/robo/reiniciar', bloquearControleRoboLocal, (req, res) => {
+    try {
+        agendarControleProcessoLocal('restart');
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Reinício do robô local solicitado. Aguarde alguns segundos e atualize a página.')}`);
+    } catch (err) {
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Não foi possível reiniciar o robô: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/robo/parar', bloquearControleRoboLocal, (req, res) => {
+    try {
+        agendarControleProcessoLocal('stop');
+        return res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Robô parado</title></head><body style="font-family:Arial,sans-serif;padding:40px"><h1>Parada solicitada</h1><p>O robô local será parado em alguns segundos.</p><p>Para iniciá-lo novamente, abra o <strong>INSTALAR.exe</strong> e escolha <strong>Abrir painel</strong> ou execute <code>pm2.cmd restart ${escapar(String(process.env.JULIAN_PLAY_APP_NAME || 'julian-play-cliente'))}</code>.</p></body></html>`);
+    } catch (err) {
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Não foi possível parar o robô: ${err.message}`)}`);
     }
 });
 
