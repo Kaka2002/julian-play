@@ -213,14 +213,22 @@ async function processarPagamentoMercadoPago(provedorPagamentoId) {
             `UPDATE cobrancas_pix SET status = 'aprovado', pagamentoId = ?, aprovadoEm = ?, erro = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
             [renovacao.pagamentoId, pagamento.date_approved || new Date().toISOString(), cobranca.id]
         );
+        let filaPainel = { criadas: 0 };
+        try {
+            filaPainel = await require('./renovacaoPainelService').enfileirarRenovacoesDaCobranca(cobranca.id);
+        } catch (erroFila) {
+            await notificarEventoPix(config, 'pix_fila_painel_pendente', 'alerta',
+                `PIX aprovado e renovacao interna concluida, mas a fila do painel sera reconciliada: ${erroFila.message}`,
+                { clienteId: cobranca.clienteId, cobrancaId: cobranca.id, erro: erroFila.message });
+        }
         await notificarEventoPix(
             config,
             'pix_pagamento_aprovado',
             'sucesso',
             `PIX aprovado e cliente renovado: ${renovacao.cliente?.nome || cobranca.clienteId}, ${renovacao.plano}, R$ ${renovacao.valorTotal}. Novo vencimento: ${renovacao.vencimentoNovo}.`,
-            { clienteId: cobranca.clienteId, cliente: renovacao.cliente?.nome || '', plano: renovacao.plano, valor: renovacao.valorTotal, vencimentoNovo: renovacao.vencimentoNovo, mercadoPagoPagamentoId: String(pagamento.id) }
+            { clienteId: cobranca.clienteId, cliente: renovacao.cliente?.nome || '', plano: renovacao.plano, valor: renovacao.valorTotal, vencimentoNovo: renovacao.vencimentoNovo, mercadoPagoPagamentoId: String(pagamento.id), renovacoesPainelEnfileiradas: filaPainel.criadas }
         );
-        return { aprovado: true, renovacao, cobranca: { ...cobranca, status: 'aprovado' } };
+        return { aprovado: true, renovacao, filaPainel, cobranca: { ...cobranca, status: 'aprovado' } };
     } catch (err) {
         await executar(`UPDATE cobrancas_pix SET status = 'erro_renovacao', erro = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`, [err.message, cobranca.id]);
         await notificarEventoPix(
@@ -285,6 +293,8 @@ async function listarConfirmacoesPixControlePendentes(limite = 30) {
         `SELECT cobranca.id AS cobrancaId, cobranca.referencia,
                 cobranca.provedorPagamentoId, cobranca.plano,
                 cobranca.valorTotal, cobranca.aprovadoEm,
+                (SELECT group_concat(fila.protocolo || ' (' || fila.status || ')', ', ')
+                 FROM renovacoes_painel_fila fila WHERE fila.cobrancaId = cobranca.id) AS protocolosPainel,
                 pagamento.vencimentoNovo, cliente.id AS clienteId,
                 cliente.nome, cliente.telefone
          FROM cobrancas_pix cobranca

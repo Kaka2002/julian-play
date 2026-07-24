@@ -134,6 +134,11 @@ const { listarInteracoesCliente } = require('../services/interacoesRoboService')
 const {
     salvarProtecaoWhatsapp
 } = require('../services/protecaoWhatsappService');
+const {
+    listarHistoricoRenovacoes,
+    testarIntegracaoPainel,
+    reagendarRenovacao
+} = require('../services/renovacaoPainelService');
 
 const router = express.Router();
 const WHATSAPP_ENVIO_DUPLICADO_MS = 5 * 60 * 1000;
@@ -7674,6 +7679,7 @@ function panelCard(painel) {
         <span class="device-icon">${icon('paineis')}</span>
         <div>
             <div class="device-name">${escapar(painel.nome)}</div>
+            <div class="subtitle">${painel.renovacaoAutomatica ?'Renovação automática ativa' : 'Renovação automática desligada'}${painel.apiUrl ?` · ${escapar(painel.tipoIntegracao || 'REST JSON')}` : ' · API não configurada'}</div>
         </div>
         <div class="model-actions">
             <a class="button secondary icon-only" href="/paineis/${painel.id}/editar" title="Editar painel">${icon('edit')}</a>
@@ -8239,7 +8245,7 @@ function telaManutencao(status = {}, opcoes = {}) {
     </section>`;
 }
 
-function formularioPainel(painel = {}) {
+function formularioPainel(painel = {}, historico = []) {
     return `<section class="page-title">
         <h1>${painel.id ?'Editar Painel' : 'Novo Painel'}</h1>
         <div class="subtitle">Cadastre os painéis usados no controle dos clientes</div>
@@ -8248,6 +8254,20 @@ function formularioPainel(painel = {}) {
         <form class="fields" method="post" action="/paineis/salvar">
             ${painel.id ?`<input type="hidden" name="id" value="${escapar(painel.id)}">` : ''}
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
+            ${campo({ nome: 'tipoIntegracao', label: 'Tipo da integração', valor: painel.tipoIntegracao || 'rest_json', opcoes: [
+                { valor: 'rest_json', texto: 'API REST / JSON genérica' },
+                { valor: 'p2p_rest', texto: 'Painel P2P via REST' },
+                { valor: 'iptv_rest', texto: 'Painel IPTV via REST' }
+            ] })}
+            ${campo({ nome: 'apiUrl', label: 'Endereço exato da API', valor: painel.apiUrl || '', tipo: 'url', attrs: 'placeholder="https://painel.exemplo.com/api/renew"' })}
+            ${campo({ nome: 'apiUsuario', label: 'Usuário da API (opcional)', valor: painel.apiUsuario || '' })}
+            ${campo({ nome: 'apiToken', label: 'Token da API', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${painel.apiToken ?'Configurado — deixe vazio para manter' : 'Token Bearer'}"` })}
+            ${campo({ nome: 'produtoPadrao', label: 'Produto correspondente', valor: painel.produtoPadrao || '', attrs: 'placeholder="Código ou nome do produto no painel"' })}
+            ${campo({ nome: 'renovacaoAutomatica', label: 'Renovação automática', valor: String(painel.renovacaoAutomatica || 0), opcoes: [
+                { valor: '0', texto: 'Desligada' }, { valor: '1', texto: 'Ligada após confirmação do PIX' }
+            ] })}
+            ${campo({ nome: 'timeoutSegundos', label: 'Tempo limite da API (segundos)', valor: painel.timeoutSegundos || 15, tipo: 'number', attrs: 'min="3" max="60"' })}
+            ${campo({ nome: 'maxTentativas', label: 'Máximo de tentativas', valor: painel.maxTentativas || 5, tipo: 'number', attrs: 'min="1" max="10"' })}
             ${campo({
                 nome: 'ativo',
                 label: 'Status',
@@ -8259,10 +8279,15 @@ function formularioPainel(painel = {}) {
             })}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar painel</button>
+                ${painel.id ?`<button class="button secondary" type="submit" formaction="/paineis/${painel.id}/testar">${icon('refresh')} Testar API</button>` : ''}
                 <a class="button secondary" href="/paineis">Cancelar</a>
             </div>
         </form>
-    </section>`;
+        <div class="notice full" style="margin:18px;">A API receberá POST JSON com ação, protocolo único, usuário do cliente, produto, plano, dias, pagamento e valor. Em falhas temporárias, a fila tentará novamente sem duplicar a renovação.</div>
+    </section>
+    ${painel.id ?`<section class="panel" style="margin-top:20px;"><div class="panel-head"><div><h2 class="panel-title">Histórico de renovações</h2><div class="subtitle">Protocolos e tentativas deste painel</div></div></div>
+        ${historico.length ?`<table><thead><tr><th>Protocolo</th><th>Cliente</th><th>Status</th><th>Tentativas</th><th>Erro</th><th>Atualização</th><th>Ação</th></tr></thead><tbody>${historico.map(item=>`<tr><td>${escapar(item.protocolo)}</td><td>${escapar(item.clienteNome)}</td><td><span class="badge ${item.status==='concluida'?'green':item.status==='falha'?'red':'orange'}">${escapar(item.status)}</span></td><td>${escapar(item.tentativas)}</td><td>${escapar(item.erro || '-')}</td><td>${escapar(formatarDataHoraCurta(item.atualizadoEm))}</td><td>${item.status==='falha'?`<form method="post" action="/paineis/${painel.id}/renovacoes/${item.id}/tentar"><button class="button secondary" type="submit">Tentar novamente</button></form>`:'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhuma solicitação registrada.</div>'}
+    </section>`:''}`;
 }
 
 router.get('/clientes', async (req, res) => {
@@ -9449,11 +9474,32 @@ router.get('/paineis/:id/editar', async (req, res) => {
         return res.redirect('/paineis?mensagem=Painel não encontrado');
     }
 
+    const historico = await listarHistoricoRenovacoes(painel.id);
     await renderizar(res, {
         titulo: 'Editar painel',
-        conteudo: formularioPainel(painel),
+        conteudo: formularioPainel(painel, historico),
+        mensagem: req.query.mensagem || '',
         ativo: 'paineis'
     });
+});
+
+router.post('/paineis/:id/testar', async (req, res) => {
+    try {
+        await salvarPainel({ ...req.body, id: req.params.id });
+        const resultado = await testarIntegracaoPainel(req.params.id);
+        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`API respondeu com HTTP ${resultado.status}.`)}`);
+    } catch (err) {
+        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`Falha no teste da API: ${err.message}`)}`);
+    }
+});
+
+router.post('/paineis/:id/renovacoes/:filaId/tentar', async (req, res) => {
+    try {
+        await reagendarRenovacao(req.params.filaId);
+        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent('Nova tentativa agendada.')}`);
+    } catch (err) {
+        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(err.message)}`);
+    }
 });
 
 router.post('/paineis/salvar', async (req, res) => {

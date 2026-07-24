@@ -221,25 +221,40 @@ async function buscarPainelPorId(id) {
 async function salvarPainel(dados = {}) {
     const id = limparTexto(dados.id);
     const nome = limparTexto(dados.nome);
+    const tipoIntegracao = limparTexto(dados.tipoIntegracao) || 'rest_json';
+    const apiUrl = limparTexto(dados.apiUrl);
+    const apiUsuario = limparTexto(dados.apiUsuario);
+    const produtoPadrao = limparTexto(dados.produtoPadrao);
+    const renovacaoAutomatica = String(dados.renovacaoAutomatica || '0') === '1' ? 1 : 0;
+    const timeoutSegundos = Math.max(3, Math.min(60, Number(dados.timeoutSegundos || 15)));
+    const maxTentativas = Math.max(1, Math.min(10, Number(dados.maxTentativas || 5)));
 
     if (!nome) throw new Error('Informe o nome do painel.');
+    if (apiUrl && !/^https?:\/\//i.test(apiUrl)) throw new Error('A URL da API precisa iniciar com http:// ou https://.');
 
     if (id) {
+        const atual = await buscarPainelPorId(id);
+        const apiToken = limparTexto(dados.apiToken) || atual?.apiToken || '';
         await executar(
             `UPDATE paineis SET
                 nome = ?,
                 ativo = ?,
+                tipoIntegracao = ?, apiUrl = ?, apiUsuario = ?, apiToken = ?, produtoPadrao = ?,
+                renovacaoAutomatica = ?, timeoutSegundos = ?, maxTentativas = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
-            [nome, dados.ativo === '0' ? 0 : 1, id]
+            [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, apiUsuario, apiToken, produtoPadrao,
+                renovacaoAutomatica, timeoutSegundos, maxTentativas, id]
         );
 
         return buscarPainelPorId(id);
     }
 
     const resultado = await executar(
-        'INSERT INTO paineis (nome, ativo) VALUES (?, ?)',
-        [nome, dados.ativo === '0' ? 0 : 1]
+        `INSERT INTO paineis (nome, ativo, tipoIntegracao, apiUrl, apiUsuario, apiToken, produtoPadrao,
+            renovacaoAutomatica, timeoutSegundos, maxTentativas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, apiUsuario, limparTexto(dados.apiToken),
+            produtoPadrao, renovacaoAutomatica, timeoutSegundos, maxTentativas]
     );
 
     return buscarPainelPorId(resultado.id);

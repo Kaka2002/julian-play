@@ -103,6 +103,14 @@ db.serialize(() => {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE,
             ativo INTEGER DEFAULT 1,
+            tipoIntegracao TEXT DEFAULT 'rest_json',
+            apiUrl TEXT,
+            apiUsuario TEXT,
+            apiToken TEXT,
+            produtoPadrao TEXT,
+            renovacaoAutomatica INTEGER DEFAULT 0,
+            timeoutSegundos INTEGER DEFAULT 15,
+            maxTentativas INTEGER DEFAULT 5,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -119,6 +127,29 @@ db.serialize(() => {
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS renovacoes_painel_fila (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            protocolo TEXT NOT NULL UNIQUE,
+            cobrancaId INTEGER NOT NULL,
+            pagamentoId INTEGER NOT NULL,
+            clienteId INTEGER NOT NULL,
+            painelId INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pendente',
+            tentativas INTEGER DEFAULT 0,
+            proximaTentativaEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            iniciadoEm DATETIME,
+            concluidoEm DATETIME,
+            requisicao TEXT,
+            resposta TEXT,
+            erro TEXT,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(cobrancaId, painelId)
+        )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_renovacoes_painel_status ON renovacoes_painel_fila(status, proximaTentativaEm)');
 
     db.run(`
         CREATE TABLE IF NOT EXISTS avisos_renovacao (
@@ -425,6 +456,14 @@ function migrarCatalogos(done) {
         ['paineis', 'ativo', 'INTEGER DEFAULT 1'],
         ['paineis', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
         ['paineis', 'atualizadoEm', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],
+        ['paineis', 'tipoIntegracao', "TEXT DEFAULT 'rest_json'"],
+        ['paineis', 'apiUrl', 'TEXT'],
+        ['paineis', 'apiUsuario', 'TEXT'],
+        ['paineis', 'apiToken', 'TEXT'],
+        ['paineis', 'produtoPadrao', 'TEXT'],
+        ['paineis', 'renovacaoAutomatica', 'INTEGER DEFAULT 0'],
+        ['paineis', 'timeoutSegundos', 'INTEGER DEFAULT 15'],
+        ['paineis', 'maxTentativas', 'INTEGER DEFAULT 5'],
         ['tipos_planos', 'valor', 'TEXT'],
         ['tipos_planos', 'ativo', 'INTEGER DEFAULT 1'],
         ['tipos_planos', 'dataCadastro', 'DATETIME DEFAULT CURRENT_TIMESTAMP'],

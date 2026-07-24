@@ -123,7 +123,7 @@ async function enviarConfirmacoesPixControlePendentes(config = {}, controles = {
     for (const confirmacao of confirmacoes) {
         const mensagem = `💰 *PIX RECEBIDO E CONFIRMADO*\n\n*Cliente:* ${confirmacao.nome || `Cliente ${confirmacao.clienteId}`}\n*Telefone:* ${confirmacao.telefone || '-'}\n*Plano:* ${confirmacao.plano}\n*Valor:* R$ ${confirmacao.valorTotal}\n*Novo vencimento:* ${confirmacao.vencimentoNovo}\n*Mercado Pago:* ${confirmacao.provedorPagamentoId || '-'}\n\nO cliente foi renovado automaticamente.`;
         try {
-            await client.sendMessage(destino, mensagem);
+            await client.sendMessage(destino, `${mensagem}\n\n*Painel IPTV/P2P:* ${confirmacao.protocolosPainel || 'sem renovacao externa configurada'}`);
             await marcarConfirmacaoPixControle(confirmacao.cobrancaId, true, '');
             console.log(`[mercado-pago] Aviso de controle enviado para a cobranca ${confirmacao.cobrancaId}.`);
         } catch (err) {
@@ -467,6 +467,8 @@ async function executarMonitoramento(controles = {}) {
         if (config.pixProvedor === 'mercado_pago' && config.mercadoPagoWhatsappControle) {
             await enviarConfirmacoesPixControlePendentes(config, controles, statusWhatsApp);
         }
+        const { processarFilaRenovacoes } = require('./renovacaoPainelService');
+        await processarFilaRenovacoes();
     } catch (err) {
         console.log(`Monitoramento comercial: ${err.message}`);
     } finally {
