@@ -1011,7 +1011,7 @@ function pagina(instalacoes, opcoes = {}) {
       <div class="fields" style="margin-top:18px">
         <form method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura de disco? Bancos e sessões dos robôs ativos serão preservados.');" style="border:1px solid #e8ebf0;border-radius:10px;padding:16px">
           <h3 style="margin-top:0">Limpar disco</h3>
-          <div class="small">Remove backups excedentes, sessões somente de instalações arquivadas, logs compactados antigos e temporários Julian Play.</div>
+          <div class="small">Remove backups excedentes, sessões somente de instalações arquivadas, cópias antigas de sessão preservando a mais recente, logs compactados antigos e temporários Julian Play.</div>
           <label style="margin-top:12px">Backups mantidos por instalação<input type="number" name="retencao" value="10" min="3" max="100" required style="width:150px"></label>
           <button type="submit" style="margin-top:12px">Executar limpeza de disco</button>
         </form>

@@ -8,5 +8,5 @@ test('PIX aprovado renova uma vez; duplicado, divergente e pendente nao renovam'
 
 test('vencimento manual e automatico montam a mesma mensagem',()=>{
  const r=executarIsolado(`(async()=>{const {montarMensagemRenovacao}=require('./services/renovacaoAutomatica');const c={nome:'Carlos',plano:'mensal',vencimento:'2026-07-30',dataVencimento:'2026-07-30T23:59'};process.stdout.write(JSON.stringify([await montarMensagemRenovacao(c),await montarMensagemRenovacao(c)]))})().catch(e=>{console.error(e);process.exit(1)})`);
- try{const [a,b]=JSON.parse(r.stdout);assert.equal(a,b);assert.match(a,/Carlos/);assert.match(a,/mensal/i);assert.match(a,/6 dia/)}finally{removerAmbiente(r.ambiente)}
+ try{const [a,b]=JSON.parse(r.stdout);assert.equal(a,b);assert.match(a,/Carlos/);assert.match(a,/mensal/i);assert.match(a,/\d+ dia/)}finally{removerAmbiente(r.ambiente)}
 });

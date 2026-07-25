@@ -879,6 +879,15 @@ function limparArtefatosOperacionaisSeguro() {
             if (item.isFile() && /\.(gz|zip)$/i.test(item.name)) candidatos.push({ arquivo: path.join(pastaLogsPm2, item.name), dias: 15 });
         }
     }
+    if (fs.existsSync(sourceDir)) {
+        for (const prefixo of ['.wwebjs_auth_backup', '.wwebjs_cache_backup']) {
+            const copiasSessao = fs.readdirSync(sourceDir, { withFileTypes: true })
+                .filter(item => item.isDirectory() && item.name.toLowerCase().startsWith(prefixo))
+                .map(item => ({ arquivo: path.join(sourceDir, item.name), stat: fs.statSync(path.join(sourceDir, item.name)) }))
+                .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+            copiasSessao.slice(1).forEach(item => candidatos.push({ arquivo: item.arquivo, dias: 7, diretorio: true }));
+        }
+    }
     if (fs.existsSync(pastaEntrega)) {
         const pacotes = fs.readdirSync(pastaEntrega, { withFileTypes: true })
             .filter(item => item.isFile() && /^ENVIAR_AO_CLIENTE-\d{8}-\d{4}\.zip$/i.test(item.name))
