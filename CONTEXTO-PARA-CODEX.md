@@ -383,3 +383,17 @@ Invoke-WebRequest "https://gestao.julianplay.com.br" -UseBasicParsing -MaximumRe
 Resultados esperados: `Cloudflared` em execucao automatica; `julian-play` e
 `julian-master` online; `julian-amplaytv` parado enquanto a copia local estiver
 em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
+
+## Limpeza de disco realizada em 26/07/2026
+
+- O espaco livre no disco `C:` do servidor aumentou de `5,21 GB` para
+  `7,58 GB`.
+- Foram removidos caches do Google Updater e do Edge Update, arquivos
+  temporarios, a pasta desativada `C:\caddy` e componentes antigos por meio de
+  `DISM.exe /Online /Cleanup-Image /StartComponentCleanup`.
+- A pasta temporaria de retorno
+  `C:\MigracaoJulianPlay\AntesRetorno-20260726-112939` foi removida.
+- `C:\$WinREAgent` foi removida depois de confirmar que o Windows nao indicava
+  reinicializacao pendente.
+- Bancos, sessoes do WhatsApp, configuracoes e backups ativos nao foram
+  alterados.
