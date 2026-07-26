@@ -248,3 +248,138 @@ Enviar:
 
 Ao concluir uma mudança importante de infraestrutura, arquitetura, entrega ou
 operação, atualizar este arquivo sem registrar segredos.
+# Marco operacional de 26/07/2026 — migração, Cloudflare e servidor
+
+Este registro deve ser lido antes de qualquer nova alteração, especialmente
+depois da exclusão ou recriação da pasta local do Codex.
+
+## Estado atual em produção
+
+- O ambiente ativo está novamente no servidor Windows, com código em
+  `C:\bots\julian-play`.
+- `julian-play` está online no PM2, usando a porta `10000`.
+- `julian-master` está online no PM2, usando a porta `9000`.
+- `julian-amplaytv` permanece parado no servidor porque essa cliente está
+  usando sua instalação local. Não iniciar simultaneamente a sessão do
+  WhatsApp da cliente no servidor e na máquina local.
+- Caddy deixou de ser utilizado: o processo foi removido do PM2 e o estado foi
+  salvo com `pm2.cmd save --force`.
+- `pm2-logrotate` permanece online.
+
+## Cloudflare
+
+- O domínio `julianplay.com.br` usa os nameservers da Cloudflare.
+- Existe um túnel da máquina de casa, chamado `julian-play-casa`, mantido para
+  contingência.
+- Existe um túnel do servidor, chamado `julian-play-servidor`, atualmente
+  saudável e ativo.
+- No túnel do servidor:
+  - `painel.julianplay.com.br` aponta para `http://127.0.0.1:10000`;
+  - `gestao.julianplay.com.br` aponta para `http://127.0.0.1:9000`.
+- Os registros DNS `painel` e `gestao` são CNAME com proxy ativo e apontam para
+  o túnel `julian-play-servidor`.
+- Os dois endereços HTTPS foram validados e respondem com redirecionamento para
+  suas respectivas telas de login.
+- Para alternar entre servidor e casa, primeiro parar e salvar os processos do
+  ambiente ativo; depois alterar somente os CNAMEs `painel` e `gestao` para o
+  túnel desejado e iniciar os processos no novo ambiente. Nunca deixar duas
+  cópias da mesma sessão de WhatsApp ativas.
+
+## Migração e cópias
+
+- Os bancos do painel administrador e do Painel Mestre foram transferidos,
+  conferidos com SHA-256 e validados com `PRAGMA quick_check`.
+- Os dados e a sessão do administrador foram devolvidos ao servidor e o
+  WhatsApp voltou a conectar.
+- A instalação AMPLAYTV não recebeu alterações depois da exportação e, por
+  isso, não foi sobrescrita no servidor. O processo correspondente permanece
+  parado.
+- Há cópias de migração mantidas no disco `D:` da máquina local.
+- No servidor, manter temporariamente a pasta de segurança mais recente
+  `C:\MigracaoJulianPlay\AntesRetorno-*` até confirmar alguns dias de operação.
+  Os ZIPs já importados em `C:\MigracaoJulianPlay\RetornoLocal` podem ser
+  removidos após conferência.
+
+## Recursos do servidor no encerramento desta etapa
+
+- Disco C: aproximadamente `5,21 GB` livres de `29,9 GB`.
+- RAM livre: aproximadamente `545 MB` de `4 GB`.
+- A pouca RAM não é causada principalmente pelos processos Node do projeto.
+  Antes de encerrar qualquer processo, identificar o consumo do Windows,
+  antivírus e Chrome. Nunca finalizar todos os processos Chrome, pois o
+  WhatsApp ativo utiliza Chrome em modo headless.
+- Para este servidor, `8 GB` de RAM é o mínimo recomendado e `16 GB` é a
+  configuração preferível.
+# Estado operacional consolidado em 26/07/2026
+
+Este registro deve ser lido antes de qualquer nova alteracao. Nao contem
+senhas, tokens, cookies ou chaves.
+
+## Operacao ativa no servidor Windows
+
+- Codigo: `C:\bots\julian-play`.
+- Dados do Painel Mestre: `C:\JulianPlayMaster`.
+- Instalacoes isoladas: `C:\JulianPlayClientes`.
+- `julian-play`: ativo no PM2, porta `10000`.
+- `julian-master`: ativo no PM2, porta `9000`.
+- `julian-amplaytv`: parado intencionalmente no servidor porque a cliente esta
+  usando a instalacao local.
+- `caddy`: removido do PM2 e nao deve mais ser usado.
+- `pm2-logrotate`: ativo.
+- O estado atual foi salvo com `pm2.cmd save --force`.
+
+## Cloudflare
+
+- O servico Windows `Cloudflared` esta `Running` e com inicio `Automatic`.
+- Tunel ativo do servidor: `julian-play-servidor`.
+- Rota `painel.julianplay.com.br` aponta para
+  `http://127.0.0.1:10000`.
+- Rota `gestao.julianplay.com.br` aponta para
+  `http://127.0.0.1:9000`.
+- Os dois nomes possuem CNAME para o identificador do tunel do servidor e
+  respondem publicamente redirecionando para suas telas de login.
+- O tunel `julian-play-casa` pode ser mantido para contingencia, mas nao deve
+  disputar os mesmos hostnames publicos enquanto o servidor estiver ativo.
+- Para trocar entre servidor e casa, primeiro parar os robos no ambiente
+  atual, preservar/sincronizar bancos e sessoes, mudar os CNAMEs/rotas para o
+  tunel de destino e somente depois iniciar os processos no novo ambiente.
+- Nunca manter a mesma sessao do WhatsApp ativa simultaneamente nos dois
+  ambientes.
+
+## Migracao e preservacao de dados
+
+- A migracao servidor -> computador local -> servidor foi concluida.
+- Os pacotes foram conferidos por SHA256 antes da restauracao.
+- `clientes.db` e `master.db` passaram por `PRAGMA quick_check` com resultado
+  `ok`.
+- O banco e a sessao da instalacao administradora foram devolvidos ao
+  servidor.
+- O Painel Mestre foi devolvido ao servidor.
+- A instalacao AMPLAYTV nao foi sobrescrita no retorno porque nao havia sido
+  modificada no computador local; seu processo permanece parado no servidor.
+- Existem copias de seguranca no disco `D:` do computador local. No servidor,
+  apagar pacotes de migracao somente depois de confirmar que a copia
+  correspondente existe no computador local e que seu hash foi validado.
+
+## Recursos observados no servidor
+
+- Ultima medicao: aproximadamente `5,21 GB` livres no disco `C:`.
+- Ultima medicao: aproximadamente `545 MB` de RAM livre em `4 GB`.
+- O servidor esta funcional, mas 4 GB de RAM e pouco para crescimento.
+- Manter pelo menos 8 GB livres em disco; abaixo de 5 GB e estado critico.
+- Para expansao, usar no minimo 8 GB de RAM, preferencialmente 16 GB.
+- Limpezas nunca devem remover `clientes.db`, `master.db`, bancos de
+  instalacoes, `.wwebjs_auth` ativa, configuracoes ou backups atuais.
+
+## Estado esperado para validacao rapida
+
+```powershell
+Get-Service Cloudflared | Select-Object Name,Status,StartType
+pm2.cmd status
+Invoke-WebRequest "https://painel.julianplay.com.br" -UseBasicParsing -MaximumRedirection 0
+Invoke-WebRequest "https://gestao.julianplay.com.br" -UseBasicParsing -MaximumRedirection 0
+```
+
+Resultados esperados: `Cloudflared` em execucao automatica; `julian-play` e
+`julian-master` online; `julian-amplaytv` parado enquanto a copia local estiver
+em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
