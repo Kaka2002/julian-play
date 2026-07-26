@@ -2,6 +2,16 @@
 
 Estas regras se aplicam a toda alteracao neste repositorio. O sistema possui duas formas de execucao que compartilham o mesmo codigo e ambas devem continuar funcionando.
 
+## Continuidade entre sessoes
+
+Antes de iniciar qualquer tarefa, leia tambem `CONTEXTO-PARA-CODEX.md`. Esse
+arquivo registra arquitetura, estado operacional, migracoes, Cloudflare e
+decisoes que precisam sobreviver ao historico local do Codex.
+
+Depois de mudancas importantes de infraestrutura, arquitetura, entrega ou
+operacao, atualize `CONTEXTO-PARA-CODEX.md`. Nunca grave nele senhas, tokens,
+cookies, chaves ou outros segredos.
+
 ## Ambientes suportados
 
 ### Servidor Windows
