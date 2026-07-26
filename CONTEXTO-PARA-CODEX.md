@@ -82,9 +82,13 @@ Rotas de produção:
 |---|---|
 | `painel.julianplay.com.br` | `http://127.0.0.1:10000` |
 | `gestao.julianplay.com.br` | `http://127.0.0.1:9000` |
+| `amplaytv.julianplay.com.br` | `http://127.0.0.1:11004` |
 
-Os dois registros DNS são CNAME, com proxy habilitado. Os dois endereços HTTPS
-foram verificados retornando redirecionamento `302` para a tela de login.
+As rotas sao publicadas pelo tunel com proxy habilitado. `painel` e `gestao`
+foram verificados retornando redirecionamento `302` para a tela de login. A
+rota `amplaytv` esta preparada, mas somente respondera normalmente quando o
+processo `julian-amplaytv` for iniciado depois de parar e sincronizar a
+instalacao local da cliente.
 
 O Caddy foi substituído nessas rotas pelo Cloudflare Tunnel e deve permanecer
 parado.
@@ -336,7 +340,10 @@ senhas, tokens, cookies ou chaves.
   `http://127.0.0.1:10000`.
 - Rota `gestao.julianplay.com.br` aponta para
   `http://127.0.0.1:9000`.
-- Os dois nomes possuem CNAME para o identificador do tunel do servidor e
+- Rota `amplaytv.julianplay.com.br` aponta para
+  `http://127.0.0.1:11004`; enquanto a cliente usar a instalacao local, o
+  processo correspondente deve permanecer parado no servidor.
+- Os hostnames publicados usam o tunel do servidor. `painel` e `gestao`
   respondem publicamente redirecionando para suas telas de login.
 - O tunel `julian-play-casa` pode ser mantido para contingencia, mas nao deve
   disputar os mesmos hostnames publicos enquanto o servidor estiver ativo.
