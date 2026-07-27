@@ -412,6 +412,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 
 - Pagamentos PayPal aprovados passam a ser encaminhados tambem ao webhook de
   alertas configurado, alem da renovacao e confirmacao pelo WhatsApp.
+- Pagamentos PIX e PayPal aprovados enviam um comprovante resumido ao WhatsApp
+  de controle cadastrado. Na ausencia dele, usam o numero de alertas.
 - Alertas repetidos de saude foram limitados a uma repeticao a cada 6 horas.
   Escalada para nivel critico continua imediata e a mensagem de normalizacao
   exige 30 minutos continuos de estabilidade.

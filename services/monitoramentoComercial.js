@@ -130,7 +130,9 @@ async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {
 }
 
 async function enviarConfirmacoesPixControlePendentes(config = {}, controles = {}, statusWhatsApp = {}) {
-    const numeroControle = String(config.mercadoPagoWhatsappControle || '').replace(/\D/g, '');
+    const numeroControle = String(
+        config.mercadoPagoWhatsappControle || config.alertaWhatsappControle || ''
+    ).replace(/\D/g, '');
     if (!numeroControle || !statusWhatsApp.conectado || typeof controles.getClient !== 'function') return;
     const client = controles.getClient();
     if (!client) return;
@@ -143,14 +145,17 @@ async function enviarConfirmacoesPixControlePendentes(config = {}, controles = {
     const destino = destinoWhatsapp(numeroControle);
 
     for (const confirmacao of confirmacoes) {
-        const mensagem = `💰 *PIX RECEBIDO E CONFIRMADO*\n\n*Cliente:* ${confirmacao.nome || `Cliente ${confirmacao.clienteId}`}\n*Telefone:* ${confirmacao.telefone || '-'}\n*Plano:* ${confirmacao.plano}\n*Valor:* R$ ${confirmacao.valorTotal}\n*Novo vencimento:* ${confirmacao.vencimentoNovo}\n*Mercado Pago:* ${confirmacao.provedorPagamentoId || '-'}\n\nO cliente foi renovado automaticamente.`;
+        const paypal = confirmacao.provedor === 'paypal';
+        const formaPagamento = paypal ? 'PAYPAL' : 'PIX';
+        const identificador = paypal ? 'PayPal' : 'Mercado Pago';
+        const mensagem = `🧾 *COMPROVANTE DE PAGAMENTO ${formaPagamento}*\n\n*Cliente:* ${confirmacao.nome || `Cliente ${confirmacao.clienteId}`}\n*Telefone:* ${confirmacao.telefone || '-'}\n*Plano:* ${confirmacao.plano}\n*Valor:* R$ ${confirmacao.valorTotal}\n*Novo vencimento:* ${confirmacao.vencimentoNovo}\n*Data da confirmação:* ${confirmacao.aprovadoEm || '-'}\n*${identificador}:* ${confirmacao.provedorPagamentoId || '-'}\n*Referência:* ${confirmacao.referencia || '-'}\n\nPagamento confirmado e cliente renovado automaticamente.`;
         try {
             await client.sendMessage(destino, `${mensagem}\n\n*Painel IPTV/P2P:* ${confirmacao.protocolosPainel || 'sem renovacao externa configurada'}`);
             await marcarConfirmacaoPixControle(confirmacao.cobrancaId, true, '');
-            console.log(`[mercado-pago] Aviso de controle enviado para a cobranca ${confirmacao.cobrancaId}.`);
+            console.log(`[pagamentos] Comprovante de controle enviado para a cobranca ${confirmacao.cobrancaId}.`);
         } catch (err) {
             await marcarConfirmacaoPixControle(confirmacao.cobrancaId, false, err.message);
-            console.error(`[mercado-pago] Falha ao enviar aviso de controle da cobranca ${confirmacao.cobrancaId}: ${err.message}`);
+            console.error(`[pagamentos] Falha ao enviar comprovante de controle da cobranca ${confirmacao.cobrancaId}: ${err.message}`);
         }
     }
 }
@@ -494,7 +499,7 @@ async function executarMonitoramento(controles = {}) {
             await verificarCobrancasPendentesMercadoPago();
             await enviarConfirmacoesPixPendentes(controles, statusWhatsApp);
         }
-        if (config.pixProvedor === 'mercado_pago' && config.mercadoPagoWhatsappControle) {
+        if (config.mercadoPagoWhatsappControle || config.alertaWhatsappControle) {
             await enviarConfirmacoesPixControlePendentes(config, controles, statusWhatsApp);
         }
         const { processarFilaRenovacoes } = require('./renovacaoPainelService');

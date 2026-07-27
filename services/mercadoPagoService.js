@@ -291,7 +291,7 @@ async function listarConfirmacoesPixPendentes(limite = 30) {
 async function listarConfirmacoesPixControlePendentes(limite = 30) {
     return buscarTodos(
         `SELECT cobranca.id AS cobrancaId, cobranca.referencia,
-                cobranca.provedorPagamentoId, cobranca.plano,
+                cobranca.provedor, cobranca.provedorPagamentoId, cobranca.plano,
                 cobranca.valorTotal, cobranca.aprovadoEm,
                 (SELECT group_concat(fila.protocolo || ' (' || fila.status || ')', ', ')
                  FROM renovacoes_painel_fila fila WHERE fila.cobrancaId = cobranca.id) AS protocolosPainel,
@@ -300,7 +300,7 @@ async function listarConfirmacoesPixControlePendentes(limite = 30) {
          FROM cobrancas_pix cobranca
          INNER JOIN cliente_pagamentos pagamento ON pagamento.id = cobranca.pagamentoId
          INNER JOIN clientes cliente ON cliente.id = cobranca.clienteId
-         WHERE cobranca.provedor = 'mercado_pago'
+         WHERE cobranca.provedor IN ('mercado_pago', 'paypal')
            AND cobranca.status = 'aprovado'
            AND COALESCE(cobranca.controleMensagemEnviada, 0) = 0
          ORDER BY datetime(cobranca.atualizadoEm) ASC

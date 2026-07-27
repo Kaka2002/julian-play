@@ -50,3 +50,13 @@ test('PayPal aprovado avisa o webhook e alertas de saude possuem intervalo',()=>
     assert.match(mestre,/NORMALIZACAO_CENTRAL_MS = 30 \* 60 \* 1000/);
     assert.match(mestre,/codigosAlertas\.sort\(\)\.join\('\|'\)/);
 });
+
+test('comprovante de PIX e PayPal segue para o WhatsApp de controle',()=>{
+    const pagamentos=fs.readFileSync(path.join(repoRoot,'services','mercadoPagoService.js'),'utf8');
+    const monitor=fs.readFileSync(path.join(repoRoot,'services','monitoramentoComercial.js'),'utf8');
+    const rota=fs.readFileSync(path.join(repoRoot,'routes','clientesRoute.js'),'utf8');
+    assert.match(pagamentos,/provedor IN \('mercado_pago', 'paypal'\)/);
+    assert.match(monitor,/COMPROVANTE DE PAGAMENTO \$\{formaPagamento\}/);
+    assert.match(monitor,/mercadoPagoWhatsappControle \|\| config\.alertaWhatsappControle/);
+    assert.match(rota,/WhatsApp para comprovantes de PIX e PayPal/);
+});
