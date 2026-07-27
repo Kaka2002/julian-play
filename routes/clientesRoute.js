@@ -98,6 +98,7 @@ const {
     listarPlanosComerciais,
     montarPlanosPadraoComerciais
 } = require('../services/pixService');
+const { criarCobrancaPayPal } = require('../services/paypalService');
 const { testarWebhookAlertas, enviarWebhook } = require('../services/monitoramentoComercial');
 const {
     criarCampanha,
@@ -5376,7 +5377,7 @@ function modeloManualEnviaPix(modelo = {}) {
     return /(venc|renova|cobran|expirad)/.test(identificacao);
 }
 
-function acoesRapidasCliente(cliente = {}) {
+function acoesRapidasCliente(cliente = {}, config = {}) {
     if (!cliente.id) return '';
 
     const whatsapp = normalizarTelefone(cliente.telefone);
@@ -5394,6 +5395,9 @@ function acoesRapidasCliente(cliente = {}) {
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
                 <button class="button green" type="submit">${icon('financeiro')} Enviar PIX</button>
             </form>
+            ${String(config.paypalAtivo) === '1' ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-paypal-plano" onsubmit="return confirm('Gerar e enviar o link PayPal do plano atual para este cliente?');">
+                <button class="button green" type="submit">${icon('financeiro')} Enviar PayPal</button>
+            </form>` : ''}
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-aviso-vencimento" onsubmit="return confirm('Enviar aviso de vencimento próximo para este cliente?');">
                 <button class="button green" type="submit">${icon('whats')} Enviar vencimento</button>
             </form>
@@ -5613,7 +5617,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     })?.id || '';
     const topoCliente = cliente.id
         ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos)}
-            ${acoesRapidasCliente(cliente)}
+            ${acoesRapidasCliente(cliente, opcoesFormulario.config)}
             ${recomendacoesCliente(cliente, pagamentos, atendimentos)}`
         : '';
 
@@ -8818,13 +8822,14 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, config] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
         buscarAlertasCadastroCliente(cliente),
         listarAtendimentosCliente(cliente.id),
-        listarInteracoesCliente(cliente, 60)
+        listarInteracoesCliente(cliente, 60),
+        obterConfiguracoes()
     ]);
 
     await renderizar(res, {
@@ -8835,6 +8840,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             alertas,
             atendimentos,
             interacoesRobo,
+            config,
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha
         }),
@@ -9077,6 +9083,79 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
             erro: err.message
         });
         return res.redirect(montarUrlClienteMensagem(req.params.id, `Não foi possível enviar o PIX do plano: ${err.message}`));
+    }
+});
+
+router.post('/clientes/:id/enviar-paypal-plano', async (req, res) => {
+    try {
+        const cliente = await buscarClientePorId(req.params.id);
+        if (!cliente) {
+            return res.redirect(montarUrlClienteMensagem(req.params.id, 'Cliente não encontrado.'));
+        }
+
+        const status = getStatusWhatsApp();
+        const client = getClient();
+        if (!client || !status.conectado) {
+            return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado para enviar o PayPal do plano.'));
+        }
+
+        const planoBase = buscarPlanoPorNome(cliente.plano) || {
+            nome: cliente.plano || 'Plano',
+            valor: cliente.valorPlano || '0,00'
+        };
+        const plano = prepararPlanoPixDoPlanoCliente(cliente, planoBase);
+        if (numeroMoeda(plano.valor) <= 0) {
+            throw new Error('O plano atual está sem valor de cobrança.');
+        }
+
+        const cobranca = await criarCobrancaPayPal(plano, {
+            tipo: 'renovacao',
+            nomeCliente: cliente.nome || 'cliente',
+            clienteId: cliente.id,
+            plano: cliente.plano,
+            tipoPlanoId: cliente.tipoPlanoId,
+            diasContrato: cliente.diasContrato,
+            valorPlano: cliente.valorPlano,
+            assinaturaApp: '0,00'
+        });
+        const mensagem = `💳 *PAYPAL - RENOVAÇÃO ${plano.nome}*
+--------------------
+👤 *Cliente:* ${cliente.nome || 'cliente'}
+💰 *Valor:* R$ ${plano.valor}
+
+Abra o link abaixo e conclua o pagamento pelo PayPal:
+${cobranca.link}
+
+✅ A confirmação é automática. Não é necessário enviar comprovante.`;
+        const envio = await enviarMensagemWhatsAppComFallback(
+            client,
+            cliente.telefone,
+            mensagem,
+            'Envio manual do link PayPal'
+        );
+
+        await adicionarNotaCliente(
+            cliente.id,
+            `Link PayPal do plano enviado manualmente: ${plano.nome}, R$ ${plano.valor}.`
+        );
+        logControleClientes('PayPal do plano enviado ao cliente', {
+            clienteId: cliente.id,
+            nome: cliente.nome,
+            plano: plano.nome,
+            valor: plano.valor,
+            destino: envio.destino,
+            ordemPayPal: cobranca.ordemId
+        });
+        return res.redirect(montarUrlClienteMensagem(cliente.id, 'Link PayPal do plano enviado ao cliente.'));
+    } catch (err) {
+        logControleClientes('Erro ao enviar PayPal do plano', {
+            clienteId: req.params.id,
+            erro: err.message
+        });
+        return res.redirect(montarUrlClienteMensagem(
+            req.params.id,
+            `Não foi possível enviar o PayPal do plano: ${err.message}`
+        ));
     }
 });
 

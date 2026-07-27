@@ -30,3 +30,10 @@ test('Painel Mestre oferece limpeza segura de disco e otimizacao de memoria',()=
     assert.match(provisionador,/\['\.wwebjs_auth_backup', '\.wwebjs_cache_backup'\]/);
     assert.match(provisionador,/copiasSessao\.slice\(1\)/);
 });
+
+test('acao PayPal individual aparece somente quando a integracao esta ativa',()=>{
+    const rota=fs.readFileSync(path.join(repoRoot,'routes','clientesRoute.js'),'utf8');
+    assert.match(rota,/String\(config\.paypalAtivo\) === '1'[\s\S]{0,300}enviar-paypal-plano/);
+    assert.match(rota,/router\.post\('\/clientes\/:id\/enviar-paypal-plano'/);
+    assert.match(rota,/criarCobrancaPayPal\(plano/);
+});
