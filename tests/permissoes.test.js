@@ -67,6 +67,8 @@ test('PayPal manual funciona sem credenciais Business e exige conferencia',()=>{
     const conversa=fs.readFileSync(path.join(repoRoot,'services','conversaService.js'),'utf8');
     assert.match(config,/paypalModo: 'api'/);
     assert.match(config,/modo === 'manual'[\s\S]{0,220}linkManual/);
+    assert.match(config,/paypalEmailManual/);
     assert.match(paypal,/PENDENTE_MANUAL/);
+    assert.match(paypal,/email: emailConfigurado/);
     assert.match(conversa,/envie o comprovante nesta conversa/);
 });

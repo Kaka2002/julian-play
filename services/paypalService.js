@@ -104,7 +104,8 @@ async function paypalDisponivel() {
     const config = await obterConfiguracoes();
     if (String(config.paypalAtivo) !== '1') return false;
     if (config.paypalModo === 'manual') {
-        return /^https:\/\//i.test(String(config.paypalLinkManual || ''));
+        return /^https:\/\//i.test(String(config.paypalLinkManual || ''))
+            || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(config.paypalEmailManual || ''));
     }
     return String(config.paypalAtivo) === '1'
         && Boolean(config.paypalClientId)
@@ -119,21 +120,32 @@ async function criarCobrancaPayPal(plano = {}, opcoes = {}) {
     const config = await obterConfiguracoes();
     if (String(config.paypalAtivo) !== '1') throw new Error('Ative o PayPal na tela Manutencao.');
     if (config.paypalModo === 'manual') {
-        if (!/^https:\/\//i.test(String(config.paypalLinkManual || ''))) {
-            throw new Error('Configure o link manual do PayPal na tela Manutencao.');
+        const linkConfigurado = String(config.paypalLinkManual || '').trim();
+        const emailConfigurado = String(config.paypalEmailManual || '').trim();
+        if (!linkConfigurado && !emailConfigurado) {
+            throw new Error('Configure o link ou o e-mail manual do PayPal na tela Manutencao.');
         }
         const cliente = await buscarClientePorId(clienteId);
         if (!cliente) throw new Error('Cliente nao encontrado para gerar a cobranca PayPal.');
         const valorNumero = moedaNumero(plano.valorNumero || plano.valorTotal || plano.valor);
         if (valorNumero <= 0) throw new Error('O plano precisa ter valor maior que zero.');
         const referencia = `JP-PP-MANUAL-${clienteId}-${crypto.randomUUID()}`;
-        const link = String(config.paypalLinkManual)
-            .replaceAll('{valor}', valorNumero.toFixed(2))
-            .replaceAll('{referencia}', encodeURIComponent(referencia));
+        const link = linkConfigurado
+            ? linkConfigurado
+                .replaceAll('{valor}', valorNumero.toFixed(2))
+                .replaceAll('{referencia}', encodeURIComponent(referencia))
+            : '';
         await registrarEvento('paypal_cobranca_manual', 'info',
             `Link PayPal manual enviado para ${cliente.nome}, R$ ${moedaTexto(valorNumero)}.`,
             { clienteId, referencia, valor: moedaTexto(valorNumero) });
-        return { referencia, ordemId: referencia, link, status: 'PENDENTE_MANUAL', manual: true };
+        return {
+            referencia,
+            ordemId: referencia,
+            link,
+            email: emailConfigurado,
+            status: 'PENDENTE_MANUAL',
+            manual: true
+        };
     }
     if (!config.paypalClientId || !config.paypalClientSecret) throw new Error('Configure as credenciais do PayPal.');
     if (!/^https:\/\//i.test(String(config.paypalRetornoUrl || ''))) {

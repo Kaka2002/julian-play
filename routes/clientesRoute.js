@@ -8200,6 +8200,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             <label class="toggle-line full"><input type="checkbox" name="paypalAtivo" value="1" ${String(status.config?.paypalAtivo) === '1' ?'checked' : ''}><span>Oferecer PayPal nas renovações pelo WhatsApp</span></label>
             <label>Modo de recebimento<select name="paypalModo"><option value="manual" ${status.config?.paypalModo === 'manual' ?'selected' : ''}>Manual — conta pessoal, sem CNPJ</option><option value="api" ${status.config?.paypalModo !== 'manual' ?'selected' : ''}>Automático — API Business</option></select></label>
             ${campo({ nome: 'paypalLinkManual', label: 'Link de recebimento PayPal pessoal', valor: status.config?.paypalLinkManual || '', tipo: 'url', attrs: 'placeholder="https://paypal.me/seuusuario"' })}
+            ${campo({ nome: 'paypalEmailManual', label: 'E-mail da conta PayPal pessoal', valor: status.config?.paypalEmailManual || '', tipo: 'email', attrs: 'placeholder="seuemail@exemplo.com"' })}
             <label>Ambiente<select name="paypalAmbiente"><option value="sandbox" ${status.config?.paypalAmbiente !== 'live' ?'selected' : ''}>Sandbox (testes)</option><option value="live" ${status.config?.paypalAmbiente === 'live' ?'selected' : ''}>Produção</option></select></label>
             ${campo({ nome: 'paypalClientId', label: 'Client ID do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientId ?'Configurado — deixe vazio para manter' : 'Client ID da aplicação REST'}"` })}
             ${campo({ nome: 'paypalClientSecret', label: 'Client Secret do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientSecret ?'Configurado — deixe vazio para manter' : 'Client Secret da aplicação REST'}"` })}
@@ -9125,8 +9126,9 @@ router.post('/clientes/:id/enviar-paypal-plano', async (req, res) => {
 👤 *Cliente:* ${cliente.nome || 'cliente'}
 💰 *Valor:* R$ ${plano.valor}
 
-Abra o link abaixo e conclua o pagamento pelo PayPal:
-${cobranca.link}
+${cobranca.link
+    ? `Abra o link abaixo e conclua o pagamento pelo PayPal:\n${cobranca.link}`
+    : `No aplicativo ou site do PayPal, escolha *Enviar pagamento* e envie para:\n📧 *${cobranca.email}*`}
 
 ${cobranca.manual
     ? `⚠️ Após pagar, envie o comprovante neste WhatsApp. A renovação será liberada depois da conferência.

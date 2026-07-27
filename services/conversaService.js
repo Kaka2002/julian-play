@@ -1341,8 +1341,9 @@ Digite apenas o número da forma de pagamento.`, imagens.erro);
 👤 *Cliente:* ${conversa.usuarioPainel}
 💰 *Valor:* R$ ${plano.valor}
 
-Abra o link abaixo e conclua o pagamento pelo PayPal:
-${cobranca.link}
+${cobranca.link
+    ? `Abra o link abaixo e conclua o pagamento pelo PayPal:\n${cobranca.link}`
+    : `No aplicativo ou site do PayPal, escolha *Enviar pagamento* e envie para:\n📧 *${cobranca.email}*`}
 
 ${cobranca.manual
     ? `⚠️ Após pagar, envie o comprovante nesta conversa. A renovação será liberada depois da conferência.

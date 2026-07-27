@@ -62,6 +62,7 @@ async function obterConfiguracoes() {
         paypalAtivo: '0',
         paypalModo: 'api',
         paypalLinkManual: '',
+        paypalEmailManual: '',
         paypalAmbiente: 'sandbox',
         paypalClientId: '',
         paypalClientSecret: '',
@@ -264,6 +265,7 @@ async function salvarConfiguracoesPayPal(dados = {}) {
     const ativo = String(dados.paypalAtivo || '') === '1' ? '1' : '0';
     const modo = String(dados.paypalModo || 'api').trim().toLowerCase();
     const linkManual = String(dados.paypalLinkManual || '').trim();
+    const emailManual = String(dados.paypalEmailManual || '').trim().toLowerCase();
     const ambiente = String(dados.paypalAmbiente || 'sandbox').trim().toLowerCase();
     const clientId = String(dados.paypalClientId || '').trim() || String(configAtual.paypalClientId || '');
     const clientSecret = String(dados.paypalClientSecret || '').trim() || String(configAtual.paypalClientSecret || '');
@@ -272,8 +274,14 @@ async function salvarConfiguracoesPayPal(dados = {}) {
 
     if (!['api', 'manual'].includes(modo)) throw new Error('Modo PayPal invalido.');
     if (!['sandbox', 'live'].includes(ambiente)) throw new Error('Ambiente PayPal invalido.');
-    if (ativo === '1' && modo === 'manual' && !/^https:\/\//i.test(linkManual)) {
-        throw new Error('Informe o link HTTPS de recebimento da sua conta PayPal.');
+    if (linkManual && !/^https:\/\//i.test(linkManual)) {
+        throw new Error('O link de recebimento PayPal precisa usar HTTPS.');
+    }
+    if (emailManual && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailManual)) {
+        throw new Error('Informe um e-mail PayPal valido.');
+    }
+    if (ativo === '1' && modo === 'manual' && !linkManual && !emailManual) {
+        throw new Error('Informe o link ou o e-mail da sua conta PayPal.');
     }
     if (ativo === '1' && modo === 'api' && (!clientId || !clientSecret)) {
         throw new Error('Informe o Client ID e o Client Secret do PayPal.');
@@ -285,6 +293,7 @@ async function salvarConfiguracoesPayPal(dados = {}) {
     await salvarConfiguracao('paypalAtivo', ativo);
     await salvarConfiguracao('paypalModo', modo);
     await salvarConfiguracao('paypalLinkManual', linkManual);
+    await salvarConfiguracao('paypalEmailManual', emailManual);
     await salvarConfiguracao('paypalAmbiente', ambiente);
     await salvarConfiguracao('paypalClientId', clientId);
     await salvarConfiguracao('paypalClientSecret', clientSecret);
