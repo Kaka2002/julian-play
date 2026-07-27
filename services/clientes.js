@@ -384,6 +384,11 @@ function dataBaseRenovacao(cliente = {}) {
     return data;
 }
 
+function dataPagamentoRenovacao(dataPagamento) {
+    const data = new Date(String(dataPagamento || ''));
+    return Number.isNaN(data.getTime()) ? new Date() : data;
+}
+
 function agoraLocalInput() {
     return agoraSaoPauloInput();
 }
@@ -1106,7 +1111,10 @@ async function renovarCliente(dados = {}) {
         throw new Error('Informe a forma de pagamento.');
     }
 
-    const base = dataBaseRenovacao(cliente);
+    const reiniciarPeriodo = dados.reiniciarPeriodo === true || String(dados.reiniciarPeriodo || '') === '1';
+    const base = reiniciarPeriodo
+        ? dataPagamentoRenovacao(dataPagamento)
+        : dataBaseRenovacao(cliente);
     const inicioRenovacao = dataParaCampos(base).dataVencimento;
     const vencimentoAnterior = cliente.dataVencimento || cliente.vencimento || '';
     const vencimentoNovo = adicionarPeriodoContrato(base, diasContrato);

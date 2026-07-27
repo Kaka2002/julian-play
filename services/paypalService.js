@@ -246,7 +246,7 @@ async function processarOrdemPayPal(ordemId, capturar = false) {
             valorPlano: cobranca.valorPlano,
             assinaturaApp: cobranca.assinaturaApp,
             formaPagamento: 'PayPal',
-            dataPagamento: new Date().toISOString().slice(0, 16),
+            reiniciarPeriodo: true,
             observacoes: `Confirmado automaticamente. PayPal: ${pagamento.capturaId || ordemId}. Referencia: ${cobranca.referencia}.`
         });
         await executar(
