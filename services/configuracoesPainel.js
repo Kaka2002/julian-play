@@ -60,6 +60,8 @@ async function obterConfiguracoes() {
         mercadoPagoEmailPagador: '',
         mercadoPagoWhatsappControle: '',
         paypalAtivo: '0',
+        paypalModo: 'api',
+        paypalLinkManual: '',
         paypalAmbiente: 'sandbox',
         paypalClientId: '',
         paypalClientSecret: '',
@@ -260,21 +262,29 @@ async function salvarConfiguracoesProvedorPix(dados = {}) {
 async function salvarConfiguracoesPayPal(dados = {}) {
     const configAtual = await obterConfiguracoes();
     const ativo = String(dados.paypalAtivo || '') === '1' ? '1' : '0';
+    const modo = String(dados.paypalModo || 'api').trim().toLowerCase();
+    const linkManual = String(dados.paypalLinkManual || '').trim();
     const ambiente = String(dados.paypalAmbiente || 'sandbox').trim().toLowerCase();
     const clientId = String(dados.paypalClientId || '').trim() || String(configAtual.paypalClientId || '');
     const clientSecret = String(dados.paypalClientSecret || '').trim() || String(configAtual.paypalClientSecret || '');
     const retornoUrl = String(dados.paypalRetornoUrl || '').trim().replace(/\/+$/, '');
     const webhookId = String(dados.paypalWebhookId || '').trim() || String(configAtual.paypalWebhookId || '');
 
+    if (!['api', 'manual'].includes(modo)) throw new Error('Modo PayPal invalido.');
     if (!['sandbox', 'live'].includes(ambiente)) throw new Error('Ambiente PayPal invalido.');
-    if (ativo === '1' && (!clientId || !clientSecret)) {
+    if (ativo === '1' && modo === 'manual' && !/^https:\/\//i.test(linkManual)) {
+        throw new Error('Informe o link HTTPS de recebimento da sua conta PayPal.');
+    }
+    if (ativo === '1' && modo === 'api' && (!clientId || !clientSecret)) {
         throw new Error('Informe o Client ID e o Client Secret do PayPal.');
     }
-    if (ativo === '1' && !/^https:\/\//i.test(retornoUrl)) {
+    if (ativo === '1' && modo === 'api' && !/^https:\/\//i.test(retornoUrl)) {
         throw new Error('Informe a URL HTTPS publica desta instalacao para o retorno do PayPal.');
     }
 
     await salvarConfiguracao('paypalAtivo', ativo);
+    await salvarConfiguracao('paypalModo', modo);
+    await salvarConfiguracao('paypalLinkManual', linkManual);
     await salvarConfiguracao('paypalAmbiente', ambiente);
     await salvarConfiguracao('paypalClientId', clientId);
     await salvarConfiguracao('paypalClientSecret', clientSecret);

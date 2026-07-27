@@ -60,3 +60,13 @@ test('comprovante de PIX e PayPal segue para o WhatsApp de controle',()=>{
     assert.match(monitor,/mercadoPagoWhatsappControle \|\| config\.alertaWhatsappControle/);
     assert.match(rota,/WhatsApp para comprovantes de PIX e PayPal/);
 });
+
+test('PayPal manual funciona sem credenciais Business e exige conferencia',()=>{
+    const config=fs.readFileSync(path.join(repoRoot,'services','configuracoesPainel.js'),'utf8');
+    const paypal=fs.readFileSync(path.join(repoRoot,'services','paypalService.js'),'utf8');
+    const conversa=fs.readFileSync(path.join(repoRoot,'services','conversaService.js'),'utf8');
+    assert.match(config,/paypalModo: 'api'/);
+    assert.match(config,/modo === 'manual'[\s\S]{0,220}linkManual/);
+    assert.match(paypal,/PENDENTE_MANUAL/);
+    assert.match(conversa,/envie o comprovante nesta conversa/);
+});

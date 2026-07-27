@@ -1344,7 +1344,10 @@ Digite apenas o número da forma de pagamento.`, imagens.erro);
 Abra o link abaixo e conclua o pagamento pelo PayPal:
 ${cobranca.link}
 
-✅ A confirmação é automática. Não é necessário enviar comprovante.
+${cobranca.manual
+    ? `⚠️ Após pagar, envie o comprovante nesta conversa. A renovação será liberada depois da conferência.
+🔖 *Referência:* ${cobranca.referencia}`
+    : '✅ A confirmação é automática. Não é necessário enviar comprovante.'}
 
 ${RODAPE_ATENDIMENTO}`, imagens.renovacao);
         } catch (err) {

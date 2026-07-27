@@ -8198,13 +8198,15 @@ function telaManutencao(status = {}, opcoes = {}) {
         </div>
         <form class="fields" method="post" action="/manutencao/paypal" style="padding-top:0;">
             <label class="toggle-line full"><input type="checkbox" name="paypalAtivo" value="1" ${String(status.config?.paypalAtivo) === '1' ?'checked' : ''}><span>Oferecer PayPal nas renovações pelo WhatsApp</span></label>
+            <label>Modo de recebimento<select name="paypalModo"><option value="manual" ${status.config?.paypalModo === 'manual' ?'selected' : ''}>Manual — conta pessoal, sem CNPJ</option><option value="api" ${status.config?.paypalModo !== 'manual' ?'selected' : ''}>Automático — API Business</option></select></label>
+            ${campo({ nome: 'paypalLinkManual', label: 'Link de recebimento PayPal pessoal', valor: status.config?.paypalLinkManual || '', tipo: 'url', attrs: 'placeholder="https://paypal.me/seuusuario"' })}
             <label>Ambiente<select name="paypalAmbiente"><option value="sandbox" ${status.config?.paypalAmbiente !== 'live' ?'selected' : ''}>Sandbox (testes)</option><option value="live" ${status.config?.paypalAmbiente === 'live' ?'selected' : ''}>Produção</option></select></label>
             ${campo({ nome: 'paypalClientId', label: 'Client ID do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientId ?'Configurado — deixe vazio para manter' : 'Client ID da aplicação REST'}"` })}
             ${campo({ nome: 'paypalClientSecret', label: 'Client Secret do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientSecret ?'Configurado — deixe vazio para manter' : 'Client Secret da aplicação REST'}"` })}
             ${campo({ nome: 'paypalRetornoUrl', label: 'URL pública desta instalação', valor: status.config?.paypalRetornoUrl || '', tipo: 'url', attrs: 'placeholder="https://amplaytv.julianplay.com.br"' })}
             ${campo({ nome: 'paypalWebhookId', label: 'Webhook ID do PayPal (recomendado)', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalWebhookId ?'Configurado — deixe vazio para manter' : 'ID do webhook cadastrado no PayPal'}"` })}
             ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
-            <div class="notice full">Cadastre no PayPal o webhook <strong>https://seu-dominio/webhooks/paypal</strong> para o evento <strong>PAYMENT.CAPTURE.COMPLETED</strong>. O cliente paga pelo PayPal, mas a cobrança usa BRL e o mesmo valor cadastrado no plano.</div>
+            <div class="notice full"><strong>Modo manual:</strong> informe o link da sua conta pessoal. O cliente envia o comprovante e você confirma a renovação no cadastro dele. Não há webhook nem liberação automática. <strong>Modo API:</strong> exige conta Business e usa o webhook <strong>https://seu-dominio/webhooks/paypal</strong>.</div>
             <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar PayPal</button></div>
         </form>
     </section>
@@ -9126,7 +9128,10 @@ router.post('/clientes/:id/enviar-paypal-plano', async (req, res) => {
 Abra o link abaixo e conclua o pagamento pelo PayPal:
 ${cobranca.link}
 
-✅ A confirmação é automática. Não é necessário enviar comprovante.`;
+${cobranca.manual
+    ? `⚠️ Após pagar, envie o comprovante neste WhatsApp. A renovação será liberada depois da conferência.
+🔖 *Referência:* ${cobranca.referencia}`
+    : '✅ A confirmação é automática. Não é necessário enviar comprovante.'}`;
         const envio = await enviarMensagemWhatsAppComFallback(
             client,
             cliente.telefone,
