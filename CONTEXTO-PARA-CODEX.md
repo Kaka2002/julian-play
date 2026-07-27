@@ -407,3 +407,14 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   reinicializacao pendente.
 - Bancos, sessoes do WhatsApp, configuracoes e backups ativos nao foram
   alterados.
+
+## PayPal, saude e deploy em 27/07/2026
+
+- Pagamentos PayPal aprovados passam a ser encaminhados tambem ao webhook de
+  alertas configurado, alem da renovacao e confirmacao pelo WhatsApp.
+- Alertas repetidos de saude foram limitados a uma repeticao a cada 6 horas.
+  Escalada para nivel critico continua imediata e a mensagem de normalizacao
+  exige 30 minutos continuos de estabilidade.
+- O `deploy.ps1` mantem `julian-amplaytv` parado e salva esse estado no PM2.
+- Depois de uma atualizacao bem-sucedida, o deploy recria automaticamente o
+  pacote oficial de instalacao local.

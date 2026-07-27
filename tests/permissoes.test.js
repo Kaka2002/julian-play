@@ -37,3 +37,16 @@ test('acao PayPal individual aparece somente quando a integracao esta ativa',()=
     assert.match(rota,/router\.post\('\/clientes\/:id\/enviar-paypal-plano'/);
     assert.match(rota,/criarCobrancaPayPal\(plano/);
 });
+
+test('PayPal aprovado avisa o webhook e alertas de saude possuem intervalo',()=>{
+    const paypal=fs.readFileSync(path.join(repoRoot,'services','paypalService.js'),'utf8');
+    const monitor=fs.readFileSync(path.join(repoRoot,'services','monitoramentoComercial.js'),'utf8');
+    const mestre=fs.readFileSync(path.join(repoRoot,'master','app.js'),'utf8');
+    assert.match(paypal,/paypal_pagamento_aprovado[\s\S]{0,500}enviarWebhook/);
+    assert.match(paypal,/PAYPAL RECEBIDO E CONFIRMADO/);
+    assert.match(monitor,/ALERTA_SAUDE_INTERVALO_HORAS \|\| 6/);
+    assert.match(monitor,/SAUDE_NORMALIZADA_MINUTOS \|\| 30/);
+    assert.match(mestre,/INTERVALO_ALERTA_CENTRAL_MS = 6 \* 60 \* 60 \* 1000/);
+    assert.match(mestre,/NORMALIZACAO_CENTRAL_MS = 30 \* 60 \* 1000/);
+    assert.match(mestre,/codigosAlertas\.sort\(\)\.join\('\|'\)/);
+});

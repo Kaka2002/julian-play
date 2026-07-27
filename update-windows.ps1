@@ -2,7 +2,9 @@ param(
     [string]$NomeProcesso = 'julian-play',
     [string]$PastaDados = '',
     [switch]$PularGit,
-    [switch]$PularDependencias
+    [switch]$PularDependencias,
+    [string[]]$ProcessosParaManterParados = @(),
+    [switch]$GerarPacoteCliente
 )
 
 $ErrorActionPreference = 'Stop'
@@ -119,6 +121,9 @@ $PastaDados = [IO.Path]::GetFullPath($PastaDados)
 $npm = ExigirComando 'npm.cmd'
 $pm2 = ExigirComando 'pm2.cmd'
 $processosJulian = ObterProcessosJulian $pm2 $NomeProcesso
+foreach ($processoAdicional in $ProcessosParaManterParados) {
+    AdicionarProcessoJulian $processosJulian $processoAdicional
+}
 
 $git = $null
 $commitAntesAtualizacao = $null
@@ -233,10 +238,18 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "PM2 startOrReload terminou com codigo $LASTEXITCODE."
     }
-    foreach ($processo in ($processosJulian | Where-Object { $_ -ne $NomeProcesso })) {
+    foreach ($processo in ($processosJulian | Where-Object {
+        $_ -ne $NomeProcesso -and $_ -notin $ProcessosParaManterParados
+    })) {
         & $pm2.Source restart $processo
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Nao foi possivel reiniciar $processo. Se for uma instalacao incompleta, recrie pelo Painel Mestre."
+        }
+    }
+    foreach ($processo in $ProcessosParaManterParados) {
+        & $pm2.Source stop $processo
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Nao foi possivel manter $processo parado; confira o cadastro no PM2."
         }
     }
     & $pm2.Source save --force
@@ -245,6 +258,19 @@ try {
     }
 
     & $pm2.Source status
+
+    if ($GerarPacoteCliente) {
+        Etapa 'Recriando o pacote de instalacao local'
+        $geradorPacote = Join-Path $diretorioProjeto 'entrega-cliente-local\USO_INTERNO_NAO_ENVIAR\CRIAR-PACOTE-APP.ps1'
+        if (-not (Test-Path -LiteralPath $geradorPacote)) {
+            throw "Gerador do pacote local nao encontrado: $geradorPacote"
+        }
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $geradorPacote
+        if ($LASTEXITCODE -ne 0) {
+            throw "Geracao do pacote local terminou com codigo $LASTEXITCODE."
+        }
+    }
+
     Write-Host '`nAtualizacao concluida com sucesso.' -ForegroundColor Green
 } catch {
     Write-Error $_
@@ -253,8 +279,13 @@ try {
     try {
         & $pm2.Source startOrReload (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
         if ($LASTEXITCODE -eq 0) {
-            foreach ($processo in ($processosJulian | Where-Object { $_ -ne $NomeProcesso })) {
+            foreach ($processo in ($processosJulian | Where-Object {
+                $_ -ne $NomeProcesso -and $_ -notin $ProcessosParaManterParados
+            })) {
                 & $pm2.Source restart $processo 2>$null | Out-Host
+            }
+            foreach ($processo in $ProcessosParaManterParados) {
+                & $pm2.Source stop $processo 2>$null | Out-Host
             }
             & $pm2.Source save --force
             Write-Warning 'O aplicativo foi reiniciado, mas a atualizacao precisa ser corrigida.'

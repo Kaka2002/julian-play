@@ -31,6 +31,7 @@ if (-not (Test-Path -LiteralPath $atualizador)) {
 }
 
 $argumentosAtualizador = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $atualizador, '-PularGit')
+$argumentosAtualizador += @('-ProcessosParaManterParados', 'julian-amplaytv', '-GerarPacoteCliente')
 if ($arquivosDependencia.Count -eq 0) {
     $argumentosAtualizador += '-PularDependencias'
 }

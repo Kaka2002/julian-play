@@ -15,6 +15,8 @@ const { instalacaoAdministrador } = require('./licencaService');
 const { avaliarSaudeOperacional } = require('./saudeOperacionalService');
 
 const INTERVALO_MS = Number(process.env.MONITOR_INTERVALO_MS || 60000);
+const ALERTA_SAUDE_INTERVALO_MS = Math.max(1, Number(process.env.ALERTA_SAUDE_INTERVALO_HORAS || 6)) * 60 * 60 * 1000;
+const SAUDE_NORMALIZADA_ESTAVEL_MS = Math.max(5, Number(process.env.SAUDE_NORMALIZADA_MINUTOS || 30)) * 60 * 1000;
 
 let agendador = null;
 let executando = false;
@@ -25,6 +27,9 @@ let reinicioSuaveTentado = false;
 let novoQrTentado = false;
 let ultimaAcaoRecuperacaoEm = 0;
 let assinaturaUltimoAlertaOperacional = '';
+let nivelUltimoAlertaOperacional = '';
+let ultimoAlertaOperacionalEm = 0;
+let saudeNormalDesde = 0;
 
 function destinoWhatsapp(telefone) {
     const numero = String(telefone || '').replace(/\D/g, '');
@@ -56,19 +61,34 @@ async function verificarSaudeOperacional(config, agora, controles, statusWhatsAp
     const avaliacao = avaliarSaudeOperacional(config);
     const assinatura = avaliacao.alertas.map(item => item.codigo).sort().join(',');
 
-    if (assinatura !== assinaturaUltimoAlertaOperacional) {
-        if (avaliacao.alertas.length) {
+    const agoraMs = Date.now();
+    if (avaliacao.alertas.length) {
+        saudeNormalDesde = 0;
+        const escalouParaCritico = avaliacao.nivel === 'critico' && nivelUltimoAlertaOperacional !== 'critico';
+        const podeRepetir = agoraMs - ultimoAlertaOperacionalEm >= ALERTA_SAUDE_INTERVALO_MS;
+        if (!assinaturaUltimoAlertaOperacional || escalouParaCritico || podeRepetir) {
             const mensagem = `Saude operacional ${avaliacao.nivel}: ${avaliacao.alertas.map(item => item.mensagem).join(' ')}`;
             await registrarEventoSistema('saude_operacional', avaliacao.nivel === 'critico' ? 'erro' : 'alerta', mensagem, avaliacao);
             await enviarWebhook(config.alertaWebhookUrl, { tipo: 'saude_operacional', nivel: avaliacao.nivel, mensagem, data: agora.iso, detalhes: avaliacao });
             await enviarWhatsappOperacional(config, controles, `⚠️ *ALERTA OPERACIONAL*\n\n${mensagem}`);
-        } else if (assinaturaUltimoAlertaOperacional) {
+            assinaturaUltimoAlertaOperacional = assinatura;
+            nivelUltimoAlertaOperacional = avaliacao.nivel;
+            ultimoAlertaOperacionalEm = agoraMs;
+        }
+    } else if (assinaturaUltimoAlertaOperacional) {
+        if (!saudeNormalDesde) saudeNormalDesde = agoraMs;
+        if (agoraMs - saudeNormalDesde >= SAUDE_NORMALIZADA_ESTAVEL_MS) {
             const mensagem = `Saude operacional normalizada. Disco: ${avaliacao.recursos.discoLivreGb ?? '-'} GB livres. Memoria: ${avaliacao.recursos.memoriaLivreMb} MB livres.`;
             await registrarEventoSistema('saude_operacional', 'sucesso', mensagem, avaliacao);
             await enviarWebhook(config.alertaWebhookUrl, { tipo: 'saude_operacional_normalizada', nivel: 'sucesso', mensagem, data: agora.iso, detalhes: avaliacao });
             await enviarWhatsappOperacional(config, controles, `✅ *SAÚDE NORMALIZADA*\n\n${mensagem}`);
+            assinaturaUltimoAlertaOperacional = '';
+            nivelUltimoAlertaOperacional = '';
+            ultimoAlertaOperacionalEm = 0;
+            saudeNormalDesde = 0;
         }
-        assinaturaUltimoAlertaOperacional = assinatura;
+    } else {
+        saudeNormalDesde = 0;
     }
 
     const semana = `${agora.data.slice(0, 4)}-${Math.ceil(Number(agora.data.slice(5, 7)) * 4.35 + Number(agora.data.slice(8, 10)) / 7)}`;

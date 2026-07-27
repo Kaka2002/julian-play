@@ -2244,7 +2244,12 @@ app.post('/instalacoes/:id/excluir', acao(excluirDefinitivamente, 'Instalação 
 let ultimaLimpezaOperacional = '';
 let ultimoResultadoLimpezaOperacional = null;
 let assinaturaAlertaCentral = '';
+let nivelAlertaCentral = '';
+let ultimoAlertaCentralEm = 0;
+let centralNormalDesde = 0;
 let ultimoRelatorioSemanalCentral = '';
+const INTERVALO_ALERTA_CENTRAL_MS = 6 * 60 * 60 * 1000;
+const NORMALIZACAO_CENTRAL_MS = 30 * 60 * 1000;
 
 async function enviarNotificacaoCentral(instalacoes, mensagem) {
     const admin = instalacoes.find(instalacaoAdministradora);
@@ -2267,16 +2272,47 @@ async function enviarNotificacaoCentral(instalacoes, mensagem) {
 async function monitorarCentralSaude() {
     const [instalacoes, recursos] = await Promise.all([listarInstalacoes(), obterRecursosServidor()]);
     const alertas = [];
-    if (recursos.discoLivreGb != null && recursos.discoLivreGb < 5) alertas.push(`DISCO CRITICO: ${recursos.discoLivreGb} GB livres`);
-    else if (recursos.discoLivreGb != null && recursos.discoLivreGb < 8) alertas.push(`DISCO EM ATENCAO: ${recursos.discoLivreGb} GB livres`);
-    if (Number(recursos.memoriaLivreMb || 0) < 512) alertas.push(`MEMORIA CRITICA: ${recursos.memoriaLivreMb} MB livres`);
+    const codigosAlertas = [];
+    if (recursos.discoLivreGb != null && recursos.discoLivreGb < 5) {
+        alertas.push(`DISCO CRITICO: ${recursos.discoLivreGb} GB livres`);
+        codigosAlertas.push('disco_critico');
+    } else if (recursos.discoLivreGb != null && recursos.discoLivreGb < 8) {
+        alertas.push(`DISCO EM ATENCAO: ${recursos.discoLivreGb} GB livres`);
+        codigosAlertas.push('disco_atencao');
+    }
+    if (Number(recursos.memoriaLivreMb || 0) < 512) {
+        alertas.push(`MEMORIA CRITICA: ${recursos.memoriaLivreMb} MB livres`);
+        codigosAlertas.push('memoria_critica');
+    }
     const instaveis = instalacoes.filter(item => Number(item.resumoComercial?.reconexoesWhatsapp24h || 0) >= 5);
-    if (instaveis.length) alertas.push(`WHATSAPP INSTAVEL: ${instaveis.map(item => item.nome).join(', ')}`);
-    const assinatura = alertas.join('|');
-    if (assinatura !== assinaturaAlertaCentral) {
-        if (alertas.length) await enviarNotificacaoCentral(instalacoes, `⚠️ *CENTRAL DE SAUDE*\n\n${alertas.join('\n')}`);
-        else if (assinaturaAlertaCentral) await enviarNotificacaoCentral(instalacoes, '✅ *CENTRAL DE SAUDE*\n\nOs recursos do servidor voltaram aos níveis normais.');
-        assinaturaAlertaCentral = assinatura;
+    if (instaveis.length) {
+        alertas.push(`WHATSAPP INSTAVEL: ${instaveis.map(item => item.nome).join(', ')}`);
+        codigosAlertas.push(`whatsapp_instavel:${instaveis.map(item => item.id).sort().join(',')}`);
+    }
+    const assinatura = codigosAlertas.sort().join('|');
+    const nivel = codigosAlertas.some(codigo => codigo.includes('critico')) ? 'critico' : 'atencao';
+    const agoraMs = Date.now();
+    if (alertas.length) {
+        centralNormalDesde = 0;
+        const escalouParaCritico = nivel === 'critico' && nivelAlertaCentral !== 'critico';
+        const podeRepetir = agoraMs - ultimoAlertaCentralEm >= INTERVALO_ALERTA_CENTRAL_MS;
+        if (!assinaturaAlertaCentral || escalouParaCritico || podeRepetir) {
+            await enviarNotificacaoCentral(instalacoes, `⚠️ *CENTRAL DE SAUDE*\n\n${alertas.join('\n')}`);
+            assinaturaAlertaCentral = assinatura;
+            nivelAlertaCentral = nivel;
+            ultimoAlertaCentralEm = agoraMs;
+        }
+    } else if (assinaturaAlertaCentral) {
+        if (!centralNormalDesde) centralNormalDesde = agoraMs;
+        if (agoraMs - centralNormalDesde >= NORMALIZACAO_CENTRAL_MS) {
+            await enviarNotificacaoCentral(instalacoes, '✅ *CENTRAL DE SAUDE*\n\nOs recursos do servidor voltaram aos níveis normais.');
+            assinaturaAlertaCentral = '';
+            nivelAlertaCentral = '';
+            ultimoAlertaCentralEm = 0;
+            centralNormalDesde = 0;
+        }
+    } else {
+        centralNormalDesde = 0;
     }
 
     const agora = new Date();

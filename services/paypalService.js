@@ -84,6 +84,20 @@ async function registrarEvento(tipo, nivel, mensagem, detalhes = {}) {
     await registrarEventoSistema(tipo, nivel, mensagem, detalhes).catch(err => {
         console.error(`[paypal] Falha ao registrar evento: ${err.message}`);
     });
+    if (tipo === 'paypal_pagamento_aprovado') {
+        const config = await obterConfiguracoes().catch(() => ({}));
+        if (config.alertaWebhookUrl) {
+            const { enviarWebhook } = require('./monitoramentoComercial');
+            await enviarWebhook(config.alertaWebhookUrl, {
+                tipo,
+                nivel,
+                mensagem: `PAYPAL RECEBIDO E CONFIRMADO\n${mensagem}`,
+                detalhes
+            }).catch(err => {
+                console.error(`[paypal] Falha ao enviar confirmacao ao webhook: ${err.message}`);
+            });
+        }
+    }
 }
 
 async function paypalDisponivel() {
