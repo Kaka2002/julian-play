@@ -59,6 +59,12 @@ async function obterConfiguracoes() {
         mercadoPagoWebhookUrl: '',
         mercadoPagoEmailPagador: '',
         mercadoPagoWhatsappControle: '',
+        paypalAtivo: '0',
+        paypalAmbiente: 'sandbox',
+        paypalClientId: '',
+        paypalClientSecret: '',
+        paypalRetornoUrl: '',
+        paypalWebhookId: '',
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
@@ -251,6 +257,32 @@ async function salvarConfiguracoesProvedorPix(dados = {}) {
     return obterConfiguracoes();
 }
 
+async function salvarConfiguracoesPayPal(dados = {}) {
+    const configAtual = await obterConfiguracoes();
+    const ativo = String(dados.paypalAtivo || '') === '1' ? '1' : '0';
+    const ambiente = String(dados.paypalAmbiente || 'sandbox').trim().toLowerCase();
+    const clientId = String(dados.paypalClientId || '').trim() || String(configAtual.paypalClientId || '');
+    const clientSecret = String(dados.paypalClientSecret || '').trim() || String(configAtual.paypalClientSecret || '');
+    const retornoUrl = String(dados.paypalRetornoUrl || '').trim().replace(/\/+$/, '');
+    const webhookId = String(dados.paypalWebhookId || '').trim() || String(configAtual.paypalWebhookId || '');
+
+    if (!['sandbox', 'live'].includes(ambiente)) throw new Error('Ambiente PayPal invalido.');
+    if (ativo === '1' && (!clientId || !clientSecret)) {
+        throw new Error('Informe o Client ID e o Client Secret do PayPal.');
+    }
+    if (ativo === '1' && !/^https:\/\//i.test(retornoUrl)) {
+        throw new Error('Informe a URL HTTPS publica desta instalacao para o retorno do PayPal.');
+    }
+
+    await salvarConfiguracao('paypalAtivo', ativo);
+    await salvarConfiguracao('paypalAmbiente', ambiente);
+    await salvarConfiguracao('paypalClientId', clientId);
+    await salvarConfiguracao('paypalClientSecret', clientSecret);
+    await salvarConfiguracao('paypalRetornoUrl', retornoUrl);
+    await salvarConfiguracao('paypalWebhookId', webhookId);
+    return obterConfiguracoes();
+}
+
 async function salvarConfiguracoesMonitoramento(dados = {}) {
     const hora = String(dados.backupAutomaticoHora || '03:00').trim();
     const retencao = Math.max(1, Math.min(365, Number.parseInt(dados.backupRetencaoDias || 30, 10) || 30));
@@ -296,6 +328,7 @@ module.exports = {
     salvarImagemRobo,
     salvarConfiguracoesPix,
     salvarConfiguracoesProvedorPix,
+    salvarConfiguracoesPayPal,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 };

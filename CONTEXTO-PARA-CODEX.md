@@ -217,6 +217,9 @@ delas, confirmar o estado real no código e nos testes:
 - controles de WhatsApp centralizados no Painel Mestre;
 - confirmação automática do PIX pelo Mercado Pago, com webhook no servidor e
   consulta periódica na instalação local;
+- opção adicional de pagamento PayPal nas renovações, cobrando em `BRL` o
+  mesmo valor do plano, com link no WhatsApp, retorno HTTPS, webhook e
+  renovação idempotente;
 - aviso de PIX confirmado no painel e no WhatsApp de controle;
 - envio do PIX correspondente ao plano após aviso de vencimento, com instrução
   para digitar `planos`;

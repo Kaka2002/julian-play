@@ -153,6 +153,20 @@ https://cliente.seudominio.com/webhooks/mercado-pago
 
 Em **Suas integracoes > Webhooks** no Mercado Pago, ative o evento **Pagamentos**. As cobrancas de renovacao vinculadas a um cliente passam a usar QR Code dinamico. Ao receber uma notificacao, o sistema consulta o pagamento diretamente na API do Mercado Pago, confere referencia, status e valor, registra uma unica renovacao e envia a confirmacao pelo WhatsApp.
 
+## Recebimento internacional com PayPal
+
+O PayPal pode ser ativado como opcao adicional nas renovacoes pelo WhatsApp.
+Depois que o cadastro e o plano forem localizados, o cliente escolhe PIX ou
+PayPal. A cobranca usa `BRL` e o mesmo valor do plano; o Julian Play nao
+calcula cambio.
+
+A integracao usa a API Orders v2, envia o link oficial de aprovacao, captura o
+pagamento no retorno HTTPS, valida referencia, moeda e valor e processa a
+renovacao de forma idempotente. O webhook `PAYMENT.CAPTURE.COMPLETED` funciona
+como confirmacao adicional.
+
+Consulte `entrega-cliente-local/ENVIAR_AO_CLIENTE/CONFIGURAR-PAYPAL.md`.
+
 Instalacoes locais sem uma URL HTTPS publica devem permanecer no modo PIX manual.
 
 ## Logs no Windows

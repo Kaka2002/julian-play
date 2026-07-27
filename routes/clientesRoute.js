@@ -55,6 +55,7 @@ const {
     salvarImagemRobo,
     salvarConfiguracoesPix,
     salvarConfiguracoesProvedorPix,
+    salvarConfiguracoesPayPal,
     salvarConfiguracoesMonitoramento,
     salvarConfiguracoesAcesso
 } = require('../services/configuracoesPainel');
@@ -8186,6 +8187,24 @@ function telaManutencao(status = {}, opcoes = {}) {
         </form>
     </section>
 
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div><h2 class="panel-title">Recebimento internacional com PayPal</h2><div class="subtitle">Cobra o mesmo valor do plano em reais e envia um link PayPal durante a renovação</div></div>
+            <span class="badge ${String(status.config?.paypalAtivo) === '1' ?'green' : ''}">${String(status.config?.paypalAtivo) === '1' ?'PayPal ativo' : 'PayPal desligado'}</span>
+        </div>
+        <form class="fields" method="post" action="/manutencao/paypal" style="padding-top:0;">
+            <label class="toggle-line full"><input type="checkbox" name="paypalAtivo" value="1" ${String(status.config?.paypalAtivo) === '1' ?'checked' : ''}><span>Oferecer PayPal nas renovações pelo WhatsApp</span></label>
+            <label>Ambiente<select name="paypalAmbiente"><option value="sandbox" ${status.config?.paypalAmbiente !== 'live' ?'selected' : ''}>Sandbox (testes)</option><option value="live" ${status.config?.paypalAmbiente === 'live' ?'selected' : ''}>Produção</option></select></label>
+            ${campo({ nome: 'paypalClientId', label: 'Client ID do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientId ?'Configurado — deixe vazio para manter' : 'Client ID da aplicação REST'}"` })}
+            ${campo({ nome: 'paypalClientSecret', label: 'Client Secret do PayPal', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalClientSecret ?'Configurado — deixe vazio para manter' : 'Client Secret da aplicação REST'}"` })}
+            ${campo({ nome: 'paypalRetornoUrl', label: 'URL pública desta instalação', valor: status.config?.paypalRetornoUrl || '', tipo: 'url', attrs: 'placeholder="https://amplaytv.julianplay.com.br"' })}
+            ${campo({ nome: 'paypalWebhookId', label: 'Webhook ID do PayPal (recomendado)', valor: '', tipo: 'password', attrs: `autocomplete="new-password" placeholder="${status.config?.paypalWebhookId ?'Configurado — deixe vazio para manter' : 'ID do webhook cadastrado no PayPal'}"` })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
+            <div class="notice full">Cadastre no PayPal o webhook <strong>https://seu-dominio/webhooks/paypal</strong> para o evento <strong>PAYMENT.CAPTURE.COMPLETED</strong>. O cliente paga pelo PayPal, mas a cobrança usa BRL e o mesmo valor cadastrado no plano.</div>
+            <div class="actions full"><button class="button" type="submit">${icon('check')} Salvar PayPal</button></div>
+        </form>
+    </section>
+
     ${monitoramentoOperacionalPermitido() ?`<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -9925,6 +9944,21 @@ router.post('/manutencao/pix-provedor', confirmarSenhaAcaoCritica, async (req, r
     } catch (err) {
         logControleClientes('Erro ao salvar provedor PIX', { erro: err.message });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar provedor PIX: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/paypal', confirmarSenhaAcaoCritica, async (req, res) => {
+    try {
+        await salvarConfiguracoesPayPal(req.body);
+        logControleClientes('Configuracao PayPal atualizada', {
+            ativo: String(req.body.paypalAtivo || '') === '1',
+            ambiente: req.body.paypalAmbiente,
+            credenciais: req.body.paypalClientId || req.body.paypalClientSecret ?'atualizadas':'mantidas'
+        });
+        res.redirect('/manutencao?mensagem=PayPal salvo com sucesso');
+    } catch (err) {
+        logControleClientes('Erro ao salvar PayPal', { erro: err.message });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar PayPal: ${err.message}`)}`);
     }
 });
 

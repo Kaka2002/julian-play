@@ -8,6 +8,7 @@ const { isMensagemConfirmacao, isPalavraChave, isPedidoTeste } = require('../uti
 const { enviarImagem } = require('./assetService');
 const { agendarEncerramentoTeste } = require('./encerramentoTesteService');
 const { buscarPlano, enviarQRCodePIX, listarPlanosComerciais } = require('./pixService');
+const { paypalDisponivel, criarCobrancaPayPal } = require('./paypalService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const {
     adicionarNotaCliente,
@@ -1198,8 +1199,8 @@ ${menuRenovacao(planos)}`, imagens.renovacao);
             return;
         }
 
-        apagarConversa(telefone);
         if (!plano.valorConfigurado) {
+            apagarConversa(telefone);
             pausarParaAtendente(telefone, conversa?.usuarioPainel || '', 'renovacao_plano_sem_valor');
             await responderComDigitacao(message, `*PLANO SELECIONADO*
 --------------------
@@ -1209,6 +1210,31 @@ Seu atendimento será encaminhado para um atendente finalizar a renovação.`, i
             return;
         }
 
+        if (conversa.clienteId && await paypalDisponivel()) {
+            definirConversa(telefone, {
+                ...conversa,
+                etapa: 'renovacao_pagamento',
+                planoPagamento: {
+                    id: plano.id,
+                    nome: plano.nome,
+                    valor: plano.valor,
+                    valorNumero: plano.valorNumero,
+                    dias: plano.dias
+                }
+            });
+            await responderComDigitacao(message, `💳 *FORMA DE PAGAMENTO*
+--------------------
+*Plano:* ${plano.nome}
+*Valor:* R$ ${plano.valor}
+
+*1* - PIX
+*2* - PayPal
+
+Digite apenas o número da opção.`, imagens.renovacao);
+            return;
+        }
+
+        apagarConversa(telefone);
         await simularDigitacao(message, 1500);
         await enviarQRCodePIX(message, plano, {
             tipo: 'renovacao',
@@ -1275,6 +1301,58 @@ Escolha um dispositivo da lista:
 
         apagarConversa(telefone);
         await responderComDigitacao(message, tutorial, imagens.ativacao);
+        return;
+    }
+
+    if (conversa?.etapa === 'renovacao_pagamento') {
+        const plano = conversa.planoPagamento || {};
+        if (!['1', '2'].includes(texto)) {
+            await responderComDigitacao(message, `⚠️ *OPÇÃO INVÁLIDA*
+--------------------
+*1* - PIX
+*2* - PayPal
+
+Digite apenas o número da forma de pagamento.`, imagens.erro);
+            return;
+        }
+
+        apagarConversa(telefone);
+        const opcoes = {
+            tipo: 'renovacao',
+            nomeCliente: conversa.usuarioPainel,
+            clienteId: conversa.clienteId,
+            plano: plano.nome,
+            tipoPlanoId: plano.id,
+            diasContrato: plano.dias,
+            valorPlano: plano.valor,
+            assinaturaApp: '0,00'
+        };
+
+        await simularDigitacao(message, 1500);
+        if (texto === '1') {
+            await enviarQRCodePIX(message, plano, opcoes);
+            return;
+        }
+
+        try {
+            const cobranca = await criarCobrancaPayPal(plano, opcoes);
+            await responderComDigitacao(message, `💳 *PAYPAL - RENOVAÇÃO ${plano.nome}*
+--------------------
+👤 *Cliente:* ${conversa.usuarioPainel}
+💰 *Valor:* R$ ${plano.valor}
+
+Abra o link abaixo e conclua o pagamento pelo PayPal:
+${cobranca.link}
+
+✅ A confirmação é automática. Não é necessário enviar comprovante.
+
+${RODAPE_ATENDIMENTO}`, imagens.renovacao);
+        } catch (err) {
+            console.error(`[paypal] Falha ao criar cobranca para ${telefone}: ${err.message}`);
+            await responderComDigitacao(message, `⚠️ Não foi possível gerar o link PayPal neste momento.
+
+Tente novamente ou fale com um atendente.`, imagens.erro);
+        }
         return;
     }
 
