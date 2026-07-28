@@ -542,3 +542,6 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   somente no processo de teste; a execucao normal permanece inalterada.
 - Execute `npm run test:e2e` para a validacao real de navegacao e
   `npm run test:all` para testes internos e de navegador.
+- O `deploy.ps1` preserva em `backups\deploy-recovery` um
+  `package-lock.json` legado e nao rastreado antes do primeiro pull que passa
+  a versionar esse arquivo. Isso evita bloqueio do Git sem apagar o artefato.

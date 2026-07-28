@@ -38,5 +38,5 @@ jobs:
             sleep 15
           done
 
-          echo "Deploy falhou apos 3 tentativas. Verifique se o SSH do servidor esta ativo e se a porta 22 aceita conexoes do GitHub Actions."
+          echo "Deploy falhou apos 3 tentativas. O SSH pode estar funcional; revise tambem o Git e os arquivos locais em C:\bots\julian-play usando a mensagem detalhada acima."
           exit 1
