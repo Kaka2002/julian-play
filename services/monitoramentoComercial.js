@@ -6,7 +6,8 @@ const os = require('os');
 const pacote = require('../package.json');
 const {
     criarBackupAutomatico,
-    limparBackupsAutomaticos,
+    aplicarPoliticaRetencaoBackups,
+    executarExercicioRestauracaoMensal,
     copiarBackupExterno,
     listarBackups
 } = require('./manutencao');
@@ -288,19 +289,47 @@ async function verificarBackup(config, agora) {
 
     try {
         const backup = await criarBackupAutomatico();
-        const removidos = limparBackupsAutomaticos(config.backupRetencaoDias || 30);
+        const politica = {
+            dias: config.backupRetencaoDias || 30,
+            semanas: config.backupRetencaoSemanas || 12,
+            meses: config.backupRetencaoMeses || 12
+        };
+        const retencaoLocal = aplicarPoliticaRetencaoBackups(politica);
         let copiaExterna = '';
+        let retencaoExterna = null;
         if (String(config.backupExternoAtivo) === '1') {
             copiaExterna = await copiarBackupExterno(backup.nome, config.backupExternoPasta);
+            retencaoExterna = aplicarPoliticaRetencaoBackups({ ...politica, pasta: config.backupExternoPasta });
             await salvarConfiguracao('ultimoBackupExterno', agora.iso);
         }
 
         await salvarConfiguracao('ultimoBackupAutomatico', agora.iso);
+        const mesAtual = agora.data.slice(0, 7);
+        let restauracaoMensal = null;
+        if (String(config.backupTesteRestauracaoMensalAtivo ?? '1') === '1'
+            && String(config.ultimoTesteRestauracaoMensal || '') !== mesAtual) {
+            try {
+                restauracaoMensal = await executarExercicioRestauracaoMensal(backup.nome);
+                await salvarConfiguracao('ultimoTesteRestauracaoMensal', mesAtual);
+                await salvarConfiguracao('ultimoBackupRecuperavel', JSON.stringify(restauracaoMensal));
+            } catch (err) {
+                await registrarEventoSistema('backup_restauracao_mensal', 'erro',
+                    `Falha no exercicio mensal de restauracao: ${err.message}`, { backup: backup.nome });
+                await enviarWebhook(config.alertaWebhookUrl, {
+                    tipo: 'backup_restauracao_mensal_erro',
+                    nivel: 'erro',
+                    mensagem: `Falha no exercicio mensal de restauracao: ${err.message}`,
+                    data: agora.iso
+                });
+            }
+        }
         await registrarEventoSistema('backup', 'sucesso', `Backup automático criado: ${backup.nome}`, {
             arquivo: backup.nome,
             tamanho: backup.tamanho,
-            removidos,
-            copiaExterna: copiaExterna || ''
+            retencaoLocal,
+            retencaoExterna,
+            copiaExterna: copiaExterna || '',
+            restauracaoMensal
         });
         console.log(`Monitoramento: backup automatico criado: ${backup.nome}`);
     } catch (err) {

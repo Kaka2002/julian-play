@@ -21,6 +21,24 @@ test('backup verificado pode ser copiado para armazenamento externo', () => {
     }
 });
 
+test('backup aplica retencao diaria semanal mensal e comprova restauracao isolada', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const db=require('./database/sqlite');await db.ready;const criado=await m.criarBackupAutomatico();const pasta=path.dirname(criado.caminho);const agora=new Date('2026-07-28T12:00:00Z');const criar=(nome,data)=>{const destino=path.join(pasta,nome);fs.copyFileSync(criado.caminho,destino);fs.copyFileSync(criado.caminho+'.json',destino+'.json');fs.utimesSync(destino,new Date(data),new Date(data));return destino};criar('clientes-auto-duplicado.db','2026-07-28T08:00:00Z');criar('clientes-auto-semana.db','2026-07-20T08:00:00Z');criar('clientes-auto-mes.db','2026-06-15T08:00:00Z');criar('clientes-auto-antigo.db','2024-01-15T08:00:00Z');fs.utimesSync(criado.caminho,agora,agora);const politica=m.aplicarPoliticaRetencaoBackups({dias:7,semanas:8,meses:6,agora});const nomes=fs.readdirSync(pasta).filter(x=>x.endsWith('.db'));const teste=await m.executarExercicioRestauracaoMensal(criado.nome);const relatorio=m.obterRelatorioUltimaRestauracao();process.stdout.write(JSON.stringify({removidos:politica.removidos,duplicado:nomes.includes('clientes-auto-duplicado.db'),semanal:nomes.includes('clientes-auto-semana.db'),mensal:nomes.includes('clientes-auto-mes.db'),antigo:nomes.includes('clientes-auto-antigo.db'),status:teste.status,mesmo:relatorio.backup===criado.nome,tabelas:teste.tabelas>0}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            removidos: 2,
+            duplicado: false,
+            semanal: true,
+            mensal: true,
+            antigo: false,
+            status: 'aprovado',
+            mesmo: true,
+            tabelas: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('TOTP aceita somente codigo atual da chave configurada', () => {
     const resultado = executarIsolado(`const s=require('./services/securityService');const segredo='JBSWY3DPEHPK3PXP';const atual=(()=>{const crypto=require('crypto');const a='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';let bits='';for(const c of segredo)bits+=a.indexOf(c).toString(2).padStart(5,'0');const bytes=[];for(let i=0;i+8<=bits.length;i+=8)bytes.push(parseInt(bits.slice(i,i+8),2));const contador=Buffer.alloc(8);contador.writeBigUInt64BE(BigInt(Math.floor(Date.now()/30000)));const h=crypto.createHmac('sha1',Buffer.from(bytes)).update(contador).digest();const o=h[19]&15;return String((h.readUInt32BE(o)&0x7fffffff)%1000000).padStart(6,'0')})();process.stdout.write(JSON.stringify([s.validarTotp(segredo,atual),s.validarTotp(segredo,'000000')]))`);
     try {

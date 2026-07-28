@@ -8,7 +8,8 @@ código; itens operacionais externos não são marcados como implementados.
 - Credenciais de clientes e integrações cifradas com AES-256-GCM, migração
   idempotente, rotação de chave e kit de recuperação cifrado.
 - Backup diário verificado, cópia externa opcional, alerta de falha,
-  `PRAGMA quick_check` e teste de restauração.
+  `PRAGMA quick_check`, retenção diária/semanal/mensal e exercício mensal de
+  restauração isolada com relatório do último backup recuperável.
 - Renovação PIX e PayPal API idempotente; fila de renovação externa com novas
   tentativas.
 - PayPal manual com fila própria, comprovante JPG/PNG/PDF dentro do `DATA_DIR`,
@@ -28,8 +29,6 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Parcial
 
-- Backup: falta retenção separada diária/semanal/mensal e exercício mensal
-  agendado com relatório.
 - Pagamento manual: concluído para PayPal pessoal. Estorno corrige a receita e
   preserva o acesso para decisão explícita, evitando suspensão acidental.
 - Campanhas: falta indicador manual de reclamação e pausa por taxa agregada de

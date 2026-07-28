@@ -332,22 +332,126 @@ function criarBackupAutomatico() {
     return criarBackup('clientes-auto');
 }
 
-function limparBackupsAutomaticos(retencaoDias = 30) {
-    if (!fs.existsSync(BACKUP_DIR)) return 0;
+function chaveSemana(data) {
+    const utc = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()));
+    const dia = utc.getUTCDay() || 7;
+    utc.setUTCDate(utc.getUTCDate() + 4 - dia);
+    const inicioAno = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
+    const semana = Math.ceil((((utc - inicioAno) / 86400000) + 1) / 7);
+    return `${utc.getUTCFullYear()}-W${String(semana).padStart(2, '0')}`;
+}
 
-    const limite = Date.now() - Math.max(1, Number(retencaoDias || 30)) * 86400000;
+function listarBackupsDaPasta(pasta) {
+    if (!fs.existsSync(pasta)) return [];
+    return fs.readdirSync(pasta)
+        .filter(nome => nome.startsWith('clientes-auto-') && nome.endsWith('.db'))
+        .map(nome => {
+            const caminho = path.join(pasta, nome);
+            const stat = fs.statSync(caminho);
+            return { nome, caminho, criadoEm: stat.mtime };
+        })
+        .sort((a, b) => b.criadoEm - a.criadoEm);
+}
+
+function aplicarPoliticaRetencaoBackups(opcoes = {}) {
+    const pasta = path.resolve(opcoes.pasta || BACKUP_DIR);
+    const dias = Math.max(1, Number(opcoes.dias || 30));
+    const semanas = Math.max(1, Number(opcoes.semanas || 12));
+    const meses = Math.max(1, Number(opcoes.meses || 12));
+    const agora = opcoes.agora instanceof Date ? opcoes.agora : new Date();
+    const backups = listarBackupsDaPasta(pasta);
+    const manter = new Set();
+    const diasVistos = new Set();
+    const semanasVistas = new Set();
+    const mesesVistos = new Set();
+
+    for (const backup of backups) {
+        const idadeDias = Math.floor((agora.getTime() - backup.criadoEm.getTime()) / 86400000);
+        const chaveDia = backup.criadoEm.toISOString().slice(0, 10);
+        const semana = chaveSemana(backup.criadoEm);
+        const chaveMes = backup.criadoEm.toISOString().slice(0, 7);
+        const idadeSemanas = Math.floor(idadeDias / 7);
+        const idadeMeses = (agora.getUTCFullYear() - backup.criadoEm.getUTCFullYear()) * 12
+            + agora.getUTCMonth() - backup.criadoEm.getUTCMonth();
+
+        if (idadeDias < dias && !diasVistos.has(chaveDia)) {
+            manter.add(backup.caminho);
+            diasVistos.add(chaveDia);
+        }
+        if (idadeSemanas < semanas && !semanasVistas.has(semana)) {
+            manter.add(backup.caminho);
+            semanasVistas.add(semana);
+        }
+        if (idadeMeses < meses && !mesesVistos.has(chaveMes)) {
+            manter.add(backup.caminho);
+            mesesVistos.add(chaveMes);
+        }
+    }
+
     let removidos = 0;
-
-    listarBackups().forEach((backup) => {
-        if (!backup.nome.startsWith('clientes-auto-')) return;
-        if (backup.criadoEm.getTime() >= limite) return;
-
+    for (const backup of backups) {
+        if (manter.has(backup.caminho)) continue;
         fs.unlinkSync(backup.caminho);
         try { fs.unlinkSync(`${backup.caminho}.json`); } catch (_) { /* manifesto opcional */ }
         removidos += 1;
-    });
+    }
+    return { removidos, mantidos: manter.size, dias, semanas, meses, pasta };
+}
 
-    return removidos;
+function limparBackupsAutomaticos(retencaoDias = 30) {
+    return aplicarPoliticaRetencaoBackups({ dias: retencaoDias }).removidos;
+}
+
+async function executarExercicioRestauracaoMensal(nomeBackup = '') {
+    const backup = nomeBackup
+        ? listarBackups().find(item => item.nome === path.basename(nomeBackup))
+        : listarBackups().find(item => item.integridade === 'ok');
+    if (!backup) throw new Error('Nenhum backup verificado disponível para o exercício de restauração.');
+
+    const pastaTeste = fs.mkdtempSync(path.join(os.tmpdir(), 'julian-restauracao-mensal-'));
+    const restaurado = path.join(pastaTeste, 'clientes-restaurado.db');
+    const iniciadoEm = new Date().toISOString();
+    try {
+        fs.copyFileSync(backup.caminho, restaurado);
+        await quickCheckArquivo(restaurado);
+        const diagnostico = await new Promise((resolve, reject) => {
+            const banco = new sqlite3.Database(restaurado, (erro) => {
+                if (erro) return reject(erro);
+                banco.get(`SELECT
+                    (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table') AS tabelas,
+                    (SELECT COUNT(*) FROM clientes) AS clientes`, (err, row) => {
+                    banco.close();
+                    err ? reject(err) : resolve(row);
+                });
+            });
+        });
+        const relatorio = {
+            status: 'aprovado',
+            backup: backup.nome,
+            hashSha256: await hashArquivo(restaurado),
+            iniciadoEm,
+            concluidoEm: new Date().toISOString(),
+            tabelas: Number(diagnostico.tabelas || 0),
+            clientes: Number(diagnostico.clientes || 0)
+        };
+        fs.writeFileSync(path.join(BACKUP_DIR, 'ultimo-exercicio-restauracao.json'), JSON.stringify(relatorio, null, 2));
+        const manifesto = JSON.parse(fs.readFileSync(`${backup.caminho}.json`, 'utf8'));
+        manifesto.ultimoExercicioRestauracao = relatorio;
+        fs.writeFileSync(`${backup.caminho}.json`, JSON.stringify(manifesto, null, 2));
+        await registrarEventoSistema('backup_restauracao_mensal', 'sucesso',
+            `Exercício mensal de restauração aprovado: ${backup.nome}.`, relatorio);
+        return relatorio;
+    } finally {
+        fs.rmSync(pastaTeste, { recursive: true, force: true });
+    }
+}
+
+function obterRelatorioUltimaRestauracao() {
+    try {
+        return JSON.parse(fs.readFileSync(path.join(BACKUP_DIR, 'ultimo-exercicio-restauracao.json'), 'utf8'));
+    } catch (_) {
+        return null;
+    }
 }
 
 async function restaurarBackup(nomeBackup) {
@@ -389,6 +493,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const bancoExiste = fs.existsSync(db.dbPath);
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
+    const ultimaRestauracaoTestada = obterRelatorioUltimaRestauracao();
     const config = await obterConfiguracoes();
     const eventos = await listarEventosSistema(15);
     const filaMensagens = obterStatusFilaMensagens();
@@ -429,6 +534,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
         backupRecente: Boolean(backups[0] && Date.now() - backups[0].criadoEm.getTime() <= 36 * 60 * 60 * 1000),
+        ultimoBackupRecuperavel: ultimaRestauracaoTestada?.status === 'aprovado' ? ultimaRestauracaoTestada : null,
         backups: backups.slice(0, 6),
         eventos,
         diagnostico,
@@ -461,6 +567,9 @@ module.exports = {
     criarBackupManual,
     criarBackupAutomatico,
     limparBackupsAutomaticos,
+    aplicarPoliticaRetencaoBackups,
+    executarExercicioRestauracaoMensal,
+    obterRelatorioUltimaRestauracao,
     restaurarBackup,
     executarDiagnosticoSistema,
     obterStatusSistema,

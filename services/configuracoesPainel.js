@@ -72,6 +72,11 @@ async function obterConfiguracoes() {
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
+        backupRetencaoSemanas: '12',
+        backupRetencaoMeses: '12',
+        backupTesteRestauracaoMensalAtivo: '1',
+        ultimoTesteRestauracaoMensal: '',
+        ultimoBackupRecuperavel: '',
         backupExternoAtivo: '0',
         backupExternoPasta: '',
         ultimoBackupExterno: '',
@@ -321,6 +326,8 @@ async function salvarConfiguracoesPayPal(dados = {}) {
 async function salvarConfiguracoesMonitoramento(dados = {}) {
     const hora = String(dados.backupAutomaticoHora || '03:00').trim();
     const retencao = Math.max(1, Math.min(365, Number.parseInt(dados.backupRetencaoDias || 30, 10) || 30));
+    const retencaoSemanas = Math.max(1, Math.min(104, Number.parseInt(dados.backupRetencaoSemanas || 12, 10) || 12));
+    const retencaoMeses = Math.max(1, Math.min(120, Number.parseInt(dados.backupRetencaoMeses || 12, 10) || 12));
     const minutos = Math.max(1, Math.min(1440, Number.parseInt(dados.alertaWhatsAppMinutos || 5, 10) || 5));
     const webhook = String(dados.alertaWebhookUrl || '').trim();
     const whatsappControle = String(dados.alertaWhatsappControle || '').replace(/\D/g, '');
@@ -357,6 +364,9 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     await salvarConfiguracao('backupAutomaticoAtivo', dados.backupAutomaticoAtivo ? '1' : '0');
     await salvarConfiguracao('backupAutomaticoHora', hora);
     await salvarConfiguracao('backupRetencaoDias', String(retencao));
+    await salvarConfiguracao('backupRetencaoSemanas', String(retencaoSemanas));
+    await salvarConfiguracao('backupRetencaoMeses', String(retencaoMeses));
+    await salvarConfiguracao('backupTesteRestauracaoMensalAtivo', dados.backupTesteRestauracaoMensalAtivo ? '1' : '0');
     await salvarConfiguracao('backupExternoAtivo', backupExternoAtivo);
     await salvarConfiguracao('backupExternoPasta', backupExternoPasta);
     await salvarConfiguracao('campanhaLimiteDiario', String(campanhaLimiteDiario));

@@ -66,6 +66,7 @@ const {
     verificarArquivoBackup,
     exportarBackupCriptografado,
     copiarBackupExterno,
+    executarExercicioRestauracaoMensal,
     executarDiagnosticoSistema,
     obterStatusSistema
 } = require('../services/manutencao');
@@ -8289,6 +8290,12 @@ function telaManutencao(status = {}, opcoes = {}) {
             </label>
             ${campo({ nome: 'backupAutomaticoHora', label: 'Horário do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
             ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
+            ${campo({ nome: 'backupRetencaoSemanas', label: 'Reter cópias semanais', valor: status.config?.backupRetencaoSemanas || '12', tipo: 'number', attrs: 'min="1" max="104" required' })}
+            ${campo({ nome: 'backupRetencaoMeses', label: 'Reter cópias mensais', valor: status.config?.backupRetencaoMeses || '12', tipo: 'number', attrs: 'min="1" max="120" required' })}
+            <label class="check">
+                <input type="checkbox" name="backupTesteRestauracaoMensalAtivo" value="1" ${String(status.config?.backupTesteRestauracaoMensalAtivo ?? '1') === '1' ? 'checked' : ''}>
+                <span>Executar exercício real de restauração mensal</span>
+            </label>
             <label class="toggle-line">
                 <input type="checkbox" name="backupExternoAtivo" value="1" ${String(status.config?.backupExternoAtivo) === '1' ?'checked' : ''}>
                 <span>Copiar cada backup para outro disco ou compartilhamento</span>
@@ -8324,6 +8331,10 @@ function telaManutencao(status = {}, opcoes = {}) {
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
             </form>
+            <form method="post" action="/manutencao/backups/testar-restauracao">
+                <input type="password" name="senhaConfirmacao" required placeholder="Senha atual">
+                <button class="button secondary" type="submit">Testar restauração agora</button>
+            </form>
         </div>
         <table>
             <tbody>
@@ -8331,6 +8342,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
                 <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
+                <tr><th>Último backup recuperável</th><td>${status.ultimoBackupRecuperavel ? `${escapar(status.ultimoBackupRecuperavel.backup)} · teste aprovado em ${escapar(formatarDataHoraCurta(status.ultimoBackupRecuperavel.concluidoEm))}` : 'Nenhum exercício mensal concluído'}</td></tr>
             </tbody>
         </table>
     </section>`}
@@ -9829,6 +9841,17 @@ router.post('/manutencao/backup', bloquearManutencaoRestritaCliente, async (req,
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao criar backup: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/backups/testar-restauracao', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
+    try {
+        const resultado = await executarExercicioRestauracaoMensal();
+        logControleClientes('Exercício de restauração concluído', resultado);
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Restauração de teste aprovada: ${resultado.backup}`)}`);
+    } catch (err) {
+        logControleClientes('Erro no exercício de restauração', { erro: err.message });
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro no teste de restauração: ${err.message}`)}`);
     }
 });
 

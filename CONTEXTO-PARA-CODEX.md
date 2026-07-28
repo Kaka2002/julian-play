@@ -223,6 +223,10 @@ delas, confirmar o estado real no código e nos testes:
   upload de comprovante para o `DATA_DIR`, conferência com identificador único,
   responsável, vencimentos anterior/novo e estorno auditado; o estorno não
   reduz automaticamente o acesso do cliente;
+- backups automáticos aplicam retenção diária, semanal e mensal localmente e
+  na pasta externa; uma vez por mês o sistema restaura uma cópia em diretório
+  temporário, abre o SQLite, valida seu conteúdo e registra o último backup
+  comprovadamente recuperável;
 
 - novas instalações com nome da empresa, imagens e PIX vazios;
 - separação entre servidor e instalação local;
