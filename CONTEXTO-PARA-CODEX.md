@@ -227,6 +227,10 @@ delas, confirmar o estado real no código e nos testes:
   na pasta externa; uma vez por mês o sistema restaura uma cópia em diretório
   temporário, abre o SQLite, valida seu conteúdo e registra o último backup
   comprovadamente recuperável;
+- migrações novas ficam em `database/migrations`, são aplicadas em transação,
+  geram backup verificado `pre-migracao-*.db`, checksum, duração e relatório em
+  `<DATA_DIR>/migrations/ultimo-relatorio.json`; falhas executam rollback e
+  impedem o banco de ser declarado pronto;
 
 - novas instalações com nome da empresa, imagens e PIX vazios;
 - separação entre servidor e instalação local;

@@ -8343,6 +8343,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
                 <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
                 <tr><th>Último backup recuperável</th><td>${status.ultimoBackupRecuperavel ? `${escapar(status.ultimoBackupRecuperavel.backup)} · teste aprovado em ${escapar(formatarDataHoraCurta(status.ultimoBackupRecuperavel.concluidoEm))}` : 'Nenhum exercício mensal concluído'}</td></tr>
+                <tr><th>Versão do banco</th><td>${status.migracoes?.ultima ? `${escapar(status.migracoes.ultima.versao)} · ${escapar(status.migracoes.total)} migração(ões)` : 'Migração formal ainda não registrada'}</td></tr>
             </tbody>
         </table>
     </section>`}

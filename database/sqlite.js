@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { executarMigracoesFormais } = require('./migrations/runner');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const dbPath = process.env.DB_PATH || path.join(DATA_DIR, 'clientes.db');
@@ -9,7 +10,7 @@ fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new sqlite3.Database(dbPath);
 
-const ready = new Promise((resolve) => {
+const ready = new Promise((resolve, reject) => {
 db.serialize(() => {
     db.run(`
         CREATE TABLE IF NOT EXISTS clientes (
@@ -88,17 +89,6 @@ db.serialize(() => {
         chave TEXT PRIMARY KEY, tentativas INTEGER DEFAULT 0, inicio INTEGER NOT NULL,
         bloqueadoAte INTEGER DEFAULT 0, atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
-    db.run(`CREATE TABLE IF NOT EXISTS sessoes_painel (
-        tokenHash TEXT PRIMARY KEY,
-        usuario TEXT NOT NULL,
-        criadoEm TEXT NOT NULL,
-        expiraEm INTEGER NOT NULL,
-        ultimoAcessoEm TEXT NOT NULL,
-        ip TEXT,
-        userAgent TEXT,
-        revogadaEm TEXT
-    )`);
-    db.run('CREATE INDEX IF NOT EXISTS idx_sessoes_painel_ativas ON sessoes_painel(revogadaEm, expiraEm)');
 
     db.run(`
         CREATE TABLE IF NOT EXISTS apps (
@@ -311,17 +301,6 @@ db.serialize(() => {
             aprovadoEm TEXT,
             controleMensagemEnviada INTEGER DEFAULT 0,
             controleMensagemErro TEXT,
-            moeda TEXT DEFAULT 'BRL',
-            comprovanteArquivo TEXT,
-            comprovanteRecebidoEm TEXT,
-            conferidoPor TEXT,
-            conferidoEm TEXT,
-            identificadorManual TEXT,
-            vencimentoAnterior TEXT,
-            vencimentoNovo TEXT,
-            estornadoEm TEXT,
-            estornadoPor TEXT,
-            motivoEstorno TEXT,
             FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE,
             FOREIGN KEY(pagamentoId) REFERENCES cliente_pagamentos(id) ON DELETE SET NULL
         )
@@ -456,7 +435,12 @@ db.serialize(() => {
             }
         });
 
-        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCobrancasPix(() => migrarCatalogos(() => migrarPrivacidadeClientes(() => resolve())))));
+        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCobrancasPix(() => migrarCatalogos(() => migrarPrivacidadeClientes(() => {
+            executarMigracoesFormais({ db, dbPath, dataDir: DATA_DIR }).then((relatorio) => {
+                db.migracoes = relatorio;
+                resolve();
+            }).catch(reject);
+        })))));
     });
 });
 });
@@ -572,23 +556,6 @@ function migrarCobrancasPix(done) {
         if (!existentes.has('controleMensagemErro')) {
             tarefas.push('ALTER TABLE cobrancas_pix ADD COLUMN controleMensagemErro TEXT');
         }
-        const novasColunas = {
-            moeda: "TEXT DEFAULT 'BRL'",
-            comprovanteArquivo: 'TEXT',
-            comprovanteRecebidoEm: 'TEXT',
-            conferidoPor: 'TEXT',
-            conferidoEm: 'TEXT',
-            identificadorManual: 'TEXT',
-            vencimentoAnterior: 'TEXT',
-            vencimentoNovo: 'TEXT',
-            estornadoEm: 'TEXT',
-            estornadoPor: 'TEXT',
-            motivoEstorno: 'TEXT'
-        };
-        for (const [coluna, definicao] of Object.entries(novasColunas)) {
-            if (!existentes.has(coluna)) tarefas.push(`ALTER TABLE cobrancas_pix ADD COLUMN ${coluna} ${definicao}`);
-        }
-
         function proxima(indice = 0) {
             if (indice < tarefas.length) {
                 db.run(tarefas[indice], () => proxima(indice + 1));
@@ -597,17 +564,11 @@ function migrarCobrancasPix(done) {
             if (instalacaoExistente) {
                 db.run(
                     "UPDATE cobrancas_pix SET controleMensagemEnviada = 1 WHERE status = 'aprovado'",
-                    () => {
-                        db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cobrancas_identificador_manual
-                            ON cobrancas_pix(provedor, identificadorManual)
-                            WHERE identificadorManual IS NOT NULL AND identificadorManual <> ''`, () => done());
-                    }
+                    () => done()
                 );
                 return;
             }
-            db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cobrancas_identificador_manual
-                ON cobrancas_pix(provedor, identificadorManual)
-                WHERE identificadorManual IS NOT NULL AND identificadorManual <> ''`, () => done());
+            done();
         }
 
         proxima();

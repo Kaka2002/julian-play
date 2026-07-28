@@ -1,4 +1,5 @@
 const express = require('express');
+const db = require('../database/sqlite');
 const { criarBackupManual } = require('../services/manutencao');
 const { liberarAtendimentosHumanos } = require('../services/conversaService');
 const { getStatusWhatsApp, getClient } = require('../config/whatsapp');
@@ -18,7 +19,12 @@ function autenticarPainelMestre(req, res, next) {
 
 router.use(autenticarPainelMestre);
 
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res, next) => {
+    try {
+        await db.ready;
+    } catch (err) {
+        return next(err);
+    }
     res.json({ ok: true, whatsapp: getStatusWhatsApp() });
 });
 

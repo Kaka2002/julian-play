@@ -26,6 +26,10 @@ código; itens operacionais externos não são marcados como implementados.
   instalação no Painel Mestre.
 - Testes automatizados para perfis, permissões, segurança, pagamentos,
   renovação externa, backup, atualização, criptografia e isolamento.
+- Executor formal de migrações com um arquivo por versão, checksum, duração,
+  backup verificado antes da alteração, transação, rollback e relatório por
+  instalação. Sessões, pagamentos manuais e índices operacionais já usam o
+  novo fluxo.
 
 ## Parcial
 
@@ -33,9 +37,9 @@ código; itens operacionais externos não são marcados como implementados.
   preserva o acesso para decisão explícita, evitando suspensão acidental.
 - Campanhas: falta indicador manual de reclamação e pausa por taxa agregada de
   erros/bloqueios.
-- Migrações: existe `schema_migrations`, mas parte do legado ainda está na
-  inicialização do SQLite; novos módulos devem migrar gradualmente para um
-  arquivo por versão.
+- Migrações: o fluxo formal está concluído para toda alteração nova. Parte das
+  estruturas históricas ainda permanece na inicialização legada e será
+  extraída gradualmente, sem reescrever o banco de uma vez.
 - Rotas: pagamentos manuais foram extraídos para
   `routes/pagamentosRoute.js`; os demais domínios de
   `routes/clientesRoute.js` ainda devem ser extraídos gradualmente.

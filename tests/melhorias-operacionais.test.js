@@ -111,3 +111,34 @@ test('pagamento manual exige comprovante, identificador unico e registra estorno
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('migracoes formais preservam banco existente, criam backup e sao idempotentes', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const runner=require('./database/migrations/runner');const estado=await runner.obterEstadoMigracoes(db);const backups=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db'));const antes=backups.length;const segunda=await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir});const colunas=await all('PRAGMA table_info(cobrancas_pix)');const sessoes=await get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessoes_painel'");process.stdout.write(JSON.stringify({total:estado.aplicadas.filter(x=>x.versao.includes('-00')).length,backup:backups.length>0,idempotente:segunda.status,novoBackup:fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length===antes,comprovante:colunas.some(x=>x.name==='comprovanteArquivo'),sessoes:!!sessoes}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            total: 3,
+            backup: true,
+            idempotente: 'sem_alteracoes',
+            novoBackup: true,
+            comprovante: true,
+            sessoes: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('falha em migracao formal executa rollback e gera relatorio', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const runner=require('./database/migrations/runner');let falhou=false;try{await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir,lista:[{versao:'teste-rollback',nome:'Teste rollback',async up({exec}){await exec('CREATE TABLE tabela_que_deve_sumir(id INTEGER)');throw new Error('falha simulada')}}]})}catch(e){falhou=/revertida/.test(e.message)}const get=s=>new Promise((ok,no)=>db.get(s,(e,r)=>e?no(e):ok(r)));const tabela=await get("SELECT name FROM sqlite_master WHERE name='tabela_que_deve_sumir'");const versao=await get("SELECT versao FROM schema_migrations WHERE versao='teste-rollback'");const relatorio=JSON.parse(fs.readFileSync(path.join(db.dataDir,'migrations','ultimo-relatorio.json'),'utf8'));process.stdout.write(JSON.stringify({falhou,tabela:!!tabela,versao:!!versao,status:relatorio.status,backup:fs.existsSync(relatorio.backup)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            falhou: true,
+            tabela: false,
+            versao: false,
+            status: 'erro',
+            backup: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});

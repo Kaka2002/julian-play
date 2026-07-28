@@ -10,6 +10,7 @@ const { listarEventosSistema, registrarEventoSistema } = require('./eventosSiste
 const { calcularEstadoLicenca } = require('./licencaCalculo');
 const { obterStatusFilaMensagens } = require('./filaMensagensService');
 const { listarAtendimentosHumanos } = require('./conversaService');
+const { obterEstadoMigracoes } = require('../database/migrations/runner');
 
 const BACKUP_DIR = process.env.BACKUP_DIR || path.join(db.dataDir, 'backups');
 
@@ -494,6 +495,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const statBanco = bancoExiste ? fs.statSync(db.dbPath) : null;
     const backups = listarBackups();
     const ultimaRestauracaoTestada = obterRelatorioUltimaRestauracao();
+    const migracoes = await obterEstadoMigracoes(db);
     const config = await obterConfiguracoes();
     const eventos = await listarEventosSistema(15);
     const filaMensagens = obterStatusFilaMensagens();
@@ -535,6 +537,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         ultimoBackup: backups[0] || null,
         backupRecente: Boolean(backups[0] && Date.now() - backups[0].criadoEm.getTime() <= 36 * 60 * 60 * 1000),
         ultimoBackupRecuperavel: ultimaRestauracaoTestada?.status === 'aprovado' ? ultimaRestauracaoTestada : null,
+        migracoes,
         backups: backups.slice(0, 6),
         eventos,
         diagnostico,
