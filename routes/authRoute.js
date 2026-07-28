@@ -8,6 +8,8 @@ const {
     cookieSessao,
     cookieLogout,
     encerrarSessao,
+    listarSessoesAtivas,
+    revogarTodasSessoes,
     obterUsuarioConfigurado
 } = require('../services/authService');
 const {
@@ -262,14 +264,14 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
                 <input name="painelUsuario" autocomplete="username" required autofocus>
             </label>
             <label>Senha
-                <input type="password" name="painelSenha" autocomplete="new-password" minlength="8" required>
+                <input type="password" name="painelSenha" autocomplete="new-password" minlength="12" required>
             </label>
             <label>Confirmar senha
-                <input type="password" name="painelConfirmarSenha" autocomplete="new-password" minlength="8" required>
+                <input type="password" name="painelConfirmarSenha" autocomplete="new-password" minlength="12" required>
             </label>
             <button type="submit">Concluir configuração</button>
         </form>
-        <div class="helper">Use uma senha exclusiva com pelo menos 8 caracteres.</div>` : `<form method="post" action="/login">
+        <div class="helper">Use uma senha exclusiva com pelo menos 12 caracteres.</div>` : `<form method="post" action="/login">
             <input type="hidden" name="next" value="${escapar(next)}">
             <label>Usuário
                 <input name="usuario" autocomplete="username" required autofocus value="${escapar(usuarioPainel)}">
@@ -299,7 +301,7 @@ router.get('/login', async (req, res) => {
         return res.redirect('/configuracao-inicial');
     }
 
-    if (obterSessao(req)) {
+    if (await obterSessao(req)) {
         return res.redirect(destinoSeguro(req.query.next));
     }
 
@@ -348,7 +350,7 @@ router.post('/login', async (req, res) => {
 
     limparFalhasLogin(req, req.body.usuario);
     await loginPersistente.limpar(chaveLogin);
-    const sessao = criarSessao(String(req.body.usuario || '').trim());
+    const sessao = await criarSessao(String(req.body.usuario || '').trim(), req);
     await registrarEventoSistema('seguranca_login', 'info', 'Login administrativo realizado.', { ip: req.ip || req.socket?.remoteAddress, usuario: String(req.body.usuario || '').trim() });
     res.setHeader('Set-Cookie', cookieSessao(sessao.token, req));
     return res.redirect(next);
@@ -386,11 +388,46 @@ router.post('/configuracao-inicial', async (req, res) => {
     }
 });
 
-router.get('/logout', (req, res) => {
+router.get('/logout', async (req, res, next) => {
     desativarCache(res);
-    encerrarSessao(req);
-    res.setHeader('Set-Cookie', cookieLogout());
-    res.redirect('/login?erro=' + encodeURIComponent('Sessão encerrada.'));
+    try {
+        await encerrarSessao(req);
+        res.setHeader('Set-Cookie', cookieLogout());
+        return res.redirect('/login?erro=' + encodeURIComponent('Sessão encerrada.'));
+    } catch (err) {
+        return next(err);
+    }
+});
+
+router.get('/sessoes', async (req, res, next) => {
+    try {
+        const atual = await obterSessao(req);
+        if (!atual) return res.redirect('/login?next=%2Fsessoes');
+        const sessoes = await listarSessoesAtivas();
+        desativarCache(res);
+        return res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sessões ativas</title><style>
+body{font-family:Arial,sans-serif;background:#f5f6f8;color:#101828;margin:0;padding:32px}.card{max-width:1050px;margin:auto;background:#fff;border:1px solid #e4e7ec;border-radius:12px;padding:24px}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:12px;border-bottom:1px solid #e4e7ec;font-size:14px}.actions{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:20px}button,a{border:0;border-radius:8px;padding:11px 15px;font-weight:700;text-decoration:none;cursor:pointer}.danger{background:#dc2626;color:#fff}.back{background:#eef2ff;color:#3448a5}.current{color:#15803d;font-weight:700}.scroll{overflow:auto}</style></head><body><main class="card">
+<div class="actions"><div><h1>Sessões administrativas</h1><p>Dispositivos autenticados nesta instalação.</p></div><a class="back" href="/manutencao">Voltar</a></div>
+<form method="post" action="/sessoes/revogar-todas" onsubmit="return confirm('Encerrar todas as sessões, inclusive esta?')"><button class="danger" type="submit">Encerrar todas as sessões</button></form>
+<div class="scroll"><table><thead><tr><th>Usuário</th><th>Criada</th><th>Último acesso</th><th>IP</th><th>Dispositivo</th><th></th></tr></thead><tbody>${sessoes.map(item => `<tr><td>${escapar(item.usuario)}</td><td>${escapar(item.criadoEm)}</td><td>${escapar(item.ultimoAcessoEm)}</td><td>${escapar(item.ip || '-')}</td><td>${escapar(item.userAgent || '-')}</td><td>${item.tokenHash === atual.tokenHash ? '<span class="current">Esta sessão</span>' : ''}</td></tr>`).join('')}</tbody></table></div>
+</main></body></html>`);
+    } catch (err) {
+        next(err);
+    }
+});
+
+router.post('/sessoes/revogar-todas', async (req, res, next) => {
+    try {
+        if (!(await obterSessao(req))) return res.status(401).send('Acesso não autorizado');
+        await revogarTodasSessoes();
+        await registrarEventoSistema('seguranca_sessoes_revogadas', 'alerta', 'Todas as sessões administrativas foram encerradas.', {
+            ip: req.ip || req.socket?.remoteAddress
+        });
+        res.setHeader('Set-Cookie', cookieLogout());
+        return res.redirect('/login?erro=' + encodeURIComponent('Todas as sessões foram encerradas.'));
+    } catch (err) {
+        next(err);
+    }
 });
 
 module.exports = router;

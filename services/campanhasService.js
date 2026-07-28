@@ -238,6 +238,17 @@ function contarItensCampanhaPorStatus(campanhaId) {
     `, [campanhaId]);
 }
 
+async function contarEnviosClienteDesde(clienteId, desdeIso) {
+    const row = await buscarUm(`
+        SELECT COUNT(*) AS total
+        FROM campanha_itens
+        WHERE clienteId = ?
+          AND status = 'enviado'
+          AND enviadoEm >= ?
+    `, [clienteId, desdeIso]);
+    return Number(row?.total || 0);
+}
+
 async function buscarCampanhaRetomavel(id = null) {
     const params = [];
     let filtro = '';
@@ -274,5 +285,6 @@ module.exports = {
     listarItensCampanha,
     listarItensCampanhaPorStatus,
     contarItensCampanhaPorStatus,
+    contarEnviosClienteDesde,
     buscarCampanhaRetomavel
 };

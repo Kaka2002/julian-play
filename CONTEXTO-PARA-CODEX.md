@@ -212,6 +212,14 @@ node.exe -e "const sqlite3=require('sqlite3').verbose();const db=new sqlite3.Dat
 Esta lista resume alterações trabalhadas no projeto. Antes de modificar uma
 delas, confirmar o estado real no código e nos testes:
 
+- a situação detalhada das recomendações técnicas fica em
+  `AUDITORIA-MELHORIAS.md`;
+- sessões administrativas agora persistem no banco somente com hash do token,
+  podem ser consultadas em `/sessoes` e revogadas em conjunto;
+- novas senhas administrativas exigem no mínimo 12 caracteres;
+- campanhas respeitam limite semanal por cliente, horário configurável e dias
+  úteis, além dos controles de consentimento, limite diário e retomada;
+
 - novas instalações com nome da empresa, imagens e PIX vazios;
 - separação entre servidor e instalação local;
 - controles de WhatsApp centralizados no Painel Mestre;

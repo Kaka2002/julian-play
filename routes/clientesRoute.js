@@ -110,6 +110,7 @@ const {
     listarItensCampanha,
     listarItensCampanhaPorStatus,
     contarItensCampanhaPorStatus,
+    contarEnviosClienteDesde,
     buscarCampanhaRetomavel
 } = require('../services/campanhasService');
 const menuRenovacao = require('../menus/renovacao');
@@ -4548,6 +4549,21 @@ async function enviarCampanhaAmizadeManualPorId(clienteId, descricao = 'Campanha
     }
 }
 
+function campanhaDentroHorario(config, data = new Date()) {
+    const partes = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+    }).formatToParts(data);
+    const obter = tipo => partes.find(item => item.type === tipo)?.value || '';
+    const dia = obter('weekday').toLowerCase();
+    const hora = `${obter('hour')}:${obter('minute')}`;
+    if (config.campanhaSomenteDiasUteis !== '0' && (dia.startsWith('sáb') || dia.startsWith('dom'))) return false;
+    return hora >= (config.campanhaHoraInicio || '09:00') && hora < (config.campanhaHoraFim || '20:00');
+}
+
 async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
     const statusInicial = getStatusWhatsApp();
     const client = getClient();
@@ -4555,6 +4571,10 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
     const telefoneInstalacao = telefoneCampanhaAmizade(statusInicial, config);
     let imagemCampanha = null;
     const retomar = Boolean(opcoes.retomar);
+
+    if (!campanhaDentroHorario(config)) {
+        throw new Error(`Campanhas permitidas somente em dias úteis, entre ${config.campanhaHoraInicio || '09:00'} e ${config.campanhaHoraFim || '20:00'}.`);
+    }
 
     if (!client || !statusInicial.conectado) {
         throw new Error('WhatsApp nao esta conectado.');
@@ -4581,6 +4601,8 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
         } else {
             const todosClientes = await listarClientesAtivosComerciais();
             const limiteDiario = Math.max(1, Number.parseInt(config.campanhaLimiteDiario || 100, 10) || 100);
+            const limiteSemanalCliente = Math.max(1, Number.parseInt(config.campanhaLimiteSemanalCliente || 1, 10) || 1);
+            const inicioSemana = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
 
             campanhaAmizadeExecucao.total = todosClientes.length;
             await sincronizarCampanhaAtual('em_andamento');
@@ -4607,6 +4629,17 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
                         telefone,
                         status: 'ja_enviado',
                         motivo: 'ja enviado anteriormente'
+                    });
+                    continue;
+                }
+
+                if (await contarEnviosClienteDesde(cliente.id, inicioSemana) >= limiteSemanalCliente) {
+                    campanhaAmizadeExecucao.ignorados += 1;
+                    registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, 'limite semanal');
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        status: 'ignorado',
+                        motivo: `limite semanal de ${limiteSemanalCliente} campanha(s) por cliente`
                     });
                     continue;
                 }
@@ -4641,6 +4674,9 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
 
         for (let indice = 0; indice < clientesElegiveis.length; indice += CAMPANHA_AMIZADE_LOTE_TAMANHO) {
             await aguardarCampanhaAmizadeLiberada();
+            if (!campanhaDentroHorario(config)) {
+                throw new Error('Campanha pausada automaticamente porque terminou o horário comercial.');
+            }
             const statusAtual = getStatusWhatsApp();
 
             if (!statusAtual.conectado) {
@@ -8254,6 +8290,10 @@ function telaManutencao(status = {}, opcoes = {}) {
             </label>
             ${campo({ nome: 'backupExternoPasta', label: 'Pasta externa de backup', valor: status.config?.backupExternoPasta || '', tipo: 'text', attrs: 'placeholder="D:\\BackupsJulianPlay ou \\\\servidor\\backups"' })}
             ${campo({ nome: 'campanhaLimiteDiario', label: 'Máximo de clientes por campanha', valor: status.config?.campanhaLimiteDiario || '100', tipo: 'number', attrs: 'min="1" max="1000" required' })}
+            ${campo({ nome: 'campanhaLimiteSemanalCliente', label: 'Máximo semanal por cliente', valor: status.config?.campanhaLimiteSemanalCliente || '1', tipo: 'number', attrs: 'min="1" max="20" required' })}
+            ${campo({ nome: 'campanhaHoraInicio', label: 'Início do horário de campanhas', valor: status.config?.campanhaHoraInicio || '09:00', tipo: 'time', attrs: 'required' })}
+            ${campo({ nome: 'campanhaHoraFim', label: 'Fim do horário de campanhas', valor: status.config?.campanhaHoraFim || '20:00', tipo: 'time', attrs: 'required' })}
+            <label class="check"><input type="checkbox" name="campanhaSomenteDiasUteis" ${status.config?.campanhaSomenteDiasUteis !== '0' ? 'checked' : ''}> Enviar campanhas somente em dias úteis</label>
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
             ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}

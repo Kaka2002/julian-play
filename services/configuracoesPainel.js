@@ -100,6 +100,10 @@ async function obterConfiguracoes() {
         roboFilaIntervaloMaximoSegundos: '5',
         campanhaExigirConsentimento: '1',
         campanhaLimiteDiario: '100',
+        campanhaLimiteSemanalCliente: '1',
+        campanhaHoraInicio: '09:00',
+        campanhaHoraFim: '20:00',
+        campanhaSomenteDiasUteis: '1',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -140,8 +144,8 @@ async function salvarConfiguracoesAcesso(dados = {}) {
     await salvarConfiguracao('painelUsuario', usuario);
 
     if (senha || confirmarSenha) {
-        if (senha.length < 8) {
-            throw new Error('A senha do painel precisa ter pelo menos 8 caracteres.');
+        if (senha.length < 12) {
+            throw new Error('A senha do painel precisa ter pelo menos 12 caracteres.');
         }
 
         if (senha !== confirmarSenha) {
@@ -327,9 +331,17 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     const backupExternoAtivo = dados.backupExternoAtivo ? '1' : '0';
     const backupExternoPasta = String(dados.backupExternoPasta || '').trim();
     const campanhaLimiteDiario = Math.max(1, Math.min(1000, Number.parseInt(dados.campanhaLimiteDiario || 100, 10) || 100));
+    const campanhaLimiteSemanalCliente = Math.max(1, Math.min(20, Number.parseInt(dados.campanhaLimiteSemanalCliente || 1, 10) || 1));
+    const campanhaHoraInicio = String(dados.campanhaHoraInicio || '09:00').trim();
+    const campanhaHoraFim = String(dados.campanhaHoraFim || '20:00').trim();
 
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
         throw new Error('Informe um horario valido para o backup automatico.');
+    }
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(campanhaHoraInicio)
+        || !/^([01]\d|2[0-3]):[0-5]\d$/.test(campanhaHoraFim)
+        || campanhaHoraInicio >= campanhaHoraFim) {
+        throw new Error('Informe um horário comercial válido para campanhas.');
     }
 
     if (webhook && !/^https:\/\//i.test(webhook)) {
@@ -348,6 +360,10 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     await salvarConfiguracao('backupExternoAtivo', backupExternoAtivo);
     await salvarConfiguracao('backupExternoPasta', backupExternoPasta);
     await salvarConfiguracao('campanhaLimiteDiario', String(campanhaLimiteDiario));
+    await salvarConfiguracao('campanhaLimiteSemanalCliente', String(campanhaLimiteSemanalCliente));
+    await salvarConfiguracao('campanhaHoraInicio', campanhaHoraInicio);
+    await salvarConfiguracao('campanhaHoraFim', campanhaHoraFim);
+    await salvarConfiguracao('campanhaSomenteDiasUteis', dados.campanhaSomenteDiasUteis ? '1' : '0');
     await salvarConfiguracao('alertaWhatsAppMinutos', String(minutos));
     await salvarConfiguracao('alertaWebhookUrl', webhook);
     await salvarConfiguracao('alertaWhatsappControle', whatsappControle);

@@ -88,6 +88,17 @@ db.serialize(() => {
         chave TEXT PRIMARY KEY, tentativas INTEGER DEFAULT 0, inicio INTEGER NOT NULL,
         bloqueadoAte INTEGER DEFAULT 0, atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
+    db.run(`CREATE TABLE IF NOT EXISTS sessoes_painel (
+        tokenHash TEXT PRIMARY KEY,
+        usuario TEXT NOT NULL,
+        criadoEm TEXT NOT NULL,
+        expiraEm INTEGER NOT NULL,
+        ultimoAcessoEm TEXT NOT NULL,
+        ip TEXT,
+        userAgent TEXT,
+        revogadaEm TEXT
+    )`);
+    db.run('CREATE INDEX IF NOT EXISTS idx_sessoes_painel_ativas ON sessoes_painel(revogadaEm, expiraEm)');
 
     db.run(`
         CREATE TABLE IF NOT EXISTS apps (
