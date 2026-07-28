@@ -79,6 +79,10 @@ db.serialize(() => {
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+    db.run(`CREATE TABLE IF NOT EXISTS schema_migrations (
+        versao TEXT PRIMARY KEY,
+        aplicadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 
     db.run(`CREATE TABLE IF NOT EXISTS tentativas_login (
         chave TEXT PRIMARY KEY, tentativas INTEGER DEFAULT 0, inicio INTEGER NOT NULL,
@@ -498,7 +502,13 @@ function migrarPrivacidadeClientes(done) {
         ['clientes', 'whatsappOptOutEm', 'TEXT']
     ];
     function proxima(indice = 0) {
-        if (indice >= tarefas.length) return done();
+        if (indice >= tarefas.length) {
+            db.run(
+                `INSERT OR IGNORE INTO schema_migrations (versao) VALUES ('2026-07-28-privacidade-clientes')`,
+                () => done()
+            );
+            return;
+        }
         const [tabela, coluna, definicao] = tarefas[indice];
         adicionarColunaSeNaoExiste(tabela, coluna, definicao, () => proxima(indice + 1));
     }

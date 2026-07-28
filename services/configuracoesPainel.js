@@ -1,5 +1,6 @@
 const db = require('../database/sqlite');
 const { criarHashSenha } = require('./passwordService');
+const { deveProteger, estaProtegido, proteger, revelar } = require('./cofreSegredosService');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -103,9 +104,15 @@ async function obterConfiguracoes() {
         painelSenhaHash: ''
     };
 
+    const migracoes = [];
     rows.forEach((row) => {
-        config[row.chave] = row.valor || '';
+        const valor = row.valor || '';
+        config[row.chave] = revelar(row.chave, valor);
+        if (valor && deveProteger(row.chave) && !estaProtegido(valor) && proteger(row.chave, valor) !== valor) {
+            migracoes.push(executar('UPDATE configuracoes SET valor = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE chave = ?', [proteger(row.chave, valor), row.chave]));
+        }
     });
+    await Promise.all(migracoes);
 
     return config;
 }
@@ -117,7 +124,7 @@ function salvarConfiguracao(chave, valor) {
         ON CONFLICT(chave) DO UPDATE SET
             valor = excluded.valor,
             atualizadoEm = CURRENT_TIMESTAMP`,
-        [chave, valor]
+        [chave, proteger(chave, valor)]
     );
 }
 

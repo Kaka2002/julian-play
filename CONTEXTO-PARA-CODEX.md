@@ -446,3 +446,22 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   migracao separada: ela so deve ser ativada depois de definir como a chave
   externa sera guardada e recuperada junto aos backups. Nao usar uma chave
   descartavel dentro da mesma pasta dos dados.
+
+## Cofre de integracoes e migracoes em 28/07/2026
+
+- Tokens e segredos reversiveis de Mercado Pago, PayPal e webhooks passam a
+  usar AES-256-GCM no banco quando a instalacao possui `JULIAN_SECRET_KEY` ou
+  `LICENSE_ADMIN_TOKEN`. Valores antigos em texto sao migrados ao primeiro
+  carregamento, sem alterar o valor usado pela aplicacao.
+- A chave deve permanecer no ambiente/ecossistema da mesma instalacao e ser
+  preservada separadamente do banco. Perder ou trocar essa chave impede abrir
+  os segredos. Durante rotacao controlada, chaves anteriores podem ser
+  informadas temporariamente em `JULIAN_SECRET_KEY_PREVIOUS`.
+- Credenciais IPTV e de aplicativos ainda nao foram cifradas, pois sao usadas
+  em muitos fluxos e exigem uma migracao transacional com plano de recuperacao
+  especifico.
+- O banco agora registra migracoes novas em `schema_migrations`; a migracao de
+  privacidade dos clientes recebeu a versao
+  `2026-07-28-privacidade-clientes`.
+- O registro de cobrancas manuais foi extraido para um servico dedicado, como
+  primeiro passo para reduzir o tamanho e o acoplamento das rotas.

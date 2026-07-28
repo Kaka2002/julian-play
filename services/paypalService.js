@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../database/sqlite');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { buscarClientePorId, renovarCliente } = require('./clientes');
+const { registrarCobrancaManual } = require('./pagamentoManualService');
 const { registrarEventoSistema } = require('./eventosSistema');
 
 function executar(sql, params = []) {
@@ -137,15 +138,17 @@ async function criarCobrancaPayPal(plano = {}, opcoes = {}) {
                 .replaceAll('{valor}', valorNumero.toFixed(2))
                 .replaceAll('{referencia}', encodeURIComponent(referencia))
             : '';
-        await executar(
-            `INSERT INTO cobrancas_pix (
-                referencia, provedor, clienteId, plano, tipoPlanoId, diasContrato,
-                valorPlano, assinaturaApp, valorTotal, status
-            ) VALUES (?, 'paypal_manual', ?, ?, ?, ?, ?, ?, ?, 'aguardando_comprovante')`,
-            [referencia, clienteId, planoNome, opcoes.tipoPlanoId || cliente.tipoPlanoId || '',
-                diasContrato, opcoes.valorPlano || plano.valor || cliente.valorPlano || moedaTexto(valorNumero),
-                opcoes.assinaturaApp || '0,00', moedaTexto(valorNumero)]
-        );
+        await registrarCobrancaManual({
+            referencia,
+            provedor: 'paypal_manual',
+            clienteId,
+            plano: planoNome,
+            tipoPlanoId: opcoes.tipoPlanoId || cliente.tipoPlanoId || '',
+            diasContrato,
+            valorPlano: opcoes.valorPlano || plano.valor || cliente.valorPlano || moedaTexto(valorNumero),
+            assinaturaApp: opcoes.assinaturaApp || '0,00',
+            valorTotal: valorNumero
+        });
         await registrarEvento('paypal_cobranca_manual', 'info',
             `Link PayPal manual enviado para ${cliente.nome}, R$ ${moedaTexto(valorNumero)}.`,
             { clienteId, referencia, valor: moedaTexto(valorNumero) });

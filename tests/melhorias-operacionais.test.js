@@ -29,3 +29,21 @@ test('TOTP aceita somente codigo atual da chave configurada', () => {
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('cofre cifra segredos e detecta chave incorreta', () => {
+    const resultado = executarIsolado(`const c=require('./services/cofreSegredosService');const x=c.proteger('paypalClientSecret','segredo-real');process.stdout.write(JSON.stringify({cifrado:x.startsWith('jplay:v1:'),claro:c.revelar('paypalClientSecret',x)}))`, { env: { JULIAN_SECRET_KEY: 'chave-de-teste-segura' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { cifrado: true, claro: 'segredo-real' });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('configuracao antiga em texto e migrada sem alterar o valor usado', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;await new Promise((ok,fail)=>db.run("INSERT INTO configuracoes(chave,valor) VALUES('paypalClientSecret','legado')",e=>e?fail(e):ok()));const c=require('./services/configuracoesPainel');const config=await c.obterConfiguracoes();const linha=await new Promise((ok,fail)=>db.get("SELECT valor FROM configuracoes WHERE chave='paypalClientSecret'",(e,r)=>e?fail(e):ok(r)));process.stdout.write(JSON.stringify({usado:config.paypalClientSecret,cifrado:linha.valor.startsWith('jplay:v1:')}));})().catch(e=>{console.error(e);process.exit(1)})`, { env: { LICENSE_ADMIN_TOKEN: 'token-persistente-da-instalacao' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { usado: 'legado', cifrado: true });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
