@@ -47,3 +47,21 @@ test('configuracao antiga em texto e migrada sem alterar o valor usado', () => {
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('kit de recuperacao inclui banco e chave somente dentro do pacote cifrado', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const crypto=require('crypto');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const arquivo=await m.exportarBackupCriptografado(b.nome,'senha-de-recuperacao-forte');const dados=fs.readFileSync(arquivo);const salt=dados.subarray(8,24),iv=dados.subarray(24,36),tag=dados.subarray(36,52);const d=crypto.createDecipheriv('aes-256-gcm',crypto.scryptSync('senha-de-recuperacao-forte',salt,32),iv);d.setAuthTag(tag);const pacote=JSON.parse(Buffer.concat([d.update(dados.subarray(52)),d.final()]));process.stdout.write(JSON.stringify({magic:dados.subarray(0,8).toString(),formato:pacote.formato,temBanco:!!pacote.bancoBase64,token:pacote.recuperacao.licenseAdminToken}));})().catch(e=>{console.error(e);process.exit(1)})`, { env: { LICENSE_ADMIN_TOKEN: 'TOKEN-RECUPERAVEL' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { magic: 'JPLAYBK2', formato: 'JPLAYBK2', temBanco: true, token: 'TOKEN-RECUPERAVEL' });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('credencial da API do painel e cifrada no banco e aberta no servico', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');const a=require('./services/appsDispositivos');await db.ready;const painel=await a.salvarPainel({nome:'Painel Seguro',apiUrl:'https://api.exemplo.test',apiUsuario:'usuario-api',apiToken:'token-api'});const bruto=await new Promise((ok,fail)=>db.get('SELECT apiUsuario,apiToken FROM paineis WHERE id=?',[painel.id],(e,r)=>e?fail(e):ok(r)));const aberto=await a.buscarPainelPorId(painel.id);process.stdout.write(JSON.stringify({usuarioCifrado:bruto.apiUsuario.startsWith('jplay:v1:'),tokenCifrado:bruto.apiToken.startsWith('jplay:v1:'),usuario:aberto.apiUsuario,token:aberto.apiToken}));})().catch(e=>{console.error(e);process.exit(1)})`, { env: { LICENSE_ADMIN_TOKEN: 'token-da-instalacao' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { usuarioCifrado: true, tokenCifrado: true, usuario: 'usuario-api', token: 'token-api' });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});

@@ -7,7 +7,9 @@ const CHAVES_SENSIVEIS = new Set([
     'paypalClientId',
     'paypalClientSecret',
     'paypalWebhookId',
-    'alertaWebhookUrl'
+    'alertaWebhookUrl',
+    'painel.apiUsuario',
+    'painel.apiToken'
 ]);
 
 function derivarChave(material) {

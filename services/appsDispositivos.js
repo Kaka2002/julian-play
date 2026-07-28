@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { proteger, revelar } = require('./cofreSegredosService');
 
 const appsPadrao = [
     ['4K IPTV', 'Painel Sigma Genial, TV LG, TV SAMSUNG, TV ROKU'],
@@ -210,12 +211,21 @@ function removerDispositivo(id) {
 
 async function listarPaineis() {
     await garantirPaineisPadrao();
-    return buscarTodos('SELECT * FROM paineis ORDER BY nome ASC');
+    const paineis = await buscarTodos('SELECT * FROM paineis ORDER BY nome ASC');
+    return paineis.map(revelarPainel);
 }
 
 async function buscarPainelPorId(id) {
     await garantirPaineisPadrao();
-    return buscarUm('SELECT * FROM paineis WHERE id = ?', [id]);
+    return revelarPainel(await buscarUm('SELECT * FROM paineis WHERE id = ?', [id]));
+}
+
+function revelarPainel(painel) {
+    if (!painel) return painel;
+    return { ...painel,
+        apiUsuario: revelar('painel.apiUsuario', painel.apiUsuario || ''),
+        apiToken: revelar('painel.apiToken', painel.apiToken || '')
+    };
 }
 
 async function salvarPainel(dados = {}) {
@@ -243,7 +253,7 @@ async function salvarPainel(dados = {}) {
                 renovacaoAutomatica = ?, timeoutSegundos = ?, maxTentativas = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
-            [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, apiUsuario, apiToken, produtoPadrao,
+            [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, proteger('painel.apiUsuario', apiUsuario), proteger('painel.apiToken', apiToken), produtoPadrao,
                 renovacaoAutomatica, timeoutSegundos, maxTentativas, id]
         );
 
@@ -253,7 +263,7 @@ async function salvarPainel(dados = {}) {
     const resultado = await executar(
         `INSERT INTO paineis (nome, ativo, tipoIntegracao, apiUrl, apiUsuario, apiToken, produtoPadrao,
             renovacaoAutomatica, timeoutSegundos, maxTentativas) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, apiUsuario, limparTexto(dados.apiToken),
+        [nome, dados.ativo === '0' ? 0 : 1, tipoIntegracao, apiUrl, proteger('painel.apiUsuario', apiUsuario), proteger('painel.apiToken', limparTexto(dados.apiToken)),
             produtoPadrao, renovacaoAutomatica, timeoutSegundos, maxTentativas]
     );
 

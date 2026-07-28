@@ -465,3 +465,20 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `2026-07-28-privacidade-clientes`.
 - O registro de cobrancas manuais foi extraido para um servico dedicado, como
   primeiro passo para reduzir o tamanho e o acoplamento das rotas.
+
+## Kit de recuperacao e credenciais de paineis em 28/07/2026
+
+- A exportacao `.jplaybackup` usa o formato `JPLAYBK2` e inclui, dentro do
+  conteudo autenticado e criptografado por senha, o banco e o material de
+  recuperacao da chave da instalacao. A senha do kit nao e armazenada.
+- O extrator offline fica em `scripts/extrair-kit-recuperacao.js`; ele exige a
+  senha em `JPLAY_RECOVERY_PASSWORD` e uma pasta de destino vazia. O arquivo
+  `recuperacao-segredos.json` extraido deve ser protegido e apagado depois da
+  restauracao.
+- Usuario e token das APIs de paineis IPTV/P2P passam pelo mesmo cofre
+  AES-256-GCM antes de serem gravados e sao abertos somente no fluxo que chama
+  a API.
+- Credenciais IPTV/app de clientes permanecem em texto neste pacote. Antes de
+  cifra-las, todas as consultas diretas em clientes, campanhas, mensagens e
+  renovacoes precisam passar por um repositorio central; fazer apenas metade
+  dessa mudanca quebraria mensagens e renovacoes.

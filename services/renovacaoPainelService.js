@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const db = require('../database/sqlite');
 const { registrarEventoSistema } = require('./eventosSistema');
+const { revelar } = require('./cofreSegredosService');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => db.run(sql, params, function(err) {
@@ -48,6 +49,8 @@ async function enfileirarRenovacoesDaCobranca(cobrancaId) {
         const painel = await buscarUm(`SELECT * FROM paineis WHERE lower(nome) = lower(?) AND ativo = 1
             AND renovacaoAutomatica = 1 AND COALESCE(apiUrl, '') != '' LIMIT 1`, [nomePainel]);
         if (!painel) continue;
+        painel.apiUsuario = revelar('painel.apiUsuario', painel.apiUsuario || '');
+        painel.apiToken = revelar('painel.apiToken', painel.apiToken || '');
         const requisicao = {
             action: 'renew', protocolo: protocolo(cobranca.id, painel.id),
             clienteId: cobranca.clienteId, cliente: cobranca.clienteNome,
@@ -93,6 +96,8 @@ async function processarItem(item) {
     if (!bloqueio.changes) return { ignorado: true };
     const atual = await buscarUm(`SELECT fila.*, painel.nome AS painelNome, painel.apiUrl, painel.apiUsuario, painel.apiToken,
         painel.timeoutSegundos, painel.maxTentativas FROM renovacoes_painel_fila fila INNER JOIN paineis painel ON painel.id=fila.painelId WHERE fila.id=?`, [item.id]);
+    atual.apiUsuario = revelar('painel.apiUsuario', atual.apiUsuario || '');
+    atual.apiToken = revelar('painel.apiToken', atual.apiToken || '');
     try {
         const payload = JSON.parse(atual.requisicao || '{}');
         const resposta = await chamarPainel(atual, payload);

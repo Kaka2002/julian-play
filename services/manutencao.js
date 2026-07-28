@@ -293,11 +293,25 @@ async function exportarBackupCriptografado(nomeBackup, senha) {
     if (!nome.endsWith('.db') || String(senha || '').length < 10) throw new Error('Informe um backup valido e senha com pelo menos 10 caracteres.');
     const origem = path.join(BACKUP_DIR, nome); if (!fs.existsSync(origem)) throw new Error('Backup nao encontrado.');
     await verificarArquivoBackup(origem, true);
+    const arquivoInstalacao = path.join(__dirname, '..', '.julian-play-install.json');
+    let configuracaoInstalacao = '';
+    try { configuracaoInstalacao = fs.readFileSync(arquivoInstalacao, 'utf8'); } catch (_) { /* Instalações provisionadas usam o ambiente PM2. */ }
+    const pacote = Buffer.from(JSON.stringify({
+        formato: 'JPLAYBK2',
+        criadoEm: new Date().toISOString(),
+        bancoNome: nome,
+        bancoBase64: fs.readFileSync(origem).toString('base64'),
+        recuperacao: {
+            configuracaoInstalacao,
+            licenseAdminToken: String(process.env.LICENSE_ADMIN_TOKEN || ''),
+            julianSecretKey: String(process.env.JULIAN_SECRET_KEY || '')
+        }
+    }), 'utf8');
     const salt=crypto.randomBytes(16), iv=crypto.randomBytes(12), chave=crypto.scryptSync(senha,salt,32), cifra=crypto.createCipheriv('aes-256-gcm',chave,iv);
-    const criptografado=Buffer.concat([cifra.update(fs.readFileSync(origem)),cifra.final()]); const tag=cifra.getAuthTag();
+    const criptografado=Buffer.concat([cifra.update(pacote),cifra.final()]); const tag=cifra.getAuthTag();
     const destino=path.join(BACKUP_DIR,`${nome}.jplaybackup`);
-    fs.writeFileSync(destino,Buffer.concat([Buffer.from('JPLAYBK1'),salt,iv,tag,criptografado]));
-    await registrarEventoSistema('backup_exportado', 'info', `Backup criptografado exportado: ${path.basename(destino)}.`, { arquivo:nome, tamanho:fs.statSync(destino).size });
+    fs.writeFileSync(destino,Buffer.concat([Buffer.from('JPLAYBK2'),salt,iv,tag,criptografado]));
+    await registrarEventoSistema('backup_exportado', 'info', `Kit de recuperação criptografado exportado: ${path.basename(destino)}.`, { arquivo:nome, tamanho:fs.statSync(destino).size, formato:'JPLAYBK2' });
     return destino;
 }
 

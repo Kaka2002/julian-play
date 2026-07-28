@@ -8341,7 +8341,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                         </form>
                         <div class="subtitle" style="margin-top:8px;">Integridade: ${escapar(backup.integridade)} · teste: ${escapar(backup.restauracaoTeste)}${backup.hashSha256 ?` · SHA-256 ${escapar(backup.hashSha256.slice(0,12))}…`:''}</div>
                         <form method="post" action="/manutencao/backups/exportar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" minlength="10" required placeholder="Senha da exportação"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar criptografado</button>
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" minlength="10" required placeholder="Senha exclusiva do kit"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar kit de recuperação</button>
                         </form>
                         <form method="post" action="/manutencao/backups/copiar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" required placeholder="D:\Backups ou unidade de rede"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Copiar externamente</button>
