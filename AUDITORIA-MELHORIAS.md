@@ -37,6 +37,10 @@ código; itens operacionais externos não são marcados como implementados.
   versão instalada, versão esperada e estado de atualização no `/health`.
 - O pacote gerado possui teste automatizado que o extrai em diretório
   temporário e reprova banco, sessão do WhatsApp, backups ou dados persistentes.
+- A Central Hoje prioriza vencimentos, pagamentos pendentes, atendimentos,
+  reclamações, backup e conexão do WhatsApp, com atalhos para resolução.
+- Testes Playwright validam em Chrome a proteção da rota, o login real e a
+  apresentação das pendências usando ambiente totalmente isolado.
 
 ## Parcial
 
@@ -58,9 +62,9 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Cloudflare Access no Painel Mestre, que depende de configuração na conta
   Cloudflare e de uma política de acesso definida pelo proprietário.
-- Central de tarefas, pesquisa global, linha do tempo unificada, detecção de
-  duplicados, conciliação diária, exportação de auditoria e política operacional
-  de retenção/exclusão.
+- Pesquisa global, linha do tempo unificada, detecção de duplicados,
+  conciliação diária, exportação de auditoria e política operacional de
+  retenção/exclusão.
 - Execução do instalador completo em uma máquina Windows física recém-formatada
   permanece como homologação externa; conteúdo, ausência de dados persistentes
   e atualização com preservação são testados automaticamente.

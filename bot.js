@@ -6,6 +6,7 @@ const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
 const criarCampanhasRoute = require('./routes/campanhasRoute');
+const criarHojeRoute = require('./routes/hojeRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
@@ -153,6 +154,9 @@ app.get('/health', (req, res) => {
 app.use(protegerPainel);
 app.use(protegerLicenca);
 app.use('/pagamentos-manuais', pagamentosRoute);
+app.use('/hoje', criarHojeRoute({
+    renderizarPaginaHoje: clientesRoute.renderizarPaginaHoje
+}));
 app.use('/campanhas', criarCampanhasRoute({
     renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
 }));
@@ -161,17 +165,22 @@ app.use('/', clientesRoute);
 app.use('/', qrRoute);
 
 const PORT = process.env.PORT || 10000;
+const whatsappDesativado = process.env.DISABLE_WHATSAPP === '1';
 
 const server = app.listen(PORT, () => {
     console.log(`Monitor na porta ${PORT}`);
-    iniciarWhatsApp();
-    iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
-    iniciarMonitoramentoComercial({
-        getClient,
-        getStatusWhatsApp,
-        verificarSaudeWhatsApp,
-        recuperarWhatsAppAutomaticamente
-    });
+    if (whatsappDesativado) {
+        console.log('WhatsApp e agendadores desativados neste processo.');
+    } else {
+        iniciarWhatsApp();
+        iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
+        iniciarMonitoramentoComercial({
+            getClient,
+            getStatusWhatsApp,
+            verificarSaudeWhatsApp,
+            recuperarWhatsAppAutomaticamente
+        });
+    }
 });
 
 server.on('error', (err) => {
@@ -186,7 +195,7 @@ server.on('error', (err) => {
 
 async function desligar(signal) {
     console.log(`Recebido ${signal}. Encerrando WhatsApp...`);
-    await encerrarWhatsApp();
+    if (!whatsappDesativado) await encerrarWhatsApp();
     liberarTravaProcesso();
     process.exit(0);
 }

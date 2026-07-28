@@ -1,12 +1,14 @@
 {
   "name": "julian-play",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "main": "bot.js",
   "scripts": {
     "start": "node supervisor.js",
     "start:bot": "node bot.js",
     "demo:seed": "node scripts/seed-demo.js",
     "test": "node --test --test-concurrency=1 tests/perfis-configuracoes.test.js tests/permissoes.test.js tests/seguranca.test.js tests/pix-vencimentos.test.js tests/renovacao-painel.test.js tests/backup-atualizacao.test.js tests/melhorias-operacionais.test.js tests/governanca-observabilidade.test.js",
+    "test:e2e": "playwright test",
+    "test:all": "npm test && npm run test:e2e",
     "test:pacote-limpo": "powershell -NoProfile -ExecutionPolicy Bypass -File entrega-cliente-local\\USO_INTERNO_NAO_ENVIAR\\TESTAR-PACOTE-LIMPO.ps1"
   },
   "dependencies": {
@@ -16,5 +18,8 @@
     "qrcode": "^1.5.3",
     "sqlite3": "^5.1.7",
     "whatsapp-web.js": "^1.26.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
   }
 }
