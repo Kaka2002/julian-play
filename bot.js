@@ -5,6 +5,7 @@ const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
+const campanhasRoute = require('./routes/campanhasRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
@@ -22,6 +23,8 @@ const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComer
 const { protegerPainel } = require('./services/authService');
 const { protegerLicenca } = require('./services/licencaService');
 const { csrfMiddleware, cabecalhosSeguranca } = require('./services/securityService');
+const { middlewareCorrelacao, compararVersoes } = require('./services/observabilidadeService');
+const packageInfo = require('./package.json');
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -99,6 +102,7 @@ adquirirTravaProcesso();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.disable('x-powered-by');
+app.use(middlewareCorrelacao);
 app.use(cabecalhosSeguranca);
 app.use(csrfMiddleware({ isento: req => req.path.startsWith('/webhooks/') || req.path.startsWith('/api/admin/') || req.is('application/json') }));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
@@ -115,6 +119,10 @@ app.get('/health', (req, res) => {
         ok: true,
         estado: whatsapp.conectado ? 'operacional' : 'degradado',
         service: 'julian-play',
+        instance: INSTANCE_NAME,
+        version: packageInfo.version,
+        latestVersion: process.env.JULIAN_PLAY_LATEST_VERSION || packageInfo.version,
+        versionStatus: compararVersoes(packageInfo.version, process.env.JULIAN_PLAY_LATEST_VERSION || packageInfo.version),
         whatsapp: {
             conectado: Boolean(whatsapp.conectado),
             status: whatsapp.status,
@@ -145,6 +153,7 @@ app.get('/health', (req, res) => {
 app.use(protegerPainel);
 app.use(protegerLicenca);
 app.use('/pagamentos-manuais', pagamentosRoute);
+app.use('/campanhas', campanhasRoute);
 app.use('/licenca', licencaRoute);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);

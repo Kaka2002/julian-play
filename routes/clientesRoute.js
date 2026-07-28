@@ -4735,10 +4735,34 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
                         telefone,
                         erro: err.message
                     });
+                    const tentativas = campanhaAmizadeExecucao.enviados + campanhaAmizadeExecucao.erros;
+                    const minimo = Math.max(1, Number.parseInt(config.campanhaPausaErroMinimo || 5, 10) || 5);
+                    const limitePercentual = Math.max(1, Number.parseInt(config.campanhaPausaErroPercentual || 20, 10) || 20);
+                    const percentual = tentativas ? (campanhaAmizadeExecucao.erros / tentativas) * 100 : 0;
+                    if (!campanhaAmizadeExecucao.pausada && tentativas >= minimo && percentual >= limitePercentual) {
+                        campanhaAmizadeExecucao.pausada = true;
+                        campanhaAmizadeExecucao.pausadaEm = new Date().toISOString();
+                        campanhaAmizadeExecucao.mensagem = `Campanha pausada automaticamente: ${percentual.toFixed(1)}% de falhas em ${tentativas} tentativa(s).`;
+                        await sincronizarCampanhaAtual('pausada');
+                        await registrarEventoSistema('campanha_pausa_automatica', 'alerta', campanhaAmizadeExecucao.mensagem, {
+                            campanhaId: campanhaAmizadeExecucao.id,
+                            tentativas,
+                            erros: campanhaAmizadeExecucao.erros,
+                            percentual
+                        });
+                        await enviarWebhook(config.alertaWebhookUrl, {
+                            tipo: 'campanha_pausa_automatica',
+                            nivel: 'alerta',
+                            mensagem: campanhaAmizadeExecucao.mensagem,
+                            detalhes: { campanhaId: campanhaAmizadeExecucao.id, tentativas, erros: campanhaAmizadeExecucao.erros, percentual }
+                        });
+                    }
                 }
 
-                campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${totalElegivel} cliente(s) elegivel(is) enviados.`;
-                await sincronizarCampanhaAtual('em_andamento');
+                if (!campanhaAmizadeExecucao.pausada) {
+                    campanhaAmizadeExecucao.mensagem = `Campanha em andamento: ${campanhaAmizadeExecucao.enviados} de ${totalElegivel} cliente(s) elegivel(is) enviados.`;
+                }
+                await sincronizarCampanhaAtual(campanhaAmizadeExecucao.pausada ? 'pausada' : 'em_andamento');
             }
 
             const aindaTemLote = indice + CAMPANHA_AMIZADE_LOTE_TAMANHO < clientesElegiveis.length;
@@ -6783,6 +6807,13 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
                 <td>${escapar(item.motivo || '-')}</td>
             </tr>`).join('')}</tbody>
         </table></div>` : '<div class="empty">Nenhum cliente registrado para esta campanha.</div>'}
+        ${campanhaSelecionada ? `<form method="post" action="/campanhas/reclamacoes" class="form-grid" style="margin-top:18px;" onsubmit="return confirm('Registrar reclamação e bloquear novas campanhas para este cliente?');">
+            <input type="hidden" name="campanhaId" value="${escapar(campanhaSelecionada.id)}">
+            <input type="hidden" name="retorno" value="/campanhas?id=${escapar(campanhaSelecionada.id)}">
+            ${campo({ nome: 'clienteId', label: 'ID do cliente que reclamou', valor: '', tipo: 'number', attrs: 'min="1" required' })}
+            ${campo({ nome: 'motivo', label: 'Motivo da reclamação', valor: '', tipo: 'text', attrs: 'maxlength="500" required' })}
+            <div class="actions full"><button class="button danger" type="submit">Registrar reclamação e bloquear marketing</button></div>
+        </form>` : ''}
     </section>
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
@@ -8305,6 +8336,8 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'campanhaLimiteSemanalCliente', label: 'Máximo semanal por cliente', valor: status.config?.campanhaLimiteSemanalCliente || '1', tipo: 'number', attrs: 'min="1" max="20" required' })}
             ${campo({ nome: 'campanhaHoraInicio', label: 'Início do horário de campanhas', valor: status.config?.campanhaHoraInicio || '09:00', tipo: 'time', attrs: 'required' })}
             ${campo({ nome: 'campanhaHoraFim', label: 'Fim do horário de campanhas', valor: status.config?.campanhaHoraFim || '20:00', tipo: 'time', attrs: 'required' })}
+            ${campo({ nome: 'campanhaPausaErroPercentual', label: 'Pausar campanha com taxa de erros (%)', valor: status.config?.campanhaPausaErroPercentual || '20', tipo: 'number', attrs: 'min="1" max="100" required' })}
+            ${campo({ nome: 'campanhaPausaErroMinimo', label: 'Mínimo de tentativas antes da pausa automática', valor: status.config?.campanhaPausaErroMinimo || '5', tipo: 'number', attrs: 'min="1" max="100" required' })}
             <label class="check"><input type="checkbox" name="campanhaSomenteDiasUteis" ${status.config?.campanhaSomenteDiasUteis !== '0' ? 'checked' : ''}> Enviar campanhas somente em dias úteis</label>
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}

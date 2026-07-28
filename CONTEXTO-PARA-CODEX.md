@@ -251,6 +251,14 @@ delas, confirmar o estado real no código e nos testes:
 - backups verificáveis com integridade e hash;
 - instalador/atualizador local e botões locais de reiniciar/parar o robô;
 - política para não versionar ZIPs gerados e manter hash dos artefatos.
+- versão 1.1.5 adiciona governança de campanhas: registro auditável de
+  reclamação, bloqueio imediato de marketing, pausa automática por taxa de
+  erros configurável e rota dedicada `routes/campanhasRoute.js`;
+- eventos persistidos recebem `correlationId`, o `/health` informa versão
+  instalada/esperada e o pacote local passa por teste automatizado de
+  instalação limpa sem bancos, sessões ou backups;
+- migrações formais `004` e `005` cobrem reclamações de campanhas e
+  formalização das colunas históricas de privacidade.
 
 ## Cuidados importantes
 

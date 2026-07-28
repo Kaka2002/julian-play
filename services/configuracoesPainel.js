@@ -109,6 +109,8 @@ async function obterConfiguracoes() {
         campanhaHoraInicio: '09:00',
         campanhaHoraFim: '20:00',
         campanhaSomenteDiasUteis: '1',
+        campanhaPausaErroPercentual: '20',
+        campanhaPausaErroMinimo: '5',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -341,6 +343,8 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     const campanhaLimiteSemanalCliente = Math.max(1, Math.min(20, Number.parseInt(dados.campanhaLimiteSemanalCliente || 1, 10) || 1));
     const campanhaHoraInicio = String(dados.campanhaHoraInicio || '09:00').trim();
     const campanhaHoraFim = String(dados.campanhaHoraFim || '20:00').trim();
+    const campanhaPausaErroPercentual = Math.max(1, Math.min(100, Number.parseInt(dados.campanhaPausaErroPercentual || 20, 10) || 20));
+    const campanhaPausaErroMinimo = Math.max(1, Math.min(100, Number.parseInt(dados.campanhaPausaErroMinimo || 5, 10) || 5));
 
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
         throw new Error('Informe um horario valido para o backup automatico.');
@@ -374,6 +378,8 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     await salvarConfiguracao('campanhaHoraInicio', campanhaHoraInicio);
     await salvarConfiguracao('campanhaHoraFim', campanhaHoraFim);
     await salvarConfiguracao('campanhaSomenteDiasUteis', dados.campanhaSomenteDiasUteis ? '1' : '0');
+    await salvarConfiguracao('campanhaPausaErroPercentual', String(campanhaPausaErroPercentual));
+    await salvarConfiguracao('campanhaPausaErroMinimo', String(campanhaPausaErroMinimo));
     await salvarConfiguracao('alertaWhatsAppMinutos', String(minutos));
     await salvarConfiguracao('alertaWebhookUrl', webhook);
     await salvarConfiguracao('alertaWhatsappControle', whatsappControle);

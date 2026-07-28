@@ -6,7 +6,9 @@ const sqlite3 = require('sqlite3').verbose();
 const migrations = [
     require('./001-sessoes-administrativas'),
     require('./002-pagamentos-manuais-auditaveis'),
-    require('./003-indices-operacionais')
+    require('./003-indices-operacionais'),
+    require('./004-governanca-campanhas'),
+    require('./005-estruturas-historicas')
 ];
 
 function run(db, sql, params = []) {

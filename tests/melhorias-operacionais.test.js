@@ -116,7 +116,7 @@ test('migracoes formais preservam banco existente, criam backup e sao idempotent
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const runner=require('./database/migrations/runner');const estado=await runner.obterEstadoMigracoes(db);const backups=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db'));const antes=backups.length;const segunda=await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir});const colunas=await all('PRAGMA table_info(cobrancas_pix)');const sessoes=await get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessoes_painel'");process.stdout.write(JSON.stringify({total:estado.aplicadas.filter(x=>x.versao.includes('-00')).length,backup:backups.length>0,idempotente:segunda.status,novoBackup:fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length===antes,comprovante:colunas.some(x=>x.name==='comprovanteArquivo'),sessoes:!!sessoes}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         assert.deepEqual(JSON.parse(resultado.stdout), {
-            total: 3,
+            total: 5,
             backup: true,
             idempotente: 'sem_alteracoes',
             novoBackup: true,

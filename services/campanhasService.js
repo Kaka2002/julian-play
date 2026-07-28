@@ -238,6 +238,46 @@ function contarItensCampanhaPorStatus(campanhaId) {
     `, [campanhaId]);
 }
 
+async function registrarReclamacaoCampanha(dados = {}) {
+    const clienteId = Number(dados.clienteId || 0);
+    const motivo = String(dados.motivo || '').trim();
+    if (!clienteId) throw new Error('Cliente da reclamação não informado.');
+    if (motivo.length < 3) throw new Error('Informe o motivo da reclamação.');
+
+    const resultado = await executar(`INSERT INTO campanha_reclamacoes
+        (campanhaId, campanhaItemId, clienteId, motivo, origem, responsavel)
+        VALUES (?, ?, ?, ?, ?, ?)`, [
+        Number(dados.campanhaId || 0) || null,
+        Number(dados.campanhaItemId || 0) || null,
+        clienteId,
+        motivo.slice(0, 500),
+        String(dados.origem || 'painel').slice(0, 50),
+        String(dados.responsavel || '').slice(0, 100)
+    ]);
+
+    await executar(`UPDATE clientes
+        SET whatsappMarketingConsentimento = 0,
+            whatsappOptOutEm = COALESCE(NULLIF(whatsappOptOutEm, ''), CURRENT_TIMESTAMP),
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`, [clienteId]);
+    return buscarUm('SELECT * FROM campanha_reclamacoes WHERE id = ?', [resultado.id]);
+}
+
+function listarReclamacoesCampanha(campanhaId = null, limite = 100) {
+    const total = Math.max(1, Math.min(500, Number(limite || 100)));
+    if (campanhaId) {
+        return buscarTodos(`SELECT r.*, c.nome AS clienteNome
+            FROM campanha_reclamacoes r
+            LEFT JOIN clientes c ON c.id = r.clienteId
+            WHERE r.campanhaId = ?
+            ORDER BY r.id DESC LIMIT ?`, [campanhaId, total]);
+    }
+    return buscarTodos(`SELECT r.*, c.nome AS clienteNome
+        FROM campanha_reclamacoes r
+        LEFT JOIN clientes c ON c.id = r.clienteId
+        ORDER BY r.id DESC LIMIT ?`, [total]);
+}
+
 async function contarEnviosClienteDesde(clienteId, desdeIso) {
     const row = await buscarUm(`
         SELECT COUNT(*) AS total
@@ -285,6 +325,8 @@ module.exports = {
     listarItensCampanha,
     listarItensCampanhaPorStatus,
     contarItensCampanhaPorStatus,
+    registrarReclamacaoCampanha,
+    listarReclamacoesCampanha,
     contarEnviosClienteDesde,
     buscarCampanhaRetomavel
 };

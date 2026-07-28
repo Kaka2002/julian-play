@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { obterContextoObservabilidade } = require('./observabilidadeService');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -19,6 +20,7 @@ function buscarTodos(sql, params = []) {
 }
 
 function registrarEventoSistema(tipo, nivel, mensagem, detalhes = {}) {
+    const contexto = obterContextoObservabilidade();
     return executar(
         `INSERT INTO eventos_sistema (tipo, nivel, mensagem, detalhes)
         VALUES (?, ?, ?, ?)`,
@@ -26,7 +28,11 @@ function registrarEventoSistema(tipo, nivel, mensagem, detalhes = {}) {
             String(tipo || 'sistema'),
             String(nivel || 'info'),
             String(mensagem || ''),
-            JSON.stringify(detalhes || {})
+            JSON.stringify({
+                ...(detalhes || {}),
+                correlationId: detalhes?.correlationId || contexto.correlationId || '',
+                requisicao: contexto.caminho ? { metodo: contexto.metodo, caminho: contexto.caminho } : undefined
+            })
         ]
     );
 }

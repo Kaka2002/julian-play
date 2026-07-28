@@ -1,12 +1,13 @@
 {
   "name": "julian-play",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "main": "bot.js",
   "scripts": {
     "start": "node supervisor.js",
     "start:bot": "node bot.js",
     "demo:seed": "node scripts/seed-demo.js",
-    "test": "node --test --test-concurrency=1 tests/perfis-configuracoes.test.js tests/permissoes.test.js tests/seguranca.test.js tests/pix-vencimentos.test.js tests/renovacao-painel.test.js tests/backup-atualizacao.test.js tests/melhorias-operacionais.test.js"
+    "test": "node --test --test-concurrency=1 tests/perfis-configuracoes.test.js tests/permissoes.test.js tests/seguranca.test.js tests/pix-vencimentos.test.js tests/renovacao-painel.test.js tests/backup-atualizacao.test.js tests/melhorias-operacionais.test.js tests/governanca-observabilidade.test.js",
+    "test:pacote-limpo": "powershell -NoProfile -ExecutionPolicy Bypass -File entrega-cliente-local\\USO_INTERNO_NAO_ENVIAR\\TESTAR-PACOTE-LIMPO.ps1"
   },
   "dependencies": {
     "@puppeteer/browsers": "^2.2.3",

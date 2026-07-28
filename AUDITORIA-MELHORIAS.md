@@ -21,7 +21,10 @@ código; itens operacionais externos não são marcados como implementados.
 - Novas senhas administrativas exigem no mínimo 12 caracteres.
 - Consentimento de marketing, opt-out por palavras-chave, limite diário,
   limite semanal por cliente, horário comercial, dias úteis, lotes,
-  intervalos, pausa, retomada e cancelamento de campanhas.
+  intervalos, pausa, retomada e cancelamento de campanhas. Reclamações podem
+  ser registradas no histórico da campanha, bloqueiam imediatamente novos
+  envios de marketing e a campanha pausa automaticamente quando a taxa
+  configurável de erros ultrapassa o limite.
 - Estado central de disco, memória, backup, WhatsApp, cobranças e versão por
   instalação no Painel Mestre.
 - Testes automatizados para perfis, permissões, segurança, pagamentos,
@@ -30,21 +33,23 @@ código; itens operacionais externos não são marcados como implementados.
   backup verificado antes da alteração, transação, rollback e relatório por
   instalação. Sessões, pagamentos manuais e índices operacionais já usam o
   novo fluxo.
+- Observabilidade inclui identificador de correlação por requisição e evento,
+  versão instalada, versão esperada e estado de atualização no `/health`.
+- O pacote gerado possui teste automatizado que o extrai em diretório
+  temporário e reprova banco, sessão do WhatsApp, backups ou dados persistentes.
 
 ## Parcial
 
 - Pagamento manual: concluído para PayPal pessoal. Estorno corrige a receita e
   preserva o acesso para decisão explícita, evitando suspensão acidental.
-- Campanhas: falta indicador manual de reclamação e pausa por taxa agregada de
-  erros/bloqueios.
 - Migrações: o fluxo formal está concluído para toda alteração nova. Parte das
   estruturas históricas ainda permanece na inicialização legada e será
   extraída gradualmente, sem reescrever o banco de uma vez.
 - Rotas: pagamentos manuais foram extraídos para
   `routes/pagamentosRoute.js`; os demais domínios de
   `routes/clientesRoute.js` ainda devem ser extraídos gradualmente.
-- Observabilidade: falta comparar versão instalada com a última versão
-  disponível e padronizar correlação estruturada em todos os logs.
+- Observabilidade: a comparação usa `JULIAN_PLAY_LATEST_VERSION`, que deve ser
+  publicada pelo deploy/Painel Mestre para representar a versão desejada.
 
 ## Pendente
 
@@ -53,7 +58,8 @@ código; itens operacionais externos não são marcados como implementados.
 - Central de tarefas, pesquisa global, linha do tempo unificada, detecção de
   duplicados, conciliação diária, exportação de auditoria e política operacional
   de retenção/exclusão.
-- Teste automatizado de instalação em uma máquina Windows limpa.
+- Execução do instalador completo em uma máquina Windows física recém-formatada;
+  o conteúdo do pacote já é validado automaticamente em ambiente temporário.
 
 ## Ação externa obrigatória
 
