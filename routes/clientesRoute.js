@@ -7389,6 +7389,11 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
         ${metricCard({ label: 'Inadimplentes', valor: inadimplentes.quantidade, nota: formatarMoeda(inadimplentes.valorMensal), tipo: 'orange', icone: 'alert' })}
     </section>
 
+    <section class="clients-panel">
+        <div class="panel-head"><div><h2 class="panel-title">Conferência manual</h2><div class="subtitle">Comprovantes PayPal, confirmação auditada e estornos.</div></div>
+        <a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div>
+    </section>
+
     <section class="finance-breakdown-grid">
         ${financeiroBreakdownCard({
             titulo: 'Por forma de pagamento',

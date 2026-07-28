@@ -219,6 +219,10 @@ delas, confirmar o estado real no código e nos testes:
 - novas senhas administrativas exigem no mínimo 12 caracteres;
 - campanhas respeitam limite semanal por cliente, horário configurável e dias
   úteis, além dos controles de consentimento, limite diário e retomada;
+- pagamentos PayPal manuais possuem área protegida em `/pagamentos-manuais`,
+  upload de comprovante para o `DATA_DIR`, conferência com identificador único,
+  responsável, vencimentos anterior/novo e estorno auditado; o estorno não
+  reduz automaticamente o acesso do cliente;
 
 - novas instalações com nome da empresa, imagens e PIX vazios;
 - separação entre servidor e instalação local;

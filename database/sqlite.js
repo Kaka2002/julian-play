@@ -311,6 +311,17 @@ db.serialize(() => {
             aprovadoEm TEXT,
             controleMensagemEnviada INTEGER DEFAULT 0,
             controleMensagemErro TEXT,
+            moeda TEXT DEFAULT 'BRL',
+            comprovanteArquivo TEXT,
+            comprovanteRecebidoEm TEXT,
+            conferidoPor TEXT,
+            conferidoEm TEXT,
+            identificadorManual TEXT,
+            vencimentoAnterior TEXT,
+            vencimentoNovo TEXT,
+            estornadoEm TEXT,
+            estornadoPor TEXT,
+            motivoEstorno TEXT,
             FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE CASCADE,
             FOREIGN KEY(pagamentoId) REFERENCES cliente_pagamentos(id) ON DELETE SET NULL
         )
@@ -561,6 +572,22 @@ function migrarCobrancasPix(done) {
         if (!existentes.has('controleMensagemErro')) {
             tarefas.push('ALTER TABLE cobrancas_pix ADD COLUMN controleMensagemErro TEXT');
         }
+        const novasColunas = {
+            moeda: "TEXT DEFAULT 'BRL'",
+            comprovanteArquivo: 'TEXT',
+            comprovanteRecebidoEm: 'TEXT',
+            conferidoPor: 'TEXT',
+            conferidoEm: 'TEXT',
+            identificadorManual: 'TEXT',
+            vencimentoAnterior: 'TEXT',
+            vencimentoNovo: 'TEXT',
+            estornadoEm: 'TEXT',
+            estornadoPor: 'TEXT',
+            motivoEstorno: 'TEXT'
+        };
+        for (const [coluna, definicao] of Object.entries(novasColunas)) {
+            if (!existentes.has(coluna)) tarefas.push(`ALTER TABLE cobrancas_pix ADD COLUMN ${coluna} ${definicao}`);
+        }
 
         function proxima(indice = 0) {
             if (indice < tarefas.length) {
@@ -570,11 +597,17 @@ function migrarCobrancasPix(done) {
             if (instalacaoExistente) {
                 db.run(
                     "UPDATE cobrancas_pix SET controleMensagemEnviada = 1 WHERE status = 'aprovado'",
-                    () => done()
+                    () => {
+                        db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cobrancas_identificador_manual
+                            ON cobrancas_pix(provedor, identificadorManual)
+                            WHERE identificadorManual IS NOT NULL AND identificadorManual <> ''`, () => done());
+                    }
                 );
                 return;
             }
-            done();
+            db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_cobrancas_identificador_manual
+                ON cobrancas_pix(provedor, identificadorManual)
+                WHERE identificadorManual IS NOT NULL AND identificadorManual <> ''`, () => done());
         }
 
         proxima();

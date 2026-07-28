@@ -11,8 +11,9 @@ código; itens operacionais externos não são marcados como implementados.
   `PRAGMA quick_check` e teste de restauração.
 - Renovação PIX e PayPal API idempotente; fila de renovação externa com novas
   tentativas.
-- PayPal manual identificado como aguardando comprovante e sem liberação
-  automática.
+- PayPal manual com fila própria, comprovante JPG/PNG/PDF dentro do `DATA_DIR`,
+  conferência obrigatória pelo administrador, ID de transação único,
+  vencimentos anterior/novo, confirmação idempotente e registro de estorno.
 - CAPTCHA, CSRF, limitação persistente de login, TOTP opcional e auditoria.
 - Sessões administrativas persistentes, armazenadas somente pelo hash do token,
   tela `/sessoes` e revogação total.
@@ -29,21 +30,21 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Backup: falta retenção separada diária/semanal/mensal e exercício mensal
   agendado com relatório.
-- Pagamento manual: falta upload e guarda do comprovante, conferente, ID PayPal,
-  vencimentos anterior/novo e fluxo formal de estorno.
+- Pagamento manual: concluído para PayPal pessoal. Estorno corrige a receita e
+  preserva o acesso para decisão explícita, evitando suspensão acidental.
 - Campanhas: falta indicador manual de reclamação e pausa por taxa agregada de
   erros/bloqueios.
 - Migrações: existe `schema_migrations`, mas parte do legado ainda está na
   inicialização do SQLite; novos módulos devem migrar gradualmente para um
   arquivo por versão.
-- Rotas: serviços já foram separados, porém `routes/clientesRoute.js` ainda
-  precisa ser extraído gradualmente por domínio.
+- Rotas: pagamentos manuais foram extraídos para
+  `routes/pagamentosRoute.js`; os demais domínios de
+  `routes/clientesRoute.js` ainda devem ser extraídos gradualmente.
 - Observabilidade: falta comparar versão instalada com a última versão
   disponível e padronizar correlação estruturada em todos os logs.
 
 ## Pendente
 
-- Fluxo completo auditável de pagamentos manuais e estornos.
 - Cloudflare Access no Painel Mestre, que depende de configuração na conta
   Cloudflare e de uma política de acesso definida pelo proprietário.
 - Central de tarefas, pesquisa global, linha do tempo unificada, detecção de

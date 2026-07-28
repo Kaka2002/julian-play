@@ -74,3 +74,22 @@ test('senhas de clientes sao cifradas sem quebrar leitura e acessos do app', () 
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('pagamento manual exige comprovante, identificador unico e registra estorno sem reduzir acesso', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,function(e){e?no(e):ok({id:this.lastID,changes:this.changes})}));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const plano=await run("INSERT INTO tipos_planos(nome,dias,valor) VALUES('Mensal',30,'35,00')");const cliente=await run("INSERT INTO clientes(nome,telefone,plano,tipoPlanoId,diasContrato,valorPlano,dataInicio,dataVencimento,vencimento,status) VALUES(?,?,?,?,?,?,?,?,?,?)",['Cliente Manual','5511999999999','Mensal',plano.id,30,'35,00','2026-07-28T10:00','2026-08-27T23:59','2026-08-27','ativo']);const s=require('./services/pagamentoManualService');await s.registrarCobrancaManual({referencia:'MAN-1',provedor:'paypal_manual',clienteId:cliente.id,plano:'Mensal',tipoPlanoId:plano.id,diasContrato:30,valorPlano:'35,00',valorTotal:35});const cob=await get("SELECT id FROM cobrancas_pix WHERE referencia='MAN-1'");let sem=false;try{await s.confirmarPagamentoManual(cob.id,{identificadorManual:'PAYPAL-1',conferidoPor:'admin'})}catch(e){sem=/comprovante/i.test(e.message)}await s.registrarComprovanteManual(cob.id,'teste.png');const ok=await s.confirmarPagamentoManual(cob.id,{identificadorManual:'PAYPAL-1',conferidoPor:'admin'});const dup=await s.confirmarPagamentoManual(cob.id,{identificadorManual:'PAYPAL-1',conferidoPor:'admin'});const antes=await get('SELECT dataVencimento FROM clientes WHERE id=?',[cliente.id]);await s.estornarPagamentoManual(cob.id,{motivo:'Estorno confirmado no PayPal',estornadoPor:'admin'});const depois=await get('SELECT dataVencimento FROM clientes WHERE id=?',[cliente.id]);const final=await get('SELECT status,conferidoPor,identificadorManual,estornadoPor,motivoEstorno FROM cobrancas_pix WHERE id=?',[cob.id]);const pagamento=await get('SELECT excluidoEm FROM cliente_pagamentos WHERE id=?',[ok.renovacao.pagamentoId]);process.stdout.write(JSON.stringify({sem,aprovado:ok.aprovado,duplicado:dup.duplicado,status:final.status,conferidoPor:final.conferidoPor,id:final.identificadorManual,estornadoPor:final.estornadoPor,receitaRemovida:!!pagamento.excluidoEm,acessoMantido:antes.dataVencimento===depois.dataVencimento}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            sem: true,
+            aprovado: true,
+            duplicado: true,
+            status: 'estornado',
+            conferidoPor: 'admin',
+            id: 'PAYPAL-1',
+            estornadoPor: 'admin',
+            receitaRemovida: true,
+            acessoMantido: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
