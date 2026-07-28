@@ -7,6 +7,8 @@ const sqlite3 = require('sqlite3').verbose();
 const { criarHashSenha } = require('../services/passwordService');
 const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('../services/licencaCalculo');
 const masterDb = require('./db');
+const packageInfo = require('../package.json');
+const { compararVersoes } = require('../services/observabilidadeService');
 
 const sourceDir = path.resolve(process.env.JULIAN_PLAY_SOURCE_DIR || path.join(__dirname, '..'));
 const clientesDir = path.resolve(process.env.MASTER_CLIENTS_DIR || 'C:\\JulianPlayClientes');
@@ -91,6 +93,9 @@ function consultarSaude(porta) {
                         ok: Boolean(dados.ok),
                         estado: String(dados.estado || ''),
                         service: String(dados.service || ''),
+                        versao: String(dados.version || ''),
+                        versaoEsperada: packageInfo.version || '',
+                        estadoVersao: compararVersoes(dados.version || '0.0.0', packageInfo.version || '0.0.0'),
                         whatsapp: Boolean(dados.whatsapp?.conectado),
                         whatsappStatus: String(dados.whatsapp?.status || ''),
                         numero: String(dados.whatsapp?.numero || '').replace(/\D/g, ''),
@@ -184,6 +189,9 @@ async function listarInstalacoes() {
                 resumoComercial,
                 estadoLicenca: calcularEstadoLicenca(config),
                 saude,
+                versaoInstalada: saude.versao || '',
+                versaoEsperada: packageInfo.version || '',
+                estadoVersao: saude.estadoVersao || 'desconhecida',
                 eventosRecentes: eventosDaInstalacao
             };
         } catch (_) {

@@ -259,6 +259,11 @@ delas, confirmar o estado real no código e nos testes:
   instalação limpa sem bancos, sessões ou backups;
 - migrações formais `004` e `005` cobrem reclamações de campanhas e
   formalização das colunas históricas de privacidade.
+- a migração formal `006` registra campanhas, itens e eventos históricos sem
+  sobrescrever dados; o Painel Mestre agora compara automaticamente a versão
+  de cada instalação com sua própria versão e mostra o resultado na saúde;
+- `routes/campanhasRoute.js` passou a registrar também a página principal de
+  campanhas, ampliando a separação gradual do arquivo histórico de clientes.
 
 ## Cuidados importantes
 

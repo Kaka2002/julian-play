@@ -8,7 +8,8 @@ const migrations = [
     require('./002-pagamentos-manuais-auditaveis'),
     require('./003-indices-operacionais'),
     require('./004-governanca-campanhas'),
-    require('./005-estruturas-historicas')
+    require('./005-estruturas-historicas'),
+    require('./006-campanhas-eventos-historicos')
 ];
 
 function run(db, sql, params = []) {

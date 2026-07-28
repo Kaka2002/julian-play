@@ -5,7 +5,7 @@ const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
-const campanhasRoute = require('./routes/campanhasRoute');
+const criarCampanhasRoute = require('./routes/campanhasRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
@@ -153,7 +153,9 @@ app.get('/health', (req, res) => {
 app.use(protegerPainel);
 app.use(protegerLicenca);
 app.use('/pagamentos-manuais', pagamentosRoute);
-app.use('/campanhas', campanhasRoute);
+app.use('/campanhas', criarCampanhasRoute({
+    renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
+}));
 app.use('/licenca', licencaRoute);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);

@@ -2,14 +2,19 @@ const express = require('express');
 const { registrarReclamacaoCampanha, listarReclamacoesCampanha } = require('../services/campanhasService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 
-const router = express.Router();
+function criarCampanhasRoute(dependencias = {}) {
+    const router = express.Router();
+    if (typeof dependencias.renderizarPaginaCampanhas !== 'function') {
+        throw new Error('Renderização da página de campanhas não configurada.');
+    }
 
-router.get('/reclamacoes', async (req, res) => {
-    const registros = await listarReclamacoesCampanha(req.query.campanhaId || null, req.query.limite || 100);
-    res.json({ ok: true, total: registros.length, registros });
-});
+    router.get('/', dependencias.renderizarPaginaCampanhas);
+    router.get('/reclamacoes', async (req, res) => {
+        const registros = await listarReclamacoesCampanha(req.query.campanhaId || null, req.query.limite || 100);
+        res.json({ ok: true, total: registros.length, registros });
+    });
 
-router.post('/reclamacoes', async (req, res) => {
+    router.post('/reclamacoes', async (req, res) => {
     try {
         const reclamacao = await registrarReclamacaoCampanha({
             campanhaId: req.body.campanhaId,
@@ -30,6 +35,9 @@ router.post('/reclamacoes', async (req, res) => {
     } catch (err) {
         return res.redirect(`/campanhas?mensagem=${encodeURIComponent(err.message)}`);
     }
-});
+    });
 
-module.exports = router;
+    return router;
+}
+
+module.exports = criarCampanhasRoute;

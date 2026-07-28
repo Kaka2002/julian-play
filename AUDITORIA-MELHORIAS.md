@@ -42,14 +42,17 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Pagamento manual: concluído para PayPal pessoal. Estorno corrige a receita e
   preserva o acesso para decisão explícita, evitando suspensão acidental.
-- Migrações: o fluxo formal está concluído para toda alteração nova. Parte das
-  estruturas históricas ainda permanece na inicialização legada e será
-  extraída gradualmente, sem reescrever o banco de uma vez.
-- Rotas: pagamentos manuais foram extraídos para
-  `routes/pagamentosRoute.js`; os demais domínios de
-  `routes/clientesRoute.js` ainda devem ser extraídos gradualmente.
-- Observabilidade: a comparação usa `JULIAN_PLAY_LATEST_VERSION`, que deve ser
-  publicada pelo deploy/Painel Mestre para representar a versão desejada.
+- Migrações: o fluxo formal está concluído para toda alteração nova.
+  Privacidade, campanhas, itens e eventos históricos já possuem migrações
+  formais; a inicialização compatível permanece temporariamente como rede de
+  segurança para instalações antigas.
+- Rotas: pagamentos manuais e a entrada/governança de campanhas foram
+  extraídos para módulos próprios. Os outros domínios do arquivo histórico
+  continuam sendo separados somente quando forem alterados, evitando uma
+  reescrita ampla sem benefício funcional.
+- Observabilidade: o Painel Mestre compara automaticamente a versão devolvida
+  por cada `/health` com a versão do próprio código publicado, sem variável
+  manual.
 
 ## Pendente
 
@@ -58,8 +61,9 @@ código; itens operacionais externos não são marcados como implementados.
 - Central de tarefas, pesquisa global, linha do tempo unificada, detecção de
   duplicados, conciliação diária, exportação de auditoria e política operacional
   de retenção/exclusão.
-- Execução do instalador completo em uma máquina Windows física recém-formatada;
-  o conteúdo do pacote já é validado automaticamente em ambiente temporário.
+- Execução do instalador completo em uma máquina Windows física recém-formatada
+  permanece como homologação externa; conteúdo, ausência de dados persistentes
+  e atualização com preservação são testados automaticamente.
 
 ## Ação externa obrigatória
 

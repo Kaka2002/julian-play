@@ -8540,7 +8540,7 @@ router.get('/clientes', async (req, res) => {
     });
 });
 
-router.get('/campanhas', async (req, res) => {
+async function renderizarPaginaCampanhas(req, res) {
     desativarCache(res);
     const campanhas = await listarCampanhas(40);
     const idSelecionado = req.query.id || campanhas[0]?.id;
@@ -8554,7 +8554,7 @@ router.get('/campanhas', async (req, res) => {
         mensagem: req.query.mensagem || '',
         ativo: 'campanhas'
     });
-});
+}
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
@@ -11122,5 +11122,7 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
 
     res.redirect(`/financeiro?mensagem=${encodeURIComponent(`${enviados} cobrança(s) enviada(s), ${ignorados} ignorada(s).`)}`);
 });
+
+router.renderizarPaginaCampanhas = renderizarPaginaCampanhas;
 
 module.exports = router;

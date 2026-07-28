@@ -400,6 +400,7 @@ function resumoDiagnostico(item) {
     return `
         <span class="badge ${classe}">${escapar(rotulo)}</span>
         <div class="diagnostic">
+            <span>Versão ${escapar(saude.versao || 'não informada')} · ${escapar(saude.estadoVersao || 'desconhecida')}</span>
         ${detalhes.map(detalhe => `<span>${escapar(detalhe)}</span>`).join('')}
         </div>
         ${numeroDivergente ? '<div class="small dangertext">O número conectado não é o WhatsApp cadastrado para esta instalação.</div>' : ''}
@@ -1628,7 +1629,12 @@ function secaoLicencasLocais(licencas = []) {
     </section>`;
 }
 
-app.get('/health', (req, res) => res.json({ ok: true, service: 'julian-master' }));
+app.get('/health', (req, res) => res.json({
+    ok: true,
+    service: 'julian-master',
+    version: packageInfo.version || '',
+    timestamp: new Date().toISOString()
+}));
 
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
     try {
