@@ -425,3 +425,24 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - O `deploy.ps1` mantem `julian-amplaytv` parado e salva esse estado no PM2.
 - Depois de uma atualizacao bem-sucedida, o deploy recria automaticamente o
   pacote oficial de instalacao local.
+
+## Seguranca, privacidade e continuidade em 28/07/2026
+
+- O monitoramento pode copiar cada backup automatico verificado para outro
+  disco ou compartilhamento de rede. A pasta e configurada em Manutencao;
+  uma pasta no mesmo disco nao deve ser tratada como copia externa.
+- O login aceita segundo fator TOTP quando `PANEL_TOTP_SECRET` estiver definido
+  no ambiente persistente do processo PM2. A chave nao deve ser gravada no
+  Git, banco ou neste documento.
+- Clientes novos nao entram em campanhas sem consentimento explicito no
+  cadastro. As palavras `parar`, `cancelar mensagens` e `nao quero receber`
+  retiram automaticamente o consentimento e registram nota no cliente.
+- Campanhas possuem limite configuravel de destinatarios, com padrao de 100,
+  alem dos lotes e intervalos ja existentes.
+- Pedidos PayPal no modo manual agora criam uma cobranca auditavel com status
+  `aguardando_comprovante`; continuam exigindo conferencia humana e nao
+  renovam automaticamente.
+- A criptografia integral das credenciais IPTV e de aplicativos permanece uma
+  migracao separada: ela so deve ser ativada depois de definir como a chave
+  externa sera guardada e recuperada junto aos backups. Nao usar uma chave
+  descartavel dentro da mesma pasta dos dados.

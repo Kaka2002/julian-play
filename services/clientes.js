@@ -295,6 +295,11 @@ function montarCliente(dados = {}) {
         origem: limparTexto(dados.origem),
         tags: normalizarTags(dados.tags),
         bonusMeses: Math.max(0, Number.parseInt(dados.bonusMeses || 0, 10) || 0),
+        whatsappMarketingConsentimento: dados.whatsappMarketingConsentimento ? 1 : 0,
+        whatsappMarketingConsentidoEm: dados.whatsappMarketingConsentimento
+            ? (limparTexto(dados.whatsappMarketingConsentidoEm) || new Date().toISOString())
+            : '',
+        whatsappOptOutEm: dados.whatsappMarketingConsentimento ? '' : limparTexto(dados.whatsappOptOutEm),
         status: limparTexto(dados.status) || 'ativo'
     };
 }
@@ -658,6 +663,8 @@ async function listarClientesAtivosComerciais() {
         `SELECT * FROM clientes
         WHERE status = 'ativo'
             AND (plano IS NULL OR plano NOT LIKE '%Teste%')
+            AND whatsappMarketingConsentimento = 1
+            AND (whatsappOptOutEm IS NULL OR whatsappOptOutEm = '')
             AND telefone IS NOT NULL
             AND telefone != ''
         ORDER BY nome ASC`
@@ -775,6 +782,9 @@ async function salvarCliente(dados) {
                 origem = ?,
                 tags = ?,
                 bonusMeses = ?,
+                whatsappMarketingConsentimento = ?,
+                whatsappMarketingConsentidoEm = ?,
+                whatsappOptOutEm = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
@@ -812,6 +822,9 @@ async function salvarCliente(dados) {
                 cliente.origem,
                 cliente.tags,
                 cliente.bonusMeses,
+                cliente.whatsappMarketingConsentimento,
+                cliente.whatsappMarketingConsentidoEm,
+                cliente.whatsappOptOutEm,
                 cliente.status,
                 idCliente
             ]
@@ -832,8 +845,9 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses,
+            whatsappMarketingConsentimento, whatsappMarketingConsentidoEm, whatsappOptOutEm, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -868,6 +882,9 @@ async function salvarCliente(dados) {
             cliente.origem,
             cliente.tags,
             cliente.bonusMeses,
+            cliente.whatsappMarketingConsentimento,
+            cliente.whatsappMarketingConsentidoEm,
+            cliente.whatsappOptOutEm,
             cliente.status
         ]
     );
@@ -1688,6 +1705,21 @@ function registrarAvisoAniversario(id, ano) {
     return registrarBonusAniversario(id, ano);
 }
 
+async function registrarOptOutWhatsapp(telefone) {
+    const cliente = await buscarClientePorTelefone(telefone);
+    if (!cliente) return null;
+    await executar(
+        `UPDATE clientes SET
+            whatsappMarketingConsentimento = 0,
+            whatsappOptOutEm = ?,
+            atualizadoEm = CURRENT_TIMESTAMP
+        WHERE id = ?`,
+        [new Date().toISOString(), cliente.id]
+    );
+    await adicionarNotaCliente(cliente.id, 'Cliente solicitou não receber campanhas pelo WhatsApp.');
+    return buscarClientePorId(cliente.id);
+}
+
 module.exports = {
     cadastrarOuAtualizarCliente,
     buscarClientePorTelefone,
@@ -1727,6 +1759,7 @@ module.exports = {
     avisoRenovacaoProgramadoExiste,
     registrarAvisoAniversario,
     registrarBonusAniversario,
+    registrarOptOutWhatsapp,
     atualizarStatusAutomaticoClientes,
     normalizarTelefone
 };

@@ -15,7 +15,8 @@ const {
     buscarClientePorNomeOuTelefone,
     buscarClientePorUsuarioIPTV,
     cadastrarClienteTesteParcial,
-    cadastrarTesteLiberadoPorAtendente
+    cadastrarTesteLiberadoPorAtendente,
+    registrarOptOutWhatsapp
 } = require('./clientes');
 const { registrarSolicitacaoTesteGratis } = require('./testesGratisHistorico');
 const {
@@ -898,6 +899,16 @@ async function responderMensagem(message) {
     const textoOriginal = message.body || '';
     const texto = normalizar(textoOriginal);
     let conversa = conversas.get(telefone);
+
+    if (['parar', 'cancelar mensagens', 'nao quero receber', 'não quero receber'].includes(texto)) {
+        const telefoneCliente = await obterTelefoneClienteMensagem(message);
+        await registrarOptOutWhatsapp(telefoneCliente || telefone).catch((err) => {
+            console.log('Não foi possível registrar opt-out do WhatsApp:', err.message);
+        });
+        apagarConversa(telefone);
+        await responderComDigitacao(message, '✅ Pronto. Você não receberá novas campanhas. Mensagens necessárias sobre atendimento e cobrança continuam disponíveis.');
+        return;
+    }
 
     if (!conversa && String(telefone || '').endsWith('@lid')) {
         const telefoneReal = await obterTelefoneClienteMensagem(message);

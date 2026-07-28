@@ -4580,6 +4580,7 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
             campanhaAmizadeExecucao.mensagem = `Campanha retomada: ${clientesElegiveis.length} cliente(s) pendente(s).`;
         } else {
             const todosClientes = await listarClientesAtivosComerciais();
+            const limiteDiario = Math.max(1, Number.parseInt(config.campanhaLimiteDiario || 100, 10) || 100);
 
             campanhaAmizadeExecucao.total = todosClientes.length;
             await sincronizarCampanhaAtual('em_andamento');
@@ -4606,6 +4607,17 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
                         telefone,
                         status: 'ja_enviado',
                         motivo: 'ja enviado anteriormente'
+                    });
+                    continue;
+                }
+
+                if (clientesElegiveis.length >= limiteDiario) {
+                    campanhaAmizadeExecucao.ignorados += 1;
+                    registrarClienteCampanha(campanhaAmizadeExecucao.clientesIgnorados, cliente, 'limite diário');
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
+                        telefone,
+                        status: 'ignorado',
+                        motivo: `limite diário de ${limiteDiario} envios`
                     });
                     continue;
                 }
@@ -5644,6 +5656,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
+            <label class="toggle-line full">
+                <input type="checkbox" name="whatsappMarketingConsentimento" value="1" ${Number(cliente.whatsappMarketingConsentimento || 0) === 1 ?'checked' : ''}>
+                <span>Cliente autorizou receber campanhas pelo WhatsApp</span>
+            </label>
+            <input type="hidden" name="whatsappMarketingConsentidoEm" value="${escapar(cliente.whatsappMarketingConsentidoEm || '')}">
+            <input type="hidden" name="whatsappOptOutEm" value="${escapar(cliente.whatsappOptOutEm || '')}">
 
             <div class="form-section full">Plano</div>
             ${campo({
@@ -8230,6 +8248,12 @@ function telaManutencao(status = {}, opcoes = {}) {
             </label>
             ${campo({ nome: 'backupAutomaticoHora', label: 'Horário do backup', valor: status.config?.backupAutomaticoHora || '03:00', tipo: 'time', attrs: 'required' })}
             ${campo({ nome: 'backupRetencaoDias', label: 'Reter backups automáticos por dias', valor: status.config?.backupRetencaoDias || '30', tipo: 'number', attrs: 'min="1" max="365" required' })}
+            <label class="toggle-line">
+                <input type="checkbox" name="backupExternoAtivo" value="1" ${String(status.config?.backupExternoAtivo) === '1' ?'checked' : ''}>
+                <span>Copiar cada backup para outro disco ou compartilhamento</span>
+            </label>
+            ${campo({ nome: 'backupExternoPasta', label: 'Pasta externa de backup', valor: status.config?.backupExternoPasta || '', tipo: 'text', attrs: 'placeholder="D:\\BackupsJulianPlay ou \\\\servidor\\backups"' })}
+            ${campo({ nome: 'campanhaLimiteDiario', label: 'Máximo de clientes por campanha', valor: status.config?.campanhaLimiteDiario || '100', tipo: 'number', attrs: 'min="1" max="1000" required' })}
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
             ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
@@ -8238,7 +8262,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
             ${campo({ nome: 'alertaMemoriaCriticaMb', label: 'Memória crítica abaixo de (MB)', valor: status.config?.alertaMemoriaCriticaMb || '512', tipo: 'number', attrs: 'min="128" max="32768" required' })}
-            <div class="notice full">No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas. Em instalação local, cada cliente monitora o próprio computador. Sem webhook ou WhatsApp, os eventos continuam registrados abaixo.</div>
+            <div class="notice full">A cópia externa deve apontar para outro disco ou compartilhamento; outra pasta no mesmo disco não protege contra falha do disco. No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -10077,6 +10101,7 @@ router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, confi
             backupAtivo: Boolean(req.body.backupAutomaticoAtivo),
             horario: req.body.backupAutomaticoHora,
             retencao: req.body.backupRetencaoDias,
+            backupExternoAtivo: Boolean(req.body.backupExternoAtivo),
             alertaMinutos: req.body.alertaWhatsAppMinutos
         });
         res.redirect('/manutencao?mensagem=Monitoramento salvo com sucesso');

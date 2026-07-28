@@ -71,6 +71,9 @@ async function obterConfiguracoes() {
         backupAutomaticoAtivo: '1',
         backupAutomaticoHora: '03:00',
         backupRetencaoDias: '30',
+        backupExternoAtivo: '0',
+        backupExternoPasta: '',
+        ultimoBackupExterno: '',
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
         alertaWhatsappControle: '',
@@ -94,6 +97,8 @@ async function obterConfiguracoes() {
         roboFilaMensagensAtiva: '1',
         roboFilaIntervaloMinimoSegundos: '2',
         roboFilaIntervaloMaximoSegundos: '5',
+        campanhaExigirConsentimento: '1',
+        campanhaLimiteDiario: '100',
         painelUsuario: '',
         painelSenhaHash: ''
     };
@@ -312,6 +317,9 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     const discoCritico = Math.max(1, Math.min(discoAtencao, Number(dados.alertaDiscoCriticoGb || 5)));
     const memoriaAtencao = Math.max(256, Math.min(32768, Number(dados.alertaMemoriaAtencaoMb || 1024)));
     const memoriaCritica = Math.max(128, Math.min(memoriaAtencao, Number(dados.alertaMemoriaCriticaMb || 512)));
+    const backupExternoAtivo = dados.backupExternoAtivo ? '1' : '0';
+    const backupExternoPasta = String(dados.backupExternoPasta || '').trim();
+    const campanhaLimiteDiario = Math.max(1, Math.min(1000, Number.parseInt(dados.campanhaLimiteDiario || 100, 10) || 100));
 
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(hora)) {
         throw new Error('Informe um horario valido para o backup automatico.');
@@ -323,10 +331,16 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     if (whatsappControle && !/^\d{10,15}$/.test(whatsappControle)) {
         throw new Error('Informe o WhatsApp de alertas com DDI, DDD e numero.');
     }
+    if (backupExternoAtivo === '1' && !/^[A-Za-z]:\\|^\\\\/.test(backupExternoPasta)) {
+        throw new Error('Informe uma pasta externa absoluta, como D:\\BackupsJulianPlay ou um compartilhamento de rede.');
+    }
 
     await salvarConfiguracao('backupAutomaticoAtivo', dados.backupAutomaticoAtivo ? '1' : '0');
     await salvarConfiguracao('backupAutomaticoHora', hora);
     await salvarConfiguracao('backupRetencaoDias', String(retencao));
+    await salvarConfiguracao('backupExternoAtivo', backupExternoAtivo);
+    await salvarConfiguracao('backupExternoPasta', backupExternoPasta);
+    await salvarConfiguracao('campanhaLimiteDiario', String(campanhaLimiteDiario));
     await salvarConfiguracao('alertaWhatsAppMinutos', String(minutos));
     await salvarConfiguracao('alertaWebhookUrl', webhook);
     await salvarConfiguracao('alertaWhatsappControle', whatsappControle);

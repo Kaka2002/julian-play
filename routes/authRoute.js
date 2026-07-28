@@ -15,7 +15,7 @@ const {
     salvarConfiguracoesAcesso,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
-const { criarCaptcha, validarCaptcha, mascararSegredos } = require('../services/securityService');
+const { criarCaptcha, validarCaptcha, validarTotp, mascararSegredos } = require('../services/securityService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 const loginPersistente = require('../services/loginSecurityService');
 
@@ -277,6 +277,9 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             <label>Senha
                 <input type="password" name="senha" autocomplete="current-password" required>
             </label>
+            ${process.env.PANEL_TOTP_SECRET ? `<label>Código do autenticador
+                <input name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+            </label>` : ''}
             <input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
             <label>Confirmação humana: ${escapar(captcha.pergunta)}
                 <input name="captchaResposta" inputmode="numeric" autocomplete="off" required>
@@ -335,6 +338,12 @@ router.post('/login', async (req, res) => {
         await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
         await registrarEventoSistema('seguranca_login', 'alerta', 'Falha de autenticação.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario }));
         return res.redirect(`/login?erro=${encodeURIComponent('Usuário ou senha inválidos.')}&next=${encodeURIComponent(next)}`);
+    }
+    if (process.env.PANEL_TOTP_SECRET && !validarTotp(process.env.PANEL_TOTP_SECRET, req.body.totp)) {
+        registrarFalhaLogin(req, req.body.usuario);
+        await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
+        await registrarEventoSistema('seguranca_login', 'alerta', 'Segundo fator inválido no login.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario }));
+        return res.redirect(`/login?erro=${encodeURIComponent('Código do autenticador inválido.')}&next=${encodeURIComponent(next)}`);
     }
 
     limparFalhasLogin(req, req.body.usuario);

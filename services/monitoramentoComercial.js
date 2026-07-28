@@ -7,6 +7,7 @@ const pacote = require('../package.json');
 const {
     criarBackupAutomatico,
     limparBackupsAutomaticos,
+    copiarBackupExterno,
     listarBackups
 } = require('./manutencao');
 const { registrarEventoSistema } = require('./eventosSistema');
@@ -288,12 +289,18 @@ async function verificarBackup(config, agora) {
     try {
         const backup = await criarBackupAutomatico();
         const removidos = limparBackupsAutomaticos(config.backupRetencaoDias || 30);
+        let copiaExterna = '';
+        if (String(config.backupExternoAtivo) === '1') {
+            copiaExterna = await copiarBackupExterno(backup.nome, config.backupExternoPasta);
+            await salvarConfiguracao('ultimoBackupExterno', agora.iso);
+        }
 
         await salvarConfiguracao('ultimoBackupAutomatico', agora.iso);
         await registrarEventoSistema('backup', 'sucesso', `Backup automático criado: ${backup.nome}`, {
             arquivo: backup.nome,
             tamanho: backup.tamanho,
-            removidos
+            removidos,
+            copiaExterna: copiaExterna || ''
         });
         console.log(`Monitoramento: backup automatico criado: ${backup.nome}`);
     } catch (err) {

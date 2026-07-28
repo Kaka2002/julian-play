@@ -50,6 +50,9 @@ db.serialize(() => {
             status TEXT DEFAULT 'teste',
             ultimoAvisoRenovacao TEXT,
             ultimoAvisoAniversario TEXT,
+            whatsappMarketingConsentimento INTEGER DEFAULT 0,
+            whatsappMarketingConsentidoEm TEXT,
+            whatsappOptOutEm TEXT,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -427,7 +430,7 @@ db.serialize(() => {
             }
         });
 
-        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCobrancasPix(() => migrarCatalogos(() => resolve()))));
+        migrarTelefoneDuplicado(() => migrarPagamentos(() => migrarCobrancasPix(() => migrarCatalogos(() => migrarPrivacidadeClientes(() => resolve())))));
     });
 });
 });
@@ -485,6 +488,20 @@ function migrarCatalogos(done) {
         adicionarColunaSeNaoExiste(tabela, coluna, definicao, () => proxima(indice + 1));
     }
 
+    proxima();
+}
+
+function migrarPrivacidadeClientes(done) {
+    const tarefas = [
+        ['clientes', 'whatsappMarketingConsentimento', 'INTEGER DEFAULT 0'],
+        ['clientes', 'whatsappMarketingConsentidoEm', 'TEXT'],
+        ['clientes', 'whatsappOptOutEm', 'TEXT']
+    ];
+    function proxima(indice = 0) {
+        if (indice >= tarefas.length) return done();
+        const [tabela, coluna, definicao] = tarefas[indice];
+        adicionarColunaSeNaoExiste(tabela, coluna, definicao, () => proxima(indice + 1));
+    }
     proxima();
 }
 

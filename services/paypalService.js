@@ -130,11 +130,22 @@ async function criarCobrancaPayPal(plano = {}, opcoes = {}) {
         const valorNumero = moedaNumero(plano.valorNumero || plano.valorTotal || plano.valor);
         if (valorNumero <= 0) throw new Error('O plano precisa ter valor maior que zero.');
         const referencia = `JP-PP-MANUAL-${clienteId}-${crypto.randomUUID()}`;
+        const planoNome = String(opcoes.plano || plano.nome || cliente.plano || 'Plano').trim();
+        const diasContrato = Number.parseInt(opcoes.diasContrato || plano.dias || cliente.diasContrato || 0, 10);
         const link = linkConfigurado
             ? linkConfigurado
                 .replaceAll('{valor}', valorNumero.toFixed(2))
                 .replaceAll('{referencia}', encodeURIComponent(referencia))
             : '';
+        await executar(
+            `INSERT INTO cobrancas_pix (
+                referencia, provedor, clienteId, plano, tipoPlanoId, diasContrato,
+                valorPlano, assinaturaApp, valorTotal, status
+            ) VALUES (?, 'paypal_manual', ?, ?, ?, ?, ?, ?, ?, 'aguardando_comprovante')`,
+            [referencia, clienteId, planoNome, opcoes.tipoPlanoId || cliente.tipoPlanoId || '',
+                diasContrato, opcoes.valorPlano || plano.valor || cliente.valorPlano || moedaTexto(valorNumero),
+                opcoes.assinaturaApp || '0,00', moedaTexto(valorNumero)]
+        );
         await registrarEvento('paypal_cobranca_manual', 'info',
             `Link PayPal manual enviado para ${cliente.nome}, R$ ${moedaTexto(valorNumero)}.`,
             { clienteId, referencia, valor: moedaTexto(valorNumero) });
