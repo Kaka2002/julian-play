@@ -10,6 +10,7 @@ module.exports = defineConfig({
     globalSetup: require.resolve('./tests/e2e/global-setup'),
     use: {
         baseURL: 'http://127.0.0.1:11999',
+        viewport: { width: 1920, height: 1080 },
         headless: true,
         launchOptions: {
             executablePath: process.env.PLAYWRIGHT_CHROME_PATH

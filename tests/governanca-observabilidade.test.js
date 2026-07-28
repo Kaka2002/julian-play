@@ -43,29 +43,3 @@ test('pacote possui verificação automatizada de instalação limpa', () => {
     assert.match(script, /\.Extension -eq '\.db'/);
     assert.match(script, /Remove-Item -LiteralPath \$testeRaiz -Recurse -Force/);
 });
-
-test('Central Hoje prioriza vencimentos, pagamentos, atendimentos, reclamações e saúde', () => {
-    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');const clientes=require('./services/clientes');const atendimentos=require('./services/atendimentos');const campanhas=require('./services/campanhasService');const central=require('./services/centralHojeService');const executar=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const cliente=await clientes.salvarCliente({nome:'Cliente Hoje',telefone:'5511999992000',tipoPlanoId:'1',diasContrato:30,valorPlano:'20,00',dataInicio:'2026-07-01T10:00',dataVencimento:'2026-07-20T23:59',status:'ativo',whatsappMarketingConsentimento:'1'});await executar("INSERT INTO cobrancas_pix(referencia,provedor,clienteId,plano,diasContrato,valorTotal,status) VALUES(?,?,?,?,?,?,?)",['hoje-paypal','paypal_manual',cliente.id,'Mensal',30,20,'aguardando_conferencia']);await atendimentos.criarAtendimento({clienteId:cliente.id,motivo:'pagamento',prioridade:'urgente',descricao:'Conferir pagamento'});const campanha=await campanhas.criarCampanha({nome:'Campanha Hoje'});const item=await campanhas.registrarItemCampanha(campanha.id,cliente,{status:'enviado'});await campanhas.registrarReclamacaoCampanha({campanhaId:campanha.id,campanhaItemId:item,clienteId:cliente.id,motivo:'Cliente reclamou'});const dados=await central.obterCentralHoje({agora:'2026-07-28T12:00:00-03:00',whatsapp:{conectado:false,status:'desconectado'}});process.stdout.write(JSON.stringify({vencidos:dados.resumo.vencidos,manual:dados.resumo.pagamentosManuais,atendimentos:dados.resumo.atendimentos,reclamacoes:dados.resumo.reclamacoes,whatsapp:dados.resumo.whatsappConectado,categorias:[...new Set(dados.tarefas.map(x=>x.categoria))].sort()}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
-    try {
-        assert.deepEqual(JSON.parse(resultado.stdout), {
-            vencidos: 1,
-            manual: 1,
-            atendimentos: 1,
-            reclamacoes: 1,
-            whatsapp: false,
-            categorias: ['Atendimentos', 'Campanhas', 'Clientes', 'Pagamentos', 'Sistema']
-        });
-    } finally {
-        removerAmbiente(resultado.ambiente);
-    }
-});
-
-test('Central Hoje possui rota própria e permanece atrás da autenticação global', () => {
-    const bot = fs.readFileSync(path.join(repoRoot, 'bot.js'), 'utf8');
-    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'hojeRoute.js'), 'utf8');
-    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
-    assert.match(bot, /app\.use\(protegerPainel\)[\s\S]*app\.use\('\/hoje'/);
-    assert.match(rota, /obterCentralHoje/);
-    assert.match(clientes, /href="\/hoje"/);
-    assert.match(clientes, /router\.renderizarPaginaHoje = renderizarPaginaHoje/);
-});

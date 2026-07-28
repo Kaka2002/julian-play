@@ -6,7 +6,6 @@ const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
 const criarCampanhasRoute = require('./routes/campanhasRoute');
-const criarHojeRoute = require('./routes/hojeRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
@@ -154,9 +153,6 @@ app.get('/health', (req, res) => {
 app.use(protegerPainel);
 app.use(protegerLicenca);
 app.use('/pagamentos-manuais', pagamentosRoute);
-app.use('/hoje', criarHojeRoute({
-    renderizarPaginaHoje: clientesRoute.renderizarPaginaHoje
-}));
 app.use('/campanhas', criarCampanhasRoute({
     renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
 }));

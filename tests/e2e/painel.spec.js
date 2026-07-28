@@ -15,19 +15,24 @@ async function autenticar(page) {
     await expect(page).not.toHaveURL(/\/login/);
 }
 
-test('protege a Central Hoje sem autenticação', async ({ page }) => {
-    await page.goto('/hoje');
+test('protege o painel sem autenticação', async ({ page }) => {
+    await page.goto('/clientes');
     await expect(page).toHaveURL(/\/login\?next=/);
     await expect(page.getByRole('button', { name: 'Acessar painel' })).toBeVisible();
 });
 
-test('autentica e apresenta pendências priorizadas na Central Hoje', async ({ page }) => {
+test('painel autenticado não exibe Hoje nem barra horizontal no menu', async ({ page }) => {
     await autenticar(page);
-    await page.goto('/hoje');
+    await page.goto('/clientes');
 
-    await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Hoje/ })).toBeVisible();
-    await expect(page.getByText('Cliente E2E Vencido está vencido')).toBeVisible();
-    await expect(page.getByText('WhatsApp desconectado')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Resolver' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Painel', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Hoje', exact: true })).toHaveCount(0);
+
+    const menu = page.locator('nav').first();
+    await expect(menu).toBeVisible();
+    const dimensoes = await menu.evaluate(elemento => ({
+        larguraVisivel: elemento.clientWidth,
+        larguraConteudo: elemento.scrollWidth
+    }));
+    expect(dimensoes.larguraConteudo).toBeLessThanOrEqual(dimensoes.larguraVisivel + 1);
 });

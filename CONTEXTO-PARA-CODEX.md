@@ -528,18 +528,16 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Campanhas retomadas e renovacao automatica de paineis foram adaptadas para
   ler o bloco de acessos pelo cofre.
 
-## Central Hoje e testes de navegacao em 28/07/2026
+## Testes de navegacao e menu principal em 28/07/2026
 
-- A rota autenticada `/hoje` concentra tarefas operacionais priorizadas:
-  clientes vencidos ou a vencer em sete dias, PIX pendente, PayPal manual,
-  atendimentos abertos, reclamacoes de campanhas, backup atrasado e WhatsApp
-  desconectado.
-- A central apenas consulta o banco da instalacao atual, respeitando
-  `DATA_DIR`/`DB_PATH`, e apresenta atalhos para resolver cada pendencia.
-- O menu principal possui acesso `Hoje` para os perfis que usam o painel.
-- Testes Playwright executam login e a Central Hoje em Chrome, banco e porta
-  temporarios. `DISABLE_WHATSAPP=1` impede WhatsApp, renovacoes e monitoramento
-  somente no processo de teste; a execucao normal permanece inalterada.
+- A Central Hoje foi removida porque repetia informacoes do Painel e adicionava
+  complexidade sem ganho operacional suficiente.
+- O menu usa uma largura maior em telas desktop e oculta a barra visual de
+  rolagem. A navegacao continua responsiva em telas menores.
+- Testes Playwright executam login e validam o Painel e a largura do menu em
+  Chrome, banco e porta temporarios. `DISABLE_WHATSAPP=1` impede WhatsApp,
+  renovacoes e monitoramento somente no processo de teste; a execucao normal
+  permanece inalterada.
 - Execute `npm run test:e2e` para a validacao real de navegacao e
   `npm run test:all` para testes internos e de navegador.
 - O `deploy.ps1` preserva em `backups\deploy-recovery` um

@@ -964,6 +964,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .topbar {
+            width: min(1980px, calc(100% - 24px));
             min-height: 76px;
             display: flex;
             align-items: center;
@@ -1022,7 +1023,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             color: rgba(255, 255, 255, .78);
             font-weight: 700;
             overflow-x: auto;
-            scrollbar-width: thin;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        nav::-webkit-scrollbar {
+            display: none;
         }
 
         .navlink {
@@ -2699,7 +2705,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="brand-text" href="/clientes">${escapar(nomeSistema)}</a>
             </div>
             <nav>
-                <a class="navlink ${ativo === 'hoje' ?'active' : ''}" href="/hoje">${icon('alert')} Hoje</a>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
                 <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
@@ -6819,46 +6824,6 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function telaHoje(dados = {}) {
-    const resumo = dados.resumo || {};
-    const tarefas = Array.isArray(dados.tarefas) ? dados.tarefas : [];
-    const grupos = tarefas.reduce((mapa, tarefa) => {
-        const categoria = tarefa.categoria || 'Outros';
-        if (!mapa[categoria]) mapa[categoria] = [];
-        mapa[categoria].push(tarefa);
-        return mapa;
-    }, {});
-    const classePrioridade = prioridade => prioridade === 'critica' ? 'red' : prioridade === 'atencao' ? 'orange' : 'info';
-    const rotuloPrioridade = prioridade => prioridade === 'critica' ? 'Crítica' : prioridade === 'atencao' ? 'Atenção' : 'Informativa';
-
-    return `<section class="page-title">
-        <h1>Hoje</h1>
-        <div class="subtitle">O que precisa da sua atenção agora, reunido sem alterar os dados de origem.</div>
-    </section>
-    ${dados.erro ? `<div class="notice danger">${escapar(dados.erro)}</div>` : ''}
-    <section class="metrics dashboard-metrics">
-        ${metricCard({ label: 'Pendências', valor: Number(resumo.total || 0), nota: 'Total priorizado', tipo: resumo.total ? 'orange' : 'green', icone: 'alert' })}
-        ${metricCard({ label: 'Críticas', valor: Number(resumo.criticas || 0), nota: 'Resolver primeiro', tipo: resumo.criticas ? 'red' : 'green', icone: 'close' })}
-        ${metricCard({ label: 'Vencidos', valor: Number(resumo.vencidos || 0), nota: `${Number(resumo.vencendo || 0)} vencendo em 7 dias`, tipo: resumo.vencidos ? 'red' : 'green', icone: 'clientes' })}
-        ${metricCard({ label: 'Pagamentos', valor: Number(resumo.pagamentosManuais || 0) + Number(resumo.pixPendentes || 0), nota: `${Number(resumo.pagamentosManuais || 0)} manual(is), ${Number(resumo.pixPendentes || 0)} PIX`, tipo: (resumo.pagamentosManuais || resumo.pixPendentes) ? 'orange' : 'green', icone: 'financeiro' })}
-        ${metricCard({ label: 'Atendimentos', valor: Number(resumo.atendimentos || 0), nota: 'Abertos ou em andamento', tipo: resumo.atendimentos ? 'orange' : 'green', icone: 'atendimento' })}
-        ${metricCard({ label: 'WhatsApp', valor: resumo.whatsappConectado ? 'OK' : 'OFF', nota: resumo.whatsappConectado ? 'Conectado' : 'Precisa reconectar', tipo: resumo.whatsappConectado ? 'green' : 'red', icone: 'whats' })}
-    </section>
-    ${tarefas.length ? Object.entries(grupos).map(([categoria, itens]) => `<section class="panel" style="margin-top:20px;">
-        <div class="panel-head"><div><h2 class="panel-title">${escapar(categoria)}</h2><div class="subtitle">${itens.length} item(ns) para acompanhar</div></div></div>
-        <div class="task-list">${itens.map(tarefa => `<article class="client-row" style="grid-template-columns:minmax(240px,1fr) minmax(260px,2fr) auto auto;">
-            <div><strong>${escapar(tarefa.titulo)}</strong><div class="helper">${escapar(tarefa.identidade || '')}</div></div>
-            <div class="helper">${escapar(tarefa.detalhe || '')}</div>
-            <span class="badge ${classePrioridade(tarefa.prioridade)}">${escapar(rotuloPrioridade(tarefa.prioridade))}</span>
-            <a class="button secondary" href="${escapar(tarefa.url || '/hoje')}">Resolver</a>
-        </article>`).join('')}</div>
-    </section>`).join('') : `<section class="panel"><div class="empty">
-        <h2>Nenhuma pendência encontrada</h2>
-        <p>Pagamentos, vencimentos, atendimentos, campanhas, backup e WhatsApp estão sem alertas agora.</p>
-    </div></section>`}
-    ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
-}
-
 function receitaMensalCard(receita) {
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
@@ -8594,16 +8559,6 @@ async function renderizarPaginaCampanhas(req, res) {
         conteudo: telaCampanhas({ campanhas, campanha, itens, campanhaRetomavel }),
         mensagem: req.query.mensagem || '',
         ativo: 'campanhas'
-    });
-}
-
-async function renderizarPaginaHoje(req, res, dados) {
-    desativarCache(res);
-    await renderizar(res, {
-        titulo: 'Hoje',
-        conteudo: telaHoje(dados),
-        mensagem: req.query.mensagem || '',
-        ativo: 'hoje'
     });
 }
 
@@ -11175,6 +11130,4 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
 });
 
 router.renderizarPaginaCampanhas = renderizarPaginaCampanhas;
-router.renderizarPaginaHoje = renderizarPaginaHoje;
-
 module.exports = router;
