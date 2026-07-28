@@ -65,3 +65,12 @@ test('credencial da API do painel e cifrada no banco e aberta no servico', () =>
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('senhas de clientes sao cifradas sem quebrar leitura e acessos do app', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');const c=require('./services/clientes');const salvo=await c.salvarCliente({nome:'Cliente Cofre',telefone:'551188887777',senha:'senha-iptv',senhaApp:'senha-app',acessoApp:['Aplicativo'],acessoSenha:['senha-conexao'],tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:'2026-07-28T10:00',dataVencimento:'2026-08-28T23:59',status:'ativo'});const bruto=await new Promise((ok,fail)=>db.get('SELECT senha,senhaApp,acessosApp FROM clientes WHERE id=?',[salvo.id],(e,r)=>e?fail(e):ok(r)));const aberto=await c.buscarClientePorId(salvo.id);process.stdout.write(JSON.stringify({senhaCifrada:bruto.senha.startsWith('jplay:v1:'),appCifrada:bruto.senhaApp.startsWith('jplay:v1:'),acessosCifrados:bruto.acessosApp.startsWith('jplay:v1:'),senha:aberto.senha,senhaApp:aberto.senhaApp,acessoSenha:JSON.parse(aberto.acessosApp)[0].senha}));})().catch(e=>{console.error(e);process.exit(1)})`, { env: { LICENSE_ADMIN_TOKEN: 'token-cliente-seguro' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { senhaCifrada: true, appCifrada: true, acessosCifrados: true, senha: 'senha-iptv', senhaApp: 'senha-app', acessoSenha: 'senha-conexao' });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});

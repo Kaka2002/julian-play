@@ -1,5 +1,11 @@
 const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
+const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes } = require('./credenciaisClienteService');
+let credenciaisProntas = null;
+function garantirCredenciaisProntas() {
+    if (!credenciaisProntas) credenciaisProntas = migrarCredenciaisExistentes();
+    return credenciaisProntas;
+}
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -11,19 +17,19 @@ function executar(sql, params = []) {
 }
 
 function buscarTodos(sql, params = []) {
-    return db.ready.then(() => new Promise((resolve, reject) => {
+    return Promise.all([db.ready, garantirCredenciaisProntas()]).then(() => new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
             if (err) return reject(err);
-            resolve(rows);
+            resolve((rows || []).map(revelarCredenciais));
         });
     }));
 }
 
 function buscarUm(sql, params = []) {
-    return db.ready.then(() => new Promise((resolve, reject) => {
+    return Promise.all([db.ready, garantirCredenciaisProntas()]).then(() => new Promise((resolve, reject) => {
         db.get(sql, params, (err, row) => {
             if (err) return reject(err);
-            resolve(row);
+            resolve(revelarCredenciais(row));
         });
     }));
 }
@@ -451,7 +457,7 @@ async function cadastrarOuAtualizarCliente({ telefone, nome, aparelho, plano = '
             limparTexto(nome) || 'Cliente',
             telefoneNormalizado,
             credenciais.usuario,
-            credenciais.senha,
+            protegerCredenciais({ senha: credenciais.senha }).senha,
             plano,
             limparTexto(aparelho),
             vencimento,
@@ -565,7 +571,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
                 ddiTeste,
                 paisTeste,
                 usuario,
-                senha,
+                protegerCredenciais({ senha }).senha,
                 'Teste grátis',
                 aparelho,
                 vencimento,
@@ -596,7 +602,7 @@ async function cadastrarTesteLiberadoPorAtendente(dados = {}) {
             ddiTeste,
             paisTeste,
             usuario,
-            senha,
+            protegerCredenciais({ senha }).senha,
             'Teste grátis',
             aparelho,
             vencimento,
@@ -744,6 +750,7 @@ async function listarClientes(filtros = {}) {
 
 async function salvarCliente(dados) {
     const cliente = montarCliente(dados);
+    const clienteProtegido = protegerCredenciais(cliente);
     const idCliente = Number.parseInt(dados.id, 10);
 
     if (Number.isFinite(idCliente) && idCliente > 0) {
@@ -794,7 +801,7 @@ async function salvarCliente(dados) {
                 cliente.ddiTelefone,
                 cliente.paisTelefone,
                 cliente.usuario,
-                cliente.senha,
+                clienteProtegido.senha,
                 cliente.plano,
                 cliente.aparelho,
                 cliente.vencimento,
@@ -814,10 +821,10 @@ async function salvarCliente(dados) {
                 cliente.conexoesPainel,
                 cliente.appInstalado,
                 cliente.usuarioApp,
-                cliente.senhaApp,
+                clienteProtegido.senhaApp,
                 cliente.enderecoMac,
                 cliente.idAplicativo,
-                cliente.acessosApp,
+                clienteProtegido.acessosApp,
                 cliente.observacoes,
                 cliente.origem,
                 cliente.tags,
@@ -854,7 +861,7 @@ async function salvarCliente(dados) {
             cliente.ddiTelefone,
             cliente.paisTelefone,
             cliente.usuario || credenciais.usuario,
-            cliente.senha || credenciais.senha,
+            protegerCredenciais({ senha: cliente.senha || credenciais.senha }).senha,
             cliente.plano,
             cliente.aparelho,
             cliente.vencimento,
@@ -874,10 +881,10 @@ async function salvarCliente(dados) {
             cliente.conexoesPainel,
             cliente.appInstalado,
             cliente.usuarioApp,
-            cliente.senhaApp,
+            clienteProtegido.senhaApp,
             cliente.enderecoMac,
             cliente.idAplicativo,
-            cliente.acessosApp,
+            clienteProtegido.acessosApp,
             cliente.observacoes,
             cliente.origem,
             cliente.tags,

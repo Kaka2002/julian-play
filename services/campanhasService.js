@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { revelarCredenciais } = require('./credenciaisClienteService');
 
 function executar(sql, params = []) {
     return new Promise((resolve, reject) => {
@@ -225,7 +226,7 @@ function listarItensCampanhaPorStatus(campanhaId, status = 'pendente', limite = 
             AND ci.status = ?
         ORDER BY ci.id ASC
         LIMIT ?
-    `, [campanhaId, status, Number(limite || 1000)]);
+    `, [campanhaId, status, Number(limite || 1000)]).then(rows => rows.map(revelarCredenciais));
 }
 
 function contarItensCampanhaPorStatus(campanhaId) {

@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const db = require('../database/sqlite');
 const { registrarEventoSistema } = require('./eventosSistema');
 const { revelar } = require('./cofreSegredosService');
+const { revelarCredenciais } = require('./credenciaisClienteService');
 
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => db.run(sql, params, function(err) {
@@ -41,7 +42,7 @@ async function enfileirarRenovacoesDaCobranca(cobrancaId) {
         WHERE c.id = ? AND c.status = 'aprovado'`, [cobrancaId]);
     if (!cobranca) return { criadas: 0, motivo: 'cobranca_nao_aprovada' };
 
-    const acessos = acessosCliente(cobranca);
+    const acessos = acessosCliente(revelarCredenciais(cobranca));
     let criadas = 0;
     for (const acesso of acessos) {
         const nomePainel = String(acesso.painel || '').trim();

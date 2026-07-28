@@ -482,3 +482,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   cifra-las, todas as consultas diretas em clientes, campanhas, mensagens e
   renovacoes precisam passar por um repositorio central; fazer apenas metade
   dessa mudanca quebraria mensagens e renovacoes.
+
+## Cofre de credenciais dos clientes em 28/07/2026
+
+- Os campos `clientes.senha`, `clientes.senhaApp` e `clientes.acessosApp`
+  passam a usar AES-256-GCM quando a instalacao possui chave.
+- A migracao `2026-07-28-credenciais-clientes` ocorre apenas na primeira
+  operacao de clientes, dentro de transacao, e pode ser repetida sem cifrar
+  novamente valores ja protegidos.
+- Usuarios permanecem pesquisaveis; senhas sao abertas somente no repositorio
+  central antes de chegar a telas, mensagens, campanhas e renovacoes.
+- Campanhas retomadas e renovacao automatica de paineis foram adaptadas para
+  ler o bloco de acessos pelo cofre.
