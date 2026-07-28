@@ -29,6 +29,27 @@ function comparar(a, b) {
     return x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
+function desativarAtalhosGerenciadorSenhas(conteudo) {
+    let html = String(conteudo || '');
+    html = html.replace(/<(form|input|textarea|select)\b(?![^>]*\bdata-lpignore=)([^>]*)>/gi,
+        '<$1 data-lpignore="true"$2>');
+
+    const estilo = `<style id="julian-play-password-manager-style">
+        [data-lastpass-icon-root], [data-lastpass-root], div[id^="__lpform_"] { display:none!important; visibility:hidden!important; pointer-events:none!important; }
+    </style>`;
+    const script = `<script id="julian-play-password-manager-control">
+        (()=>{const aplicar=(raiz=document)=>{raiz.querySelectorAll?.('form,input,textarea,select').forEach(el=>el.setAttribute('data-lpignore','true'));raiz.querySelectorAll?.('[data-lastpass-icon-root],[data-lastpass-root],div[id^="__lpform_"]').forEach(el=>el.remove());};aplicar();new MutationObserver(()=>aplicar()).observe(document.documentElement,{childList:true,subtree:true});})();
+    </script>`;
+
+    if (!html.includes('julian-play-password-manager-style')) {
+        html = /<\/head>/i.test(html) ? html.replace(/<\/head>/i, `${estilo}</head>`) : `${estilo}${html}`;
+    }
+    if (!html.includes('julian-play-password-manager-control')) {
+        html = /<\/body>/i.test(html) ? html.replace(/<\/body>/i, `${script}</body>`) : `${html}${script}`;
+    }
+    return html;
+}
+
 function csrfMiddleware(opcoes = {}) {
     const isento = opcoes.isento || (() => false);
     return (req, res, next) => {
@@ -39,6 +60,7 @@ function csrfMiddleware(opcoes = {}) {
             if (typeof conteudo === 'string' && (tipo.includes('text/html') || /<html|<form/i.test(conteudo))) {
                 conteudo = conteudo.replace(/<form\b([^>]*\bmethod=["']?post["']?[^>]*)>/gi,
                     `<form$1><input type="hidden" name="_csrf" value="${token}">`);
+                conteudo = desativarAtalhosGerenciadorSenhas(conteudo);
             }
             return envioOriginal(conteudo);
         };
@@ -96,4 +118,4 @@ function mascararSegredos(dados = {}) {
     return Object.fromEntries(Object.entries(dados).map(([k,v]) => [k, sensivel.test(k) ? '[OCULTO]' : v]));
 }
 
-module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos };
+module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, desativarAtalhosGerenciadorSenhas };
