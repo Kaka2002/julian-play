@@ -26,9 +26,33 @@ test('Painel Mestre oferece limpeza segura de disco e otimizacao de memoria',()=
     assert.match(app,/action="\/manutencao\/memoria"/);
     assert.match(app,/app\.post\('\/manutencao\/memoria'/);
     assert.match(provisionador,/status NOT IN \('arquivado', 'parado'\)/);
+    assert.match(provisionador,/separarInstalacoesPorEstadoPm2/);
+    assert.match(provisionador,/\['jlist'\]/);
     assert.match(provisionador,/pm2\.cmd', \['restart', instalacao\.processoPm2/);
     assert.match(provisionador,/\['\.wwebjs_auth_backup', '\.wwebjs_cache_backup'\]/);
     assert.match(provisionador,/copiasSessao\.slice\(1\)/);
+});
+
+test('otimizacao de memoria reinicia somente processos online no PM2',()=>{
+    const {analisarListaPm2,separarInstalacoesPorEstadoPm2}=require('../master/pm2Estado');
+    const estados=analisarListaPm2(`aviso do PM2\n[
+        {"name":"julian-play","pm2_env":{"status":"online"}},
+        {"name":"julian-amplaytv","pm2_env":{"status":"stopped"}},
+        {"name":"julian-erro","pm2_env":{"status":"errored"}}
+    ]`);
+    const instalacoes=[
+        {id:1,processoPm2:'julian-play'},
+        {id:2,processoPm2:'julian-amplaytv'},
+        {id:3,processoPm2:'julian-erro'},
+        {id:4,processoPm2:'julian-ausente'}
+    ];
+    const resultado=separarInstalacoesPorEstadoPm2(instalacoes,estados);
+    assert.deepEqual(resultado.online.map(item=>item.processoPm2),['julian-play']);
+    assert.deepEqual(resultado.ignoradas.map(item=>`${item.instalacao.processoPm2}:${item.estado}`),[
+        'julian-amplaytv:stopped',
+        'julian-erro:errored',
+        'julian-ausente:ausente'
+    ]);
 });
 
 test('acao PayPal individual aparece somente quando a integracao esta ativa',()=>{

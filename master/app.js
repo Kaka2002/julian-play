@@ -1878,7 +1878,8 @@ app.post('/manutencao/memoria', async (req, res) => {
     try {
         const resultado = await otimizarMemoriaRobos();
         const falhas = resultado.falhas.length ? ` Falhas: ${resultado.falhas.join(' | ')}` : '';
-        const mensagem = `Otimização concluída: ${resultado.reiniciadas.length} robô(s) reiniciado(s). RAM livre antes: ${resultado.memoriaAntesMb} MB; depois: ${resultado.memoriaDepoisMb} MB.${falhas}`;
+        const ignoradas = resultado.ignoradas.length ? ` Ignorados por não estarem online: ${resultado.ignoradas.join(', ')}.` : '';
+        const mensagem = `Otimização concluída: ${resultado.reiniciadas.length} robô(s) reiniciado(s). RAM livre antes: ${resultado.memoriaAntesMb} MB; depois: ${resultado.memoriaDepoisMb} MB.${ignoradas}${falhas}`;
         res.redirect(`/?mensagem=${encodeURIComponent(mensagem)}`);
     } catch (err) {
         res.redirect(`/?erro=${encodeURIComponent(err.message)}`);

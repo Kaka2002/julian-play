@@ -9,6 +9,7 @@ const { dataHojeSaoPaulo, adicionarDias, calcularEstadoLicenca } = require('../s
 const masterDb = require('./db');
 const packageInfo = require('../package.json');
 const { compararVersoes } = require('../services/observabilidadeService');
+const { analisarListaPm2, separarInstalacoesPorEstadoPm2 } = require('./pm2Estado');
 
 const sourceDir = path.resolve(process.env.JULIAN_PLAY_SOURCE_DIR || path.join(__dirname, '..'));
 const clientesDir = path.resolve(process.env.MASTER_CLIENTS_DIR || 'C:\\JulianPlayClientes');
@@ -931,8 +932,27 @@ async function otimizarMemoriaRobos() {
     );
     const reiniciadas = [];
     const falhas = [];
+    const ignoradas = [];
+    let estadosPm2;
 
-    for (const instalacao of instalacoes) {
+    try {
+        estadosPm2 = analisarListaPm2(await executarComando('pm2.cmd', ['jlist']));
+    } catch (err) {
+        return {
+            memoriaAntesMb,
+            memoriaDepoisMb: Math.round(os.freemem() / 1024 / 1024),
+            reiniciadas,
+            ignoradas,
+            falhas: [`PM2: não foi possível consultar o estado real dos processos; nenhum robô foi reiniciado. ${err.message}`]
+        };
+    }
+
+    const selecao = separarInstalacoesPorEstadoPm2(instalacoes, estadosPm2);
+    selecao.ignoradas.forEach(item => {
+        ignoradas.push(`${item.instalacao.processoPm2} (${item.estado})`);
+    });
+
+    for (const instalacao of selecao.online) {
         try {
             await executarComando('pm2.cmd', ['restart', instalacao.processoPm2, '--update-env']);
             reiniciadas.push(instalacao.processoPm2);
@@ -953,6 +973,7 @@ async function otimizarMemoriaRobos() {
         memoriaAntesMb,
         memoriaDepoisMb: Math.round(os.freemem() / 1024 / 1024),
         reiniciadas,
+        ignoradas,
         falhas
     };
 }

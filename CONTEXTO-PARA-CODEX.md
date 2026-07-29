@@ -543,3 +543,14 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - O `deploy.ps1` preserva em `backups\deploy-recovery` um
   `package-lock.json` legado e nao rastreado antes do primeiro pull que passa
   a versionar esse arquivo. Isso evita bloqueio do Git sem apagar o artefato.
+
+## Otimizacao segura de memoria em 29/07/2026
+
+- A acao de memoria do Painel Mestre consulta `pm2 jlist` antes de reiniciar
+  qualquer instalacao.
+- Somente processos cujo estado real no PM2 seja `online` podem ser
+  reiniciados. Processos `stopped`, `stopping`, `errored` ou ausentes sao
+  ignorados e aparecem na mensagem final.
+- Se a consulta ao PM2 falhar ou devolver uma resposta invalida, nenhum robo
+  e reiniciado. Essa regra impede que uma instalacao mantida parada, como
+  `julian-amplaytv`, seja reativada pela manutencao de memoria.

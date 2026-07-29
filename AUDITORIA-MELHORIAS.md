@@ -40,6 +40,8 @@ código; itens operacionais externos não são marcados como implementados.
 - Testes Playwright validam em Chrome a proteção da rota, o login real, o
   Painel e a ausência de transbordamento horizontal no menu usando ambiente
   totalmente isolado.
+- A otimização de memória consulta o estado real do PM2 e reinicia somente
+  processos `online`; processos parados ou com erro permanecem intocados.
 
 ## Parcial
 
