@@ -561,9 +561,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - `C:\JulianPlay\dados` e a instalacao local independente
   `julian-play-cliente` devem permanecer intocados na porta `10000`.
 - O administrador do servidor sera migrado para
-  `C:\JulianPlayMigrado\admin`, processo `julian-play-admin`, porta `10001`.
-- O Painel Mestre sera atualizado em `C:\JulianPlayMaster`, processo
+  `D:\JulianPlayDados\admin`, processo `julian-play-admin`, porta `10001`.
+- O Painel Mestre sera atualizado em `D:\JulianPlayDados\master`, processo
   `julian-master`, porta `9000`.
+- Instalacoes comerciais futuras ficam em `D:\JulianPlayDados\clientes` e os
+  pacotes, temporarios e backups da migracao em `D:\MigracaoJulianPlay`.
 - AMPLAYTV deve permanecer parada.
 - Os scripts controlados ficam em `scripts\migracao-servidor-local`: o
   exportador para os processos, copia bancos e sessao e gera manifesto e

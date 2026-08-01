@@ -3,14 +3,21 @@
 Este fluxo migra o Painel Mestre e o administrador do servidor para este
 computador. Ele preserva `C:\JulianPlay\dados` e mantém AMPLAYTV parada.
 
+Os dados maiores ficam no disco `D:`:
+
+- administrador: `D:\JulianPlayDados\admin`;
+- Painel Mestre: `D:\JulianPlayDados\master`;
+- instalações comerciais futuras: `D:\JulianPlayDados\clientes`;
+- pacotes, extração e backups da migração: `D:\MigracaoJulianPlay`.
+
 ## Ordem obrigatória
 
 1. Atualize o repositório nos dois computadores.
 2. No servidor, execute `1-EXPORTAR-NO-SERVIDOR.ps1 -CorteFinal` como
    Administrador. O script para e salva os processos antes de copiar bancos e
    sessão do WhatsApp.
-3. Copie o ZIP e o `.sha256` para este computador por SCP, SFTP ou unidade
-   segura.
+3. Copie o ZIP e o `.sha256` para `D:\MigracaoJulianPlay\Recebidos` neste
+   computador por SCP, SFTP ou unidade segura.
 4. Compare o SHA-256 antes de importar.
 5. Neste computador, execute `2-IMPORTAR-NESTE-COMPUTADOR.ps1` como
    Administrador e informe `-ConfirmarServidorParado`.

@@ -1,8 +1,9 @@
 param(
     [Parameter(Mandatory=$true)][string]$Pacote,
     [string]$ProjetoLocal = 'D:\julian-play',
-    [string]$DadosAdministrador = 'C:\JulianPlayMigrado\admin',
-    [string]$DadosMaster = 'C:\JulianPlayMaster',
+    [string]$DadosAdministrador = 'D:\JulianPlayDados\admin',
+    [string]$DadosMaster = 'D:\JulianPlayDados\master',
+    [string]$DadosClientes = 'D:\JulianPlayDados\clientes',
     [switch]$ConfirmarServidorParado
 )
 
@@ -25,13 +26,15 @@ function ValidarBanco([string]$banco, [string]$projeto) {
 Exigir $ConfirmarServidorParado 'Confirme primeiro que julian-play e julian-master estao parados no servidor e use -ConfirmarServidorParado.'
 Exigir (Test-Path -LiteralPath $Pacote -PathType Leaf) 'Pacote de migracao nao encontrado.'
 Exigir (Test-Path -LiteralPath (Join-Path $ProjetoLocal 'package.json')) 'Projeto local nao encontrado.'
-Exigir ($DadosAdministrador -ne 'C:\JulianPlay\dados') 'A instalacao local independente nunca pode ser sobrescrita.'
+Exigir ([IO.Path]::GetFullPath($DadosAdministrador) -ne 'C:\JulianPlay\dados') 'A instalacao local independente nunca pode ser sobrescrita.'
+Exigir ([IO.Path]::GetPathRoot($DadosAdministrador) -eq 'D:\') 'Os dados migrados do administrador devem permanecer no disco D:.'
+Exigir ([IO.Path]::GetPathRoot($DadosMaster) -eq 'D:\') 'Os dados migrados do Painel Mestre devem permanecer no disco D:.'
 Exigir ($null -ne (Get-Command node.exe -ErrorAction SilentlyContinue)) 'Node.js nao encontrado.'
 Exigir ($null -ne (Get-Command pm2.cmd -ErrorAction SilentlyContinue)) 'PM2 nao encontrado.'
 
 $carimbo = Get-Date -Format 'yyyyMMdd-HHmmss'
-$temporario = Join-Path $env:TEMP "julian-migracao-$carimbo"
-$backup = "C:\MigracaoJulianPlay\AntesImportacao-$carimbo"
+$temporario = "D:\MigracaoJulianPlay\Temporario-$carimbo"
+$backup = "D:\MigracaoJulianPlay\AntesImportacao-$carimbo"
 New-Item -ItemType Directory -Path $temporario,$backup -Force | Out-Null
 
 try {
@@ -66,7 +69,7 @@ try {
         if (Test-Path -LiteralPath $atual) { Copy-Item -LiteralPath $atual -Destination (Join-Path $backup $config) -Force }
     }
 
-    New-Item -ItemType Directory -Path $DadosAdministrador,$DadosMaster -Force | Out-Null
+    New-Item -ItemType Directory -Path $DadosAdministrador,$DadosMaster,$DadosClientes -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $temporario 'admin\clientes.db') -Destination (Join-Path $DadosAdministrador 'clientes.db') -Force
     foreach ($nome in @('.wwebjs_auth','backups')) {
         $origem = Join-Path $temporario "admin\$nome"
@@ -87,8 +90,8 @@ try {
     Exigir (Test-Path -LiteralPath $configMasterOrigem) 'Configuracao do Painel Mestre ausente.'
     $configMaster = Get-Content -LiteralPath $configMasterOrigem -Raw | ConvertFrom-Json
     $configMaster.dataDir = $DadosMaster
-    $configMaster.clientsDir = 'C:\JulianPlayClientes'
-    $configMaster.archiveDir = 'C:\JulianPlayClientes\_arquivados'
+    $configMaster.clientsDir = $DadosClientes
+    $configMaster.archiveDir = (Join-Path $DadosClientes '_arquivados')
     $configMaster.port = 9000
     $configMaster | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $ProjetoLocal '.julian-master-install.json') -Encoding UTF8
 
