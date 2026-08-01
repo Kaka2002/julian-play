@@ -1,4 +1,9 @@
+const fs = require('fs');
 const { defineConfig } = require('@playwright/test');
+
+const chromePadrao = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const navegadorConfigurado = process.env.PLAYWRIGHT_CHROME_PATH
+    || (fs.existsSync(chromePadrao) ? chromePadrao : '');
 
 module.exports = defineConfig({
     testDir: './tests/e2e',
@@ -13,8 +18,7 @@ module.exports = defineConfig({
         viewport: { width: 1920, height: 1080 },
         headless: true,
         launchOptions: {
-            executablePath: process.env.PLAYWRIGHT_CHROME_PATH
-                || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            ...(navegadorConfigurado ? { executablePath: navegadorConfigurado } : {}),
             args: [
                 '--disable-extensions',
                 '--disable-background-networking',

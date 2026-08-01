@@ -298,8 +298,15 @@ async function verificarBackup(config, agora) {
         let copiaExterna = '';
         let retencaoExterna = null;
         if (String(config.backupExternoAtivo) === '1') {
-            copiaExterna = await copiarBackupExterno(backup.nome, config.backupExternoPasta);
-            retencaoExterna = aplicarPoliticaRetencaoBackups({ ...politica, pasta: config.backupExternoPasta });
+            copiaExterna = await copiarBackupExterno(
+                backup.nome,
+                config.backupExternoPasta,
+                config.backupExternoMaximo || 5
+            );
+            retencaoExterna = {
+                maximo: Number.parseInt(config.backupExternoMaximo || 5, 10) || 5,
+                criterio: 'ultimos_backups'
+            };
             await salvarConfiguracao('ultimoBackupExterno', agora.iso);
         }
 

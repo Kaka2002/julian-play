@@ -38,8 +38,11 @@ jobs:
       - name: Instalar navegador dos testes
         run: npx playwright install chromium
 
-      - name: Executar testes internos e de navegacao
-        run: npm run test:all
+      - name: Executar testes internos
+        run: npm test
+
+      - name: Executar testes de navegacao
+        run: npm run test:e2e
 
       - name: Validar pacote local limpo
         shell: powershell

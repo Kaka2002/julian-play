@@ -44,7 +44,8 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
  assert.match(workflow,/workflow_dispatch:/);
  assert.match(workflow,/runs-on:\s*windows-latest/);
  assert.match(workflow,/npm ci/);
- assert.match(workflow,/npm run test:all/);
+ assert.match(workflow,/run:\s*npm test/);
+ assert.match(workflow,/npm run test:e2e/);
  assert.match(workflow,/npm run test:pacote-limpo/);
  assert.doesNotMatch(workflow,/VPS_HOST|VPS_USER|VPS_SSH_KEY|ssh\s|deploy\.ps1/i);
 });

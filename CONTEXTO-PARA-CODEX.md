@@ -723,5 +723,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `julian-play-admin`, tambem garante `julian-master` a partir de
   `.julian-master-install.json`. Se precisou reconstruir a lista, salva o PM2
   novamente. A AMPLAYTV nao e iniciada por esse mecanismo e permanece parada.
+- A versao 1.2.16 limita a copia externa a cinco conjuntos de backup por
+  padrao, removendo banco e manifesto antigos juntos sem reduzir a retencao
+  longa mantida no disco de dados. Quando `C:\BackupsJulianPlay` estiver
+  sincronizada pelo Google Drive para computador, as exclusoes locais tambem
+  mantem somente os cinco conjuntos mais recentes na nuvem. O limite pode ser
+  alterado em Manutencao. A validacao do GitHub usa o Chromium instalado no
+  runner quando o Google Chrome nao estiver disponivel e separa testes
+  internos dos testes de navegacao para diagnostico claro.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

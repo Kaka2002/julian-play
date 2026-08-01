@@ -8339,7 +8339,8 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <input type="checkbox" name="backupExternoAtivo" value="1" ${String(status.config?.backupExternoAtivo) === '1' ?'checked' : ''}>
                 <span>Copiar cada backup para outro disco ou compartilhamento</span>
             </label>
-            ${campo({ nome: 'backupExternoPasta', label: 'Pasta externa de backup', valor: status.config?.backupExternoPasta || '', tipo: 'text', attrs: 'placeholder="D:\\BackupsJulianPlay ou \\\\servidor\\backups"' })}
+            ${campo({ nome: 'backupExternoPasta', label: 'Pasta externa de backup', valor: status.config?.backupExternoPasta || '', tipo: 'text', attrs: 'placeholder="C:\\BackupsJulianPlay ou \\\\servidor\\backups"' })}
+            ${campo({ nome: 'backupExternoMaximo', label: 'Máximo de backups na cópia externa / Google Drive', valor: status.config?.backupExternoMaximo || '5', tipo: 'number', attrs: 'min="1" max="100" required' })}
             ${campo({ nome: 'campanhaLimiteDiario', label: 'Máximo de clientes por campanha', valor: status.config?.campanhaLimiteDiario || '100', tipo: 'number', attrs: 'min="1" max="1000" required' })}
             ${campo({ nome: 'campanhaLimiteSemanalCliente', label: 'Máximo semanal por cliente', valor: status.config?.campanhaLimiteSemanalCliente || '1', tipo: 'number', attrs: 'min="1" max="20" required' })}
             ${campo({ nome: 'campanhaHoraInicio', label: 'Início do horário de campanhas', valor: status.config?.campanhaHoraInicio || '09:00', tipo: 'time', attrs: 'required' })}
@@ -8355,7 +8356,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
             ${campo({ nome: 'alertaMemoriaCriticaMb', label: 'Memória crítica abaixo de (MB)', valor: status.config?.alertaMemoriaCriticaMb || '512', tipo: 'number', attrs: 'min="128" max="32768" required' })}
-            <div class="notice full">A cópia externa deve apontar para outro disco ou compartilhamento; outra pasta no mesmo disco não protege contra falha do disco. No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas.</div>
+            <div class="notice full">A cópia externa deve apontar para outro disco ou para uma pasta sincronizada com a nuvem. Somente os backups mais recentes definidos acima são mantidos nesse destino; a retenção longa do disco de dados continua independente. No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -10222,6 +10223,7 @@ router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, confi
             horario: req.body.backupAutomaticoHora,
             retencao: req.body.backupRetencaoDias,
             backupExternoAtivo: Boolean(req.body.backupExternoAtivo),
+            backupExternoMaximo: req.body.backupExternoMaximo,
             alertaMinutos: req.body.alertaWhatsAppMinutos
         });
         res.redirect('/manutencao?mensagem=Monitoramento salvo com sucesso');

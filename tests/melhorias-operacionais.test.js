@@ -51,6 +51,27 @@ test('backup verificado pode ser copiado para armazenamento externo', () => {
     }
 });
 
+test('copia externa mantem somente os cinco backups mais recentes', () => {
+    const resultado = executarIsolado(`(()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const pasta=fs.mkdtempSync(path.join(os.tmpdir(),'julian-retencao-externa-'));for(let i=1;i<=7;i+=1){const nome='clientes-2026010'+i+'-00000'+i+'.db';const arquivo=path.join(pasta,nome);fs.writeFileSync(arquivo,'backup-'+i);fs.writeFileSync(arquivo+'.json',JSON.stringify({i}));const data=new Date(Date.UTC(2026,0,i));fs.utimesSync(arquivo,data,data);fs.utimesSync(arquivo+'.json',data,data)}fs.writeFileSync(path.join(pasta,'nao-remover.txt'),'preservar');const retencao=m.aplicarRetencaoBackupsExternos(pasta,5);const arquivos=fs.readdirSync(pasta);const retorno={retencao,bancos:arquivos.filter(x=>x.endsWith('.db')).sort(),manifestos:arquivos.filter(x=>x.endsWith('.db.json')).length,outro:arquivos.includes('nao-remover.txt')};fs.rmSync(pasta,{recursive:true,force:true});process.stdout.write(JSON.stringify(retorno))})()`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.equal(retorno.retencao.removidos, 2);
+        assert.equal(retorno.retencao.mantidos, 5);
+        assert.equal(retorno.retencao.maximo, 5);
+        assert.deepEqual(retorno.bancos, [
+            'clientes-20260103-000003.db',
+            'clientes-20260104-000004.db',
+            'clientes-20260105-000005.db',
+            'clientes-20260106-000006.db',
+            'clientes-20260107-000007.db'
+        ]);
+        assert.equal(retorno.manifestos, 5);
+        assert.equal(retorno.outro, true);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('backup manual atualiza automaticamente o armazenamento externo configurado', () => {
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const externa=path.join(os.tmpdir(),'julian-play-backup-manual-externo-'+Date.now());const criado=await m.criarBackupManualComCopiaExterna({backupExternoAtivo:'1',backupExternoPasta:externa});const retorno={nome:criado.backup.nome,copia:criado.copiaExterna,erro:criado.erroCopiaExterna,db:fs.existsSync(criado.copiaExterna),manifesto:fs.existsSync(criado.copiaExterna+'.json')};fs.rmSync(externa,{recursive:true,force:true});process.stdout.write(JSON.stringify(retorno));})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

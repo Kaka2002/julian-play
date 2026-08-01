@@ -316,13 +316,46 @@ async function exportarBackupCriptografado(nomeBackup, senha) {
     return destino;
 }
 
-async function copiarBackupExterno(nomeBackup, pastaExterna) {
+function aplicarRetencaoBackupsExternos(pastaExterna, maximoBackups = 5) {
+    const pastaInformada = String(pastaExterna || '').trim();
+    const maximo = Math.max(1, Math.min(100, Number.parseInt(maximoBackups, 10) || 5));
+    if (!pastaInformada || !path.isAbsolute(pastaInformada)) throw new Error('Informe uma pasta externa absoluta.');
+    const pasta = path.resolve(pastaInformada);
+    if (!fs.existsSync(pasta)) return { removidos: 0, mantidos: 0, maximo, pasta };
+
+    const backups = fs.readdirSync(pasta)
+        .filter(nome => /^clientes(?:-auto)?-\d{8}-\d{6}\.db$/.test(nome))
+        .map(nome => {
+            const caminho = path.join(pasta, nome);
+            const stat = fs.statSync(caminho);
+            return { nome, caminho, criadoEm: stat.mtimeMs };
+        })
+        .sort((a, b) => b.criadoEm - a.criadoEm || b.nome.localeCompare(a.nome));
+
+    let removidos = 0;
+    for (const backup of backups.slice(maximo)) {
+        fs.unlinkSync(backup.caminho);
+        try { fs.unlinkSync(`${backup.caminho}.json`); } catch (_) { /* manifesto opcional */ }
+        removidos += 1;
+    }
+
+    return {
+        removidos,
+        mantidos: Math.min(backups.length, maximo),
+        maximo,
+        pasta
+    };
+}
+
+async function copiarBackupExterno(nomeBackup, pastaExterna, maximoBackups = 5) {
     const nome=path.basename(String(nomeBackup||'')); const origem=path.join(BACKUP_DIR,nome);
     if(!nome.endsWith('.db')||!fs.existsSync(origem))throw new Error('Backup nao encontrado.');
-    const destinoBase=path.resolve(String(pastaExterna||'')); if(!path.isAbsolute(destinoBase))throw new Error('Informe uma pasta externa absoluta.');
+    const pastaInformada=String(pastaExterna||'').trim(); if(!pastaInformada||!path.isAbsolute(pastaInformada))throw new Error('Informe uma pasta externa absoluta.');
+    const destinoBase=path.resolve(pastaInformada);
     await verificarArquivoBackup(origem,true); fs.mkdirSync(destinoBase,{recursive:true});
     const destino=path.join(destinoBase,nome); fs.copyFileSync(origem,destino); fs.copyFileSync(`${origem}.json`,`${destino}.json`);
-    await registrarEventoSistema('backup_copia_externa','info',`Backup copiado para armazenamento externo: ${nome}.`,{destino:destinoBase}); return destino;
+    const retencao = aplicarRetencaoBackupsExternos(destinoBase, maximoBackups);
+    await registrarEventoSistema('backup_copia_externa','info',`Backup copiado para armazenamento externo: ${nome}.`,{destino:destinoBase,retencao}); return destino;
 }
 
 function criarBackupManual() {
@@ -341,7 +374,11 @@ async function criarBackupManualComCopiaExterna(config = {}) {
 
     if (copiaExternaSolicitada) {
         try {
-            copiaExterna = await copiarBackupExterno(backup.nome, config.backupExternoPasta);
+            copiaExterna = await copiarBackupExterno(
+                backup.nome,
+                config.backupExternoPasta,
+                config.backupExternoMaximo || 5
+            );
         } catch (err) {
             erroCopiaExterna = String(err?.message || err || 'Falha desconhecida.');
             await registrarEventoSistema(
@@ -600,6 +637,7 @@ module.exports = {
     criarBackupAutomatico,
     limparBackupsAutomaticos,
     aplicarPoliticaRetencaoBackups,
+    aplicarRetencaoBackupsExternos,
     executarExercicioRestauracaoMensal,
     obterRelatorioUltimaRestauracao,
     restaurarBackup,
