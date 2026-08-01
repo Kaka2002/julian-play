@@ -583,6 +583,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   exportacao final. A compactacao passa a ser feita em fluxo para evitar falta
   de memoria no servidor de 4 GB; falhas continuam religando automaticamente
   os processos que estavam online antes da tentativa.
+- A versao 1.2.4 permite ao importador reconstruir nomes Unicode que tenham
+  sido alterados pelo ZIP do `tar.exe`, usando tamanho e SHA-256 do manifesto.
+  Depois da verificacao, entradas que nao pertencem ao manifesto sao removidas
+  da area temporaria antes da copia para o `DATA_DIR`.
 - Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
   `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,

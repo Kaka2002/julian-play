@@ -44,9 +44,32 @@ try {
     $manifesto = Get-Content -LiteralPath $manifestoPath -Raw | ConvertFrom-Json
     foreach ($item in @($manifesto.arquivos)) {
         $arquivo = Join-Path $temporario ([string]$item.caminho)
+        if (-not (Test-Path -LiteralPath $arquivo -PathType Leaf)) {
+            $recuperado = Get-ChildItem -LiteralPath $temporario -File -Recurse -Force |
+                Where-Object { $_.Length -eq [long]$item.tamanho } |
+                Where-Object { (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash -eq [string]$item.sha256 } |
+                Select-Object -First 1
+            if ($recuperado) {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $arquivo) -Force | Out-Null
+                Copy-Item -LiteralPath $recuperado.FullName -Destination $arquivo -Force
+                Write-Warning "Nome reconstruido pelo SHA-256: $($item.caminho)"
+            }
+        }
         Exigir (Test-Path -LiteralPath $arquivo -PathType Leaf) "Arquivo ausente: $($item.caminho)"
         $hash = (Get-FileHash -LiteralPath $arquivo -Algorithm SHA256).Hash
         Exigir ($hash -eq [string]$item.sha256) "Hash divergente: $($item.caminho)"
+    }
+
+    $permitidos = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    [void]$permitidos.Add('manifesto.json')
+    foreach ($item in @($manifesto.arquivos)) {
+        [void]$permitidos.Add(([string]$item.caminho).Replace('/','\').TrimStart('.','\'))
+    }
+    Get-ChildItem -LiteralPath $temporario -File -Recurse -Force | ForEach-Object {
+        $relativo = $_.FullName.Substring($temporario.Length + 1).Replace('/','\')
+        if (-not $permitidos.Contains($relativo)) {
+            Remove-Item -LiteralPath $_.FullName -Force
+        }
     }
 
     Set-Location $ProjetoLocal

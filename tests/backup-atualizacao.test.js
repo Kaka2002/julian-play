@@ -53,6 +53,8 @@ test('migracao servidor para local preserva instalacao independente e exige cort
  assert.match(importar,/D:\\JulianPlayDados\\admin/);
  assert.match(importar,/D:\\MigracaoJulianPlay\\Temporario/);
  assert.match(importar,/PRAGMA quick_check/);
+ assert.match(importar,/Nome reconstruido pelo SHA-256/);
+ assert.match(importar,/HashSet\[string\]/);
  assert.match(importar,/julian-play-admin/);
  assert.match(importar,/'assets','database','migrations'/);
  assert.match(importar,/pm2\.cmd stop julian-amplaytv/);
