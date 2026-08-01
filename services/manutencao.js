@@ -333,6 +333,34 @@ function criarBackupAutomatico() {
     return criarBackup('clientes-auto');
 }
 
+async function criarBackupManualComCopiaExterna(config = {}) {
+    const backup = await criarBackupManual();
+    const copiaExternaSolicitada = String(config.backupExternoAtivo) === '1';
+    let copiaExterna = '';
+    let erroCopiaExterna = '';
+
+    if (copiaExternaSolicitada) {
+        try {
+            copiaExterna = await copiarBackupExterno(backup.nome, config.backupExternoPasta);
+        } catch (err) {
+            erroCopiaExterna = String(err?.message || err || 'Falha desconhecida.');
+            await registrarEventoSistema(
+                'backup_copia_externa',
+                'erro',
+                `Backup local criado, mas a copia externa falhou: ${erroCopiaExterna}`,
+                { arquivo: backup.nome, pasta: String(config.backupExternoPasta || '') }
+            );
+        }
+    }
+
+    return {
+        backup,
+        copiaExternaSolicitada,
+        copiaExterna,
+        erroCopiaExterna
+    };
+}
+
 function chaveSemana(data) {
     const utc = new Date(Date.UTC(data.getFullYear(), data.getMonth(), data.getDate()));
     const dia = utc.getUTCDay() || 7;
@@ -568,6 +596,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
 
 module.exports = {
     criarBackupManual,
+    criarBackupManualComCopiaExterna,
     criarBackupAutomatico,
     limparBackupsAutomaticos,
     aplicarPoliticaRetencaoBackups,

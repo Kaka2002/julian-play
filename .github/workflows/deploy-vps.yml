@@ -1,13 +1,16 @@
-name: Deploy VPS
+name: Deploy VPS legado (manual)
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      confirmar:
+        description: 'Digite DEPLOY_VPS_LEGADO para confirmar o deploy no servidor antigo'
+        required: true
+        type: string
 
 jobs:
   deploy:
+    if: ${{ inputs.confirmar == 'DEPLOY_VPS_LEGADO' }}
     runs-on: ubuntu-latest
 
     steps:

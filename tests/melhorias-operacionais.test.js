@@ -21,6 +21,32 @@ test('backup verificado pode ser copiado para armazenamento externo', () => {
     }
 });
 
+test('backup manual atualiza automaticamente o armazenamento externo configurado', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const externa=path.join(os.tmpdir(),'julian-play-backup-manual-externo-'+Date.now());const criado=await m.criarBackupManualComCopiaExterna({backupExternoAtivo:'1',backupExternoPasta:externa});const retorno={nome:criado.backup.nome,copia:criado.copiaExterna,erro:criado.erroCopiaExterna,db:fs.existsSync(criado.copiaExterna),manifesto:fs.existsSync(criado.copiaExterna+'.json')};fs.rmSync(externa,{recursive:true,force:true});process.stdout.write(JSON.stringify(retorno));})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.match(retorno.nome, /^clientes-\d{8}-\d{6}\.db$/);
+        assert.equal(retorno.erro, '');
+        assert.equal(retorno.db, true);
+        assert.equal(retorno.manifesto, true);
+        assert.ok(retorno.copia.endsWith(retorno.nome));
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('falha da copia externa nao elimina o backup manual local', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const alvo=path.join(os.tmpdir(),'julian-play-destino-invalido-'+Date.now());fs.writeFileSync(alvo,'arquivo impede a criacao da pasta');const criado=await m.criarBackupManualComCopiaExterna({backupExternoAtivo:'1',backupExternoPasta:alvo});const retorno={local:fs.existsSync(criado.backup.caminho),copia:criado.copiaExterna,erro:criado.erroCopiaExterna};fs.rmSync(alvo,{force:true});process.stdout.write(JSON.stringify(retorno));})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.equal(retorno.local, true);
+        assert.equal(retorno.copia, '');
+        assert.ok(retorno.erro.length > 0);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('backup aplica retencao diaria semanal mensal e comprova restauracao isolada', () => {
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const db=require('./database/sqlite');await db.ready;const criado=await m.criarBackupAutomatico();const pasta=path.dirname(criado.caminho);const agora=new Date('2026-07-28T12:00:00Z');const criar=(nome,data)=>{const destino=path.join(pasta,nome);fs.copyFileSync(criado.caminho,destino);fs.copyFileSync(criado.caminho+'.json',destino+'.json');fs.utimesSync(destino,new Date(data),new Date(data));return destino};criar('clientes-auto-duplicado.db','2026-07-28T08:00:00Z');criar('clientes-auto-semana.db','2026-07-20T08:00:00Z');criar('clientes-auto-mes.db','2026-06-15T08:00:00Z');criar('clientes-auto-antigo.db','2024-01-15T08:00:00Z');fs.utimesSync(criado.caminho,agora,agora);const politica=m.aplicarPoliticaRetencaoBackups({dias:7,semanas:8,meses:6,agora});const nomes=fs.readdirSync(pasta).filter(x=>x.endsWith('.db'));const teste=await m.executarExercicioRestauracaoMensal(criado.nome);const relatorio=m.obterRelatorioUltimaRestauracao();process.stdout.write(JSON.stringify({removidos:politica.removidos,duplicado:nomes.includes('clientes-auto-duplicado.db'),semanal:nomes.includes('clientes-auto-semana.db'),mensal:nomes.includes('clientes-auto-mes.db'),antigo:nomes.includes('clientes-auto-antigo.db'),status:teste.status,mesmo:relatorio.backup===criado.nome,tabelas:teste.tabelas>0}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

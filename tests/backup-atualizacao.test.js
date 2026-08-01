@@ -35,6 +35,14 @@ test('artefatos de entrega sao versionados e gerados somente na maquina local',(
  assert.match(gerador,/Select-Object -Skip \$Retencao/);
 });
 
+test('deploy do VPS legado exige acionamento e confirmacao manuais',()=>{
+ const workflow=fs.readFileSync(path.join(repoRoot,'.github','workflows','deploy-vps.yml'),'utf8');
+ assert.doesNotMatch(workflow,/\n\s+push:/);
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/DEPLOY_VPS_LEGADO/);
+ assert.match(workflow,/inputs\.confirmar\s*==\s*'DEPLOY_VPS_LEGADO'/);
+});
+
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{
  const exportar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','1-EXPORTAR-NO-SERVIDOR.ps1'),'utf8');
  const importar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','2-IMPORTAR-NESTE-COMPUTADOR.ps1'),'utf8');

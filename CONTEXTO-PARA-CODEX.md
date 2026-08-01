@@ -698,5 +698,14 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   O exercicio real de restauracao foi aprovado com 25 tabelas e 11 clientes.
   Essa segunda copia local protege contra falha do disco `D:`, mas ainda deve
   ser sincronizada para armazenamento fora do computador.
+- A versao 1.2.13 faz o botao `Gerar backup agora` copiar o novo backup e seu
+  manifesto automaticamente para a pasta externa configurada. Se a segunda
+  copia falhar, o backup local verificado permanece preservado e a interface
+  informa separadamente a falha externa. O comportamento possui testes para
+  sucesso e falha do destino externo.
+- O workflow `.github/workflows/deploy-vps.yml` deixou de executar em pushes
+  para `main`. O deploy do VPS antigo ficou restrito a acionamento manual com
+  a confirmacao literal `DEPLOY_VPS_LEGADO`, evitando que um push volte a
+  iniciar o servidor que sera encerrado.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

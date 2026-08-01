@@ -62,6 +62,7 @@ const {
 const { atualizarLicencaComercial, calcularEstadoLicenca, instalacaoAdministrador } = require('../services/licencaService');
 const {
     criarBackupManual,
+    criarBackupManualComCopiaExterna,
     restaurarBackup,
     verificarArquivoBackup,
     exportarBackupCriptografado,
@@ -8365,7 +8366,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Backup dos dados</h2>
-                <div class="subtitle">Gere uma cópia do banco antes de atualizar ou fazer manutenção</div>
+                <div class="subtitle">Gere uma cópia verificada; quando o armazenamento externo estiver ativo, ele também será atualizado</div>
             </div>
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
@@ -9871,11 +9872,21 @@ router.post('/manutencao/simular-robo', async (req, res) => {
 
 router.post('/manutencao/backup', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
-        const backup = await criarBackupManual();
+        const config = await obterConfiguracoes();
+        const resultado = await criarBackupManualComCopiaExterna(config);
+        const backup = resultado.backup;
         logControleClientes('Backup manual criado', {
-            arquivo: backup.nome
+            arquivo: backup.nome,
+            copiaExterna: resultado.copiaExterna || '',
+            erroCopiaExterna: resultado.erroCopiaExterna || ''
         });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Backup criado: ${backup.nome}`)}`);
+        let mensagem = `Backup criado: ${backup.nome}`;
+        if (resultado.copiaExterna) {
+            mensagem += `; cópia externa criada em ${resultado.copiaExterna}`;
+        } else if (resultado.erroCopiaExterna) {
+            mensagem += `; o backup local está preservado, mas a cópia externa falhou: ${resultado.erroCopiaExterna}`;
+        }
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
     } catch (err) {
         logControleClientes('Erro ao criar backup manual', {
             erro: err.message
