@@ -44,6 +44,7 @@ test('migracao servidor para local preserva instalacao independente e exige cort
  assert.match(exportar,/avisos-fora-horario\.json/);
  assert.match(exportar,/'migrations'/);
  assert.match(exportar,/clientes_backup_antes_manutencao\.db/);
+ assert.match(exportar,/LastWriteTime = \$agora/);
  assert.match(exportar,/Get-FileHash[\s\S]*SHA256/);
  assert.match(exportar,/not \$exportacaoConcluida[\s\S]*religados automaticamente/);
  assert.match(importar,/ConfirmarServidorParado/);

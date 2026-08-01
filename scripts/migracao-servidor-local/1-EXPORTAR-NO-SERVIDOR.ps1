@@ -86,6 +86,15 @@ try {
     }
     $manifesto | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $conteudo 'manifesto.json') -Encoding UTF8
 
+    # O formato ZIP aceita datas somente a partir de 1980. Alguns arquivos
+    # operacionais antigos podem carregar timestamps invalidos; normalize
+    # apenas a copia temporaria, sem tocar nos dados originais nem nos hashes.
+    $agora = Get-Date
+    Get-ChildItem -LiteralPath $conteudo -Recurse -Force | ForEach-Object {
+        $_.LastWriteTime = $agora
+    }
+    (Get-Item -LiteralPath $conteudo).LastWriteTime = $agora
+
     $zip = Join-Path $Saida "JulianPlay-Servidor-$carimbo.zip"
     Compress-Archive -Path (Join-Path $conteudo '*') -DestinationPath $zip -Force
     $hashZip = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash

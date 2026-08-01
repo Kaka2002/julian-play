@@ -576,6 +576,9 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   e o banco legado anterior a manutencao quando ele existir. Cache antigo do
   Chrome/WhatsApp Web e copias antigas do script de deploy nao fazem parte do
   estado necessario para restauracao.
+- A versao 1.2.2 normaliza a data somente das copias temporarias antes de
+  compactar a exportacao. Isso contorna arquivos legados com timestamp fora do
+  intervalo aceito pelo ZIP sem alterar os dados originais ou seus hashes.
 - Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
   `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
