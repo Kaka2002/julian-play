@@ -19,6 +19,7 @@ $projeto = [IO.Path]::GetFullPath($ProjetoServidor)
 Exigir (Test-Path -LiteralPath (Join-Path $projeto 'clientes.db')) 'Banco administrador nao encontrado.'
 Exigir (Test-Path -LiteralPath 'C:\JulianPlayMaster\master.db') 'Banco do Painel Mestre nao encontrado.'
 Exigir ($null -ne (Get-Command pm2.cmd -ErrorAction SilentlyContinue)) 'PM2 nao encontrado.'
+Exigir ($null -ne (Get-Command tar.exe -ErrorAction SilentlyContinue)) 'Compactador tar.exe do Windows nao encontrado.'
 
 $carimbo = Get-Date -Format 'yyyyMMdd-HHmmss'
 $raiz = Join-Path $Saida "Exportacao-$carimbo"
@@ -96,7 +97,11 @@ try {
     (Get-Item -LiteralPath $conteudo).LastWriteTime = $agora
 
     $zip = Join-Path $Saida "JulianPlay-Servidor-$carimbo.zip"
-    Compress-Archive -Path (Join-Path $conteudo '*') -DestinationPath $zip -Force
+    if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
+    & tar.exe -a -c -f $zip -C $conteudo .
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $zip -PathType Leaf)) {
+        throw "tar.exe nao conseguiu criar o pacote ZIP (codigo $LASTEXITCODE)."
+    }
     $hashZip = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash
     Set-Content -LiteralPath "$zip.sha256" -Value "$hashZip  $([IO.Path]::GetFileName($zip))" -Encoding ASCII
     $exportacaoConcluida = $true

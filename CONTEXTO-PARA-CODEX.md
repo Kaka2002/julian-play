@@ -579,6 +579,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - A versao 1.2.2 normaliza a data somente das copias temporarias antes de
   compactar a exportacao. Isso contorna arquivos legados com timestamp fora do
   intervalo aceito pelo ZIP sem alterar os dados originais ou seus hashes.
+- A versao 1.2.3 substituiu `Compress-Archive` pelo `tar.exe` nativo na
+  exportacao final. A compactacao passa a ser feita em fluxo para evitar falta
+  de memoria no servidor de 4 GB; falhas continuam religando automaticamente
+  os processos que estavam online antes da tentativa.
 - Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
   `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
