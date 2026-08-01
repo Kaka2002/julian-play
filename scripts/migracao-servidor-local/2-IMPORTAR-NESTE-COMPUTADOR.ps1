@@ -71,7 +71,7 @@ try {
 
     New-Item -ItemType Directory -Path $DadosAdministrador,$DadosMaster,$DadosClientes -Force | Out-Null
     Copy-Item -LiteralPath (Join-Path $temporario 'admin\clientes.db') -Destination (Join-Path $DadosAdministrador 'clientes.db') -Force
-    foreach ($nome in @('.wwebjs_auth','backups')) {
+    foreach ($nome in @('.wwebjs_auth','backups','assets','database','migrations')) {
         $origem = Join-Path $temporario "admin\$nome"
         if (Test-Path -LiteralPath $origem) { Copy-Item -LiteralPath $origem -Destination (Join-Path $DadosAdministrador $nome) -Recurse -Force }
     }

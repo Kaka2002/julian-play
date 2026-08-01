@@ -571,6 +571,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   exportador para os processos, copia bancos e sessao e gera manifesto e
   SHA-256; o importador valida hashes e `PRAGMA quick_check`, cria backup do
   estado local e exige confirmacao explicita de que o servidor foi parado.
+- A versao 1.2.1 ampliou o pacote de encerramento para preservar tambem
+  `assets`, backups, relatorios de migracao, o estado de avisos fora de horario
+  e o banco legado anterior a manutencao quando ele existir. Cache antigo do
+  Chrome/WhatsApp Web e copias antigas do script de deploy nao fazem parte do
+  estado necessario para restauracao.
 - Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
   `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,

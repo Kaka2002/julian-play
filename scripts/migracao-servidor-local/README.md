@@ -3,6 +3,11 @@
 Este fluxo migra o Painel Mestre e o administrador do servidor para este
 computador. Ele preserva `C:\JulianPlay\dados` e mantém AMPLAYTV parada.
 
+O pacote tambem preserva as imagens personalizadas em `assets`, os backups,
+os relatorios operacionais de migracao e o estado de avisos fora de horario.
+Cache antigo do Chrome/WhatsApp Web e copias antigas do script de deploy nao
+sao necessarios para restaurar o sistema e ficam fora da exportacao.
+
 Os dados maiores ficam no disco `D:`:
 
 - administrador: `D:\JulianPlayDados\admin`;

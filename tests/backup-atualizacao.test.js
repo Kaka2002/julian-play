@@ -40,6 +40,10 @@ test('migracao servidor para local preserva instalacao independente e exige cort
  const importar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','2-IMPORTAR-NESTE-COMPUTADOR.ps1'),'utf8');
  assert.match(exportar,/pm2\.cmd[\s\S]*stop[\s\S]*julian-play/);
  assert.match(exportar,/\.wwebjs_auth/);
+ assert.match(exportar,/'assets'/);
+ assert.match(exportar,/avisos-fora-horario\.json/);
+ assert.match(exportar,/'migrations'/);
+ assert.match(exportar,/clientes_backup_antes_manutencao\.db/);
  assert.match(exportar,/Get-FileHash[\s\S]*SHA256/);
  assert.match(exportar,/not \$exportacaoConcluida[\s\S]*religados automaticamente/);
  assert.match(importar,/ConfirmarServidorParado/);
@@ -48,5 +52,6 @@ test('migracao servidor para local preserva instalacao independente e exige cort
  assert.match(importar,/D:\\MigracaoJulianPlay\\Temporario/);
  assert.match(importar,/PRAGMA quick_check/);
  assert.match(importar,/julian-play-admin/);
+ assert.match(importar,/'assets','database','migrations'/);
  assert.match(importar,/pm2\.cmd stop julian-amplaytv/);
 });

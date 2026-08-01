@@ -45,11 +45,23 @@ try {
     Start-Sleep -Seconds 4
 
     Copy-Item -LiteralPath (Join-Path $projeto 'clientes.db') -Destination (Join-Path $admin 'clientes.db') -Force
-    foreach ($nome in @('.wwebjs_auth','backups')) {
+    foreach ($nome in @('.wwebjs_auth','backups','assets','migrations')) {
         $origem = Join-Path $projeto $nome
         if (Test-Path -LiteralPath $origem) {
             Copy-Item -LiteralPath $origem -Destination (Join-Path $admin $nome) -Recurse -Force
         }
+    }
+    $avisosForaHorario = Join-Path $projeto 'database\avisos-fora-horario.json'
+    if (Test-Path -LiteralPath $avisosForaHorario -PathType Leaf) {
+        $databaseAdmin = Join-Path $admin 'database'
+        New-Item -ItemType Directory -Path $databaseAdmin -Force | Out-Null
+        Copy-Item -LiteralPath $avisosForaHorario -Destination (Join-Path $databaseAdmin 'avisos-fora-horario.json') -Force
+    }
+    $backupLegado = Join-Path $projeto 'clientes_backup_antes_manutencao.db'
+    if (Test-Path -LiteralPath $backupLegado -PathType Leaf) {
+        $backupsAdmin = Join-Path $admin 'backups'
+        New-Item -ItemType Directory -Path $backupsAdmin -Force | Out-Null
+        Copy-Item -LiteralPath $backupLegado -Destination (Join-Path $backupsAdmin 'legado-clientes_backup_antes_manutencao.db') -Force
     }
     foreach ($nome in @('.julian-play-install.json','.julian-master-install.json')) {
         $origem = Join-Path $projeto $nome
