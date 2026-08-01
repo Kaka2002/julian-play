@@ -29,6 +29,9 @@ test('Painel Mestre oferece limpeza segura de disco e otimizacao de memoria',()=
     assert.match(provisionador,/separarInstalacoesPorEstadoPm2/);
     assert.match(provisionador,/\['jlist'\]/);
     assert.match(provisionador,/pm2\.cmd', \['restart', instalacao\.processoPm2/);
+    assert.match(provisionador,/estadosPm2\.has\(instalacao\.processoPm2\)/);
+    assert.match(provisionador,/ecosystem\.config\.cjs/);
+    assert.match(provisionador,/\['start', ecossistema, '--only', instalacao\.processoPm2, '--update-env'\]/);
     assert.match(provisionador,/\['\.wwebjs_auth_backup', '\.wwebjs_cache_backup'\]/);
     assert.match(provisionador,/copiasSessao\.slice\(1\)/);
 });

@@ -1,4 +1,4 @@
-const fs=require('fs'); const path=require('path'); const test=require('node:test'); const assert=require('node:assert/strict');
+const fs=require('fs'); const os=require('os'); const path=require('path'); const {spawnSync}=require('child_process'); const test=require('node:test'); const assert=require('node:assert/strict');
 const {criarAmbiente,executarIsolado,removerAmbiente,repoRoot}=require('./helpers/isolated');
 
 test('backup e restauracao recuperam o banco anterior',()=>{
@@ -38,6 +38,9 @@ test('artefatos de entrega sao versionados e gerados somente na maquina local',(
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{
  const exportar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','1-EXPORTAR-NO-SERVIDOR.ps1'),'utf8');
  const importar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','2-IMPORTAR-NESTE-COMPUTADOR.ps1'),'utf8');
+ const exportarAmbiente=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','3-EXPORTAR-AMBIENTE-SEGURO-NO-SERVIDOR.ps1'),'utf8');
+ const exportarAmplay=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','4-EXPORTAR-AMPLAYTV-PARADA-NO-SERVIDOR.ps1'),'utf8');
+ const importarAmplay=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','5-IMPORTAR-AMPLAYTV-PARADA-NESTE-COMPUTADOR.ps1'),'utf8');
  assert.match(exportar,/pm2\.cmd[\s\S]*stop[\s\S]*julian-play/);
  assert.match(exportar,/\.wwebjs_auth/);
  assert.match(exportar,/'assets'/);
@@ -55,7 +58,101 @@ test('migracao servidor para local preserva instalacao independente e exige cort
  assert.match(importar,/PRAGMA quick_check/);
  assert.match(importar,/Nome reconstruido pelo SHA-256/);
  assert.match(importar,/HashSet\[string\]/);
+ assert.match(importar,/ExecutarPm2Opcional/);
+ assert.match(importar,/cmd\.exe \/d \/c/);
+ assert.match(importar,/AmbienteSeguro/);
+ assert.match(importar,/JULIAN_SECRET_KEY/);
+ assert.match(importar,/MASTER_PASSWORD_HASH/);
+ assert.match(importar,/PANEL_TOTP_SECRET/);
+ assert.match(importar,/O ambiente seguro deve ficar fora do repositorio/);
+ assert.match(importar,/LimparAmbienteSeguro/);
+ assert.match(importar,/adaptar-cadastro-local\.js/);
  assert.match(importar,/julian-play-admin/);
  assert.match(importar,/'assets','database','migrations'/);
- assert.match(importar,/pm2\.cmd stop julian-amplaytv/);
+ assert.match(exportarAmbiente,/dump\.pm2/);
+ assert.match(exportarAmbiente,/LICENSE_ADMIN_TOKEN/);
+ assert.match(exportarAmbiente,/MASTER_PASSWORD_HASH/);
+ assert.doesNotMatch(exportarAmbiente,/Write-Host\s+\$json/);
+ assert.match(importar,/ExecutarPm2Opcional 'stop' 'julian-amplaytv'/);
+ assert.match(exportarAmplay,/ConfirmarParada/);
+ assert.match(exportarAmplay,/pm2\.cmd pid/);
+ assert.match(exportarAmplay,/Get-NetTCPConnection/);
+ assert.match(exportarAmplay,/\.wwebjs_cache/);
+ assert.match(exportarAmplay,/Get-FileHash/);
+ assert.match(exportarAmplay,/tar\.exe/);
+ assert.doesNotMatch(exportarAmplay,/pm2\.cmd start/);
+ assert.match(importarAmplay,/ConfirmarOrigemParada/);
+ assert.match(importarAmplay,/D:\\JulianPlayDados\\clientes\\amplaytv/);
+ assert.match(importarAmplay,/processoConfirmadoParado/);
+ assert.match(importarAmplay,/JULIAN_SECRET_KEY/);
+ assert.match(importarAmplay,/LICENSE_ADMIN_TOKEN como chave legada do cofre/);
+ assert.match(importarAmplay,/materialCofre/);
+ assert.match(importarAmplay,/adaptar-cliente-parado\.js/);
+ assert.match(importarAmplay,/function NormalizarCaminhoRelativo/);
+ assert.doesNotMatch(importarAmplay,/TrimStart\('\.','\\\\'\)/);
+ assert.match(importarAmplay,/ExecutarPm2Opcional 'delete' \$ProcessoPm2/);
+ assert.doesNotMatch(importarAmplay,/& pm2\.cmd start/);
+});
+
+test('adaptacao do cadastro mestre usa SQL parametrizado em arquivo proprio',async()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-master-')); const banco=path.join(raiz,'master.db');
+ const sqlite3=require('sqlite3').verbose();
+ try{
+  await new Promise((resolve,reject)=>{
+   const db=new sqlite3.Database(banco);
+   db.run('CREATE TABLE instalacoes (processoPm2 TEXT, porta INTEGER, pastaDados TEXT)',erro=>{
+    if(erro){db.close();return reject(erro)}
+    db.run('INSERT INTO instalacoes (processoPm2,porta,pastaDados) VALUES (?,?,?)',['julian-play',10000,'C:\\bots\\julian-play'],erroInsercao=>db.close(erroFechamento=>erroInsercao||erroFechamento?reject(erroInsercao||erroFechamento):resolve()));
+   });
+  });
+  const script=path.join(repoRoot,'scripts','migracao-servidor-local','adaptar-cadastro-local.js');
+  const resultado=spawnSync(process.execPath,[script],{encoding:'utf8',env:{...process.env,JULIAN_MASTER_DB:banco,JULIAN_ADMIN_DATA:'D:\\JulianPlayDados\\admin'}});
+  assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
+  const linha=await new Promise((resolve,reject)=>{const db=new sqlite3.Database(banco);db.get('SELECT * FROM instalacoes',(erro,row)=>db.close(erroFechamento=>erro||erroFechamento?reject(erro||erroFechamento):resolve(row)))});
+  assert.deepEqual(linha,{processoPm2:'julian-play-admin',porta:10001,pastaDados:'D:\\JulianPlayDados\\admin'});
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
+test('adaptacao da AMPLAYTV aponta para o disco D e mantem o robo parado',async()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-amplay-')); const banco=path.join(raiz,'master.db');
+ const sqlite3=require('sqlite3').verbose();
+ try{
+  await new Promise((resolve,reject)=>{
+   const db=new sqlite3.Database(banco);
+   db.run('CREATE TABLE instalacoes (slug TEXT, processoPm2 TEXT, porta INTEGER, pastaDados TEXT, status TEXT, detalheStatus TEXT, atualizadoEm DATETIME)',erro=>{
+    if(erro){db.close();return reject(erro)}
+    db.run('INSERT INTO instalacoes (slug,processoPm2,porta,pastaDados,status) VALUES (?,?,?,?,?)',['amplaytv','julian-amplaytv',11004,'C:\\JulianPlayClientes\\amplaytv','ativo'],erroInsercao=>db.close(erroFechamento=>erroInsercao||erroFechamento?reject(erroInsercao||erroFechamento):resolve()));
+   });
+  });
+  const script=path.join(repoRoot,'scripts','migracao-servidor-local','adaptar-cliente-parado.js');
+  const resultado=spawnSync(process.execPath,[script],{encoding:'utf8',env:{...process.env,JULIAN_MASTER_DB:banco,JULIAN_CLIENT_SLUG:'amplaytv',JULIAN_CLIENT_DATA:'D:\\JulianPlayDados\\clientes\\amplaytv',JULIAN_CLIENT_PROCESS:'julian-amplaytv',JULIAN_CLIENT_PORT:'11004'}});
+  assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
+  const linha=await new Promise((resolve,reject)=>{const db=new sqlite3.Database(banco);db.get('SELECT processoPm2,porta,pastaDados,status,detalheStatus FROM instalacoes WHERE slug=?',['amplaytv'],(erro,row)=>db.close(erroFechamento=>erro||erroFechamento?reject(erro||erroFechamento):resolve(row))) });
+  assert.deepEqual(linha,{processoPm2:'julian-amplaytv',porta:11004,pastaDados:'D:\\JulianPlayDados\\clientes\\amplaytv',status:'parado',detalheStatus:'Dados migrados para o computador local; robo mantido parado.'});
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
+test('exportador do ambiente PM2 seleciona segredos sem mostra-los no terminal',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-pm2-'));
+ try{
+  const dump=path.join(raiz,'dump.pm2'); const destino=path.join(raiz,'ambiente-seguro.json');
+  fs.writeFileSync(dump,JSON.stringify([
+   {name:'julian-play',username:'minusculo',USERNAME:'maiusculo',LICENSE_ADMIN_TOKEN:'token-nao-exibir',env:{JULIAN_SECRET_KEY:'chave-nao-exibir',PANEL_TOTP_SECRET:'totp-nao-exibir'}},
+   {name:'julian-master',env:{MASTER_USER:'mestre',MASTER_PASSWORD_HASH:'hash-nao-exibir',LICENSE_ADMIN_TOKEN:'token-nao-exibir'}},
+   {name:'julian-amplaytv',env:{PANEL_USER:'cliente',PANEL_PASSWORD_HASH:'hash-cliente-nao-exibir',LICENSE_ADMIN_TOKEN:'token-cliente-nao-exibir',JULIAN_SECRET_KEY:'chave-cliente-nao-exibir'}}
+  ]));
+  const script=path.join(repoRoot,'scripts','migracao-servidor-local','3-EXPORTAR-AMBIENTE-SEGURO-NO-SERVIDOR.ps1');
+  const resultado=spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',script,'-Destino',destino,'-DumpPm2',dump],{encoding:'utf8'});
+  assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
+  assert.doesNotMatch(resultado.stdout,/token-nao-exibir|chave-nao-exibir|totp-nao-exibir|hash-nao-exibir/);
+  const ambiente=JSON.parse(fs.readFileSync(destino,'utf8'));
+  assert.equal(ambiente.admin.LICENSE_ADMIN_TOKEN,'token-nao-exibir');
+  assert.equal(ambiente.admin.JULIAN_SECRET_KEY,'chave-nao-exibir');
+  assert.equal(ambiente.master.MASTER_USER,'mestre');
+  assert.equal(ambiente.master.MASTER_PASSWORD_HASH,'hash-nao-exibir');
+  assert.equal(ambiente.amplaytv.PANEL_USER,'cliente');
+  assert.equal(ambiente.amplaytv.PANEL_PASSWORD_HASH,'hash-cliente-nao-exibir');
+  assert.equal(ambiente.amplaytv.JULIAN_SECRET_KEY,'chave-cliente-nao-exibir');
+  assert.doesNotMatch(fs.readFileSync(script,'utf8'),/ConvertFrom-Json/);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });

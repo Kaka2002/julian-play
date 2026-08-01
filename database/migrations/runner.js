@@ -68,10 +68,31 @@ async function criarBackupPreMigracao(dbPath, dataDir) {
     return destino;
 }
 
-function checksumMigracao(migracao) {
+function fonteMigracaoCanonica(migracao) {
+    return migracao.up.toString().replace(/\r\n?/g, '\n');
+}
+
+function calcularChecksumMigracao(migracao, fonte) {
     return crypto.createHash('sha256')
-        .update(`${migracao.versao}\n${migracao.nome}\n${migracao.up.toString()}`)
+        .update(`${migracao.versao}\n${migracao.nome}\n${fonte}`)
         .digest('hex');
+}
+
+function checksumMigracao(migracao) {
+    return calcularChecksumMigracao(migracao, fonteMigracaoCanonica(migracao));
+}
+
+function checksumMigracaoLegadoCrlf(migracao) {
+    return calcularChecksumMigracao(
+        migracao,
+        fonteMigracaoCanonica(migracao).replace(/\n/g, '\r\n')
+    );
+}
+
+function classificarChecksumMigracao(migracao, checksumRegistrado) {
+    if (!checksumRegistrado || checksumRegistrado === checksumMigracao(migracao)) return 'atual';
+    if (checksumRegistrado === checksumMigracaoLegadoCrlf(migracao)) return 'legado_crlf';
+    throw new Error(`Checksum divergente na migração já aplicada: ${migracao.versao}.`);
 }
 
 async function adicionarColuna(db, tabela, coluna, definicao) {
@@ -96,35 +117,59 @@ async function executarMigracoesFormais({ db, dbPath, dataDir, lista = migration
     const aplicadasBasicas = await all(db, 'SELECT versao FROM schema_migrations');
     const versoesAplicadas = new Set(aplicadasBasicas.map(item => item.versao));
     const pendentes = lista.filter(item => !versoesAplicadas.has(item.versao));
+    const colunasControle = await all(db, 'PRAGMA table_info(schema_migrations)');
+    const possuiChecksum = colunasControle.some(item => item.name === 'checksum');
+    const aplicadasComChecksum = possuiChecksum
+        ? await all(db, 'SELECT versao, checksum FROM schema_migrations')
+        : [];
+    const checksumsLegados = [];
+
+    for (const migracao of lista) {
+        const registrada = aplicadasComChecksum.find(item => item.versao === migracao.versao);
+        if (registrada?.checksum && classificarChecksumMigracao(migracao, registrada.checksum) === 'legado_crlf') {
+            checksumsLegados.push({ migracao, checksumRegistrado: registrada.checksum });
+        }
+    }
+
     const relatorio = {
         iniciadoEm: new Date().toISOString(),
         banco: dbPath,
         backup: '',
         pendentes: pendentes.map(item => item.versao),
         aplicadas: [],
+        checksumsNormalizados: [],
         status: 'sem_alteracoes'
     };
-    if (!pendentes.length) {
-        const colunasControle = await all(db, 'PRAGMA table_info(schema_migrations)');
-        if (colunasControle.some(item => item.name === 'checksum')) {
-            const aplicadasComChecksum = await all(db, 'SELECT versao, checksum FROM schema_migrations');
-            for (const migracao of lista) {
-                const registrada = aplicadasComChecksum.find(item => item.versao === migracao.versao);
-                if (registrada?.checksum && registrada.checksum !== checksumMigracao(migracao)) {
-                    throw new Error(`Checksum divergente na migração já aplicada: ${migracao.versao}.`);
-                }
-            }
-        }
+    if (!pendentes.length && !checksumsLegados.length) {
         return relatorio;
     }
 
     relatorio.backup = await criarBackupPreMigracao(dbPath, dataDir);
     await garantirMetadados(db);
-    const aplicadasAntes = await all(db, 'SELECT versao, checksum FROM schema_migrations');
-    for (const migracao of lista) {
-        const registrada = aplicadasAntes.find(item => item.versao === migracao.versao);
-        if (registrada?.checksum && registrada.checksum !== checksumMigracao(migracao)) {
-            throw new Error(`Checksum divergente na migração já aplicada: ${migracao.versao}.`);
+
+    if (checksumsLegados.length) {
+        try {
+            await exec(db, 'BEGIN IMMEDIATE');
+            for (const item of checksumsLegados) {
+                const resultado = await run(db, `UPDATE schema_migrations
+                    SET checksum = ? WHERE versao = ? AND checksum = ?`, [
+                    checksumMigracao(item.migracao),
+                    item.migracao.versao,
+                    item.checksumRegistrado
+                ]);
+                if (resultado.alteracoes !== 1) {
+                    throw new Error(`O checksum de ${item.migracao.versao} mudou durante a normalização.`);
+                }
+                relatorio.checksumsNormalizados.push(item.migracao.versao);
+            }
+            await exec(db, 'COMMIT');
+        } catch (err) {
+            await exec(db, 'ROLLBACK').catch(() => {});
+            relatorio.status = 'erro';
+            relatorio.erro = { etapa: 'normalizacao_checksum', mensagem: err.message };
+            relatorio.concluidoEm = new Date().toISOString();
+            gravarRelatorio(dataDir, relatorio);
+            throw new Error(`Normalização segura dos checksums falhou e foi revertida: ${err.message}`);
         }
     }
 
@@ -182,5 +227,7 @@ module.exports = {
     migrations,
     executarMigracoesFormais,
     obterEstadoMigracoes,
-    criarBackupPreMigracao
+    criarBackupPreMigracao,
+    checksumMigracao,
+    checksumMigracaoLegadoCrlf
 };

@@ -587,7 +587,116 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   sido alterados pelo ZIP do `tar.exe`, usando tamanho e SHA-256 do manifesto.
   Depois da verificacao, entradas que nao pertencem ao manifesto sao removidas
   da area temporaria antes da copia para o `DATA_DIR`.
-- Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
-  `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
+- A versao 1.2.5 trata `stop` e `delete` de processos PM2 ainda inexistentes
+  como operacoes opcionais durante a primeira importacao. Isso evita que a
+  mensagem esperada `Process not found` interrompa o fluxo no PowerShell 5.1.
+- A versao 1.2.6 aceita um arquivo `AmbienteSeguro` separado para migrar
+  credenciais persistidas somente no PM2, incluindo chaves de licenca, cofre,
+  MFA e login do Painel Mestre. O arquivo nunca deve ser versionado, exibido
+  no terminal ou mantido depois da homologacao e do backup definitivo.
+- O exportador seguro fica em
+  `scripts\migracao-servidor-local\3-EXPORTAR-AMBIENTE-SEGURO-NO-SERVIDOR.ps1`.
+  Ele le o `dump.pm2`, copia somente variaveis permitidas, valida o token do
+  administrador e o usuario/hash do Painel Mestre e mostra apenas caminho,
+  tamanho e SHA-256 do arquivo criado.
+- A versao 1.2.7 usa o parser JSON do Node.js nesse exportador porque o
+  Windows PowerShell 5.1 rejeita o `dump.pm2` real quando ele contem chaves
+  legitimas que diferem somente entre maiusculas e minusculas, como
+  `username` e `USERNAME`.
+- A versao 1.2.8 move a adaptacao do cadastro do administrador no banco mestre
+  para `adaptar-cadastro-local.js`. Isso evita que o Windows PowerShell remova
+  aspas do SQL passado anteriormente por `node -e`; a consulta agora usa
+  parametros e possui teste executavel com SQLite temporario.
+- A versao 1.2.9 torna o checksum das migracoes independente dos finais de
+  linha do sistema operacional. Os seis checksums trazidos do servidor foram
+  comprovados como a variante CRLF exata do mesmo codigo LF local; por isso o
+  runner aceita somente essa equivalencia legada, cria backup, normaliza os
+  registros em transacao e continua bloqueando qualquer divergencia real.
+- Depois do reinicio em 01/08/2026, `julian-play-admin` permaneceu online, a
+  rota local `http://127.0.0.1:10001/login` respondeu HTTP 200 e o WhatsApp do
+  administrador foi confirmado como conectado. O dominio exibido pelo Painel
+  Mestre e o cadastro publico da instalacao; a saude e o estado do WhatsApp
+  sao consultados localmente em `127.0.0.1` pela porta cadastrada. Nao
+  desconectar o aparelho vinculado pelo celular durante o corte do tunel.
+- A versao 1.2.10 conclui o fluxo controlado para copiar a AMPLAYTV para
+  `D:\JulianPlayDados\clientes\amplaytv` sem iniciar o robo. O exportador 4
+  exige processo e porta parados; o importador 5 valida SHA-256, manifesto e
+  bancos, cria rollback, atualiza o Painel Mestre para status `parado`, grava
+  a configuracao PM2 e deixa o processo fora da lista ativa. A transferencia
+  real ainda deve ser executada com a cliente usando a instalacao local.
+- O exportador de ambiente seguro da versao 1.2.10 inclui opcionalmente a
+  secao `amplaytv`. Para essa etapa e obrigatorio gerar um novo JSON no
+  servidor; o arquivo anterior nao contem os segredos da instalacao. O botao
+  `Iniciar robo` do Painel Mestre passa a carregar o `ecosystem.config.cjs`
+  quando o processo ainda nao existir no PM2, mas somente apos acao explicita.
+- A versao 1.2.11 aceita a instalacao legada sem `JULIAN_SECRET_KEY`
+  explicita quando o `LICENSE_ADMIN_TOKEN` original esta presente. Esse e o
+  fallback deliberado de `cofreSegredosService`; preservar o mesmo token
+  mantem legiveis os valores ja cifrados sem criar ou trocar a chave durante
+  a migracao.
+- A versao 1.2.12 preserva pontos iniciais de diretorios raiz no pacote da
+  AMPLAYTV. A primeira importacao validou todos os hashes, mas materializou
+  `.wwebjs_auth` e `.wwebjs_auth-backup-*` sem o ponto por causa de
+  `TrimStart`; como o robo permaneceu parado, as duas pastas puderam ser
+  renomeadas localmente antes de qualquer uso da sessao.
+- A AMPLAYTV foi importada com sucesso em 01/08/2026 para
+  `D:\JulianPlayDados\clientes\amplaytv`. Os bancos da instalacao e do Painel
+  Mestre retornaram `PRAGMA quick_check = ok`; o cadastro ficou com processo
+  `julian-amplaytv`, porta 11004, caminho local e status `parado`.
+- O backup anterior dessa etapa esta em
+  `D:\MigracaoJulianPlay\AntesImportacao-AMPLAYTV-20260801-160650`. Depois da
+  correcao dos nomes, `.wwebjs_auth` possui aproximadamente 997 MB, a pasta
+  sem ponto nao existe e a porta 11004 permanece sem listener. O `dump.pm2`
+  salvo contem somente `julian-play-cliente`, `julian-play-admin` e
+  `julian-master`; portanto AMPLAYTV nao sera ressuscitada no boot.
+- A importacao definitiva no computador `Julianelli-CP` foi concluida em
+  01/08/2026 e homologada com a versao 1.2.12. `julian-play-admin`,
+  `julian-master` e a instalacao independente `julian-play-cliente` ficaram
+  online; a porta 11004 permaneceu fechada e AMPLAYTV nao foi iniciada.
+- Depois da importacao, `PRAGMA quick_check` retornou `ok` nos bancos em
+  `D:\JulianPlayDados\admin` e `D:\JulianPlayDados\master`. O cadastro mestre
+  passou a apontar para processo `julian-play-admin`, porta 10001 e pasta
+  `D:\JulianPlayDados\admin`. As portas 9000, 10000 e 10001 responderam com
+  redirecionamento HTTP 302 para seus respectivos logins.
+- A migracao dos dados e o corte publico foram concluidos em 01/08/2026. O
+  servico Windows `Cloudflared` do computador `Julianelli-CP` ficou em
+  execucao automatica, conectado ao tunel `julian-play-casa`, ID
+  `6c9f4316-0d11-47c6-8987-4f2a92d1a054`.
+- Os registros DNS `painel.julianplay.com.br`, `gestao.julianplay.com.br` e
+  `amplaytv.julianplay.com.br` passaram a apontar para `julian-play-casa` com
+  proxy ativo. `painel` e `gestao` retornaram HTTP 200 pelas rotas publicas;
+  AMPLAYTV permanece preparada em `http://localhost:11004`, mas indisponivel
+  enquanto o processo estiver parado e a porta 11004 fechada.
+- O reinicio completo do Windows foi homologado em 01/08/2026. A tarefa
+  `Julian Play - Iniciar PM2` executou com resultado 0 e restaurou somente
+  `julian-master`, `julian-play-admin` e `julian-play-cliente`; os listeners
+  voltaram nas portas 9000, 10000 e 10001, sem listener em 11004. O servico
+  `Cloudflared` voltou como `Running/Automatic` e os enderecos publicos de
+  `painel` e `gestao` retornaram HTTP 200 depois do boot.
+- Manter o VPS parado e disponivel para rollback ate validar acesso por outra
+  rede, confirmar visualmente o WhatsApp e concluir o backup externo seguro.
+- O pacote final copiado para o computador local em 01/08/2026 e
+  `D:\MigracaoJulianPlay\Recebidos\JulianPlay-Servidor-20260801-130527.zip`,
+  com SHA-256
+  `F659E6BE5E5CB8F612274EF4F9540F537807E1D61FB6E0A43F7D6477D56BA813`.
+  Os processos `julian-play`, `julian-master` e `julian-amplaytv` permanecem
+  parados no servidor. Administrador, Painel Mestre e os dados da AMPLAYTV ja
+  foram importados e validados localmente; falta somente concluir o corte
+  publico do Cloudflare. Nao religar nem atualizar o servidor.
+- A verificacao final do PM2 em 01/08/2026 confirmou `julian-master`,
+  `julian-play-admin` e `julian-play-cliente` online e salvos no
+  `C:\Users\carlo\.pm2\dump.pm2`. Os listeners locais ficaram em 9000, 10000
+  e 10001; `julian-amplaytv` permaneceu fora do PM2 e sem listener em 11004.
+- O tunel residencial `julian-play-casa` assumiu os enderecos publicos
+  `painel.julianplay.com.br`, `gestao.julianplay.com.br` e
+  `amplaytv.julianplay.com.br`; nao voltar os registros ao tunel do servidor
+  sem executar o procedimento formal de retorno e sincronizar os dados.
+- O backup manual `clientes-20260801-173039.db` foi copiado para
+  `C:\BackupsJulianPlay`, no disco fisico `C:` separado do disco `D:` que
+  armazena os dados. As copias retornaram o mesmo SHA-256
+  `4C7E47A5B962492FE93E1D2846783EDB9A728AF64CF3E52BC03BCD88FC90C8D9`.
+  O exercicio real de restauracao foi aprovado com 25 tabelas e 11 clientes.
+  Essa segunda copia local protege contra falha do disco `D:`, mas ainda deve
+  ser sincronizada para armazenamento fora do computador.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

@@ -128,6 +128,34 @@ test('migracoes formais preservam banco existente, criam backup e sao idempotent
     }
 });
 
+test('checksum CRLF legado e normalizado com backup sem desativar a integridade', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const runner=require('./database/migrations/runner');const migracao=runner.migrations[0];const legado=runner.checksumMigracaoLegadoCrlf(migracao);const atual=runner.checksumMigracao(migracao);const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run('UPDATE schema_migrations SET checksum=? WHERE versao=?',[legado,migracao.versao]);const antes=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length;const relatorio=await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir});const registrada=await get('SELECT checksum FROM schema_migrations WHERE versao=?',[migracao.versao]);const depois=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length;process.stdout.write(JSON.stringify({formatosDistintos:legado!==atual,status:relatorio.status,normalizada:relatorio.checksumsNormalizados.includes(migracao.versao),checksumAtual:registrada.checksum===atual,backupCriado:depois===antes+1}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            formatosDistintos: true,
+            status: 'sucesso',
+            normalizada: true,
+            checksumAtual: true,
+            backupCriado: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('checksum realmente divergente continua bloqueando a inicializacao', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const runner=require('./database/migrations/runner');const migracao=runner.migrations[0];const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run('UPDATE schema_migrations SET checksum=? WHERE versao=?',['checksum-adulterado',migracao.versao]);const antes=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length;let bloqueou=false;try{await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir})}catch(e){bloqueou=/Checksum divergente/.test(e.message)}const registrada=await get('SELECT checksum FROM schema_migrations WHERE versao=?',[migracao.versao]);const depois=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length;process.stdout.write(JSON.stringify({bloqueou,inalterado:registrada.checksum==='checksum-adulterado',semBackupDesnecessario:depois===antes}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            bloqueou: true,
+            inalterado: true,
+            semBackupDesnecessario: true
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('falha em migracao formal executa rollback e gera relatorio', () => {
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const runner=require('./database/migrations/runner');let falhou=false;try{await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir,lista:[{versao:'teste-rollback',nome:'Teste rollback',async up({exec}){await exec('CREATE TABLE tabela_que_deve_sumir(id INTEGER)');throw new Error('falha simulada')}}]})}catch(e){falhou=/revertida/.test(e.message)}const get=s=>new Promise((ok,no)=>db.get(s,(e,r)=>e?no(e):ok(r)));const tabela=await get("SELECT name FROM sqlite_master WHERE name='tabela_que_deve_sumir'");const versao=await get("SELECT versao FROM schema_migrations WHERE versao='teste-rollback'");const relatorio=JSON.parse(fs.readFileSync(path.join(db.dataDir,'migrations','ultimo-relatorio.json'),'utf8'));process.stdout.write(JSON.stringify({falhou,tabela:!!tabela,versao:!!versao,status:relatorio.status,backup:fs.existsSync(relatorio.backup)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

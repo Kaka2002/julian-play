@@ -739,7 +739,16 @@ async function iniciarInstalacao(id) {
     if (!instalacao) throw new Error('Instalação não encontrada.');
     if (instalacao.status === 'arquivado') throw new Error('Instalações arquivadas não podem ser iniciadas.');
 
-    await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
+    const estadosPm2 = analisarListaPm2(await executarComando('pm2.cmd', ['jlist']));
+    if (estadosPm2.has(instalacao.processoPm2)) {
+        await executarComando('pm2.cmd', ['start', instalacao.processoPm2, '--update-env']);
+    } else {
+        const ecossistema = path.join(instalacao.pastaDados, 'ecosystem.config.cjs');
+        if (!fs.existsSync(ecossistema)) {
+            throw new Error('Configuração PM2 da instalação não encontrada.');
+        }
+        await executarComando('pm2.cmd', ['start', ecossistema, '--only', instalacao.processoPm2, '--update-env']);
+    }
     await executarComando('pm2.cmd', ['save', '--force']);
     await atualizarStatus(id, 'ativo', 'Robô iniciado pelo Painel Mestre. Aguardando conexão do WhatsApp.');
     await registrarEventoInstalacao(id, 'robo', 'Robô iniciado pelo Painel Mestre.');
