@@ -35,12 +35,30 @@ test('artefatos de entrega sao versionados e gerados somente na maquina local',(
  assert.match(gerador,/Select-Object -Skip \$Retencao/);
 });
 
-test('deploy do VPS legado exige acionamento e confirmacao manuais',()=>{
- const workflow=fs.readFileSync(path.join(repoRoot,'.github','workflows','deploy-vps.yml'),'utf8');
- assert.doesNotMatch(workflow,/\n\s+push:/);
+test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
+ const legado=path.join(repoRoot,'.github','workflows','deploy-vps.yml');
+ const workflow=fs.readFileSync(path.join(repoRoot,'.github','workflows','validacao.yml'),'utf8');
+ assert.equal(fs.existsSync(legado),false);
+ assert.match(workflow,/\n\s+push:/);
+ assert.match(workflow,/pull_request:/);
  assert.match(workflow,/workflow_dispatch:/);
- assert.match(workflow,/DEPLOY_VPS_LEGADO/);
- assert.match(workflow,/inputs\.confirmar\s*==\s*'DEPLOY_VPS_LEGADO'/);
+ assert.match(workflow,/runs-on:\s*windows-latest/);
+ assert.match(workflow,/npm ci/);
+ assert.match(workflow,/npm run test:all/);
+ assert.match(workflow,/npm run test:pacote-limpo/);
+ assert.doesNotMatch(workflow,/VPS_HOST|VPS_USER|VPS_SSH_KEY|ssh\s|deploy\.ps1/i);
+});
+
+test('inicializacao PM2 recupera painel e mestre sem iniciar AMPLAYTV',()=>{
+ const script=fs.readFileSync(path.join(repoRoot,'start-pm2.ps1'),'utf8');
+ assert.match(script,/pm2\.Source resurrect/);
+ assert.match(script,/\.julian-play-install\.json/);
+ assert.match(script,/IniciarProcessoPm2SeNecessario/);
+ assert.match(script,/julian-play-admin/);
+ assert.match(script,/\.julian-master-install\.json/);
+ assert.match(script,/master\\ecosystem\.config\.js/);
+ assert.match(script,/save --force/);
+ assert.doesNotMatch(script,/julian-amplaytv/);
 });
 
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{

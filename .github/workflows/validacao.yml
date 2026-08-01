@@ -1,0 +1,46 @@
+name: Validacao do Julian Play
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: validacao-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    name: Testes e pacote local
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Instalar navegador dos testes
+        run: npx playwright install chromium
+
+      - name: Executar testes internos e de navegacao
+        run: npm run test:all
+
+      - name: Validar pacote local limpo
+        shell: powershell
+        run: npm run test:pacote-limpo

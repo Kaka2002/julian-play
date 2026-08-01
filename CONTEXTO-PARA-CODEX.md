@@ -712,5 +712,16 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   ano de datas ISO existentes depois de criar o backup pre-migracao, e os
   avisos anuais e a importacao/exportacao CSV aceitam o formato novo sem
   perder compatibilidade com registros legados.
+- O workflow legado de deploy do VPS foi removido depois do encerramento do
+  servidor. O GitHub Actions agora executa somente validacao em Windows nos
+  pushes e pull requests da `main`: testes internos, navegacao no Chromium e
+  verificacao do pacote local limpo. O workflow nao possui SSH, nao usa os
+  secrets antigos do VPS e nao implanta codigo no computador residencial.
+- A versao 1.2.15 torna `start-pm2.ps1` tolerante a um `dump.pm2` incompleto.
+  Depois de `pm2 resurrect`, o script le `.julian-play-install.json` e garante
+  o processo principal configurado; quando o perfil local e
+  `julian-play-admin`, tambem garante `julian-master` a partir de
+  `.julian-master-install.json`. Se precisou reconstruir a lista, salva o PM2
+  novamente. A AMPLAYTV nao e iniciada por esse mecanismo e permanece parada.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.
