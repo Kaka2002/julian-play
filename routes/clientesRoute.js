@@ -4,6 +4,7 @@ const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
 const { execFile, spawn } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
+const { formatarAniversario, mesDiaAniversario } = require('../utils/aniversario');
 const {
     listarClientes,
     listarClientesAtivosComerciais,
@@ -3117,12 +3118,6 @@ function lerListaSalva(valor) {
     }
 }
 
-function formatarAniversario(dataISO) {
-    const partes = String(dataISO || '').slice(0, 10).split('-');
-    if (partes.length !== 3) return dataISO || '';
-    return `${partes[2]}/${partes[1]}`;
-}
-
 function formatarDataHoraCurta(valor) {
     if (!valor) return '-';
     return formatarDataHoraBrasil(valor);
@@ -3656,7 +3651,7 @@ function montarDadosClienteImportado(registro, planos = []) {
     const diasContrato = valorCsv(registro, ['Dias de contrato', 'Dias contrato', 'Dias']) || planoEncontrado?.dias || (isTeste ?0 : 30);
     const dataInicio = dataCsvParaIso(valorCsv(registro, ['Data/Hora de início', 'Data inicio', 'Início', 'Inicio']), true);
     const dataVencimento = dataCsvParaIso(valorCsv(registro, ['Data/Hora de vencimento', 'Data vencimento', 'Vencimento']), true);
-    const nascimento = dataCsvParaIso(valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']), false);
+    const nascimento = mesDiaAniversario(valorCsv(registro, ['Nascimento', 'Data de aniversário', 'Data aniversario']));
     const apps = listaCsvParaArray(valorCsv(registro, ['Apps instalados', 'Aplicativos', 'App']));
     const dispositivos = listaCsvParaArray(valorCsv(registro, ['Dispositivos', 'Dispositivo', 'Aparelho']));
     const paineis = listaCsvParaArray(valorCsv(registro, ['Painéis', 'Paineis', 'Painel']));
@@ -5657,13 +5652,13 @@ function secaoHistoricoUnificado(cliente = {}, dados = {}, paginacaoHistoricoUni
 }
 
 function clienteAniversarioPendente(cliente = {}) {
-    const nascimento = String(cliente.nascimento || '');
-    if (nascimento.length < 10) return false;
+    const nascimento = mesDiaAniversario(cliente.nascimento);
+    if (!nascimento) return false;
     const partes = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
     }).formatToParts(new Date());
     const valores = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
-    return nascimento.slice(5, 10) === `${valores.month}-${valores.day}`
+    return nascimento === `${valores.month}-${valores.day}`
         && String(cliente.ultimoAvisoAniversario || '') !== String(valores.year);
 }
 
@@ -5712,7 +5707,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
             ${campoWhatsAppComPais(cliente.telefone, cliente.ddiTelefone, cliente.paisTelefone)}
-            ${campo({ nome: 'nascimento', label: 'Data de Aniversário', valor: cliente.nascimento, tipo: 'date' })}
+            ${campo({
+                nome: 'nascimento',
+                label: 'Aniversário (dia/mês)',
+                valor: formatarAniversario(cliente.nascimento),
+                tipo: 'text',
+                attrs: 'inputmode="numeric" maxlength="5" pattern="(?:0[1-9]|[12][0-9]|3[01])/(?:0[1-9]|1[0-2])" placeholder="DD/MM" title="Informe somente dia e mês no formato DD/MM" autocomplete="off" data-lpignore="true" oninput="const n=this.value.replace(/[^0-9]/g,\'\').slice(0,4);this.value=n.length>2?n.slice(0,2)+\'/\'+n.slice(2):n"'
+            })}
             ${campo({
                 nome: 'origem',
                 label: 'Origem do Cliente',

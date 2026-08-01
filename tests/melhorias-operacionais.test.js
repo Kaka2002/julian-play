@@ -3,6 +3,36 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 
+test('aniversario aceita somente dia e mes sem inventar ano', () => {
+    const aniversario = require('../utils/aniversario');
+    assert.equal(aniversario.normalizarAniversario('08/04'), '04-08');
+    assert.equal(aniversario.normalizarAniversario('1998-04-08'), '04-08');
+    assert.equal(aniversario.formatarAniversario('04-08'), '08/04');
+    assert.equal(aniversario.normalizarAniversario('29/02'), '02-29');
+    assert.throws(() => aniversario.normalizarAniversario('31/04'), /DD\/MM/);
+});
+
+test('cadastro e aviso anual usam aniversario sem ano', () => {
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const partes=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',month:'2-digit',day:'2-digit'}).formatToParts(new Date());const v=Object.fromEntries(partes.map(x=>[x.type,x.value]));const salvo=await c.salvarCliente({nome:'Cliente Aniversario',telefone:'5511999991234',nascimento:v.day+'/'+v.month,status:'ativo'});const lista=await c.listarClientesAniversarioHoje(new Date().getFullYear());let invalida=false;try{await c.salvarCliente({nome:'Data Invalida',telefone:'5511999994321',nascimento:'31/04'})}catch(e){invalida=/DD\\/MM/.test(e.message)}process.stdout.write(JSON.stringify({nascimento:salvo.nascimento,encontrado:lista.some(x=>x.id===salvo.id),invalida}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.match(retorno.nascimento, /^\d{2}-\d{2}$/);
+        assert.equal(retorno.encontrado, true);
+        assert.equal(retorno.invalida, true);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('migracao remove ano de aniversarios ISO existentes', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO clientes(nome,telefone,nascimento) VALUES('Legado','5511999999999','1998-04-08')");await require('./database/migrations/007-aniversario-dia-mes').up({run});const cliente=await get("SELECT nascimento FROM clientes WHERE nome='Legado'");process.stdout.write(JSON.stringify(cliente));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { nascimento: '04-08' });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('cliente novo exige consentimento explicito para entrar em campanhas', () => {
     const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const base={nome:'Cliente Teste',telefone:'5511999990000',tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:'2026-07-28T10:00',dataVencimento:'2026-08-28T23:59',status:'ativo'};const sem=await c.salvarCliente(base);const antes=await c.listarClientesAtivosComerciais();const com=await c.salvarCliente({...base,id:sem.id,whatsappMarketingConsentimento:'1'});const depois=await c.listarClientesAtivosComerciais();process.stdout.write(JSON.stringify({sem:sem.whatsappMarketingConsentimento,antes:antes.length,com:com.whatsappMarketingConsentimento,depois:depois.length}));})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
@@ -142,7 +172,7 @@ test('migracoes formais preservam banco existente, criam backup e sao idempotent
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const runner=require('./database/migrations/runner');const estado=await runner.obterEstadoMigracoes(db);const backups=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db'));const antes=backups.length;const segunda=await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir});const colunas=await all('PRAGMA table_info(cobrancas_pix)');const sessoes=await get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessoes_painel'");process.stdout.write(JSON.stringify({total:estado.aplicadas.filter(x=>x.versao.includes('-00')).length,backup:backups.length>0,idempotente:segunda.status,novoBackup:fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length===antes,comprovante:colunas.some(x=>x.name==='comprovanteArquivo'),sessoes:!!sessoes}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         assert.deepEqual(JSON.parse(resultado.stdout), {
-            total: 6,
+            total: 7,
             backup: true,
             idempotente: 'sem_alteracoes',
             novoBackup: true,

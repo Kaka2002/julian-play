@@ -36,3 +36,15 @@ test('painel autenticado não exibe Hoje nem barra horizontal no menu', async ({
     }));
     expect(dimensoes.larguraConteudo).toBeLessThanOrEqual(dimensoes.larguraVisivel + 1);
 });
+
+test('cadastro de cliente pede aniversario somente como dia e mes', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/clientes/novo');
+
+    const aniversario = page.getByLabel('Aniversário (dia/mês)');
+    await expect(aniversario).toHaveAttribute('type', 'text');
+    await expect(aniversario).toHaveAttribute('placeholder', 'DD/MM');
+    await expect(aniversario).toHaveAttribute('maxlength', '5');
+    await aniversario.fill('0804');
+    await expect(aniversario).toHaveValue('08/04');
+});

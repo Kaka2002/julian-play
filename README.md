@@ -104,7 +104,7 @@ O painel usa o mesmo banco SQLite do bot e normaliza telefones para o formato br
 No cadastro de cliente, o tipo de plano preenche automaticamente os dias de contrato e ajuda a calcular a data/hora de vencimento a partir da data/hora de inicio. Tambem e possivel selecionar varios apps, dispositivos e paineis para o mesmo cliente.
 Quando o status do cliente for `Teste`, o campo de horas de teste fica disponivel com opcoes de 30 minutos a 24 horas.
 
-Na lista `/clientes/todos`, o painel mostra inicio, vencimento, app, dispositivos, validade, status e a data de aniversario do cliente no formato dia/mes.
+No cadastro e na lista `/clientes/todos`, o aniversário usa somente dia/mês (`DD/MM`), sem exigir nem armazenar o ano de nascimento. Registros antigos com data completa são normalizados automaticamente. O painel também mostra início, vencimento, app, dispositivos, validade e status.
 O status e atualizado automaticamente conforme o vencimento, e o envio automatico usa os modelos cadastrados em `/modelos`.
 Tambem existe um modelo padrao de aniversario com bonus de 1 mes de acesso, enviado uma vez por ano no dia do aniversario do cliente.
 

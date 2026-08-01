@@ -1,5 +1,6 @@
 const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
+const { normalizarAniversario } = require('../utils/aniversario');
 const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes } = require('./credenciaisClienteService');
 let credenciaisProntas = null;
 function garantirCredenciaisProntas() {
@@ -277,7 +278,7 @@ function montarCliente(dados = {}) {
         plano: limparTexto(dados.plano),
         aparelho: limparTexto(dados.aparelho),
         vencimento: limparTexto(dados.dataVencimento || dados.vencimento).slice(0, 10),
-        nascimento: limparTexto(dados.nascimento),
+        nascimento: normalizarAniversario(dados.nascimento),
         tipoPlanoId: limparTexto(dados.tipoPlanoId),
         diasContrato: Number(dados.diasContrato || 0),
         valorPlano: normalizarMoeda(dados.valorPlano),
@@ -1665,14 +1666,17 @@ function listarClientesAniversarioHoje(ano) {
         `SELECT * FROM clientes
         WHERE nascimento IS NOT NULL
             AND nascimento != ''
-            AND substr(nascimento, 6, 5) = ?
+            AND (
+                nascimento = ?
+                OR substr(nascimento, 6, 5) = ?
+            )
             AND status NOT IN ('cancelado', 'suspenso')
             AND (
                 ultimoAvisoAniversario IS NULL
                 OR ultimoAvisoAniversario != ?
             )
         ORDER BY nome ASC`,
-        [mesDia, String(ano)]
+        [mesDia, mesDia, String(ano)]
     );
 }
 

@@ -707,5 +707,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   para `main`. O deploy do VPS antigo ficou restrito a acionamento manual com
   a confirmacao literal `DEPLOY_VPS_LEGADO`, evitando que um push volte a
   iniciar o servidor que sera encerrado.
+- A versao 1.2.14 altera o aniversario de clientes para somente dia e mes no
+  formato `DD/MM`. O banco guarda `MM-DD`, a migracao formal `007` remove o
+  ano de datas ISO existentes depois de criar o backup pre-migracao, e os
+  avisos anuais e a importacao/exportacao CSV aceitam o formato novo sem
+  perder compatibilidade com registros legados.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

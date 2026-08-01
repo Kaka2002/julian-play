@@ -9,7 +9,8 @@ const migrations = [
     require('./003-indices-operacionais'),
     require('./004-governanca-campanhas'),
     require('./005-estruturas-historicas'),
-    require('./006-campanhas-eventos-historicos')
+    require('./006-campanhas-eventos-historicos'),
+    require('./007-aniversario-dia-mes')
 ];
 
 function run(db, sql, params = []) {
