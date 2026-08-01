@@ -554,3 +554,22 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Se a consulta ao PM2 falhar ou devolver uma resposta invalida, nenhum robo
   e reiniciado. Essa regra impede que uma instalacao mantida parada, como
   `julian-amplaytv`, seja reativada pela manutencao de memoria.
+
+## Encerramento planejado do servidor em 01/08/2026
+
+- O destino confirmado e este computador Windows.
+- `C:\JulianPlay\dados` e a instalacao local independente
+  `julian-play-cliente` devem permanecer intocados na porta `10000`.
+- O administrador do servidor sera migrado para
+  `C:\JulianPlayMigrado\admin`, processo `julian-play-admin`, porta `10001`.
+- O Painel Mestre sera atualizado em `C:\JulianPlayMaster`, processo
+  `julian-master`, porta `9000`.
+- AMPLAYTV deve permanecer parada.
+- Os scripts controlados ficam em `scripts\migracao-servidor-local`: o
+  exportador para os processos, copia bancos e sessao e gera manifesto e
+  SHA-256; o importador valida hashes e `PRAGMA quick_check`, cria backup do
+  estado local e exige confirmacao explicita de que o servidor foi parado.
+- Depois da importacao, o tunel residencial `julian-play-casa` deve assumir
+  `painel.julianplay.com.br` e `gestao.julianplay.com.br`.
+- Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
+  WhatsApp, reinicio do Windows e restauracao de backup.
