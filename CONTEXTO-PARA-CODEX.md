@@ -736,5 +736,9 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   sem depender de `Get-FileHash`. Processos isolados continuam limitados a 30
   segundos localmente e recebem 90 segundos quando `CI` esta definido, para
   tolerar runners mais lentos sem desativar a deteccao de travamentos.
+- A versao 1.2.18 corrige a ordem da validacao do pacote no GitHub Actions. Em
+  um checkout limpo, o workflow agora executa `CRIAR-PACOTE-APP.ps1` antes de
+  `test:pacote-limpo`, pois os ZIPs gerados permanecem corretamente fora do
+  Git e nao existem ate que o pacote seja construido no proprio runner.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

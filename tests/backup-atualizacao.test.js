@@ -41,6 +41,7 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
  assert.equal(fs.existsSync(legado),false);
  assert.match(workflow,/\n\s+push:/);
  assert.match(workflow,/pull_request:/);
+ assert.match(workflow,/CRIAR-PACOTE-APP\.ps1[\s\S]*test:pacote-limpo/);
  assert.match(workflow,/workflow_dispatch:/);
  assert.match(workflow,/runs-on:\s*windows-latest/);
  assert.match(workflow,/npm ci/);

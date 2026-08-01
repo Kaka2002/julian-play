@@ -44,6 +44,10 @@ jobs:
       - name: Executar testes de navegacao
         run: npm run test:e2e
 
-      - name: Validar pacote local limpo
+      - name: Gerar e validar pacote local limpo
         shell: powershell
-        run: npm run test:pacote-limpo
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\entrega-cliente-local\USO_INTERNO_NAO_ENVIAR\CRIAR-PACOTE-APP.ps1
+          npm run test:pacote-limpo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
