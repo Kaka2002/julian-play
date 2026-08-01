@@ -731,5 +731,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   alterado em Manutencao. A validacao do GitHub usa o Chromium instalado no
   runner quando o Google Chrome nao estiver disponivel e separa testes
   internos dos testes de navegacao para diagnostico claro.
+- A versao 1.2.17 corrige a compatibilidade da validacao no GitHub Actions: o
+  exportador do ambiente seguro calcula SHA-256 diretamente pela API .NET,
+  sem depender de `Get-FileHash`. Processos isolados continuam limitados a 30
+  segundos localmente e recebem 90 segundos quando `CI` esta definido, para
+  tolerar runners mais lentos sem desativar a deteccao de travamentos.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

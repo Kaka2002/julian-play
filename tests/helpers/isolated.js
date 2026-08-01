@@ -4,6 +4,7 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
+const timeoutPadrao = process.env.CI ? 90000 : 30000;
 
 function criarAmbiente(prefixo = 'julian-play-test-') {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), prefixo));
@@ -19,7 +20,7 @@ function executarIsolado(codigo, opcoes = {}) {
         cwd: repoRoot,
         env: { ...process.env, DATA_DIR: ambiente.dataDir, DB_PATH: path.join(ambiente.dataDir, 'clientes.db'), BACKUP_DIR: ambiente.backupDir, NODE_ENV: 'test', ...opcoes.env },
         encoding: 'utf8',
-        timeout: opcoes.timeout || 30000
+        timeout: opcoes.timeout ?? timeoutPadrao
     });
     if (resultado.status !== 0) throw new Error(`Processo isolado falhou (${resultado.status}).\nSTDOUT:\n${resultado.stdout}\nSTDERR:\n${resultado.stderr}`);
     return { ambiente, stdout: resultado.stdout.trim(), stderr: resultado.stderr.trim() };

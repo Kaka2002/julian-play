@@ -9,6 +9,20 @@ function Exigir([bool]$condicao, [string]$mensagem) {
     if (-not $condicao) { throw $mensagem }
 }
 
+function Obter-Sha256Arquivo([string]$caminho) {
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $stream = [System.IO.File]::OpenRead($caminho)
+
+    try {
+        $bytes = $sha256.ComputeHash($stream)
+        return ([System.BitConverter]::ToString($bytes)).Replace('-', '')
+    }
+    finally {
+        $stream.Dispose()
+        $sha256.Dispose()
+    }
+}
+
 Exigir (Test-Path -LiteralPath $DumpPm2 -PathType Leaf) 'dump.pm2 nao encontrado.'
 Exigir ($null -ne (Get-Command node.exe -ErrorAction SilentlyContinue)) 'Node.js nao encontrado.'
 $destinoCompleto = [IO.Path]::GetFullPath($Destino)
@@ -103,7 +117,7 @@ try {
 }
 
 $item = Get-Item -LiteralPath $destinoCompleto
-$hash = (Get-FileHash -LiteralPath $destinoCompleto -Algorithm SHA256).Hash
+$hash = Obter-Sha256Arquivo $destinoCompleto
 Write-Host 'Ambiente seguro exportado sem exibir os valores.' -ForegroundColor Green
 Write-Host "Arquivo: $($item.FullName)" -ForegroundColor Green
 Write-Host "Tamanho: $($item.Length) bytes" -ForegroundColor Green

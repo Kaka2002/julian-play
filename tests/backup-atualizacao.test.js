@@ -180,6 +180,9 @@ test('exportador do ambiente PM2 seleciona segredos sem mostra-los no terminal',
   assert.equal(ambiente.amplaytv.PANEL_USER,'cliente');
   assert.equal(ambiente.amplaytv.PANEL_PASSWORD_HASH,'hash-cliente-nao-exibir');
   assert.equal(ambiente.amplaytv.JULIAN_SECRET_KEY,'chave-cliente-nao-exibir');
-  assert.doesNotMatch(fs.readFileSync(script,'utf8'),/ConvertFrom-Json/);
+  const fonteExportador=fs.readFileSync(script,'utf8');
+  assert.doesNotMatch(fonteExportador,/ConvertFrom-Json/);
+  assert.doesNotMatch(fonteExportador,/Get-FileHash/);
+  assert.match(fonteExportador,/Security\.Cryptography\.SHA256/);
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
