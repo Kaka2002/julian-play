@@ -773,5 +773,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   continuam executados com Node.js 20 para reproduzir o ambiente local atual.
   O cancelamento de uma execucao antiga quando entra um push mais novo em
   `main` e intencional; a execucao mais recente deve ser usada como resultado.
+- Retomada rapida em 02/08/2026: o ambiente principal foi migrado do VPS para
+  `Julianelli-CP`, com codigo em `D:\julian-play`, dados persistentes em
+  `D:\JulianPlayDados`, processos `julian-master` e `julian-play-admin` e o
+  tunel `julian-play-casa`. A versao atual e 1.2.22. A regra de campanhas fora
+  da janela configurada e a correcao de upload da logo ja estao no codigo.
+  GitHub CLI foi instalado e autenticado sem registrar credenciais neste
+  documento. A atualizacao do workflow para Actions v6 ainda precisa ser
+  adicionada, commitada e enviada; depois do push, conferir a execucao mais
+  recente de `Validacao do Julian Play`. O pacote externo foi recriado em
+  `D:\julian-play\entrega-cliente-local\ENVIAR_AO_CLIENTE.zip`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.
