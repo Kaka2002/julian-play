@@ -3,6 +3,57 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 
+test('upload multipart ignora o campo CSRF e extrai o arquivo real', () => {
+    const { extrairArquivoMultipart, validarCsrfMultipart } = require('../services/uploadMultipartService');
+    const boundary = 'julian-play-boundary';
+    const csrf = 'a'.repeat(64);
+    const png = Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        Buffer.from('imagem-de-teste')
+    ]);
+    const corpo = Buffer.concat([
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="_csrf"\r\n\r\n${csrf}\r\n`),
+        Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="logo"; filename="Logo 1.png"\r\nContent-Type: image/png\r\n\r\n`),
+        png,
+        Buffer.from(`\r\n--${boundary}--\r\n`)
+    ]);
+
+    const upload = extrairArquivoMultipart(corpo, boundary, 'logo');
+    assert.equal(upload.filename, 'Logo 1.png');
+    assert.equal(upload.campo, 'logo');
+    assert.equal(upload.campos._csrf, csrf);
+    assert.deepEqual(upload.buffer, png);
+    assert.doesNotThrow(() => validarCsrfMultipart({ headers: { cookie: `julian_csrf=${csrf}` } }, upload));
+    assert.throws(
+        () => validarCsrfMultipart({ headers: { cookie: `julian_csrf=${'b'.repeat(64)}` } }, upload),
+        /expirada ou invalida/i
+    );
+});
+
+test('upload de imagem rejeita texto com extensao PNG', () => {
+    const { validarImagemUpload } = require('../services/uploadMultipartService');
+    assert.throws(
+        () => validarImagemUpload('logo.png', Buffer.from('a'.repeat(64))),
+        /imagem valida/
+    );
+});
+
+test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
+    const fs = require('fs');
+    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /Campanhas disponíveis/);
+    assert.match(rota, /action="\/clientes\/disparar-amizade-presente"/);
+    assert.match(rota, /totalElegiveis/);
+    assert.match(rota, /Fora do horário permitido/);
+    assert.match(rota, /Aguarde a janela permitida/);
+
+    const rotaDisparo = rota.slice(rota.indexOf("router.post('/clientes/disparar-amizade-presente'"));
+    assert.ok(
+        rotaDisparo.indexOf('if (!campanhaDentroHorario(config))') < rotaDisparo.indexOf('const campanha = await criarCampanha'),
+        'o horário deve ser validado antes de criar o histórico da campanha'
+    );
+});
+
 test('aniversario aceita somente dia e mes sem inventar ano', () => {
     const aniversario = require('../utils/aniversario');
     assert.equal(aniversario.normalizarAniversario('08/04'), '04-08');

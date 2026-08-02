@@ -48,3 +48,32 @@ test('cadastro de cliente pede aniversario somente como dia e mes', async ({ pag
     await aniversario.fill('0804');
     await expect(aniversario).toHaveValue('08/04');
 });
+
+test('campanhas disponiveis aparecem separadas do historico', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/campanhas');
+
+    await expect(page.getByRole('heading', { name: 'Campanhas disponíveis' })).toBeVisible();
+    await expect(page.getByText('Amizade que vale presente', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Campanhas registradas' })).toBeVisible();
+});
+
+test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/modelos');
+
+    const pngUmPixel = Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl9Z7sAAAAASUVORK5CYII=',
+        'base64'
+    );
+    await page.locator('input[type="file"][name="logo"]').last().setInputFiles({
+        name: 'logo-e2e.png',
+        mimeType: 'image/png',
+        buffer: pngUmPixel
+    });
+
+    await expect(page).toHaveURL(/\/modelos\?mensagem=/);
+    await expect(page.getByText('Logo atualizada com sucesso')).toBeVisible();
+    const carregou = await page.locator('img[alt="Logo atual"]').evaluate(img => img.naturalWidth > 0);
+    expect(carregou).toBe(true);
+});

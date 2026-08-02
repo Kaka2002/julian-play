@@ -751,5 +751,22 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   instalador em modo local pausa somente o processo que esta sendo atualizado.
   Assim, atualizar `C:\JulianPlay\app` nao derruba nem remove `julian-play-admin`
   e `julian-master` mantidos pelo ambiente administrativo em `D:\julian-play`.
+- A versao 1.2.21 corrige uploads multipart com o campo CSRF: o leitor agora
+  localiza a parte que realmente contem o arquivo, valida o token do formulario,
+  limita o upload e confere a assinatura do conteudo antes de gravar imagens.
+  O defeito anterior salvava o token CSRF de 64 caracteres como
+  `logo-painel.png`; a logo valida da instalacao administradora foi restaurada
+  em `D:\JulianPlayDados\admin\assets\logo-painel.png` sem alterar o banco.
+- A pagina Campanhas passou a separar campanhas disponiveis do historico. A
+  campanha `Amizade que vale presente` agora pode ser testada para um cliente ou
+  iniciada diretamente nessa pagina, com a quantidade de clientes elegiveis e
+  os mesmos controles de consentimento, horario, repeticao e lotes ja usados
+  pelo servico existente.
+- A versao 1.2.22 impede criar uma execucao de campanha fora da janela definida
+  em Manutencao. A pagina desabilita o disparo geral e explica a regra atual;
+  assim, dias nao permitidos deixam de aparecer incorretamente como falha de
+  WhatsApp. Alertas de uma campanha que ultrapasse o horario orientam aguardar
+  a janela configurada, em vez de afirmar incorretamente que o WhatsApp ficou
+  instavel. O envio individual de teste permanece disponivel.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

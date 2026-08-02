@@ -5,6 +5,7 @@ const { AsyncLocalStorage } = require('async_hooks');
 const { execFile, spawn } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
 const { formatarAniversario, mesDiaAniversario } = require('../utils/aniversario');
+const { lerUploadMultipart, validarImagemUpload } = require('../services/uploadMultipartService');
 const {
     listarClientes,
     listarClientesAtivosComerciais,
@@ -434,49 +435,6 @@ function filtrosFinanceiroQuery(query = {}) {
         dataFim: String(query.dataFim || '').slice(0, 10),
         status: ['validos', 'removidos', 'todos'].includes(status) ?status : 'validos'
     };
-}
-
-function lerUploadMultipart(req) {
-    return new Promise((resolve, reject) => {
-        const tipo = req.headers['content-type'] || '';
-        const match = tipo.match(/boundary=(?:"([^"]+)"|([^;]+))/i);
-
-        if (!match) {
-            reject(new Error('Formulario de upload invalido.'));
-            return;
-        }
-
-        const boundary = `--${match[1] || match[2]}`;
-        const partes = [];
-
-        req.on('data', parte => partes.push(parte));
-        req.on('error', reject);
-        req.on('end', () => {
-            const buffer = Buffer.concat(partes);
-            const conteudo = buffer.toString('binary');
-            const inicioCabecalho = conteudo.indexOf('\r\n\r\n');
-            const filenameMatch = conteudo.match(/filename="([^"]+)"/i);
-
-            if (!filenameMatch || inicioCabecalho < 0) {
-                reject(new Error('Selecione um arquivo CSV.'));
-                return;
-            }
-
-            const inicioArquivo = inicioCabecalho + 4;
-            const fimMarcador = Buffer.from(`\r\n${boundary}`, 'binary');
-            const fimArquivo = buffer.indexOf(fimMarcador, inicioArquivo);
-
-            if (fimArquivo < 0) {
-                reject(new Error('Não foi possível ler o arquivo enviado.'));
-                return;
-            }
-
-            resolve({
-                filename: path.basename(filenameMatch[1]),
-                buffer: buffer.slice(inicioArquivo, fimArquivo)
-            });
-        });
-    });
 }
 
 function extensaoLogoPermitida(nome) {
@@ -4567,6 +4525,15 @@ function campanhaDentroHorario(config, data = new Date()) {
     return hora >= (config.campanhaHoraInicio || '09:00') && hora < (config.campanhaHoraFim || '20:00');
 }
 
+function textoJanelaCampanha(config = {}) {
+    const dias = config.campanhaSomenteDiasUteis !== '0' ? 'somente em dias úteis' : 'todos os dias';
+    return `${dias}, das ${config.campanhaHoraInicio || '09:00'} às ${config.campanhaHoraFim || '20:00'}`;
+}
+
+function mensagemCampanhaForaHorario(config = {}) {
+    return `Envio geral bloqueado pela configuração: campanhas permitidas ${textoJanelaCampanha(config)}. Altere essa regra em Manutenção se quiser enviar agora.`;
+}
+
 async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
     const statusInicial = getStatusWhatsApp();
     const client = getClient();
@@ -6724,7 +6691,7 @@ function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
     </div>`;
 }
 
-function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRetomavel = null }) {
+function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRetomavel = null, clientes = [], totalElegiveis = 0, config = {} }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
     const retomavel = !ativa && campanhaRetomavel ? campanhaRetomavel : null;
     const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
@@ -6732,6 +6699,12 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
     const totalErros = campanhas.reduce((soma, item) => soma + Number(item.erros || 0), 0);
     const totalIgnorados = campanhas.reduce((soma, item) => soma + Number(item.ignorados || 0), 0);
     const campanhaSelecionada = campanha || campanhas[0] || null;
+    const envioGeralLiberado = campanhaDentroHorario(config);
+    const opcoesClientesCampanha = clientes
+        .filter(cliente => normalizarTelefone(cliente.telefone))
+        .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
+        .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome || 'Cliente sem nome')}${clienteEhTeste(cliente) ? ' (teste)' : ''}</option>`)
+        .join('');
 
     return `<section class="page-title">
         <h1>Campanhas</h1>
@@ -6742,6 +6715,36 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         ${metricCard({ label: 'Enviadas', valor: totalEnviados, nota: 'Total historico', tipo: 'green', icone: 'check' })}
         ${metricCard({ label: 'Ignoradas', valor: totalIgnorados, nota: 'Teste, sem telefone ou ja enviado', tipo: totalIgnorados ? 'orange' : 'info', icone: 'alert' })}
         ${metricCard({ label: 'Erros', valor: totalErros, nota: 'Falhas registradas', tipo: totalErros ? 'red' : 'green', icone: 'close' })}
+    </section>
+    <section class="panel" id="campanhas-disponiveis" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Campanhas disponíveis</h2>
+                <div class="subtitle">Inicie um novo envio aqui. O histórico das execuções aparece separadamente abaixo.</div>
+            </div>
+            <span class="badge ${totalElegiveis ? 'green' : 'orange'}">${escapar(totalElegiveis)} cliente(s) elegível(is)</span>
+        </div>
+        <div class="mini-card" style="margin-top:14px;">
+            <strong>Amizade que vale presente</strong>
+            <div class="helper">Envia para clientes ativos com consentimento. Testes, repetições e contatos sem telefone são ignorados automaticamente.</div>
+            ${envioGeralLiberado
+                ? `<div class="notice success" style="margin-top:12px;">Envio geral liberado agora (${escapar(textoJanelaCampanha(config))}).</div>`
+                : `<div class="notice warn" style="margin-top:12px;">${escapar(mensagemCampanhaForaHorario(config))}</div>`}
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px;">
+                <form method="post" action="/clientes/disparar-amizade-presente-cliente" onsubmit="return confirm('Enviar a campanha somente para o cliente selecionado?');" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input type="hidden" name="retorno" value="/campanhas">
+                    <select name="clienteId" required style="min-width:220px;">
+                        <option value="">Enviar teste para 1 cliente...</option>
+                        ${opcoesClientesCampanha}
+                    </select>
+                    <button class="button secondary" type="submit">${icon('whats')} Testar envio</button>
+                </form>
+                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes elegiveis?');">
+                    <input type="hidden" name="retorno" value="/campanhas">
+                    <button class="button green" type="submit" ${ativa || retomavel || !totalElegiveis || !envioGeralLiberado ? 'disabled' : ''}>${icon('whats')} ${ativa ? 'Campanha em andamento' : retomavel ? 'Retome a campanha pendente' : !envioGeralLiberado ? 'Fora do horário permitido' : 'Disparar campanha'}</button>
+                </form>
+            </div>
+        </div>
     </section>
     ${ativa ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -6773,7 +6776,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         <form method="post" action="/campanhas/amizade/retomar" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
             <input type="hidden" name="campanhaId" value="${escapar(retomavel.id)}">
             <input type="hidden" name="retorno" value="/campanhas">
-            <button class="button green" type="submit">${icon('refresh')} Retomar campanha</button>
+            <button class="button green" type="submit" ${envioGeralLiberado ? '' : 'disabled'}>${icon('refresh')} ${envioGeralLiberado ? 'Retomar campanha' : 'Fora do horário permitido'}</button>
         </form>
     </section>` : ''}
     <section class="panel" style="margin-bottom:24px;">
@@ -6782,7 +6785,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
                 <h2 class="panel-title">Campanhas registradas</h2>
                 <div class="subtitle">${campanhas.length} campanha(s) no historico.</div>
             </div>
-            <a class="button green" href="/clientes">${icon('whats')} Disparar pelo painel</a>
+            <a class="button secondary" href="/clientes/todos">${icon('clientes')} Ver clientes</a>
         </div>
         ${campanhas.length ? `<div class="table-wrap"><table>
             <thead><tr><th>Campanha</th><th>Status</th><th>Inicio</th><th>Resultado</th><th>Proximo lote</th><th>Acoes</th></tr></thead>
@@ -8556,10 +8559,23 @@ async function renderizarPaginaCampanhas(req, res) {
     const campanha = idSelecionado ? await buscarCampanha(idSelecionado) : null;
     const itens = campanha ? await listarItensCampanha(campanha.id, 300) : [];
     const campanhaRetomavel = campanhaAmizadeExecucao.emAndamento ? null : await buscarCampanhaRetomavel();
+    const [clientes, clientesElegiveis, config] = await Promise.all([
+        listarClientes(),
+        listarClientesAtivosComerciais(),
+        obterConfiguracoes()
+    ]);
 
     await renderizar(res, {
         titulo: 'Campanhas',
-        conteudo: telaCampanhas({ campanhas, campanha, itens, campanhaRetomavel }),
+        conteudo: telaCampanhas({
+            campanhas,
+            campanha,
+            itens,
+            campanhaRetomavel,
+            clientes,
+            totalElegiveis: clientesElegiveis.filter(cliente => !clienteEhTeste(cliente) && normalizarTelefone(cliente.telefone)).length,
+            config
+        }),
         mensagem: req.query.mensagem || '',
         ativo: 'campanhas'
     });
@@ -9946,7 +9962,7 @@ router.get('/manutencao/clientes-modelo.csv', (req, res) => {
 
 router.post('/manutencao/importar-clientes', async (req, res) => {
     try {
-        const upload = await lerUploadMultipart(req);
+        const upload = await lerUploadMultipart(req, { campo: 'arquivo' });
         const preview = await prepararImportacaoClientesCsv(upload.buffer.toString('utf8'));
         const token = salvarPreviaImportacao(preview);
         const status = await obterStatusSistema(getStatusWhatsApp());
@@ -10094,11 +10110,13 @@ router.post('/manutencao/robo', bloquearManutencaoRestritaCliente, async (req, r
 
 router.post('/manutencao/robo/imagem/:chave', bloquearManutencaoRestritaCliente, async (req, res) => {
     try {
-        const upload = await lerUploadMultipart(req);
+        const upload = await lerUploadMultipart(req, { campo: 'imagem' });
 
         if (!extensaoLogoPermitida(upload.filename)) {
             return res.redirect('/manutencao?mensagem=Use uma imagem PNG, JPG, WEBP, GIF ou SVG');
         }
+
+        validarImagemUpload(upload.filename, upload.buffer);
 
         fs.mkdirSync(ASSETS_DIR, { recursive: true });
 
@@ -10338,11 +10356,13 @@ router.post('/configuracoes/painel', async (req, res) => {
 
 router.post('/configuracoes/logo', async (req, res) => {
     try {
-        const upload = await lerUploadMultipart(req);
+        const upload = await lerUploadMultipart(req, { campo: 'logo' });
 
         if (!extensaoLogoPermitida(upload.filename)) {
             return res.redirect('/modelos?mensagem=Use uma imagem PNG, JPG, WEBP, GIF ou SVG');
         }
+
+        validarImagemUpload(upload.filename, upload.buffer);
 
         fs.mkdirSync(ASSETS_DIR, { recursive: true });
 
@@ -10722,9 +10742,10 @@ router.post('/clientes/:id/enviar-campanha-amizade', async (req, res) => {
 
 router.post('/clientes/disparar-amizade-presente-cliente', async (req, res) => {
     const clienteId = req.body?.clienteId;
+    const retorno = retornoCampanha(req);
 
     if (!clienteId) {
-        return res.redirect(montarUrlListaClientesMensagem('Selecione um cliente para testar a campanha.'));
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Selecione um cliente para testar a campanha.')}`);
     }
 
     try {
@@ -10733,13 +10754,13 @@ router.post('/clientes/disparar-amizade-presente-cliente', async (req, res) => {
             'Campanha amizade que vale presente teste individual'
         );
 
-        return res.redirect(montarUrlListaClientesMensagem(`Campanha de teste enviada para ${cliente.nome}.`));
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent(`Campanha de teste enviada para ${cliente.nome}.`)}`);
     } catch (err) {
         logControleClientes('Erro ao enviar campanha amizade teste individual', {
             clienteId,
             erro: err.message
         });
-        return res.redirect(montarUrlListaClientesMensagem(`Erro ao testar campanha: ${err.message}`));
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent(`Erro ao testar campanha: ${err.message}`)}`);
     }
 });
 
@@ -10861,7 +10882,11 @@ function iniciarExecucaoCampanhaAmizade(config, opcoes = {}) {
 
                 campanhaAmizadeExecucao.erro = err.message;
                 campanhaAmizadeExecucao.erros = Math.max(1, Number(campanhaAmizadeExecucao.erros || 0));
-                campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}. Retome depois que o WhatsApp estabilizar.`;
+                const bloqueioHorario = /dias úteis|horário comercial|campanhas permitidas/i.test(String(err.message || ''));
+                const orientacao = bloqueioHorario
+                    ? `Aguarde a janela permitida (${textoJanelaCampanha(config)}) ou altere a regra em Manutenção.`
+                    : 'Retome depois que o WhatsApp estabilizar.';
+                campanhaAmizadeExecucao.mensagem = `Campanha interrompida: ${err.message}. ${orientacao}`;
                 sincronizarCampanhaAtual('interrompida', {
                     erros: campanhaAmizadeExecucao.erros
                 });
@@ -10903,6 +10928,10 @@ router.post('/campanhas/amizade/retomar', async (req, res) => {
     const status = getStatusWhatsApp();
     const client = getClient();
     const config = await obterConfiguracoes();
+
+    if (!campanhaDentroHorario(config)) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent(mensagemCampanhaForaHorario(config))}`);
+    }
 
     if (!client || !status.conectado) {
         return res.redirect(`${retorno}?mensagem=${encodeURIComponent('WhatsApp nao esta conectado. Reconecte antes de retomar a campanha.')}`);
@@ -11034,17 +11063,22 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
     const status = getStatusWhatsApp();
     const client = getClient();
     const config = await obterConfiguracoes();
+    const retorno = retornoCampanha(req);
+
+    if (!campanhaDentroHorario(config)) {
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent(mensagemCampanhaForaHorario(config))}`);
+    }
 
     if (!client || !status.conectado) {
-        return res.redirect(`/clientes?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
     }
 
     if (!fs.existsSync(obterImagemBaseCampanhaAmizade(config))) {
-        return res.redirect(`/clientes?mensagem=${encodeURIComponent('Imagem da campanha nao encontrada. Gere o pacote novamente.')}`);
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Imagem da campanha nao encontrada. Gere o pacote novamente.')}`);
     }
 
     if (campanhaAmizadeExecucao.emAndamento) {
-        return res.redirect(`/clientes?mensagem=${encodeURIComponent('Campanha ja esta em andamento. Aguarde finalizar para iniciar outro envio.')}`);
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Campanha ja esta em andamento. Aguarde finalizar para iniciar outro envio.')}`);
     }
 
     try {
@@ -11087,10 +11121,10 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
             erros: 1,
             finalizadaEm: new Date().toISOString()
         });
-        return res.redirect(`/clientes?mensagem=${encodeURIComponent(`Erro ao preparar campanha: ${err.message}`)}`);
+        return res.redirect(`${retorno}?mensagem=${encodeURIComponent(`Erro ao preparar campanha: ${err.message}`)}`);
     }
 
-    return res.redirect(`/clientes?mensagem=${encodeURIComponent('Campanha iniciada. O envio sera feito em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos. Aguarde finalizar antes de iniciar outra campanha.')}`);
+    return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Campanha iniciada. O envio sera feito em lotes de 10 clientes, com intervalo aleatorio entre 150 e 210 segundos. Aguarde finalizar antes de iniciar outra campanha.')}`);
 });
 
 router.post('/clientes/cobrar-vencidos', async (req, res) => {
