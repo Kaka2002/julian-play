@@ -768,5 +768,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   WhatsApp. Alertas de uma campanha que ultrapasse o horario orientam aguardar
   a janela configurada, em vez de afirmar incorretamente que o WhatsApp ficou
   instavel. O envio individual de teste permanece disponivel.
+- O workflow de validacao usa `actions/checkout@v6` e `actions/setup-node@v6`,
+  cujos runtimes internos sao compativeis com Node.js 24. Os testes da aplicacao
+  continuam executados com Node.js 20 para reproduzir o ambiente local atual.
+  O cancelamento de uma execucao antiga quando entra um push mais novo em
+  `main` e intencional; a execucao mais recente deve ser usada como resultado.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.
