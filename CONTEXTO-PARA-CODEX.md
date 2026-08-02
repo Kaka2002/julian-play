@@ -797,3 +797,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   digitar o ID numerico do cliente. O formulario lista por nome e telefone
   somente quem teve envio confirmado naquela campanha; o backend resolve e
   valida o cliente pelo item da campanha antes de bloquear o marketing.
+- Os clientes de cada execucao de campanha aparecem em paginas de 10 linhas.
+  Campanhas repetidas no mesmo dia sao diferenciadas na lista e no cabecalho
+  por numero da execucao, data e horario; cada link abre somente os clientes
+  associados ao respectivo ID de campanha.

@@ -29,9 +29,10 @@ function criarCampanhasRoute(dependencias = {}) {
                 reclamacaoId: reclamacao.id,
                 campanhaId: reclamacao.campanhaId,
                 clienteId: reclamacao.clienteId
-            });
+        });
         const retorno = String(req.body.retorno || '/campanhas');
-        return res.redirect(`${retorno}?mensagem=${encodeURIComponent('Reclamação registrada. O cliente não receberá novas campanhas.')}`);
+        const separador = retorno.includes('?') ? '&' : '?';
+        return res.redirect(`${retorno}${separador}mensagem=${encodeURIComponent('Reclamação registrada. O cliente não receberá novas campanhas.')}`);
     } catch (err) {
         return res.redirect(`/campanhas?mensagem=${encodeURIComponent(err.message)}`);
     }

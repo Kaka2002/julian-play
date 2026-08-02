@@ -6691,7 +6691,7 @@ function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
     </div>`;
 }
 
-function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRetomavel = null, clientes = [], totalElegiveis = 0, config = {} }) {
+function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensReclamacao = [], paginacaoItens = null, campanhaRetomavel = null, clientes = [], totalElegiveis = 0, config = {} }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
     const retomavel = !ativa && campanhaRetomavel ? campanhaRetomavel : null;
     const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
@@ -6705,7 +6705,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
         .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome || 'Cliente sem nome')}${clienteEhTeste(cliente) ? ' (teste)' : ''}</option>`)
         .join('');
-    const opcoesReclamacaoCampanha = itens
+    const opcoesReclamacaoCampanha = itensReclamacao
         .filter(item => Number(item.clienteId || 0) > 0 && String(item.status || '') === 'enviado')
         .sort((a, b) => String(a.clienteNome || '').localeCompare(String(b.clienteNome || ''), 'pt-BR'))
         .map(item => `<option value="${escapar(item.id)}">${escapar(item.clienteNome || 'Cliente sem nome')} — ${escapar(item.telefone || 'sem telefone')}</option>`)
@@ -6795,12 +6795,12 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         ${campanhas.length ? `<div class="table-wrap"><table>
             <thead><tr><th>Campanha</th><th>Status</th><th>Inicio</th><th>Resultado</th><th>Proximo lote</th><th>Acoes</th></tr></thead>
             <tbody>${campanhas.map(item => `<tr>
-                <td><strong>${escapar(item.nome)}</strong><div class="helper">${escapar(item.publico || '')}</div></td>
+                <td><strong>${escapar(item.nome)}</strong><div class="helper">Execução #${escapar(item.id)}${item.publico ? ` • ${escapar(item.publico)}` : ''}</div></td>
                 <td><span class="badge ${classeStatusCampanha(item.status)}">${escapar(textoStatusCampanha(item.status))}</span></td>
                 <td>${escapar(formatarDataHoraCurta(item.iniciadaEm || item.criadoEm))}</td>
                 <td>${Number(item.enviados || 0)} enviado(s), ${Number(item.ignorados || 0)} ignorado(s), ${Number(item.jaEnviados || 0)} repetido(s), ${Number(item.erros || 0)} erro(s)</td>
                 <td>${item.proximoLoteEm ? escapar(formatarDataHoraCurta(item.proximoLoteEm)) : '-'}</td>
-                <td><a class="button secondary" href="/campanhas?id=${escapar(item.id)}">Detalhes</a></td>
+                <td><a class="button secondary" href="/campanhas?id=${escapar(item.id)}">Ver execução</a></td>
             </tr>`).join('')}</tbody>
         </table></div>` : '<div class="empty">Nenhuma campanha registrada ainda.</div>'}
     </section>
@@ -6808,7 +6808,9 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Clientes da campanha</h2>
-                <div class="subtitle">${campanhaSelecionada ? escapar(campanhaSelecionada.nome) : 'Selecione uma campanha para ver os clientes.'}</div>
+                <div class="subtitle">${campanhaSelecionada
+                    ? `${escapar(campanhaSelecionada.nome)} • Execução #${escapar(campanhaSelecionada.id)} • ${escapar(formatarDataHoraCurta(campanhaSelecionada.iniciadaEm || campanhaSelecionada.criadoEm))}`
+                    : 'Selecione uma campanha para ver os clientes.'}</div>
             </div>
             ${campanhaSelecionada ? `<span class="badge ${classeStatusCampanha(campanhaSelecionada.status)}">${escapar(textoStatusCampanha(campanhaSelecionada.status))}</span>` : ''}
         </div>
@@ -6822,10 +6824,17 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
                 <td>${escapar(formatarDataHoraCurta(item.enviadoEm || item.criadoEm))}</td>
                 <td>${escapar(item.motivo || '-')}</td>
             </tr>`).join('')}</tbody>
-        </table></div>` : '<div class="empty">Nenhum cliente registrado para esta campanha.</div>'}
+        </table></div>${paginacaoItens ? paginacao({
+            base: '/campanhas',
+            params: { id: campanhaSelecionada.id, parametroPagina: 'paginaClientes' },
+            pagina: paginacaoItens.pagina,
+            totalPaginas: paginacaoItens.totalPaginas,
+            total: paginacaoItens.total,
+            porPagina: paginacaoItens.porPagina
+        }) : ''}` : '<div class="empty">Nenhum cliente registrado para esta campanha.</div>'}
         ${campanhaSelecionada ? `<form method="post" action="/campanhas/reclamacoes" class="form-grid" style="margin-top:18px;" onsubmit="return confirm('Registrar reclamação e bloquear novas campanhas para este cliente?');">
             <input type="hidden" name="campanhaId" value="${escapar(campanhaSelecionada.id)}">
-            <input type="hidden" name="retorno" value="/campanhas?id=${escapar(campanhaSelecionada.id)}">
+            <input type="hidden" name="retorno" value="/campanhas?id=${escapar(campanhaSelecionada.id)}&paginaClientes=${escapar(paginacaoItens?.pagina || 1)}">
             <label>Cliente que reclamou
                 <select name="campanhaItemId" required ${opcoesReclamacaoCampanha ? '' : 'disabled'}>
                     <option value="">Selecione pelo nome ou telefone</option>
@@ -8582,7 +8591,8 @@ async function renderizarPaginaCampanhas(req, res) {
     const campanhas = await listarCampanhas(40);
     const idSelecionado = req.query.id || campanhas[0]?.id;
     const campanha = idSelecionado ? await buscarCampanha(idSelecionado) : null;
-    const itens = campanha ? await listarItensCampanha(campanha.id, 300) : [];
+    const todosItens = campanha ? await listarItensCampanha(campanha.id, 5000) : [];
+    const paginacaoItensCampanha = paginarItens(todosItens, paginaAtual(req.query.paginaClientes), 10);
     const campanhaRetomavel = campanhaAmizadeExecucao.emAndamento ? null : await buscarCampanhaRetomavel();
     const [clientes, clientesElegiveis, config] = await Promise.all([
         listarClientes(),
@@ -8595,7 +8605,9 @@ async function renderizarPaginaCampanhas(req, res) {
         conteudo: telaCampanhas({
             campanhas,
             campanha,
-            itens,
+            itens: paginacaoItensCampanha.itens,
+            itensReclamacao: todosItens,
+            paginacaoItens: paginacaoItensCampanha,
             campanhaRetomavel,
             clientes,
             totalElegiveis: clientesElegiveis.filter(cliente => !clienteEhTeste(cliente) && normalizarTelefone(cliente.telefone)).length,
