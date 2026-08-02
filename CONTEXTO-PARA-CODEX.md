@@ -778,10 +778,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `D:\JulianPlayDados`, processos `julian-master` e `julian-play-admin` e o
   tunel `julian-play-casa`. A versao atual e 1.2.22. A regra de campanhas fora
   da janela configurada e a correcao de upload da logo ja estao no codigo.
-  GitHub CLI foi instalado e autenticado sem registrar credenciais neste
-  documento. A atualizacao do workflow para Actions v6 ainda precisa ser
-  adicionada, commitada e enviada; depois do push, conferir a execucao mais
-  recente de `Validacao do Julian Play`. O pacote externo foi recriado em
+  GitHub CLI foi instalado, mas a autenticacao local precisa ser renovada antes
+  de novo uso. A atualizacao do workflow para Actions v6 foi enviada no commit
+  `5ad8996`; a execucao #9 de `Validacao do Julian Play` concluiu com sucesso,
+  assim como a execucao mais recente #10 do commit `854d37e`. O pacote externo
+  foi recriado em
   `D:\julian-play\entrega-cliente-local\ENVIAR_AO_CLIENTE.zip`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.
