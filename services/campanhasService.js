@@ -239,16 +239,35 @@ function contarItensCampanhaPorStatus(campanhaId) {
 }
 
 async function registrarReclamacaoCampanha(dados = {}) {
-    const clienteId = Number(dados.clienteId || 0);
+    let campanhaId = Number(dados.campanhaId || 0) || null;
+    const campanhaItemId = Number(dados.campanhaItemId || 0) || null;
+    let clienteId = Number(dados.clienteId || 0);
     const motivo = String(dados.motivo || '').trim();
+
+    if (campanhaItemId) {
+        const item = await buscarUm(
+            'SELECT id, campanhaId, clienteId, status FROM campanha_itens WHERE id = ?',
+            [campanhaItemId]
+        );
+        if (!item) throw new Error('Cliente não encontrado nesta campanha.');
+        if (campanhaId && Number(item.campanhaId) !== campanhaId) {
+            throw new Error('O cliente selecionado não pertence a esta campanha.');
+        }
+        if (String(item.status || '') !== 'enviado') {
+            throw new Error('Só é possível registrar reclamação de cliente que recebeu a campanha.');
+        }
+        campanhaId = Number(item.campanhaId);
+        clienteId = Number(item.clienteId || 0);
+    }
+
     if (!clienteId) throw new Error('Cliente da reclamação não informado.');
     if (motivo.length < 3) throw new Error('Informe o motivo da reclamação.');
 
     const resultado = await executar(`INSERT INTO campanha_reclamacoes
         (campanhaId, campanhaItemId, clienteId, motivo, origem, responsavel)
         VALUES (?, ?, ?, ?, ?, ?)`, [
-        Number(dados.campanhaId || 0) || null,
-        Number(dados.campanhaItemId || 0) || null,
+        campanhaId,
+        campanhaItemId,
         clienteId,
         motivo.slice(0, 500),
         String(dados.origem || 'painel').slice(0, 50),

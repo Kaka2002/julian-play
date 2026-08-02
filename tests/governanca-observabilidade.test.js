@@ -4,10 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const { executarIsolado, removerAmbiente, repoRoot } = require('./helpers/isolated');
 
-test('reclamação de campanha bloqueia novos envios de marketing e fica auditável', () => {
-    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const camp=require('./services/campanhasService');const cliente=await c.salvarCliente({nome:'Cliente Reclamação',telefone:'5511999991000',tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:'2026-07-28T10:00',dataVencimento:'2026-08-28T23:59',status:'ativo',whatsappMarketingConsentimento:'1'});const campanha=await camp.criarCampanha({nome:'Teste governança'});const item=await camp.registrarItemCampanha(campanha.id,cliente,{status:'enviado'});const reclamacao=await camp.registrarReclamacaoCampanha({campanhaId:campanha.id,campanhaItemId:item,clienteId:cliente.id,motivo:'Não quero receber'});const atualizado=await c.buscarClientePorId(cliente.id);const lista=await camp.listarReclamacoesCampanha(campanha.id);process.stdout.write(JSON.stringify({id:reclamacao.id>0,consentimento:atualizado.whatsappMarketingConsentimento,optout:!!atualizado.whatsappOptOutEm,total:lista.length}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+test('reclamação de campanha identifica o cliente pelo item e bloqueia marketing', () => {
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const camp=require('./services/campanhasService');const cliente=await c.salvarCliente({nome:'Cliente Reclamação',telefone:'5511999991000',tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:'2026-07-28T10:00',dataVencimento:'2026-08-28T23:59',status:'ativo',whatsappMarketingConsentimento:'1'});const campanha=await camp.criarCampanha({nome:'Teste governança'});const item=await camp.registrarItemCampanha(campanha.id,cliente,{status:'enviado'});const reclamacao=await camp.registrarReclamacaoCampanha({campanhaId:campanha.id,campanhaItemId:item,motivo:'Não quero receber'});const atualizado=await c.buscarClientePorId(cliente.id);const lista=await camp.listarReclamacoesCampanha(campanha.id);process.stdout.write(JSON.stringify({id:reclamacao.id>0,clienteId:reclamacao.clienteId,consentimento:atualizado.whatsappMarketingConsentimento,optout:!!atualizado.whatsappOptOutEm,total:lista.length}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
-        assert.deepEqual(JSON.parse(resultado.stdout), { id: true, consentimento: 0, optout: true, total: 1 });
+        const dados = JSON.parse(resultado.stdout);
+        assert.equal(dados.id, true);
+        assert.ok(Number(dados.clienteId) > 0);
+        assert.equal(dados.consentimento, 0);
+        assert.equal(dados.optout, true);
+        assert.equal(dados.total, 1);
     } finally {
         removerAmbiente(resultado.ambiente);
     }
@@ -34,6 +39,9 @@ test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     assert.match(campanhas, /router\.get\('\/'/);
     assert.doesNotMatch(clientes, /router\.get\('\/campanhas'/);
     assert.match(clientes, /router\.renderizarPaginaCampanhas = renderizarPaginaCampanhas/);
+    assert.match(clientes, /select name="campanhaItemId"/);
+    assert.match(clientes, /Selecione pelo nome ou telefone/);
+    assert.doesNotMatch(clientes, /ID do cliente que reclamou/);
 });
 
 test('pacote possui verificação automatizada de instalação limpa', () => {

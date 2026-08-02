@@ -793,3 +793,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   WhatsApp permanece conectado, mas o robo nao responde nem realiza envios
   proativos. A gravacao das opcoes antigas de resposta humanizada e fila tambem
   passou a respeitar corretamente o valor Desligado.
+- O registro de reclamacao na pagina de campanhas nao exige mais descobrir e
+  digitar o ID numerico do cliente. O formulario lista por nome e telefone
+  somente quem teve envio confirmado naquela campanha; o backend resolve e
+  valida o cliente pelo item da campanha antes de bloquear o marketing.

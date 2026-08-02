@@ -6705,6 +6705,11 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         .sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR'))
         .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome || 'Cliente sem nome')}${clienteEhTeste(cliente) ? ' (teste)' : ''}</option>`)
         .join('');
+    const opcoesReclamacaoCampanha = itens
+        .filter(item => Number(item.clienteId || 0) > 0 && String(item.status || '') === 'enviado')
+        .sort((a, b) => String(a.clienteNome || '').localeCompare(String(b.clienteNome || ''), 'pt-BR'))
+        .map(item => `<option value="${escapar(item.id)}">${escapar(item.clienteNome || 'Cliente sem nome')} — ${escapar(item.telefone || 'sem telefone')}</option>`)
+        .join('');
 
     return `<section class="page-title">
         <h1>Campanhas</h1>
@@ -6821,9 +6826,17 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], campanhaRe
         ${campanhaSelecionada ? `<form method="post" action="/campanhas/reclamacoes" class="form-grid" style="margin-top:18px;" onsubmit="return confirm('Registrar reclamação e bloquear novas campanhas para este cliente?');">
             <input type="hidden" name="campanhaId" value="${escapar(campanhaSelecionada.id)}">
             <input type="hidden" name="retorno" value="/campanhas?id=${escapar(campanhaSelecionada.id)}">
-            ${campo({ nome: 'clienteId', label: 'ID do cliente que reclamou', valor: '', tipo: 'number', attrs: 'min="1" required' })}
+            <label>Cliente que reclamou
+                <select name="campanhaItemId" required ${opcoesReclamacaoCampanha ? '' : 'disabled'}>
+                    <option value="">Selecione pelo nome ou telefone</option>
+                    ${opcoesReclamacaoCampanha}
+                </select>
+            </label>
             ${campo({ nome: 'motivo', label: 'Motivo da reclamação', valor: '', tipo: 'text', attrs: 'maxlength="500" required' })}
-            <div class="actions full"><button class="button danger" type="submit">Registrar reclamação e bloquear marketing</button></div>
+            ${opcoesReclamacaoCampanha
+                ? '<div class="notice full">A lista contém somente clientes que receberam esta campanha. Ao registrar, o marketing será bloqueado imediatamente para o cliente escolhido.</div>'
+                : '<div class="notice warn full">Esta campanha ainda não possui clientes com envio confirmado para selecionar.</div>'}
+            <div class="actions full"><button class="button danger" type="submit" ${opcoesReclamacaoCampanha ? '' : 'disabled'}>Registrar reclamação e bloquear marketing</button></div>
         </form>` : ''}
     </section>
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
