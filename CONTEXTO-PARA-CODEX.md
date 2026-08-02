@@ -740,5 +740,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   um checkout limpo, o workflow agora executa `CRIAR-PACOTE-APP.ps1` antes de
   `test:pacote-limpo`, pois os ZIPs gerados permanecem corretamente fora do
   Git e nao existem ate que o pacote seja construido no proprio runner.
+- A versao 1.2.19 impede que a instalacao ou atualizacao de um cliente local
+  sobrescreva a tarefa PM2 valida de outra instalacao no mesmo computador. A
+  tarefa existente e preservada quando aponta para outro `start-pm2.ps1` que
+  ainda existe. O problema foi identificado depois que a tarefa administrativa
+  de `D:\julian-play` foi substituida pela copia de `C:\JulianPlay\app`, fazendo
+  somente a porta 10000 subir no reinicio e causando 502 nas portas 10001 e 9000.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

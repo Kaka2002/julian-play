@@ -354,13 +354,36 @@ if ($LASTEXITCODE -ne 0) {
 if (-not $SemInicioAutomatico) {
     Etapa 'Configurando inicio automatico com o Windows'
     if (TestarAdministrador) {
-        $acao = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$diretorioProjeto\start-pm2.ps1`""
-        $gatilho = New-ScheduledTaskTrigger -AtStartup
-        $usuario = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-        $principal = New-ScheduledTaskPrincipal -UserId $usuario -LogonType S4U -RunLevel Highest
-        $configuracao = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
-        Register-ScheduledTask -TaskName 'Julian Play - Iniciar PM2' -Action $acao -Trigger $gatilho -Principal $principal -Settings $configuracao -Force | Out-Null
-        Write-Host 'Tarefa de inicializacao criada.' -ForegroundColor Green
+        $nomeTarefaPm2 = 'Julian Play - Iniciar PM2'
+        $scriptInicializacao = Join-Path $diretorioProjeto 'start-pm2.ps1'
+        $tarefaExistente = Get-ScheduledTask -TaskName $nomeTarefaPm2 -ErrorAction SilentlyContinue
+        $scriptTarefaExistente = $null
+
+        if ($tarefaExistente) {
+            $argumentosExistentes = [string](@($tarefaExistente.Actions)[0].Arguments)
+            $arquivoExistente = [regex]::Match($argumentosExistentes, '(?i)-File\s+"([^"]+)"')
+            if ($arquivoExistente.Success) {
+                $scriptTarefaExistente = $arquivoExistente.Groups[1].Value
+            }
+        }
+
+        $preservarTarefaExistente = (
+            $scriptTarefaExistente -and
+            (Test-Path -LiteralPath $scriptTarefaExistente -PathType Leaf) -and
+            ([IO.Path]::GetFullPath($scriptTarefaExistente) -ne [IO.Path]::GetFullPath($scriptInicializacao))
+        )
+
+        if ($preservarTarefaExistente) {
+            Write-Warning "A tarefa $nomeTarefaPm2 ja pertence a outra instalacao valida e foi preservada: $scriptTarefaExistente"
+        } else {
+            $acao = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$scriptInicializacao`""
+            $gatilho = New-ScheduledTaskTrigger -AtStartup
+            $usuario = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $principal = New-ScheduledTaskPrincipal -UserId $usuario -LogonType S4U -RunLevel Highest
+            $configuracao = New-ScheduledTaskSettingsSet -StartWhenAvailable -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+            Register-ScheduledTask -TaskName $nomeTarefaPm2 -Action $acao -Trigger $gatilho -Principal $principal -Settings $configuracao -Force | Out-Null
+            Write-Host 'Tarefa de inicializacao criada.' -ForegroundColor Green
+        }
     } else {
         $startup = [Environment]::GetFolderPath('Startup')
         $atalho = Join-Path $startup 'julian-play-pm2.cmd'
