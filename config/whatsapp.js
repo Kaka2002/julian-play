@@ -12,6 +12,7 @@ const {
 } = require('../services/conversaService');
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
 const { licencaPermiteUso } = require('../services/licencaService');
+const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -457,6 +458,11 @@ function processarMensagemEmFila(message, options = {}) {
     const proximaFila = filaAtual
         .catch(() => {})
         .then(async () => {
+            if (!(await roboPodeResponderMensagens())) {
+                console.log(`Mensagem ignorada: respostas automáticas do robô estão desligadas (${telefone}).`);
+                return;
+            }
+
             if (!(await licencaPermiteUso())) {
                 console.log('Mensagem ignorada: licença expirada ou bloqueada.');
                 return;

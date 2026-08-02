@@ -8189,6 +8189,18 @@ function telaManutencao(status = {}, opcoes = {}) {
             </div>
         </div>
         <form class="fields" method="post" action="/manutencao/robo" style="padding-top:0;">
+            <label>Robô responder mensagens recebidas
+                <select name="roboResponderMensagensAtivo">
+                    <option value="1" ${String(status.config?.roboResponderMensagensAtivo ?? '1') === '1' ?'selected' : ''}>Ligado</option>
+                    <option value="0" ${String(status.config?.roboResponderMensagensAtivo ?? '1') === '0' ?'selected' : ''}>Desligado</option>
+                </select>
+            </label>
+            <label>Robô enviar mensagens do painel e avisos automáticos
+                <select name="roboEnviarMensagensPainelAtivo">
+                    <option value="1" ${String(status.config?.roboEnviarMensagensPainelAtivo ?? '1') === '1' ?'selected' : ''}>Ligado</option>
+                    <option value="0" ${String(status.config?.roboEnviarMensagensPainelAtivo ?? '1') === '0' ?'selected' : ''}>Desligado</option>
+                </select>
+            </label>
             ${campo({ nome: 'nomeEmpresaRobo', label: 'Nome da empresa nas mensagens', valor: status.config?.nomeEmpresaRobo || '', attrs: 'required placeholder="Ex: Minha IPTV"' })}
             ${campo({ nome: 'roboPalavrasChave', label: 'Palavras que iniciam o robô', valor: status.config?.roboPalavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis', attrs: 'placeholder="Ex: oi, menu, Planos, plano, preço, teste"' })}
             ${campo({ nome: 'roboAtendimentoHumanoMinutos', label: 'Minutos em atendimento humano', valor: status.config?.roboAtendimentoHumanoMinutos || '30', tipo: 'number', attrs: 'min="1" max="1440" required' })}
@@ -8209,7 +8221,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'roboFilaIntervaloMinimoSegundos', label: 'Intervalo mínimo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMinimoSegundos || '2', tipo: 'number', attrs: 'min="0" max="120" required' })}
             ${campo({ nome: 'roboFilaIntervaloMaximoSegundos', label: 'Intervalo máximo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMaximoSegundos || '5', tipo: 'number', attrs: 'min="0" max="180" required' })}
             ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
-            <div class="notice full">O robô usa este nome nas boas-vindas, menus, planos, renovações e encerramentos. As palavras acima servem apenas para iniciar um novo atendimento. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
+            <div class="notice full">Cada atividade pode ser ligada separadamente. Com as duas opções desligadas, o WhatsApp permanece conectado, mas o robô fica dormindo: não responde clientes nem envia campanhas, cobranças, avisos ou mensagens iniciadas pelo painel. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar configuração do robô</button>
                 <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
@@ -10099,7 +10111,9 @@ router.post('/manutencao/robo', bloquearManutencaoRestritaCliente, async (req, r
     try {
         await salvarConfiguracoesRobo(req.body);
         logControleClientes('Configuracao do robo atualizada', {
-            nomeEmpresa: req.body.nomeEmpresaRobo
+            nomeEmpresa: req.body.nomeEmpresaRobo,
+            responderMensagens: String(req.body.roboResponderMensagensAtivo || '') === '1',
+            enviarMensagensPainel: String(req.body.roboEnviarMensagensPainelAtivo || '') === '1'
         });
         res.redirect('/manutencao?mensagem=Configuração do robô salva com sucesso');
     } catch (err) {
@@ -10260,6 +10274,8 @@ router.post('/manutencao/monitoramento/testar', bloquearMonitoramentoOperacional
         }
         const numero = String(req.body.alertaWhatsappControle || '').replace(/\D/g, '');
         if (numero) {
+            const { exigirEnvioPainelPermitido } = require('../services/controleOperacaoRoboService');
+            await exigirEnvioPainelPermitido('teste da Central de Saúde');
             const client = getClient();
             const status = getStatusWhatsApp();
             if (!client || !status.conectado) throw new Error('WhatsApp nao esta conectado para enviar o alerta de teste.');

@@ -3,6 +3,7 @@ const db = require('../database/sqlite');
 const { criarBackupManual } = require('../services/manutencao');
 const { liberarAtendimentosHumanos } = require('../services/conversaService');
 const { getStatusWhatsApp, getClient } = require('../config/whatsapp');
+const { exigirEnvioPainelPermitido } = require('../services/controleOperacaoRoboService');
 
 const router = express.Router();
 
@@ -50,10 +51,11 @@ router.post('/alerta-operacional', async (req, res) => {
         const client = getClient();
         if (!destino || !mensagem) return res.status(400).json({ ok: false, erro: 'Destino e mensagem sao obrigatorios.' });
         if (!client || !status.conectado) return res.status(409).json({ ok: false, erro: 'WhatsApp da instalacao administradora nao esta conectado.' });
+        await exigirEnvioPainelPermitido('alerta operacional do Painel Mestre');
         const enviada = await client.sendMessage(`${destino}@c.us`, mensagem);
         res.json({ ok: true, mensagemId: enviada?.id?._serialized || '' });
     } catch (err) {
-        res.status(500).json({ ok: false, erro: err.message });
+        res.status(err.operacaoRoboDesativada ? 409 : 500).json({ ok: false, erro: err.message });
     }
 });
 

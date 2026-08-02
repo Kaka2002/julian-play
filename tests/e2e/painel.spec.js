@@ -58,6 +58,15 @@ test('campanhas disponiveis aparecem separadas do historico', async ({ page }) =
     await expect(page.getByRole('heading', { name: 'Campanhas registradas' })).toBeVisible();
 });
 
+test('manutencao exibe controles independentes para o robo', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/manutencao');
+
+    await expect(page.getByLabel('Robô responder mensagens recebidas')).toHaveValue('1');
+    await expect(page.getByLabel('Robô enviar mensagens do painel e avisos automáticos')).toHaveValue('1');
+    await expect(page.getByText(/o robô fica dormindo/)).toBeVisible();
+});
+
 test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {
     await autenticar(page);
     await page.goto('/modelos');

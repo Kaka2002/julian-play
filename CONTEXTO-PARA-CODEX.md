@@ -786,3 +786,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `D:\julian-play\entrega-cliente-local\ENVIAR_AO_CLIENTE.zip`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.
+- A versao 1.2.23 adiciona dois controles independentes em Manutencao para o
+  robo responder mensagens recebidas e enviar mensagens iniciadas pelo painel
+  ou por rotinas automaticas. Os controles iniciam ligados em instalacoes novas
+  e nao sobrescrevem configuracoes existentes; com ambos desligados, o
+  WhatsApp permanece conectado, mas o robo nao responde nem realiza envios
+  proativos. A gravacao das opcoes antigas de resposta humanizada e fila tambem
+  passou a respeitar corretamente o valor Desligado.

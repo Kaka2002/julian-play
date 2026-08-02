@@ -28,3 +28,17 @@ test('configuracoes existentes prevalecem e DATA_DIRs ficam isolados', () => {
         assert.equal(JSON.parse(b.stdout).nomeEmpresaRobo,''); assert.equal(JSON.parse(b.stdout).pixChave,'');
     } finally { removerAmbiente(a.ambiente); removerAmbiente(b.ambiente); }
 });
+
+test('controles do robo iniciam ligados e respeitam valores desligados', () => {
+    const r=executarIsolado(`(async()=>{const c=require('./services/configuracoesPainel');const db=require('./database/sqlite');const inicial=await c.obterConfiguracoes();await c.salvarConfiguracoesRobo({nomeEmpresaRobo:'Empresa Teste',roboResponderMensagensAtivo:'0',roboEnviarMensagensPainelAtivo:'0',roboRespostaHumanizadaAtiva:'0',roboFilaMensagensAtiva:'0'});const final=await c.obterConfiguracoes();process.stdout.write(JSON.stringify({inicial:[inicial.roboResponderMensagensAtivo,inicial.roboEnviarMensagensPainelAtivo],final:[final.roboResponderMensagensAtivo,final.roboEnviarMensagensPainelAtivo,final.roboRespostaHumanizadaAtiva,final.roboFilaMensagensAtiva]}));db.close()})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(r.stdout), { inicial:['1','1'], final:['0','0','0','0'] });
+    } finally { removerAmbiente(r.ambiente); }
+});
+
+test('envio proativo nao executa quando mensagens do painel estao desligadas', () => {
+    const r=executarIsolado(`(async()=>{const c=require('./services/configuracoesPainel');const fila=require('./services/filaMensagensService');const db=require('./database/sqlite');await c.salvarConfiguracao('roboEnviarMensagensPainelAtivo','0');let executou=false;let codigo='';try{await fila.enfileirarEnvio(async()=>{executou=true},'teste bloqueado',{proativo:true})}catch(e){codigo=e.code}process.stdout.write(JSON.stringify({executou,codigo}));db.close()})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(r.stdout), { executou:false, codigo:'ROBO_ENVIOS_PAINEL_DESATIVADOS' });
+    } finally { removerAmbiente(r.ambiente); }
+});

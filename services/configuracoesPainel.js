@@ -98,6 +98,8 @@ async function obterConfiguracoes() {
         roboPalavrasChave: 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis',
         roboMensagemDesconhecida: 'Mensagem ignorada sem palavra-chave para iniciar atendimento.',
         roboAtendimentoHumanoMinutos: '30',
+        roboResponderMensagensAtivo: '1',
+        roboEnviarMensagensPainelAtivo: '1',
         roboRespostaHumanizadaAtiva: '1',
         roboRespostaTempoMinimoSegundos: '3',
         roboRespostaTempoMaximoSegundos: '8',
@@ -178,11 +180,13 @@ async function salvarConfiguracoesRobo(dados = {}) {
     const palavrasChave = String(dados.roboPalavrasChave || '').trim();
     const mensagemDesconhecida = String(dados.roboMensagemDesconhecida || '').trim();
     const minutosAtendimento = Math.max(1, Math.min(1440, Number.parseInt(dados.roboAtendimentoHumanoMinutos || 30, 10) || 30));
-    const respostaHumanizadaAtiva = dados.roboRespostaHumanizadaAtiva ? '1' : '0';
+    const responderMensagensAtivo = String(dados.roboResponderMensagensAtivo || '') === '1' ? '1' : '0';
+    const enviarMensagensPainelAtivo = String(dados.roboEnviarMensagensPainelAtivo || '') === '1' ? '1' : '0';
+    const respostaHumanizadaAtiva = String(dados.roboRespostaHumanizadaAtiva || '') === '1' ? '1' : '0';
     const tempoMinimo = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMinimoSegundos || 3, 10) || 0));
     const tempoMaximoBruto = Math.max(0, Math.min(60, Number.parseInt(dados.roboRespostaTempoMaximoSegundos || 8, 10) || 0));
     const tempoMaximo = Math.max(tempoMinimo, tempoMaximoBruto);
-    const filaMensagensAtiva = dados.roboFilaMensagensAtiva ? '1' : '0';
+    const filaMensagensAtiva = String(dados.roboFilaMensagensAtiva || '') === '1' ? '1' : '0';
     const filaMinimo = Math.max(0, Math.min(120, Number.parseInt(dados.roboFilaIntervaloMinimoSegundos || 2, 10) || 0));
     const filaMaximoBruto = Math.max(0, Math.min(180, Number.parseInt(dados.roboFilaIntervaloMaximoSegundos || 5, 10) || 0));
     const filaMaximo = Math.max(filaMinimo, filaMaximoBruto);
@@ -195,6 +199,8 @@ async function salvarConfiguracoesRobo(dados = {}) {
     await salvarConfiguracao('roboPalavrasChave', palavrasChave || 'oi, ola, olá, menu, Planos, planos, Plano, plano, preço, preco, teste, grátis, gratis');
     await salvarConfiguracao('roboMensagemDesconhecida', mensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.');
     await salvarConfiguracao('roboAtendimentoHumanoMinutos', String(minutosAtendimento));
+    await salvarConfiguracao('roboResponderMensagensAtivo', responderMensagensAtivo);
+    await salvarConfiguracao('roboEnviarMensagensPainelAtivo', enviarMensagensPainelAtivo);
     await salvarConfiguracao('roboRespostaHumanizadaAtiva', respostaHumanizadaAtiva);
     await salvarConfiguracao('roboRespostaTempoMinimoSegundos', String(tempoMinimo));
     await salvarConfiguracao('roboRespostaTempoMaximoSegundos', String(tempoMaximo));

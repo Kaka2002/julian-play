@@ -39,6 +39,7 @@ function destinoWhatsapp(telefone) {
 }
 
 async function enviarWhatsappOperacional(config, controles, mensagem) {
+    if (String(config.roboEnviarMensagensPainelAtivo ?? '1') !== '1') return false;
     const destino = destinoWhatsapp(config.alertaWhatsappControle);
     if (!destino || typeof controles.getClient !== 'function') return false;
     const client = controles.getClient();
@@ -104,7 +105,8 @@ async function verificarSaudeOperacional(config, agora, controles, statusWhatsAp
     }
 }
 
-async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {}) {
+async function enviarConfirmacoesPixPendentes(config = {}, controles = {}, statusWhatsApp = {}) {
+    if (String(config.roboEnviarMensagensPainelAtivo ?? '1') !== '1') return;
     if (!statusWhatsApp.conectado || typeof controles.getClient !== 'function') return;
     const client = controles.getClient();
     if (!client) return;
@@ -132,6 +134,7 @@ async function enviarConfirmacoesPixPendentes(controles = {}, statusWhatsApp = {
 }
 
 async function enviarConfirmacoesPixControlePendentes(config = {}, controles = {}, statusWhatsApp = {}) {
+    if (String(config.roboEnviarMensagensPainelAtivo ?? '1') !== '1') return;
     const numeroControle = String(
         config.mercadoPagoWhatsappControle || config.alertaWhatsappControle || ''
     ).replace(/\D/g, '');
@@ -540,7 +543,7 @@ async function executarMonitoramento(controles = {}) {
         ) {
             const { verificarCobrancasPendentesMercadoPago } = require('./mercadoPagoService');
             await verificarCobrancasPendentesMercadoPago();
-            await enviarConfirmacoesPixPendentes(controles, statusWhatsApp);
+            await enviarConfirmacoesPixPendentes(config, controles, statusWhatsApp);
         }
         if (config.mercadoPagoWhatsappControle || config.alertaWhatsappControle) {
             await enviarConfirmacoesPixControlePendentes(config, controles, statusWhatsApp);

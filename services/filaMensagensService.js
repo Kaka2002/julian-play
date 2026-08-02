@@ -43,7 +43,9 @@ function tempoAleatorio(minimoMs, maximoMs) {
 
 async function executarComControle(tarefa, descricao, opcoes) {
     if (opcoes.proativo) {
+        const { exigirEnvioPainelPermitido } = require('./controleOperacaoRoboService');
         const { exigirEnvioProativoPermitido } = require('./protecaoWhatsappService');
+        await exigirEnvioPainelPermitido(descricao);
         await exigirEnvioProativoPermitido(descricao);
     }
 
