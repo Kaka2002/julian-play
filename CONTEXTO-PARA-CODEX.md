@@ -746,5 +746,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   ainda existe. O problema foi identificado depois que a tarefa administrativa
   de `D:\julian-play` foi substituida pela copia de `C:\JulianPlay\app`, fazendo
   somente a porta 10000 subir no reinicio e causando 502 nas portas 10001 e 9000.
+- A versao 1.2.20 completa o isolamento da atualizacao local: o atualizador nao
+  executa mais `pm2 kill` nem salva uma lista parcial antes da reinstalacao, e o
+  instalador em modo local pausa somente o processo que esta sendo atualizado.
+  Assim, atualizar `C:\JulianPlay\app` nao derruba nem remove `julian-play-admin`
+  e `julian-master` mantidos pelo ambiente administrativo em `D:\julian-play`.
 - Nao cancelar o VPS antes de validar HTTPS por outra rede, login, bancos,
   WhatsApp, reinicio do Windows e restauracao de backup.

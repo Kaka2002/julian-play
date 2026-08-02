@@ -85,8 +85,6 @@ function ExecutarPm2Opcional([string[]]$argumentos) {
 function PararPm2Local([string]$nomeProcesso) {
     ExecutarPm2Opcional @('stop', $nomeProcesso)
     ExecutarPm2Opcional @('delete', $nomeProcesso)
-    ExecutarPm2Opcional @('save', '--force')
-    ExecutarPm2Opcional @('kill')
     Start-Sleep -Seconds 5
 }
 

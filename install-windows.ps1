@@ -257,8 +257,13 @@ if ($backup) {
 $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
 $processosPausados = @()
 if ($pm2) {
-    Etapa 'Parando as instalacoes Julian Play antes de atualizar dependencias'
-    $processosPausados = ObterProcessosJulian $pm2 $NomeProcesso
+    if ($configInstalacao.installMode -eq 'local') {
+        Etapa 'Parando somente esta instalacao local antes de atualizar dependencias'
+        $processosPausados = @($NomeProcesso)
+    } else {
+        Etapa 'Parando as instalacoes Julian Play antes de atualizar dependencias'
+        $processosPausados = ObterProcessosJulian $pm2 $NomeProcesso
+    }
     foreach ($processo in $processosPausados) {
         ExecutarPm2Opcional $pm2 @('stop', $processo)
     }

@@ -20,7 +20,12 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  for(const item of ['clientes.db','.wwebjs_auth','.wwebjs_cache','backups'])assert.match(atualizar,new RegExp(item.replace('.', '\\.'),'i'));
  assert.match(atualizar,/Preservando configuracao local/i);
  assert.match(atualizar,/Get-FileHash[\s\S]*SHA256/i);
+ const paradaLocal=atualizar.match(/function PararPm2Local[\s\S]*?\n}/)?.[0]||'';
+ assert.match(paradaLocal,/\('stop', \$nomeProcesso\)/);
+ assert.match(paradaLocal,/\('delete', \$nomeProcesso\)/);
+ assert.doesNotMatch(paradaLocal,/\('save'|\('kill'/);
  assert.match(instalar,/Get-ScheduledTask[\s\S]*preservarTarefaExistente[\s\S]*outra instalacao valida e foi preservada/);
+ assert.match(instalar,/installMode -eq 'local'[\s\S]*processosPausados = @\(\$NomeProcesso\)[\s\S]*Parando as instalacoes Julian Play/);
  const linhaMaster=instalar.indexOf("AdicionarProcessoJulian $nomes 'julian-master'"); const condicao=instalar.indexOf('if (Test-Path -LiteralPath $arquivoMaster)');
  assert.ok(linhaMaster>condicao,'julian-master somente deve ser incluido dentro da configuracao master');
 });
