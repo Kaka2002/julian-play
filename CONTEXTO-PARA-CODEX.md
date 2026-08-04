@@ -812,3 +812,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   No Painel Mestre, usuario e senha de uma nova instalacao tambem iniciam
   vazios e precisam ser informados explicitamente; instalacoes existentes nao
   sao alteradas.
+- Publicacao operacional de 04/08/2026: a correcao foi enviada no commit
+  `0b7ebbf` e o painel administrador na porta 10001 carregou o codigo novo. O
+  processo do Painel Mestre na porta 9000 permaneceu com o codigo anterior
+  porque o Windows negou acesso ao canal do PM2 e ao encerramento do PID; ele
+  precisa de `pm2 restart julian-master` em PowerShell aberto como Administrador.
