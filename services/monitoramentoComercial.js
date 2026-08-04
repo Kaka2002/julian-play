@@ -319,7 +319,10 @@ async function verificarBackup(config, agora) {
         if (String(config.backupTesteRestauracaoMensalAtivo ?? '1') === '1'
             && String(config.ultimoTesteRestauracaoMensal || '') !== mesAtual) {
             try {
-                restauracaoMensal = await executarExercicioRestauracaoMensal(backup.nome);
+                restauracaoMensal = await executarExercicioRestauracaoMensal(
+                    copiaExterna ? '' : backup.nome,
+                    copiaExterna ? { caminhoArquivo: copiaExterna, origem: 'externa' } : { origem: 'local' }
+                );
                 await salvarConfiguracao('ultimoTesteRestauracaoMensal', mesAtual);
                 await salvarConfiguracao('ultimoBackupRecuperavel', JSON.stringify(restauracaoMensal));
             } catch (err) {

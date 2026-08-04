@@ -4,12 +4,17 @@ param(
     [switch]$PularGit,
     [switch]$PularDependencias,
     [string[]]$ProcessosParaManterParados = @(),
-    [switch]$GerarPacoteCliente
+    [switch]$GerarPacoteCliente,
+    [int]$TempoSaudeSegundos = 120
 )
 
 $ErrorActionPreference = 'Stop'
-$diretorioProjeto = Split-Path -Parent $MyInvocation.MyCommand.Path
+$diretorioProjeto = [IO.Path]::GetFullPath((Split-Path -Parent $MyInvocation.MyCommand.Path)).TrimEnd('\')
 Set-Location $diretorioProjeto
+
+# Todos os pontos de inicializacao do projeto usam o mesmo daemon. Sem isso,
+# um deploy pode consultar um PM2 e reiniciar outro.
+$env:PM2_HOME = Join-Path $env:USERPROFILE '.pm2'
 
 $arquivoInstalacao = Join-Path $diretorioProjeto '.julian-play-install.json'
 if (Test-Path -LiteralPath $arquivoInstalacao) {
@@ -26,6 +31,11 @@ if (Test-Path -LiteralPath $arquivoInstalacao) {
     }
 }
 
+if (-not $PastaDados) {
+    $PastaDados = if ($env:JULIAN_PLAY_DATA_DIR) { $env:JULIAN_PLAY_DATA_DIR } else { $diretorioProjeto }
+}
+$PastaDados = [IO.Path]::GetFullPath($PastaDados)
+
 function Etapa([string]$mensagem) {
     Write-Host "`n==> $mensagem" -ForegroundColor Cyan
 }
@@ -38,6 +48,26 @@ function ExigirComando([string]$nome) {
     return $comando
 }
 
+function ExecutarComando {
+    param(
+        [Parameter(Mandatory = $true)]$Comando,
+        [Parameter(Mandatory = $true)][string[]]$Argumentos,
+        [Parameter(Mandatory = $true)][string]$MensagemErro,
+        [string]$Diretorio = ''
+    )
+
+    $diretorioAnterior = (Get-Location).Path
+    try {
+        if ($Diretorio) { Set-Location $Diretorio }
+        & $Comando.Source @Argumentos
+        if ($LASTEXITCODE -ne 0) {
+            throw "$MensagemErro Codigo $LASTEXITCODE."
+        }
+    } finally {
+        Set-Location $diretorioAnterior
+    }
+}
+
 function AdicionarProcessoJulian([System.Collections.Generic.List[string]]$lista, [string]$nome) {
     $nomeLimpo = [string]$nome
     if ($nomeLimpo -and $nomeLimpo -like 'julian-*' -and -not $lista.Contains($nomeLimpo)) {
@@ -45,23 +75,25 @@ function AdicionarProcessoJulian([System.Collections.Generic.List[string]]$lista
     }
 }
 
+function ObterListaPm2($pm2) {
+    $saida = (& $pm2.Source jlist --silent 2>$null) -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Nao foi possivel consultar o daemon PM2 configurado.'
+    }
+    $inicioJson = $saida.IndexOf('[')
+    if ($inicioJson -lt 0) {
+        throw 'O PM2 retornou uma lista de processos invalida.'
+    }
+    try {
+        return @($saida.Substring($inicioJson) | ConvertFrom-Json)
+    } catch {
+        throw "O PM2 retornou JSON invalido: $($_.Exception.Message)"
+    }
+}
+
 function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     $nomes = [System.Collections.Generic.List[string]]::new()
-
-    try {
-        $saida = (& $pm2.Source jlist --silent 2>$null) -join "`n"
-        $inicioJson = $saida.IndexOf('[')
-        if ($inicioJson -ge 0) {
-            $listaPm2 = $saida.Substring($inicioJson) | ConvertFrom-Json
-            @($listaPm2 | Where-Object { $_.name -like 'julian-*' } | Select-Object -ExpandProperty name -Unique) |
-                ForEach-Object { AdicionarProcessoJulian $nomes $_ }
-        }
-    } catch {
-        Write-Warning 'Nao foi possivel listar todos os processos pelo PM2; usando a lista conhecida.'
-    }
-
     AdicionarProcessoJulian $nomes $nomePrincipal
-
     $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
     if (Test-Path -LiteralPath $arquivoMaster) {
         AdicionarProcessoJulian $nomes 'julian-master'
@@ -73,11 +105,36 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
                     ForEach-Object { AdicionarProcessoJulian $nomes "julian-$($_.Name)" }
             }
         } catch {
-            Write-Warning 'Nao foi possivel ler as instalacoes comerciais; a atualizacao continuara.'
+            throw "Nao foi possivel ler as instalacoes comerciais: $($_.Exception.Message)"
         }
     }
-
     return @($nomes)
+}
+
+function ObterEstadoProcessos($pm2, [string[]]$nomes) {
+    $porNome = @{}
+    foreach ($item in (ObterListaPm2 $pm2)) {
+        if ($item.name -notin $nomes) { continue }
+        $porta = 0
+        [void][int]::TryParse([string]$item.pm2_env.PORT, [ref]$porta)
+        $porNome[[string]$item.name] = [PSCustomObject]@{
+            nome = [string]$item.name
+            status = [string]$item.pm2_env.status
+            estavaOnline = [string]$item.pm2_env.status -eq 'online'
+            porta = $porta
+        }
+    }
+    foreach ($nome in $nomes) {
+        if (-not $porNome.ContainsKey($nome)) {
+            $porNome[$nome] = [PSCustomObject]@{
+                nome = $nome
+                status = 'ausente'
+                estavaOnline = $false
+                porta = 0
+            }
+        }
+    }
+    return $porNome
 }
 
 function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
@@ -85,10 +142,7 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
         Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
         ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') } |
         Select-Object -Unique)
-
-    if ($raizesValidas.Count -eq 0) {
-        return
-    }
+    if ($raizesValidas.Count -eq 0) { return }
 
     $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
         Where-Object {
@@ -98,7 +152,6 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
             $linhaComando -and
             ($raizesValidas | Where-Object { $linhaComando -like "*$_*" })
         })
-
     foreach ($processo in $processos) {
         try {
             Write-Host "Encerrando processo residual $($processo.Name) PID $($processo.ProcessId)." -ForegroundColor Yellow
@@ -107,193 +160,349 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
             Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
         }
     }
+    if ($processos.Count -gt 0) { Start-Sleep -Seconds 3 }
+}
 
-    if ($processos.Count -gt 0) {
-        Start-Sleep -Seconds 3
+function ValidarPowerShell([string]$arquivo) {
+    $tokens = $null
+    $erros = $null
+    [void][Management.Automation.Language.Parser]::ParseFile($arquivo, [ref]$tokens, [ref]$erros)
+    if ($erros.Count -gt 0) {
+        throw "PowerShell invalido em $arquivo`: $($erros[0].Message)"
     }
 }
 
-if (-not $PastaDados) {
-    $PastaDados = if ($env:JULIAN_PLAY_DATA_DIR) { $env:JULIAN_PLAY_DATA_DIR } else { $diretorioProjeto }
-}
-$PastaDados = [IO.Path]::GetFullPath($PastaDados)
+function PrepararRelease {
+    param(
+        [Parameter(Mandatory = $true)]$Git,
+        [Parameter(Mandatory = $true)]$Npm,
+        [Parameter(Mandatory = $true)]$Node,
+        [Parameter(Mandatory = $true)][string]$CommitAlvo,
+        [Parameter(Mandatory = $true)][bool]$InstalarDependencias
+    )
 
-$npm = ExigirComando 'npm.cmd'
-$pm2 = ExigirComando 'pm2.cmd'
-$processosJulian = ObterProcessosJulian $pm2 $NomeProcesso
-foreach ($processoAdicional in $ProcessosParaManterParados) {
-    AdicionarProcessoJulian $processosJulian $processoAdicional
-}
+    $raizTemporaria = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+    $pastaRelease = Join-Path $raizTemporaria ("julian-play-release-{0}" -f ([Guid]::NewGuid().ToString('N')))
+    $arquivoZip = "$pastaRelease.zip"
+    New-Item -ItemType Directory -Path $pastaRelease -Force | Out-Null
 
-$git = $null
-$commitAntesAtualizacao = $null
-$dependenciasAlteradas = -not $PularDependencias
-if (-not $PularGit) {
-    $git = ExigirComando 'git.exe'
-    $alteracoes = & $git.Source status --porcelain --untracked-files=no
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Nao foi possivel verificar o repositorio Git.'
-    }
-    if ($alteracoes) {
-        throw 'Existem alteracoes locais no codigo. Salve-as no Git antes de atualizar para evitar perda.'
-    }
-    $commitAntesAtualizacao = (& $git.Source rev-parse HEAD).Trim()
-}
-
-Etapa 'Parando as instalacoes Julian Play com seguranca'
-foreach ($processo in $processosJulian) {
-    & $pm2.Source stop $processo
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "O processo $processo nao estava ativo; a atualizacao continuara."
-    }
-}
-Start-Sleep -Seconds 4
-
-$raizesProcessos = [System.Collections.Generic.List[string]]::new()
-$raizesProcessos.Add($diretorioProjeto)
-$raizesProcessos.Add($PastaDados)
-$arquivoMasterProcessos = Join-Path $diretorioProjeto '.julian-master-install.json'
-if (Test-Path -LiteralPath $arquivoMasterProcessos) {
     try {
-        $configMasterProcessos = Get-Content -LiteralPath $arquivoMasterProcessos -Raw | ConvertFrom-Json
-        if ($configMasterProcessos.clientsDir) {
-            $raizesProcessos.Add([string]$configMasterProcessos.clientsDir)
+        ExecutarComando -Comando $Git -Argumentos @('archive', '--format=zip', "--output=$arquivoZip", $CommitAlvo) -MensagemErro 'Nao foi possivel preparar o codigo candidato.' -Diretorio $diretorioProjeto
+        Expand-Archive -LiteralPath $arquivoZip -DestinationPath $pastaRelease -Force
+        Remove-Item -LiteralPath $arquivoZip -Force
+
+        if ($InstalarDependencias) {
+            Etapa 'Instalando dependencias na area isolada'
+            $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
+            $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
+            ExecutarComando -Comando $Npm -Argumentos @('ci', '--omit=dev') -MensagemErro 'A instalacao isolada de dependencias falhou.' -Diretorio $pastaRelease
+        } else {
+            $env:NODE_PATH = Join-Path $diretorioProjeto 'node_modules'
         }
+
+        Etapa 'Validando a versao candidata antes de parar producao'
+        $javascript = @(& $Git.Source diff --name-only "$CommitAlvo^" $CommitAlvo -- '*.js' '*.cjs' 2>$null)
+        if ($LASTEXITCODE -ne 0 -or $javascript.Count -eq 0) {
+            $javascript = @('bot.js', 'master/app.js', 'ecosystem.config.js', 'master/ecosystem.config.js')
+        }
+        foreach ($relativo in ($javascript | Select-Object -Unique)) {
+            $arquivo = Join-Path $pastaRelease $relativo
+            if (Test-Path -LiteralPath $arquivo -PathType Leaf) {
+                ExecutarComando -Comando $Node -Argumentos @('--check', $arquivo) -MensagemErro "Erro de sintaxe em $relativo."
+            }
+        }
+
+        Get-ChildItem -LiteralPath $pastaRelease -Filter '*.ps1' -File |
+            ForEach-Object { ValidarPowerShell $_.FullName }
+
+        # Testes internos usam bancos temporarios e DISABLE_WHATSAPP; nao tocam
+        # nas sessoes nem nos bancos ativos.
+        $env:DISABLE_WHATSAPP = '1'
+        ExecutarComando -Comando $Npm -Argumentos @('test') -MensagemErro 'Os testes da versao candidata falharam.' -Diretorio $pastaRelease
+        return $pastaRelease
     } catch {
-        Write-Warning 'Nao foi possivel ler a pasta das instalacoes comerciais para limpeza de processos.'
+        if (Test-Path -LiteralPath $arquivoZip) { Remove-Item -LiteralPath $arquivoZip -Force }
+        if (Test-Path -LiteralPath $pastaRelease) { Remove-Item -LiteralPath $pastaRelease -Recurse -Force }
+        throw
+    } finally {
+        Remove-Item Env:NODE_PATH -ErrorAction SilentlyContinue
+        Remove-Item Env:DISABLE_WHATSAPP -ErrorAction SilentlyContinue
     }
 }
-EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
 
-try {
-    Etapa 'Criando backup antes da atualizacao'
+function CalcularSha256Arquivo([string]$arquivo) {
+    $fluxo = [IO.File]::OpenRead($arquivo)
+    try {
+        $sha = [Security.Cryptography.SHA256]::Create()
+        try { return ([BitConverter]::ToString($sha.ComputeHash($fluxo))).Replace('-', '') }
+        finally { $sha.Dispose() }
+    } finally {
+        $fluxo.Dispose()
+    }
+}
+
+function CopiarBancoFechado {
+    param(
+        [Parameter(Mandatory = $true)][string]$Origem,
+        [Parameter(Mandatory = $true)][string]$PastaBackup,
+        [Parameter(Mandatory = $true)][string]$NomeBackup,
+        [Parameter(Mandatory = $true)]$Node
+    )
+    New-Item -ItemType Directory -Path $PastaBackup -Force | Out-Null
+    $destino = Join-Path $PastaBackup $NomeBackup
+    Copy-Item -LiteralPath $Origem -Destination $destino
+    $verificador = Join-Path $diretorioProjeto 'scripts\verificar-banco-sqlite.js'
+    ExecutarComando -Comando $Node -Argumentos @($verificador, $destino) -MensagemErro "O backup $NomeBackup falhou no PRAGMA quick_check."
+    $hashOrigem = CalcularSha256Arquivo $Origem
+    $hashDestino = CalcularSha256Arquivo $destino
+    if ($hashOrigem -ne $hashDestino) {
+        throw "O backup $NomeBackup nao corresponde ao banco de origem."
+    }
+    [PSCustomObject]@{
+        versao = 1
+        arquivo = $NomeBackup
+        criadoEm = (Get-Date).ToUniversalTime().ToString('o')
+        tamanho = (Get-Item -LiteralPath $destino).Length
+        hashSha256 = $hashDestino
+        integridade = 'ok'
+        finalidade = 'antes_atualizacao'
+    } | ConvertTo-Json | Set-Content -LiteralPath "$destino.json" -Encoding UTF8
+    Write-Host "Backup verificado: $destino" -ForegroundColor Green
+    return $destino
+}
+
+function CriarBackupsAntesAtualizacao($Node) {
+    $carimbo = Get-Date -Format 'yyyyMMdd-HHmmss'
     $banco = Join-Path $PastaDados 'clientes.db'
     if (Test-Path -LiteralPath $banco) {
         $pastaBackup = Join-Path $PastaDados 'backups'
-        New-Item -ItemType Directory -Path $pastaBackup -Force | Out-Null
-        $destino = Join-Path $pastaBackup ("antes-atualizar-{0}.db" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
-        Copy-Item -LiteralPath $banco -Destination $destino -Force
-        Write-Host "Backup criado: $destino" -ForegroundColor Green
+        [void](CopiarBancoFechado -Origem $banco -PastaBackup $pastaBackup -NomeBackup "antes-atualizar-$carimbo.db" -Node $Node)
     } else {
         Write-Warning 'Banco clientes.db nao encontrado na pasta de dados informada.'
     }
 
     $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
-    if (Test-Path -LiteralPath $arquivoMaster) {
-        $configMaster = Get-Content -LiteralPath $arquivoMaster -Raw | ConvertFrom-Json
-        if ($configMaster.clientsDir -and (Test-Path -LiteralPath $configMaster.clientsDir)) {
-            Get-ChildItem -LiteralPath $configMaster.clientsDir -Directory |
-                Where-Object { $_.Name -ne '_arquivados' } |
-                ForEach-Object {
-                    $bancoCliente = Join-Path $_.FullName 'clientes.db'
-                    if (Test-Path -LiteralPath $bancoCliente) {
-                        $backupsCliente = Join-Path $_.FullName 'backups'
-                        New-Item -ItemType Directory -Path $backupsCliente -Force | Out-Null
-                        $backupCliente = Join-Path $backupsCliente ("antes-atualizar-{0}.db" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
-                        Copy-Item -LiteralPath $bancoCliente -Destination $backupCliente -Force
-                        Write-Host "Backup do cliente criado: $backupCliente" -ForegroundColor Green
-                    }
-                }
+    if (-not (Test-Path -LiteralPath $arquivoMaster)) { return }
+    $configMaster = Get-Content -LiteralPath $arquivoMaster -Raw | ConvertFrom-Json
+    if ($configMaster.dataDir) {
+        $bancoMaster = Join-Path ([string]$configMaster.dataDir) 'master.db'
+        if (Test-Path -LiteralPath $bancoMaster) {
+            $backupsMaster = Join-Path ([string]$configMaster.dataDir) 'backups'
+            [void](CopiarBancoFechado -Origem $bancoMaster -PastaBackup $backupsMaster -NomeBackup "master-antes-atualizar-$carimbo.db" -Node $Node)
         }
     }
-
-    if (-not $PularGit) {
-        Etapa 'Baixando a versao publicada no GitHub'
-        & $git.Source pull --ff-only
-        if ($LASTEXITCODE -ne 0) {
-            throw "git pull terminou com codigo $LASTEXITCODE."
+    if (-not $configMaster.clientsDir -or -not (Test-Path -LiteralPath $configMaster.clientsDir)) { return }
+    Get-ChildItem -LiteralPath $configMaster.clientsDir -Directory |
+        Where-Object { $_.Name -ne '_arquivados' } |
+        ForEach-Object {
+            $bancoCliente = Join-Path $_.FullName 'clientes.db'
+            if (Test-Path -LiteralPath $bancoCliente) {
+                $backupsCliente = Join-Path $_.FullName 'backups'
+                [void](CopiarBancoFechado -Origem $bancoCliente -PastaBackup $backupsCliente -NomeBackup "antes-atualizar-$carimbo.db" -Node $Node)
+            }
         }
+}
 
-        $commitDepoisAtualizacao = (& $git.Source rev-parse HEAD).Trim()
-        if ($commitAntesAtualizacao -and $commitDepoisAtualizacao) {
-            $arquivosDependencia = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitDepoisAtualizacao -- package.json package-lock.json)
-            $dependenciasAlteradas = $arquivosDependencia.Count -gt 0
+function PararProcessosOnline($pm2, $estados) {
+    foreach ($estado in $estados.Values | Where-Object { $_.estavaOnline }) {
+        & $pm2.Source stop $estado.nome
+        if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel parar $($estado.nome)." }
+    }
+    Start-Sleep -Seconds 3
+}
+
+function IniciarProcessosAnteriores($pm2, $estados) {
+    $ecosistemaPrincipal = Join-Path $diretorioProjeto 'ecosystem.config.js'
+    $ecosistemaMaster = Join-Path $diretorioProjeto 'master\ecosystem.config.js'
+    foreach ($estado in $estados.Values | Where-Object { $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados }) {
+        if ($estado.nome -eq $NomeProcesso) {
+            & $pm2.Source startOrReload $ecosistemaPrincipal --only $estado.nome --update-env
+        } elseif ($estado.nome -eq 'julian-master') {
+            & $pm2.Source startOrReload $ecosistemaMaster --only $estado.nome --update-env
+        } else {
+            # Instalacoes comerciais ja possuem DATA_DIR, porta, licenca e
+            # sessao proprios no PM2. Nao importe o ambiente do deploy nelas.
+            & $pm2.Source restart $estado.nome
         }
+        if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel iniciar $($estado.nome)." }
+    }
+    foreach ($processo in $ProcessosParaManterParados) {
+        & $pm2.Source stop $processo 2>$null | Out-Host
+    }
+}
+
+function AguardarSaude($pm2, $estados, [string]$versaoEsperada) {
+    $limite = (Get-Date).AddSeconds([Math]::Max(30, $TempoSaudeSegundos))
+    $pendentes = @($estados.Values | Where-Object {
+        $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados
+    })
+    do {
+        $listaAtual = ObterListaPm2 $pm2
+        $falhas = [System.Collections.Generic.List[string]]::new()
+        foreach ($estado in $pendentes) {
+            $pm2Atual = $listaAtual | Where-Object { $_.name -eq $estado.nome } | Select-Object -First 1
+            if (-not $pm2Atual -or $pm2Atual.pm2_env.status -ne 'online') {
+                $falhas.Add("$($estado.nome): PM2 $($pm2Atual.pm2_env.status)")
+                continue
+            }
+            if ($estado.porta -le 0) {
+                $falhas.Add("$($estado.nome): porta desconhecida")
+                continue
+            }
+            try {
+                $resposta = Invoke-RestMethod -Uri "http://127.0.0.1:$($estado.porta)/ready" -TimeoutSec 5
+                if (-not $resposta.ok -or -not $resposta.ready) { $falhas.Add("$($estado.nome): readiness sem ok") }
+                elseif ($versaoEsperada -and [string]$resposta.version -ne $versaoEsperada) {
+                    $falhas.Add("$($estado.nome): versao $($resposta.version), esperada $versaoEsperada")
+                }
+            } catch {
+                $falhas.Add("$($estado.nome): health indisponivel")
+            }
+        }
+        if ($falhas.Count -eq 0) { return }
+        if ((Get-Date) -ge $limite) {
+            throw "A nova versao nao ficou saudavel: $($falhas -join '; ')."
+        }
+        Start-Sleep -Seconds 3
+    } while ($true)
+}
+
+function RemoverTemporarioSeguro([string]$caminho) {
+    if (-not $caminho -or -not (Test-Path -LiteralPath $caminho)) { return }
+    $resolvido = [IO.Path]::GetFullPath($caminho).TrimEnd('\')
+    $raizTemporaria = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+    if (-not $resolvido.StartsWith("$raizTemporaria\", [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Recusa ao remover pasta fora do temporario: $resolvido"
+    }
+    Remove-Item -LiteralPath $resolvido -Recurse -Force
+}
+
+$npm = ExigirComando 'npm.cmd'
+$node = ExigirComando 'node.exe'
+$pm2 = ExigirComando 'pm2.cmd'
+$git = ExigirComando 'git.exe'
+$listaProcessosJulian = [System.Collections.Generic.List[string]]::new()
+foreach ($processoEncontrado in (ObterProcessosJulian $pm2 $NomeProcesso)) {
+    AdicionarProcessoJulian $listaProcessosJulian $processoEncontrado
+}
+foreach ($processoAdicional in $ProcessosParaManterParados) {
+    AdicionarProcessoJulian $listaProcessosJulian $processoAdicional
+}
+$processosJulian = $listaProcessosJulian.ToArray()
+$estadosAntes = ObterEstadoProcessos $pm2 $processosJulian
+$commitAntesAtualizacao = (& $git.Source rev-parse HEAD).Trim()
+$commitAlvo = $commitAntesAtualizacao
+$dependenciasAlteradas = -not $PularDependencias
+$pastaRelease = ''
+$pastaNodeAnterior = ''
+$pastaNodeFalha = ''
+$trocouDependencias = $false
+$parouProducao = $false
+$atualizouCodigo = $false
+
+if (-not $PularGit) {
+    $alteracoes = & $git.Source status --porcelain --untracked-files=no
+    if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel verificar o repositorio Git.' }
+    if ($alteracoes) { throw 'Existem alteracoes locais no codigo. Salve-as no Git antes de atualizar para evitar perda.' }
+
+    Etapa 'Consultando a versao publicada sem alterar producao'
+    ExecutarComando -Comando $git -Argumentos @('fetch', 'origin', 'main') -MensagemErro 'git fetch falhou.' -Diretorio $diretorioProjeto
+    $commitAlvo = (& $git.Source rev-parse 'origin/main').Trim()
+    if (-not $commitAlvo) { throw 'Nao foi possivel identificar origin/main.' }
+    $arquivosDependencia = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitAlvo -- package.json package-lock.json)
+    $dependenciasAlteradas = $arquivosDependencia.Count -gt 0
+}
+
+try {
+    $pastaRelease = PrepararRelease -Git $git -Npm $npm -Node $node -CommitAlvo $commitAlvo -InstalarDependencias $dependenciasAlteradas
+
+    Etapa 'Parando somente os processos que estavam online'
+    PararProcessosOnline $pm2 $estadosAntes
+    $parouProducao = $true
+
+    $raizesProcessos = [System.Collections.Generic.List[string]]::new()
+    $raizesProcessos.Add($diretorioProjeto)
+    $raizesProcessos.Add($PastaDados)
+    $arquivoMasterProcessos = Join-Path $diretorioProjeto '.julian-master-install.json'
+    if (Test-Path -LiteralPath $arquivoMasterProcessos) {
+        $configMasterProcessos = Get-Content -LiteralPath $arquivoMasterProcessos -Raw | ConvertFrom-Json
+        if ($configMasterProcessos.clientsDir) { $raizesProcessos.Add([string]$configMasterProcessos.clientsDir) }
+    }
+    EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
+
+    Etapa 'Criando backups com os bancos fechados'
+    CriarBackupsAntesAtualizacao $node
+
+    if (-not $PularGit -and $commitAlvo -ne $commitAntesAtualizacao) {
+        Etapa 'Aplicando o commit previamente validado'
+        ExecutarComando -Comando $git -Argumentos @('merge', '--ff-only', $commitAlvo) -MensagemErro 'Nao foi possivel aplicar o commit validado.' -Diretorio $diretorioProjeto
+        $atualizouCodigo = $true
     }
 
     if ($dependenciasAlteradas) {
-        Etapa 'Atualizando dependencias'
-        $env:PUPPETEER_SKIP_DOWNLOAD = 'true'
-        $env:PUPPETEER_SKIP_CHROME_DOWNLOAD = 'true'
-        & $npm.Source ci --omit=dev
-        if ($LASTEXITCODE -ne 0) {
-            throw "npm ci terminou com codigo $LASTEXITCODE."
-        }
-    } else {
-        Etapa 'Dependencias sem alteracao'
-        Write-Host 'package.json e package-lock.json nao mudaram; npm ci foi pulado para evitar bloqueio do sqlite no Windows.' -ForegroundColor Green
-    }
-
-    Etapa 'Validando arquivos principais'
-    & node --check bot.js
-    if ($LASTEXITCODE -ne 0) { throw 'bot.js possui erro de sintaxe.' }
-    & node --check ecosystem.config.js
-    if ($LASTEXITCODE -ne 0) { throw 'ecosystem.config.js possui erro de sintaxe.' }
-
-    $env:JULIAN_PLAY_APP_NAME = $NomeProcesso
-    $env:JULIAN_PLAY_DATA_DIR = $PastaDados
-
-    Etapa 'Iniciando a versao atualizada'
-    & $pm2.Source startOrReload (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
-    if ($LASTEXITCODE -ne 0) {
-        throw "PM2 startOrReload terminou com codigo $LASTEXITCODE."
-    }
-    foreach ($processo in ($processosJulian | Where-Object {
-        $_ -ne $NomeProcesso -and $_ -notin $ProcessosParaManterParados
-    })) {
-        & $pm2.Source restart $processo
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Nao foi possivel reiniciar $processo. Se for uma instalacao incompleta, recrie pelo Painel Mestre."
+        Etapa 'Trocando dependencias somente depois da instalacao aprovada'
+        $nodeAtivo = Join-Path $diretorioProjeto 'node_modules'
+        $nodeCandidato = Join-Path $pastaRelease 'node_modules'
+        $pastaRecuperacao = Join-Path $PastaDados 'backups\deploy-recovery'
+        New-Item -ItemType Directory -Path $pastaRecuperacao -Force | Out-Null
+        $pastaNodeAnterior = Join-Path $pastaRecuperacao ("node_modules-{0}-{1}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'), $commitAntesAtualizacao.Substring(0, 7))
+        if (Test-Path -LiteralPath $nodeAtivo) { Move-Item -LiteralPath $nodeAtivo -Destination $pastaNodeAnterior }
+        try {
+            Move-Item -LiteralPath $nodeCandidato -Destination $nodeAtivo
+            $trocouDependencias = $true
+        } catch {
+            if ((Test-Path -LiteralPath $pastaNodeAnterior) -and -not (Test-Path -LiteralPath $nodeAtivo)) {
+                Move-Item -LiteralPath $pastaNodeAnterior -Destination $nodeAtivo
+            }
+            throw
         }
     }
-    foreach ($processo in $ProcessosParaManterParados) {
-        & $pm2.Source stop $processo
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Nao foi possivel manter $processo parado; confira o cadastro no PM2."
-        }
-    }
+
+    Etapa 'Iniciando a versao validada'
+    IniciarProcessosAnteriores $pm2 $estadosAntes
+    $versaoEsperada = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
+    AguardarSaude $pm2 $estadosAntes $versaoEsperada
     & $pm2.Source save --force
-    if ($LASTEXITCODE -ne 0) {
-        throw "PM2 save terminou com codigo $LASTEXITCODE."
-    }
-
-    & $pm2.Source status
+    if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel salvar o estado aprovado do PM2.' }
 
     if ($GerarPacoteCliente) {
         Etapa 'Recriando o pacote de instalacao local'
         $geradorPacote = Join-Path $diretorioProjeto 'entrega-cliente-local\USO_INTERNO_NAO_ENVIAR\CRIAR-PACOTE-APP.ps1'
-        if (-not (Test-Path -LiteralPath $geradorPacote)) {
-            throw "Gerador do pacote local nao encontrado: $geradorPacote"
-        }
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $geradorPacote
-        if ($LASTEXITCODE -ne 0) {
-            throw "Geracao do pacote local terminou com codigo $LASTEXITCODE."
-        }
+        if ($LASTEXITCODE -ne 0) { throw "Geracao do pacote local terminou com codigo $LASTEXITCODE." }
     }
 
-    Write-Host '`nAtualizacao concluida com sucesso.' -ForegroundColor Green
+    Write-Host "`nAtualizacao concluida e saude confirmada. Commit: $commitAlvo" -ForegroundColor Green
 } catch {
-    Write-Error $_
-    Write-Warning "A atualizacao falhou. O backup foi preservado em: $PastaDados\backups"
-    Write-Warning 'Tentando restaurar a execucao da versao instalada...'
-    try {
-        & $pm2.Source startOrReload (Join-Path $diretorioProjeto 'ecosystem.config.js') --only $NomeProcesso --update-env
-        if ($LASTEXITCODE -eq 0) {
-            foreach ($processo in ($processosJulian | Where-Object {
-                $_ -ne $NomeProcesso -and $_ -notin $ProcessosParaManterParados
-            })) {
-                & $pm2.Source restart $processo 2>$null | Out-Host
+    $falha = $_
+    Write-Warning "Atualizacao recusada ou revertida: $($falha.Exception.Message)"
+    if ($parouProducao) {
+        Write-Warning 'Restaurando automaticamente a ultima versao funcional...'
+        try {
+            foreach ($estado in $estadosAntes.Values | Where-Object { $_.estavaOnline }) {
+                & $pm2.Source stop $estado.nome 2>$null | Out-Host
             }
-            foreach ($processo in $ProcessosParaManterParados) {
-                & $pm2.Source stop $processo 2>$null | Out-Host
+            if ($atualizouCodigo) {
+                ExecutarComando -Comando $git -Argumentos @('reset', '--hard', $commitAntesAtualizacao) -MensagemErro 'Falha ao restaurar o commit anterior.' -Diretorio $diretorioProjeto
             }
+            if ($trocouDependencias -and (Test-Path -LiteralPath $pastaNodeAnterior)) {
+                $nodeAtivo = Join-Path $diretorioProjeto 'node_modules'
+                if (Test-Path -LiteralPath $nodeAtivo) {
+                    $pastaNodeFalha = Join-Path (Split-Path -Parent $pastaNodeAnterior) ("node_modules-rejeitado-{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+                    Move-Item -LiteralPath $nodeAtivo -Destination $pastaNodeFalha
+                }
+                Move-Item -LiteralPath $pastaNodeAnterior -Destination $nodeAtivo
+            }
+            IniciarProcessosAnteriores $pm2 $estadosAntes
+            $versaoAnterior = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
+            AguardarSaude $pm2 $estadosAntes $versaoAnterior
             & $pm2.Source save --force
-            Write-Warning 'O aplicativo foi reiniciado, mas a atualizacao precisa ser corrigida.'
-        } else {
-            Write-Warning "Nao foi possivel reiniciar. Execute: pm2 start ecosystem.config.js --only $NomeProcesso --update-env"
+            Write-Warning "Rollback confirmado no commit $commitAntesAtualizacao."
+        } catch {
+            Write-Error "O rollback automatico tambem falhou: $($_.Exception.Message)"
         }
-    } catch {
-        Write-Warning "Nao foi possivel reiniciar. Execute: pm2 start ecosystem.config.js --only $NomeProcesso --update-env"
     }
-    exit 1
+    throw $falha
+} finally {
+    if ($pastaRelease) { RemoverTemporarioSeguro $pastaRelease }
 }

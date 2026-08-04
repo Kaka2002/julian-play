@@ -158,4 +158,14 @@ function buscarTodos(sql, params = []) {
     }));
 }
 
-module.exports = { db, ready, dataDir, dbPath, executar, buscarUm, buscarTodos };
+let encerramento = null;
+function encerrar() {
+    if (!encerramento) {
+        encerramento = ready.then(() => new Promise((resolve, reject) => {
+            db.close(err => err ? reject(err) : resolve());
+        }));
+    }
+    return encerramento;
+}
+
+module.exports = { db, ready, dataDir, dbPath, executar, buscarUm, buscarTodos, encerrar };

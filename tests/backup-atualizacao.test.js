@@ -57,6 +57,54 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
  assert.doesNotMatch(workflow,/VPS_HOST|VPS_USER|VPS_SSH_KEY|ssh\s|deploy\.ps1/i);
 });
 
+test('deploy prepara e testa a versao antes da parada e possui rollback automatico',()=>{
+ const atualizar=fs.readFileSync(path.join(repoRoot,'update-windows.ps1'),'utf8');
+ const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');
+ const indicePreparar=atualizar.indexOf('$pastaRelease = PrepararRelease');
+ const indiceParar=atualizar.indexOf("Etapa 'Parando somente os processos que estavam online'");
+ assert.ok(indicePreparar>=0&&indiceParar>indicePreparar,'a versao candidata deve ser aprovada antes de parar producao');
+ assert.match(atualizar,/git\.Source diff[\s\S]*package\.json package-lock\.json/);
+ assert.match(atualizar,/Argumentos\s+@\('ci',\s*'--omit=dev'\)/);
+ assert.match(atualizar,/Argumentos\s+@\('test'\)/);
+ assert.match(atualizar,/estavaOnline/);
+ assert.match(atualizar,/Invoke-RestMethod[^\n]+\/ready/);
+ assert.match(atualizar,/reset', '--hard', \$commitAntesAtualizacao/);
+ assert.match(atualizar,/node_modules-rejeitado/);
+ assert.match(atualizar,/Rollback confirmado/);
+ assert.match(atualizar,/PM2_HOME[\s\S]*\.pm2/);
+ assert.match(atualizar,/configMaster\.dataDir[\s\S]*master\.db/);
+ assert.match(atualizar,/verificar-banco-sqlite\.js/);
+ assert.match(atualizar,/CalcularSha256Arquivo/);
+ const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\n}/)?.[0]||'';
+ assert.match(selecaoProcessos,/AdicionarProcessoJulian \$nomes \$nomePrincipal/);
+ assert.match(selecaoProcessos,/configMaster\.clientsDir/);
+ assert.doesNotMatch(selecaoProcessos,/Where-Object \{ \$_\.name -like 'julian-\*' \}/);
+ assert.match(atualizar,/restart \$estado\.nome\n/);
+ assert.doesNotMatch(atualizar,/restart \$estado\.nome --update-env/);
+ assert.doesNotMatch(atualizar,/\$env:JULIAN_PLAY_DATA_DIR = \$PastaDados/);
+ assert.match(deploy,/update-windows\.ps1/);
+ assert.doesNotMatch(deploy,/git\.Source pull|npm\s+ci/);
+});
+
+test('PM2 aguarda prontidao e encerra processos por mensagem no Windows',()=>{
+ const bot=fs.readFileSync(path.join(repoRoot,'bot.js'),'utf8');
+ const mestre=fs.readFileSync(path.join(repoRoot,'master','app.js'),'utf8');
+ const ecossistema=fs.readFileSync(path.join(repoRoot,'ecosystem.config.js'),'utf8');
+ const ecossistemaMestre=fs.readFileSync(path.join(repoRoot,'master','ecosystem.config.js'),'utf8');
+ for(const configuracao of [ecossistema,ecossistemaMestre]){
+  assert.match(configuracao,/wait_ready:\s*true/);
+  assert.match(configuracao,/shutdown_with_message:\s*true/);
+  assert.match(configuracao,/min_uptime/);
+  assert.match(configuracao,/max_restarts/);
+ }
+ for(const aplicacao of [bot,mestre]){
+  assert.match(aplicacao,/process\.send\('ready'\)/);
+  assert.match(aplicacao,/mensagem === 'shutdown'/);
+ }
+ assert.match(bot,/bancoAplicacao\.encerrar\(\)/);
+ assert.match(mestre,/masterDb\.encerrar\(\)/);
+});
+
 test('inicializacao PM2 recupera painel e mestre sem iniciar AMPLAYTV',()=>{
  const script=fs.readFileSync(path.join(repoRoot,'start-pm2.ps1'),'utf8');
  assert.match(script,/pm2\.Source resurrect/);

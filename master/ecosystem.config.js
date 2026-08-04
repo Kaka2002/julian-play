@@ -18,6 +18,11 @@ module.exports = {
         instances: 1,
         exec_mode: 'fork',
         autorestart: true,
+        wait_ready: true,
+        shutdown_with_message: true,
+        listen_timeout: 30000,
+        min_uptime: '10s',
+        max_restarts: 5,
         restart_delay: 10000,
         max_memory_restart: '300M',
         env: {

@@ -12,7 +12,8 @@ const CHAVES_SENSIVEIS = new Set([
     'painel.apiToken',
     'cliente.senha',
     'cliente.senhaApp',
-    'cliente.acessosApp'
+    'cliente.acessosApp',
+    'fila.mensagem'
 ]);
 
 function derivarChave(material) {

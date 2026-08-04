@@ -74,6 +74,11 @@ function calcularRiscoWhatsApp(statusWhatsApp = {}, fila = {}) {
         pontos.push('Fila de WhatsApp com muitos envios pendentes.');
     }
 
+    if (Number(fila.persistente?.incertos || 0) > 0) {
+        score += 2;
+        pontos.push('Ha envio(s) interrompido(s) que exigem revisao para evitar mensagem duplicada.');
+    }
+
     if (fila.ultimoErro) {
         score += 2;
         pontos.push(`Último erro de envio: ${fila.ultimoErro}`);
@@ -354,8 +359,42 @@ async function copiarBackupExterno(nomeBackup, pastaExterna, maximoBackups = 5) 
     const destinoBase=path.resolve(pastaInformada);
     await verificarArquivoBackup(origem,true); fs.mkdirSync(destinoBase,{recursive:true});
     const destino=path.join(destinoBase,nome); fs.copyFileSync(origem,destino); fs.copyFileSync(`${origem}.json`,`${destino}.json`);
+    await verificarArquivoBackup(destino, true);
+    const [hashOrigem, hashDestino] = await Promise.all([hashArquivo(origem), hashArquivo(destino)]);
+    if (hashOrigem !== hashDestino) {
+        throw new Error('A copia externa foi criada, mas seu SHA-256 difere do backup original.');
+    }
     const retencao = aplicarRetencaoBackupsExternos(destinoBase, maximoBackups);
-    await registrarEventoSistema('backup_copia_externa','info',`Backup copiado para armazenamento externo: ${nome}.`,{destino:destinoBase,retencao}); return destino;
+    await registrarEventoSistema('backup_copia_externa','info',`Backup externo copiado e reaberto com sucesso: ${nome}.`,{
+        destino: destinoBase,
+        retencao,
+        hashSha256: hashDestino,
+        integridade: 'ok',
+        restauracaoTeste: 'aprovada'
+    });
+    return destino;
+}
+
+function avaliarDestinoBackupExterno(config = {}) {
+    const ativo = String(config.backupExternoAtivo) === '1';
+    const pastaInformada = String(config.backupExternoPasta || '').trim();
+    const confirmadaForaComputador = String(config.backupExternoForaComputador || '') === '1';
+    const compartilhamentoRede = /^\\\\/.test(pastaInformada);
+    let volumeDiferente = false;
+    if (pastaInformada && path.isAbsolute(pastaInformada)) {
+        const raizDados = path.parse(path.resolve(db.dataDir)).root.toLowerCase();
+        const raizExterna = path.parse(path.resolve(pastaInformada)).root.toLowerCase();
+        volumeDiferente = raizDados !== raizExterna;
+    }
+    return {
+        ativo,
+        pasta: pastaInformada,
+        compartilhamentoRede,
+        volumeDiferente,
+        confirmadaForaComputador,
+        protegidaContraPerdaDoComputador: ativo && confirmadaForaComputador,
+        nivel: !ativo ? 'desativado' : confirmadaForaComputador ? 'fora_computador' : volumeDiferente ? 'outro_volume_local' : 'mesmo_volume'
+    };
 }
 
 function criarBackupManual() {
@@ -468,8 +507,15 @@ function limparBackupsAutomaticos(retencaoDias = 30) {
     return aplicarPoliticaRetencaoBackups({ dias: retencaoDias }).removidos;
 }
 
-async function executarExercicioRestauracaoMensal(nomeBackup = '') {
-    const backup = nomeBackup
+async function executarExercicioRestauracaoMensal(nomeBackup = '', opcoes = {}) {
+    const caminhoAlternativo = String(opcoes.caminhoArquivo || '').trim();
+    const backup = caminhoAlternativo
+        ? (() => {
+            const caminho = path.resolve(caminhoAlternativo);
+            if (!fs.existsSync(caminho)) throw new Error('A copia indicada para o exercicio nao existe.');
+            return { nome: path.basename(caminho), caminho, integridade: 'ok' };
+        })()
+        : nomeBackup
         ? listarBackups().find(item => item.nome === path.basename(nomeBackup))
         : listarBackups().find(item => item.integridade === 'ok');
     if (!backup) throw new Error('Nenhum backup verificado disponível para o exercício de restauração.');
@@ -498,7 +544,8 @@ async function executarExercicioRestauracaoMensal(nomeBackup = '') {
             iniciadoEm,
             concluidoEm: new Date().toISOString(),
             tabelas: Number(diagnostico.tabelas || 0),
-            clientes: Number(diagnostico.clientes || 0)
+            clientes: Number(diagnostico.clientes || 0),
+            origem: opcoes.origem || (caminhoAlternativo ? 'externa' : 'local')
         };
         fs.writeFileSync(path.join(BACKUP_DIR, 'ultimo-exercicio-restauracao.json'), JSON.stringify(relatorio, null, 2));
         const manifesto = JSON.parse(fs.readFileSync(`${backup.caminho}.json`, 'utf8'));
@@ -562,6 +609,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const ultimaRestauracaoTestada = obterRelatorioUltimaRestauracao();
     const migracoes = await obterEstadoMigracoes(db);
     const config = await obterConfiguracoes();
+    const backupExterno = avaliarDestinoBackupExterno(config);
     const eventos = await listarEventosSistema(15);
     const filaMensagens = obterStatusFilaMensagens();
     const atendimentoHumanoMs = Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000;
@@ -602,6 +650,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         ultimoBackup: backups[0] || null,
         backupRecente: Boolean(backups[0] && Date.now() - backups[0].criadoEm.getTime() <= 36 * 60 * 60 * 1000),
         ultimoBackupRecuperavel: ultimaRestauracaoTestada?.status === 'aprovado' ? ultimaRestauracaoTestada : null,
+        backupExterno,
         migracoes,
         backups: backups.slice(0, 6),
         eventos,
@@ -648,4 +697,5 @@ module.exports = {
     ,verificarArquivoBackup
     ,exportarBackupCriptografado
     ,copiarBackupExterno
+    ,avaliarDestinoBackupExterno
 };

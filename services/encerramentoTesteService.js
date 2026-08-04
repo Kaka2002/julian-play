@@ -26,7 +26,10 @@ function agendarEncerramentoTeste(client, destino) {
             const enviada = await enfileirarEnvio(
                 () => client.sendMessage(destino, mensagem),
                 'Envio de encerramento automatico de teste',
-                { proativo: true }
+                {
+                    proativo: true,
+                    persistencia: { tipo: 'texto', destino, texto: mensagem }
+                }
             );
             registrarMensagemDoRobo(enviada);
             console.log(`[teste] Atendimento encerrado automaticamente para ${destino}. id=${enviada?.id?._serialized || 'sem-id'}`);

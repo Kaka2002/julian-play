@@ -904,10 +904,6 @@ function buscarClientePorId(id) {
     return buscarUm('SELECT * FROM clientes WHERE id = ?', [id]);
 }
 
-function removerCliente(id) {
-    return executar('DELETE FROM clientes WHERE id = ?', [id]);
-}
-
 async function aplicarBonusCliente(id, quantidade = 1) {
     const meses = Number.parseInt(quantidade, 10);
     if (!Number.isFinite(meses) || meses <= 0) {
@@ -1752,7 +1748,6 @@ module.exports = {
     marcarPagamentoMensagem,
     atualizarPagamentoCliente,
     removerPagamentoCliente,
-    removerCliente,
     listarNotasCliente,
     campanhaAmizadeJaEnviada,
     adicionarNotaCliente,

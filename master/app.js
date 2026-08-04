@@ -1636,6 +1636,28 @@ app.get('/health', (req, res) => res.json({
     timestamp: new Date().toISOString()
 }));
 
+app.get('/live', (req, res) => res.status(200).json({
+    ok: true,
+    service: 'julian-master',
+    version: packageInfo.version || '',
+    timestamp: new Date().toISOString()
+}));
+
+app.get('/ready', async (req, res) => {
+    try {
+        await masterDb.ready;
+        res.status(200).json({
+            ok: true,
+            ready: true,
+            service: 'julian-master',
+            version: packageInfo.version || '',
+            timestamp: new Date().toISOString()
+        });
+    } catch (err) {
+        res.status(503).json({ ok: false, ready: false, service: 'julian-master' });
+    }
+});
+
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
     try {
         const instalacaoId = String(req.params.instalacaoId || '').trim();
@@ -2346,10 +2368,40 @@ async function executarLimpezaOperacionalProgramada() {
     }
 }
 
-app.listen(PORT, HOST, () => {
+const servidorMaster = app.listen(PORT, HOST, async () => {
     console.log(`Painel Mestre em http://${HOST}:${PORT}`);
+    await masterDb.ready;
+    if (typeof process.send === 'function') process.send('ready');
     setTimeout(() => executarLimpezaOperacionalProgramada().catch(err => console.log(`Limpeza operacional: ${err.message}`)), 30000);
     setInterval(() => executarLimpezaOperacionalProgramada().catch(err => console.log(`Limpeza operacional: ${err.message}`)), 60 * 60 * 1000);
     setTimeout(() => monitorarCentralSaude().catch(err => console.log(`Central de saude: ${err.message}`)), 45000);
     setInterval(() => monitorarCentralSaude().catch(err => console.log(`Central de saude: ${err.message}`)), 5 * 60 * 1000);
+});
+
+let encerrandoMaster = false;
+function encerrarMaster(origem) {
+    if (encerrandoMaster) return;
+    encerrandoMaster = true;
+    console.log(`Recebido ${origem}. Encerrando Painel Mestre...`);
+    const limite = setTimeout(() => process.exit(1), 25000);
+    limite.unref();
+    servidorMaster.close(async erro => {
+        if (erro) {
+            console.error('Falha ao encerrar Painel Mestre:', erro.message);
+            process.exit(1);
+        }
+        try {
+            await masterDb.encerrar();
+            process.exit(0);
+        } catch (err) {
+            console.error('Falha ao fechar banco do Painel Mestre:', err.message);
+            process.exit(1);
+        }
+    });
+}
+
+process.on('SIGTERM', () => encerrarMaster('SIGTERM'));
+process.on('SIGINT', () => encerrarMaster('SIGINT'));
+process.on('message', mensagem => {
+    if (mensagem === 'shutdown') encerrarMaster('shutdown do PM2');
 });

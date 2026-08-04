@@ -24,7 +24,6 @@ const {
     marcarPagamentoMensagem,
     atualizarPagamentoCliente,
     removerPagamentoCliente,
-    removerCliente,
     normalizarTelefone,
     listarNotasCliente,
     campanhaAmizadeJaEnviada,
@@ -3971,7 +3970,10 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
                 enfileirarEnvio(
                     () => client.sendMessage(destino, mensagem),
                     descricao,
-                    { proativo: true }
+                    {
+                        proativo: true,
+                        persistencia: { tipo: 'texto', destino, texto: mensagem }
+                    }
                 ),
                 90000,
                 descricao
@@ -4043,7 +4045,16 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                         return client.sendMessage(destino, media, { caption: legenda });
                     },
                     descricao,
-                    { ...(opcoes.fila || {}), proativo: true }
+                    {
+                        ...(opcoes.fila || {}),
+                        proativo: true,
+                        persistencia: {
+                            tipo: 'midia',
+                            destino,
+                            midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
+                            opcoesMensagem: { caption: legenda }
+                        }
+                    }
                 ),
                 120000,
                 descricao
@@ -5021,6 +5032,46 @@ function camposFaltandoTesteLiberado(dados = {}) {
     return campos
         .filter(([campo]) => !String(dados[campo] || '').trim())
         .map(([, label]) => label);
+}
+
+function secaoPrivacidadeCliente(cliente = {}) {
+    if (!cliente.id) return '';
+    const anonimizado = Boolean(cliente.anonimizadoEm);
+
+    return `<section class="panel" id="privacidade" style="margin-top:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Privacidade e dados do cliente</h2>
+                <div class="subtitle">Exporte os dados do titular ou remova os dados pessoais com trilha de auditoria</div>
+            </div>
+            ${anonimizado ? '<span class="badge warn">Anonimizado</span>' : '<span class="badge info">Ação protegida</span>'}
+        </div>
+        <div class="notice ${anonimizado ? 'warn' : ''}">
+            ${anonimizado
+        ? `Este cadastro foi anonimizado em ${escapar(formatarDataHoraBrasil(cliente.anonimizadoEm))}. Os registros financeiros mínimos continuam preservados.`
+        : 'Antes de exportar, confirme a identidade do titular. A anonimização é irreversível e substitui a exclusão direta para não quebrar pagamentos e auditorias.'}
+        </div>
+        <div class="fields" style="margin-top:16px;">
+            <form class="full" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/exportar">
+                <div class="fields">
+                    <label class="full" style="display:flex;gap:10px;align-items:center;">
+                        <input type="checkbox" name="titularConfirmado" value="1" required style="width:auto;">
+                        Confirmei a identidade da pessoa que solicitou os dados
+                    </label>
+                    ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required` })}
+                    <div style="align-self:end;"><button class="button secondary" type="submit">Exportar dados em JSON</button></div>
+                </div>
+            </form>
+            ${anonimizado ? '' : `<form class="full" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/anonimizar" onsubmit="return confirm('Anonimizar definitivamente os dados pessoais deste cliente? Esta operação não pode ser desfeita.');">
+                <div class="fields">
+                    ${areaTexto({ nome: 'motivo', label: 'Motivo da solicitação de anonimização', valor: '' })}
+                    ${campo({ nome: 'confirmacao', label: 'Digite ANONIMIZAR', valor: '', attrs: 'required autocomplete="off" pattern="ANONIMIZAR"' })}
+                    ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required` })}
+                    <div class="full"><button class="button danger" type="submit">Anonimizar dados pessoais</button></div>
+                </div>
+            </form>`}
+        </div>
+    </section>`;
 }
 
 function secaoTesteLiberado(cliente = {}, listas = {}) {
@@ -6082,7 +6133,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
         cliente.id ?secaoHistoricoUnificado(cliente, {}, paginacaoHistoricoUnificado) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
-        secaoNotasCliente(cliente, notas, paginacaoNotas)
+        secaoNotasCliente(cliente, notas, paginacaoNotas),
+        secaoPrivacidadeCliente(cliente)
     ].filter(Boolean).join('');
 
     return `${topoCliente}${formulario}${extras}`;
@@ -7063,9 +7115,7 @@ function tabelaClientes(clientes) {
                 <a class="button icon-only icon-action refresh" href="/clientes/${cliente.id}/editar#renovar" title="Renovar cliente">${icon('planos')}</a>
                 <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar#atendimentos" title="Abrir atendimento">${icon('atendimento')}</a>
                 <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar" title="Editar">${icon('edit')}</a>
-                <form method="post" action="/clientes/${cliente.id}/excluir" onsubmit="return confirm('Excluir este cliente?');">
-                    <button class="button icon-only icon-action" type="submit" title="Excluir">${icon('trash')}</button>
-                </form>
+                <a class="button icon-only icon-action" href="/clientes/${cliente.id}/editar#privacidade" title="Privacidade e anonimização">${icon('trash')}</a>
             </div>
         </td>
     </tr>`;
@@ -7913,6 +7963,7 @@ function painelSaudeRobo(status = {}) {
     const whatsapp = status.whatsapp || {};
     const saudeRobo = status.saudeRobo || {};
     const fila = status.filaMensagens || {};
+    const filaPersistente = fila.persistente || {};
     const risco = status.riscoWhatsApp || {};
     const verificacaoSaude = status.verificacaoSaudeWhatsApp || {};
     const recuperacaoWhatsApp = status.recuperacaoWhatsApp || {};
@@ -7946,7 +7997,7 @@ function painelSaudeRobo(status = {}) {
                 <tr><td><strong>Risco do WhatsApp</strong></td><td><span class="badge ${classeRisco}">${escapar(risco.nivel || 'baixo')}</span> ${escapar(risco.recomendacao || 'Operação normal.')}</td></tr>
                 <tr><td><strong>Diagnóstico da sessão</strong></td><td>${verificacaoSaude.verificadoEm ?`${verificacaoSaude.ok ?'Saudável' : 'Atenção'} (${escapar(verificacaoSaude.estado || '-')}) em ${escapar(formatarDataHoraCurta(verificacaoSaude.verificadoEm))}${verificacaoSaude.erro ?` &middot; ${escapar(verificacaoSaude.erro)}` : ''}` : 'Ainda não verificado pelo monitor'}</td></tr>
                 <tr><td><strong>Recuperação automática</strong></td><td>${recuperacaoWhatsApp.iniciadoEm ?`${escapar(recuperacaoWhatsApp.tipo || '-')}: ${escapar(recuperacaoWhatsApp.status || '-')}, ${escapar(formatarDataHoraCurta(recuperacaoWhatsApp.iniciadoEm))}${recuperacaoWhatsApp.motivo ?` &middot; ${escapar(recuperacaoWhatsApp.motivo)}` : ''}${recuperacaoWhatsApp.erro ?` &middot; erro: ${escapar(recuperacaoWhatsApp.erro)}` : ''}` : 'Nenhuma recuperação automática executada'}</td></tr>
-                <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} pendente(s)${fila.ultimoEnvioEm ?`, último envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
+                <tr><td><strong>Fila de mensagens</strong></td><td>${escapar(fila.pendentes || 0)} em memória &middot; ${escapar(filaPersistente.pendentes || 0)} aguardando retomada &middot; ${escapar(filaPersistente.incertos || 0)} exige(m) revisão &middot; ${escapar(filaPersistente.falhas || 0)} falha(s)${fila.ultimoEnvioEm ?`, último envio ${escapar(formatarDataHoraCurta(fila.ultimoEnvioEm))}` : ''}${fila.ultimoErro ?` &middot; erro: ${escapar(fila.ultimoErro)}` : ''}</td></tr>
                 <tr><td><strong>Última mensagem recebida</strong></td><td>${saudeRobo.ultimaMensagemRecebidaEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimaMensagemRecebidaEm))}${saudeRobo.ultimaMensagemRecebidaDe ?` de ${escapar(saudeRobo.ultimaMensagemRecebidaDe)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
                 <tr><td><strong>Última resposta do robô</strong></td><td>${saudeRobo.ultimoEnvioRoboEm ?`${escapar(formatarDataHoraCurta(saudeRobo.ultimoEnvioRoboEm))}${saudeRobo.ultimoEnvioRoboPara ?` para ${escapar(saudeRobo.ultimoEnvioRoboPara)}` : ''}` : 'Nenhuma desde o último início'}</td></tr>
                 <tr><td><strong>Mensagens recebidas</strong></td><td>${escapar(saudeRobo.mensagensRecebidasTotal || 0)} desde o último início</td></tr>
@@ -8380,6 +8431,10 @@ function telaManutencao(status = {}, opcoes = {}) {
             </label>
             ${campo({ nome: 'backupExternoPasta', label: 'Pasta externa de backup', valor: status.config?.backupExternoPasta || '', tipo: 'text', attrs: 'placeholder="C:\\BackupsJulianPlay ou \\\\servidor\\backups"' })}
             ${campo({ nome: 'backupExternoMaximo', label: 'Máximo de backups na cópia externa / Google Drive', valor: status.config?.backupExternoMaximo || '5', tipo: 'number', attrs: 'min="1" max="100" required' })}
+            <label class="check full">
+                <input type="checkbox" name="backupExternoForaComputador" value="1" ${String(status.config?.backupExternoForaComputador) === '1' ? 'checked' : ''}>
+                <span>Confirmo que esta pasta é sincronizada ou copiada para fora deste computador</span>
+            </label>
             ${campo({ nome: 'campanhaLimiteDiario', label: 'Máximo de clientes por campanha', valor: status.config?.campanhaLimiteDiario || '100', tipo: 'number', attrs: 'min="1" max="1000" required' })}
             ${campo({ nome: 'campanhaLimiteSemanalCliente', label: 'Máximo semanal por cliente', valor: status.config?.campanhaLimiteSemanalCliente || '1', tipo: 'number', attrs: 'min="1" max="20" required' })}
             ${campo({ nome: 'campanhaHoraInicio', label: 'Início do horário de campanhas', valor: status.config?.campanhaHoraInicio || '09:00', tipo: 'time', attrs: 'required' })}
@@ -8395,7 +8450,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
             ${campo({ nome: 'alertaMemoriaCriticaMb', label: 'Memória crítica abaixo de (MB)', valor: status.config?.alertaMemoriaCriticaMb || '512', tipo: 'number', attrs: 'min="128" max="32768" required' })}
-            <div class="notice full">A cópia externa deve apontar para outro disco ou para uma pasta sincronizada com a nuvem. Somente os backups mais recentes definidos acima são mantidos nesse destino; a retenção longa do disco de dados continua independente. No servidor, somente a instalação administradora envia alertas do host para evitar mensagens duplicadas.</div>
+            <div class="notice full"><strong>Situação:</strong> ${status.backupExterno?.protegidaContraPerdaDoComputador ? 'cópia fora do computador confirmada' : status.backupExterno?.volumeDiferente ? 'cópia em outro volume local; ainda falta confirmar sincronização externa' : 'sem proteção confirmada fora do computador'}. A cópia é validada novamente por SHA-256 e por abertura real do SQLite. Somente os backups mais recentes definidos acima são mantidos nesse destino; a retenção longa do disco de dados continua independente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -10849,8 +10904,10 @@ router.post('/manutencao/whatsapp/numero', async (req, res) => {
 });
 
 router.post('/clientes/:id/excluir', async (req, res) => {
-    await removerCliente(req.params.id);
-    res.redirect('/clientes/todos?mensagem=Cliente excluído');
+    res.redirect(montarUrlClienteMensagem(
+        req.params.id,
+        'A exclusao direta foi desativada. Use a area Privacidade para exportar ou anonimizar os dados com seguranca.'
+    ));
 });
 
 router.post('/clientes/verificar-renovacoes', async (req, res) => {

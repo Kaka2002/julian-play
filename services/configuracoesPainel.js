@@ -80,6 +80,7 @@ async function obterConfiguracoes() {
         backupExternoAtivo: '0',
         backupExternoPasta: '',
         backupExternoMaximo: '5',
+        backupExternoForaComputador: '0',
         ultimoBackupExterno: '',
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
@@ -347,6 +348,7 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     const backupExternoAtivo = dados.backupExternoAtivo ? '1' : '0';
     const backupExternoPasta = String(dados.backupExternoPasta || '').trim();
     const backupExternoMaximo = Math.max(1, Math.min(100, Number.parseInt(dados.backupExternoMaximo || 5, 10) || 5));
+    const backupExternoForaComputador = dados.backupExternoForaComputador ? '1' : '0';
     const campanhaLimiteDiario = Math.max(1, Math.min(1000, Number.parseInt(dados.campanhaLimiteDiario || 100, 10) || 100));
     const campanhaLimiteSemanalCliente = Math.max(1, Math.min(20, Number.parseInt(dados.campanhaLimiteSemanalCliente || 1, 10) || 1));
     const campanhaHoraInicio = String(dados.campanhaHoraInicio || '09:00').trim();
@@ -382,6 +384,7 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
     await salvarConfiguracao('backupExternoAtivo', backupExternoAtivo);
     await salvarConfiguracao('backupExternoPasta', backupExternoPasta);
     await salvarConfiguracao('backupExternoMaximo', String(backupExternoMaximo));
+    await salvarConfiguracao('backupExternoForaComputador', backupExternoForaComputador);
     await salvarConfiguracao('campanhaLimiteDiario', String(campanhaLimiteDiario));
     await salvarConfiguracao('campanhaLimiteSemanalCliente', String(campanhaLimiteSemanalCliente));
     await salvarConfiguracao('campanhaHoraInicio', campanhaHoraInicio);

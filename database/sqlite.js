@@ -54,6 +54,8 @@ db.serialize(() => {
             whatsappMarketingConsentimento INTEGER DEFAULT 0,
             whatsappMarketingConsentidoEm TEXT,
             whatsappOptOutEm TEXT,
+            anonimizadoEm TEXT,
+            exclusaoSolicitadaEm TEXT,
             dataCadastro DATETIME DEFAULT CURRENT_TIMESTAMP,
             atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -163,6 +165,44 @@ db.serialize(() => {
         )
     `);
     db.run('CREATE INDEX IF NOT EXISTS idx_renovacoes_painel_status ON renovacoes_painel_fila(status, proximaTentativaEm)');
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS mensagens_saida_fila (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            protocolo TEXT NOT NULL UNIQUE,
+            tipo TEXT NOT NULL DEFAULT 'texto',
+            destino TEXT NOT NULL,
+            payloadProtegido TEXT NOT NULL,
+            descricao TEXT,
+            opcoes TEXT,
+            status TEXT NOT NULL DEFAULT 'pendente',
+            tentativas INTEGER NOT NULL DEFAULT 0,
+            maxTentativas INTEGER NOT NULL DEFAULT 5,
+            proximaTentativaEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            iniciadoEm DATETIME,
+            concluidoEm DATETIME,
+            mensagemId TEXT,
+            erro TEXT,
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_mensagens_saida_fila_status ON mensagens_saida_fila(status, proximaTentativaEm, id)');
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS solicitacoes_privacidade (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clienteId INTEGER NOT NULL,
+            tipo TEXT NOT NULL,
+            motivo TEXT,
+            responsavel TEXT,
+            resumo TEXT,
+            status TEXT NOT NULL DEFAULT 'concluida',
+            criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(clienteId) REFERENCES clientes(id) ON DELETE RESTRICT
+        )
+    `);
+    db.run('CREATE INDEX IF NOT EXISTS idx_solicitacoes_privacidade_cliente ON solicitacoes_privacidade(clienteId, criadoEm DESC)');
 
     db.run(`
         CREATE TABLE IF NOT EXISTS avisos_renovacao (
@@ -418,6 +458,8 @@ db.serialize(() => {
         status: "TEXT DEFAULT 'teste'",
         ultimoAvisoRenovacao: 'TEXT',
         ultimoAvisoAniversario: 'TEXT',
+        anonimizadoEm: 'TEXT',
+        exclusaoSolicitadaEm: 'TEXT',
         atualizadoEm: 'DATETIME DEFAULT CURRENT_TIMESTAMP'
     };
 
@@ -664,5 +706,14 @@ function migrarTelefoneDuplicado(done) {
 db.ready = ready;
 db.dbPath = dbPath;
 db.dataDir = DATA_DIR;
+let encerramento = null;
+db.encerrar = function encerrarBanco() {
+    if (!encerramento) {
+        encerramento = db.ready.then(() => new Promise((resolve, reject) => {
+            db.close(err => err ? reject(err) : resolve());
+        }));
+    }
+    return encerramento;
+};
 
 module.exports = db;

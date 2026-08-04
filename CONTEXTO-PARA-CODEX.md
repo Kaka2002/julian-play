@@ -9,6 +9,14 @@ Este arquivo fica no repositório para sobreviver à exclusão de
 
 Não registrar aqui senhas, tokens, chaves PIX, cookies ou credenciais.
 
+## Fonte de verdade operacional em 04/08/2026
+
+O ambiente de produção atual e o procedimento de recuperação estão consolidados
+em `docs/ESTADO-OPERACIONAL-ATUAL.md` e
+`docs/RECUPERACAO-E-CONTINGENCIA.md`. Em caso de conflito, esses documentos
+prevalecem sobre os marcos históricos abaixo. A produção está no computador
+`Julianelli-CP`; o VPS antigo permanece parado e não deve receber deploy.
+
 ## Objetivo do sistema
 
 O Julian Play é um sistema de administração de clientes, automação de
@@ -813,7 +821,38 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   vazios e precisam ser informados explicitamente; instalacoes existentes nao
   sao alteradas.
 - Publicacao operacional de 04/08/2026: a correcao foi enviada no commit
-  `0b7ebbf` e o painel administrador na porta 10001 carregou o codigo novo. O
-  processo do Painel Mestre na porta 9000 permaneceu com o codigo anterior
-  porque o Windows negou acesso ao canal do PM2 e ao encerramento do PID; ele
-  precisa de `pm2 restart julian-master` em PowerShell aberto como Administrador.
+  `0b7ebbf`. Durante o reinicio, uma tentativa de `npm ci` deixou `node_modules`
+  incompleto e o Painel Mestre entrou em reinicio continuo por falta do modulo
+  `express`, causando 502 temporario. As dependencias foram restauradas com
+  `npm install --omit=dev`; as portas 9000 e 10001 e os enderecos publicos
+  `gestao.julianplay.com.br` e `painel.julianplay.com.br` voltaram a responder
+  HTTP 200 e servem o codigo novo. Bancos e sessoes do WhatsApp nao foram
+  alterados.
+- A versao 1.3.0 consolida as prioridades operacionais. O deploy prepara e
+  testa a release em diretorio temporario, fecha os bancos, cria copias
+  verificadas do administrador, Painel Mestre e clientes, troca dependencias
+  de forma atomica, exige `/ready` na versao esperada e faz rollback automatico
+  do codigo e de `node_modules` em caso de falha. O PM2 aguarda sinal de
+  prontidao e encerra HTTP, WhatsApp e SQLite de forma graciosa; somente os
+  processos antes online retornam, e AMPLAYTV permanece parada.
+- O monitoramento publico de `painel` e `gestao` roda fora do computador pelo
+  GitHub Actions a cada 15 minutos. `/live` e `/ready` sao minimos; `/health`
+  detalhado fica restrito a chamadas locais para nao publicar numeros e
+  contatos do WhatsApp.
+- A copia externa de backup agora e reaberta como SQLite, comparada por
+  SHA-256 e usada preferencialmente no exercicio mensal de restauracao. A
+  interface distingue outro disco de uma copia confirmada fora do computador.
+- Mensagens proativas passam por uma fila persistente cifrada. Pendencias que
+  ainda nao iniciaram sao retomadas; uma interrupcao durante o envio vira
+  estado `incerto` para revisao manual, pois repetir automaticamente poderia
+  duplicar uma mensagem que o WhatsApp recebeu antes da queda.
+- A exclusao direta de clientes foi desativada. A area Privacidade exige senha
+  atual, confirmacao do titular para exportar JSON e confirmacao literal para
+  anonimizar. Dados pessoais e textos livres sao removidos em transacao;
+  registros financeiros minimos e a trilha da solicitacao permanecem.
+- O estado atual e os procedimentos de desastre foram consolidados em
+  `docs/ESTADO-OPERACIONAL-ATUAL.md` e
+  `docs/RECUPERACAO-E-CONTINGENCIA.md`.
+- O runtime SQLite foi atualizado para `sqlite3` 6.0.1. A atualizacao foi
+  validada em release isolada com 71 testes unitarios e 7 testes de navegador;
+  `npm audit --omit=dev` passou sem vulnerabilidades conhecidas em 04/08/2026.

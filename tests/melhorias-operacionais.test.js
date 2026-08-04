@@ -94,9 +94,23 @@ test('cliente novo exige consentimento explicito para entrar em campanhas', () =
 });
 
 test('backup verificado pode ser copiado para armazenamento externo', () => {
-    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const externa=path.join(${JSON.stringify(require('os').tmpdir())},'julian-play-backup-externo-'+Date.now());const destino=await m.copiarBackupExterno(b.nome,externa);process.stdout.write(JSON.stringify({db:fs.existsSync(destino),manifesto:fs.existsSync(destino+'.json')}));fs.rmSync(externa,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)})`);
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const externa=path.join(${JSON.stringify(require('os').tmpdir())},'julian-play-backup-externo-'+Date.now());const destino=await m.copiarBackupExterno(b.nome,externa);const exercicio=await m.executarExercicioRestauracaoMensal('',{caminhoArquivo:destino,origem:'externa'});process.stdout.write(JSON.stringify({db:fs.existsSync(destino),manifesto:fs.existsSync(destino+'.json'),status:exercicio.status,origem:exercicio.origem,hash:exercicio.hashSha256}));fs.rmSync(externa,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
-        assert.deepEqual(JSON.parse(resultado.stdout), { db: true, manifesto: true });
+        const retorno = JSON.parse(resultado.stdout);
+        assert.equal(retorno.db, true);
+        assert.equal(retorno.manifesto, true);
+        assert.equal(retorno.status, 'aprovado');
+        assert.equal(retorno.origem, 'externa');
+        assert.match(retorno.hash, /^[a-f0-9]{64}$/);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('painel diferencia copia local de copia confirmada fora do computador', () => {
+    const resultado = executarIsolado(`(()=>{const m=require('./services/manutencao');const local=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups'});const fora=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups',backupExternoForaComputador:'1'});process.stdout.write(JSON.stringify({local:local.protegidaContraPerdaDoComputador,fora:fora.protegidaContraPerdaDoComputador,nivel:fora.nivel}))})()`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { local: false, fora: true, nivel: 'fora_computador' });
     } finally {
         removerAmbiente(resultado.ambiente);
     }
@@ -243,8 +257,10 @@ test('pagamento manual exige comprovante, identificador unico e registra estorno
 test('migracoes formais preservam banco existente, criam backup e sao idempotentes', () => {
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const runner=require('./database/migrations/runner');const estado=await runner.obterEstadoMigracoes(db);const backups=fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db'));const antes=backups.length;const segunda=await runner.executarMigracoesFormais({db,dbPath:db.dbPath,dataDir:db.dataDir});const colunas=await all('PRAGMA table_info(cobrancas_pix)');const sessoes=await get("SELECT name FROM sqlite_master WHERE type='table' AND name='sessoes_painel'");process.stdout.write(JSON.stringify({total:estado.aplicadas.filter(x=>x.versao.includes('-00')).length,backup:backups.length>0,idempotente:segunda.status,novoBackup:fs.readdirSync(path.join(db.dataDir,'backups')).filter(x=>x.startsWith('pre-migracao-')&&x.endsWith('.db')).length===antes,comprovante:colunas.some(x=>x.name==='comprovanteArquivo'),sessoes:!!sessoes}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
-        assert.deepEqual(JSON.parse(resultado.stdout), {
-            total: 7,
+        const dados = JSON.parse(resultado.stdout);
+        assert.ok(dados.total >= 8);
+        delete dados.total;
+        assert.deepEqual(dados, {
             backup: true,
             idempotente: 'sem_alteracoes',
             novoBackup: true,

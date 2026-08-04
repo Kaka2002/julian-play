@@ -4,6 +4,7 @@ const path = require('path');
 const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');
+const privacidadeRoute = require('./routes/privacidadeRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
 const criarCampanhasRoute = require('./routes/campanhasRoute');
 const licencaRoute = require('./routes/licencaRoute');
@@ -25,6 +26,14 @@ const { protegerLicenca } = require('./services/licencaService');
 const { csrfMiddleware, cabecalhosSeguranca } = require('./services/securityService');
 const { middlewareCorrelacao, compararVersoes } = require('./services/observabilidadeService');
 const packageInfo = require('./package.json');
+const bancoAplicacao = require('./database/sqlite');
+const { MessageMedia } = require('whatsapp-web.js');
+const { configurarExecutorFilaPersistente } = require('./services/filaMensagensService');
+
+let bancoPronto = false;
+bancoAplicacao.ready.then(() => { bancoPronto = true; }).catch(err => {
+    console.error('Banco nao ficou pronto:', err.message);
+});
 
 process.on('unhandledRejection', (err) => {
     const mensagem = err && err.message ? err.message : String(err);
@@ -111,10 +120,41 @@ app.use('/', authRoute);
 app.use('/api/admin', adminInternoRoute);
 app.use('/', webhookRoute);
 
+app.get('/live', (req, res) => res.status(200).json({
+    ok: true,
+    service: 'julian-play',
+    version: packageInfo.version,
+    timestamp: new Date().toISOString()
+}));
+
+app.get('/ready', (req, res) => res.status(bancoPronto ? 200 : 503).json({
+    ok: bancoPronto,
+    ready: bancoPronto,
+    service: 'julian-play',
+    version: packageInfo.version,
+    timestamp: new Date().toISOString()
+}));
+
 app.get('/health', (req, res) => {
     const whatsapp = getStatusWhatsApp();
     const memoria = process.memoryUsage();
     const recursos = medirRecursosOperacionais();
+    const enderecoRemoto = String(req.socket?.remoteAddress || '');
+    const origemLocal = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(enderecoRemoto);
+    const requisicaoPassouPorProxyPublico = Boolean(
+        !origemLocal || req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for']
+    );
+    if (requisicaoPassouPorProxyPublico) {
+        return res.status(200).json({
+            ok: true,
+            estado: whatsapp.conectado ? 'operacional' : 'degradado',
+            service: 'julian-play',
+            version: packageInfo.version,
+            whatsapp: { conectado: Boolean(whatsapp.conectado), status: whatsapp.status },
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString()
+        });
+    }
     res.status(200).json({
         ok: true,
         estado: whatsapp.conectado ? 'operacional' : 'degradado',
@@ -157,17 +197,35 @@ app.use('/campanhas', criarCampanhasRoute({
     renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
 }));
 app.use('/licenca', licencaRoute);
+app.use('/', privacidadeRoute);
 app.use('/', clientesRoute);
 app.use('/', qrRoute);
 
 const PORT = process.env.PORT || 10000;
 const whatsappDesativado = process.env.DISABLE_WHATSAPP === '1';
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
     console.log(`Monitor na porta ${PORT}`);
+    await bancoAplicacao.ready;
+    if (typeof process.send === 'function') process.send('ready');
     if (whatsappDesativado) {
         console.log('WhatsApp e agendadores desativados neste processo.');
     } else {
+        configurarExecutorFilaPersistente(async payload => {
+            const clienteWhatsapp = getClient();
+            if (!clienteWhatsapp || !getStatusWhatsApp().conectado) {
+                throw new Error('WhatsApp ainda nao esta conectado para retomar a fila.');
+            }
+            if (payload.tipo === 'midia') {
+                const media = new MessageMedia(
+                    String(payload.midia.mimetype || 'application/octet-stream'),
+                    String(payload.midia.data || ''),
+                    String(payload.midia.filename || 'arquivo')
+                );
+                return clienteWhatsapp.sendMessage(payload.destino, media, payload.opcoesMensagem || {});
+            }
+            return clienteWhatsapp.sendMessage(payload.destino, payload.texto);
+        });
         iniciarWhatsApp();
         iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
         iniciarMonitoramentoComercial({
@@ -189,13 +247,30 @@ server.on('error', (err) => {
     process.exit(1);
 });
 
+let desligamentoEmAndamento = false;
+
 async function desligar(signal) {
+    if (desligamentoEmAndamento) return;
+    desligamentoEmAndamento = true;
     console.log(`Recebido ${signal}. Encerrando WhatsApp...`);
-    if (!whatsappDesativado) await encerrarWhatsApp();
-    liberarTravaProcesso();
-    process.exit(0);
+    const limite = setTimeout(() => process.exit(1), 25000);
+    limite.unref();
+    try {
+        await new Promise(resolve => server.close(resolve));
+        if (!whatsappDesativado) await encerrarWhatsApp();
+        await bancoAplicacao.encerrar();
+        liberarTravaProcesso();
+        process.exit(0);
+    } catch (err) {
+        console.error('Falha durante encerramento controlado:', err.message);
+        liberarTravaProcesso();
+        process.exit(1);
+    }
 }
 
 process.on('SIGTERM', () => desligar('SIGTERM'));
 process.on('SIGINT', () => desligar('SIGINT'));
+process.on('message', mensagem => {
+    if (mensagem === 'shutdown') desligar('shutdown do PM2');
+});
 process.on('exit', liberarTravaProcesso);

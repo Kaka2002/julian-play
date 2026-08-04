@@ -1,0 +1,57 @@
+name: Monitoramento publico Julian Play
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disponibilidade:
+    name: Verificar ${{ matrix.servico }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - servico: Painel
+            url: https://painel.julianplay.com.br/ready
+            esperado: julian-play
+          - servico: Gestao
+            url: https://gestao.julianplay.com.br/ready
+            esperado: julian-master
+
+    steps:
+      - name: Consultar prontidao fora do computador de producao
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $resposta = Invoke-RestMethod -Uri '${{ matrix.url }}' -TimeoutSec 20
+          if (-not $resposta.ok -or -not $resposta.ready) {
+            throw 'O servico respondeu, mas declarou que nao esta pronto.'
+          }
+          if ([string]$resposta.service -ne '${{ matrix.esperado }}') {
+            throw "Servico inesperado: $($resposta.service)"
+          }
+          Write-Host "${{ matrix.servico }} disponivel na versao $($resposta.version)."
+
+      - name: Enviar alerta opcional quando falhar
+        if: failure()
+        continue-on-error: true
+        shell: pwsh
+        env:
+          MONITOR_ALERT_WEBHOOK: ${{ secrets.MONITOR_ALERT_WEBHOOK }}
+        run: |
+          if (-not $env:MONITOR_ALERT_WEBHOOK) {
+            Write-Host 'Secret MONITOR_ALERT_WEBHOOK nao configurado; a falha permanecera visivel no GitHub Actions.'
+            exit 0
+          }
+          $corpo = @{
+            content = "ALERTA: ${{ matrix.servico }} nao passou no monitoramento publico. Consulte o GitHub Actions."
+            tipo = 'monitoramento_publico'
+            nivel = 'erro'
+          } | ConvertTo-Json
+          Invoke-RestMethod -Method Post -Uri $env:MONITOR_ALERT_WEBHOOK -ContentType 'application/json' -Body $corpo -TimeoutSec 20

@@ -407,7 +407,15 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
             enfileirarEnvio(
                 () => client.sendMessage(destino, media, { caption }),
                 `Envio do QR Code PIX ${planoPix.nome}`,
-                { proativo: Boolean(options.proativo) }
+                {
+                    proativo: Boolean(options.proativo),
+                    persistencia: options.proativo ? {
+                        tipo: 'midia',
+                        destino,
+                        midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
+                        opcoesMensagem: { caption }
+                    } : undefined
+                }
             ),
             ENVIO_TIMEOUT_MS,
             'Envio do QR Code PIX'
