@@ -19,6 +19,10 @@ test('protege o painel sem autenticação', async ({ page }) => {
     await page.goto('/clientes');
     await expect(page).toHaveURL(/\/login\?next=/);
     await expect(page.getByRole('button', { name: 'Acessar painel' })).toBeVisible();
+    await expect(page.getByLabel('Usuário')).toHaveAttribute('autocomplete', 'username');
+    await expect(page.getByLabel('Senha', { exact: true })).toHaveAttribute('autocomplete', 'current-password');
+    await expect(page.getByLabel('Usuário')).not.toHaveAttribute('data-lpignore', 'true');
+    await expect(page.getByLabel('Senha', { exact: true })).not.toHaveAttribute('data-lpignore', 'true');
 });
 
 test('painel autenticado não exibe Hoje nem barra horizontal no menu', async ({ page }) => {
@@ -65,6 +69,18 @@ test('manutencao exibe controles independentes para o robo', async ({ page }) =>
     await expect(page.getByLabel('Robô responder mensagens recebidas')).toHaveValue('1');
     await expect(page.getByLabel('Robô enviar mensagens do painel e avisos automáticos')).toHaveValue('1');
     await expect(page.getByText(/o robô fica dormindo/)).toBeVisible();
+});
+
+test('manutencao mantem senhas e WhatsApp opcional sem preenchimento indevido', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/manutencao');
+
+    await expect(page.getByLabel('Usuário do painel')).toHaveValue('admin');
+    await expect(page.getByLabel('Nova senha', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Confirmar nova senha', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Senha atual para confirmar a alteração')).toHaveValue('');
+    await expect(page.getByLabel('WhatsApp de controle para alertas (opcional)')).toHaveValue('');
+    await expect(page.getByLabel('WhatsApp de controle para alertas (opcional)')).toHaveAttribute('data-autofill-empty', 'true');
 });
 
 test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {

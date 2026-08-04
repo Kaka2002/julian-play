@@ -801,3 +801,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   Campanhas repetidas no mesmo dia sao diferenciadas na lista e no cabecalho
   por numero da execucao, data e horario; cada link abre somente os clientes
   associados ao respectivo ID de campanha.
+- A versao 1.2.24 reforca o bloqueio de preenchimento automatico nos campos
+  sensiveis da Manutencao. Senhas de confirmacao, senha do kit e pasta de copia
+  externa sempre abrem vazias; o WhatsApp de controle tambem permanece vazio
+  quando ainda nao foi configurado, sem receber por engano o usuario salvo no
+  navegador. O usuario de acesso exibido continua sendo o valor real gravado.
+  O preenchimento automatico permanece permitido somente na pagina de login;
+  nas demais paginas, todo campo de senha e protegido e aberto vazio.

@@ -2736,6 +2736,8 @@ function areaTexto({ nome, label, valor = '' }) {
     </label>`;
 }
 
+const ATRIBUTOS_CAMPO_SEMPRE_VAZIO = 'autocomplete="off" data-autofill-empty="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other"';
+
 function normalizarTagsTela(valor) {
     if (Array.isArray(valor)) return valor.map(String).map(item => item.trim()).filter(Boolean);
     return String(valor || '').split(',').map(item => item.trim()).filter(Boolean);
@@ -8174,11 +8176,11 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <div class="subtitle">Salve o usuário e a senha no banco para não perder ao reiniciar o PM2</div>
             </div>
         </div>
-        <form class="fields" method="post" action="/manutencao/acesso" style="padding-top:0;">
-            ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="username"' })}
-            ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Deixe em branco para manter a atual"' })}
-            ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: 'autocomplete="new-password" placeholder="Repita a nova senha"' })}
-            ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual para confirmar a alteração', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
+        <form class="fields" method="post" action="/manutencao/acesso" autocomplete="off" data-form-type="other" style="padding-top:0;">
+            ${campo({ nome: 'painelUsuario', label: 'Usuário do painel', valor: status.config?.painelUsuario || 'admin', attrs: 'required autocomplete="off" data-1p-ignore="true" data-bwignore="true"' })}
+            ${campo({ nome: 'painelSenha', label: 'Nova senha', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} placeholder="Deixe em branco para manter a atual"` })}
+            ${campo({ nome: 'painelConfirmarSenha', label: 'Confirmar nova senha', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} placeholder="Repita a nova senha"` })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual para confirmar a alteração', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required` })}
             <div class="notice full">Depois de alterar, faça login novamente com o novo acesso.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar acesso</button>
@@ -8387,8 +8389,8 @@ function telaManutencao(status = {}, opcoes = {}) {
             <label class="check"><input type="checkbox" name="campanhaSomenteDiasUteis" ${status.config?.campanhaSomenteDiasUteis !== '0' ? 'checked' : ''}> Enviar campanhas somente em dias úteis</label>
             ${campo({ nome: 'alertaWhatsAppMinutos', label: 'Alertar após desconectado por minutos', valor: status.config?.alertaWhatsAppMinutos || '5', tipo: 'number', attrs: 'min="1" max="1440" required' })}
             ${campo({ nome: 'alertaWebhookUrl', label: 'Webhook HTTPS para alertas (opcional)', valor: status.config?.alertaWebhookUrl || '', tipo: 'url', attrs: 'placeholder="https://..."' })}
-            ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: 'placeholder="5511999999999"' })}
-            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: 'autocomplete="current-password" required' })}
+            ${campo({ nome: 'alertaWhatsappControle', label: 'WhatsApp de controle para alertas (opcional)', valor: status.config?.alertaWhatsappControle || '', tipo: 'tel', attrs: `${status.config?.alertaWhatsappControle ? 'autocomplete="off" data-1p-ignore="true" data-bwignore="true"' : ATRIBUTOS_CAMPO_SEMPRE_VAZIO} inputmode="numeric" placeholder="5511999999999"` })}
+            ${campo({ nome: 'senhaConfirmacao', label: 'Confirme sua senha atual', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required` })}
             ${campo({ nome: 'alertaDiscoAtencaoGb', label: 'Disco em atenção abaixo de (GB)', valor: status.config?.alertaDiscoAtencaoGb || '8', tipo: 'number', attrs: 'min="2" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
@@ -8410,8 +8412,8 @@ function telaManutencao(status = {}, opcoes = {}) {
             <form method="post" action="/manutencao/backup">
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
             </form>
-            <form method="post" action="/manutencao/backups/testar-restauracao">
-                <input type="password" name="senhaConfirmacao" required placeholder="Senha atual">
+            <form method="post" action="/manutencao/backups/testar-restauracao" autocomplete="off" data-form-type="other">
+                <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual">
                 <button class="button secondary" type="submit">Testar restauração agora</button>
             </form>
         </div>
@@ -8471,17 +8473,17 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <td>${escapar(backup.tamanhoFormatado)}</td>
                     <td>${escapar(formatarDataHoraCurta(backup.criadoEm.toISOString()))}</td>
                     ${manutencaoRestrita ?'' : `<td>
-                        <form method="post" action="/manutencao/restaurar" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
+                        <form method="post" action="/manutencao/restaurar" autocomplete="off" data-form-type="other" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
-                            <input type="password" name="senhaConfirmacao" autocomplete="current-password" required placeholder="Senha atual" style="max-width:180px;">
+                            <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:180px;">
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
                         <div class="subtitle" style="margin-top:8px;">Integridade: ${escapar(backup.integridade)} · teste: ${escapar(backup.restauracaoTeste)}${backup.hashSha256 ?` · SHA-256 ${escapar(backup.hashSha256.slice(0,12))}…`:''}</div>
-                        <form method="post" action="/manutencao/backups/exportar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" minlength="10" required placeholder="Senha exclusiva do kit"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar kit de recuperação</button>
+                        <form method="post" action="/manutencao/backups/exportar" autocomplete="off" data-form-type="other" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} minlength="10" required placeholder="Senha exclusiva do kit"><input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar kit de recuperação</button>
                         </form>
-                        <form method="post" action="/manutencao/backups/copiar" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" required placeholder="D:\Backups ou unidade de rede"><input type="password" name="senhaConfirmacao" required placeholder="Senha atual"><button class="button secondary" type="submit">Copiar externamente</button>
+                        <form method="post" action="/manutencao/backups/copiar" autocomplete="off" data-form-type="other" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="D:\Backups ou unidade de rede"><input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"><button class="button secondary" type="submit">Copiar externamente</button>
                         </form>
                     </td>`}
                 </tr>`).join('')}
