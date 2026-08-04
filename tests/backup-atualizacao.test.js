@@ -60,10 +60,12 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
 test('deploy prepara e testa a versao antes da parada e possui rollback automatico',()=>{
  const atualizar=fs.readFileSync(path.join(repoRoot,'update-windows.ps1'),'utf8');
  const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');
+ const normalizador=path.join(repoRoot,'scripts','normalizar-pm2-jlist.js');
  const indicePreparar=atualizar.indexOf('$pastaRelease = PrepararRelease');
  const indiceParar=atualizar.indexOf("Etapa 'Parando somente os processos que estavam online'");
  assert.ok(indicePreparar>=0&&indiceParar>indicePreparar,'a versao candidata deve ser aprovada antes de parar producao');
- assert.match(atualizar,/git\.Source diff[\s\S]*package\.json package-lock\.json/);
+ assert.match(atualizar,/\$dependenciasAlteradas = -not \$PularDependencias/);
+ assert.doesNotMatch(atualizar,/git\.Source diff[\s\S]*package\.json package-lock\.json/);
  assert.match(atualizar,/Argumentos\s+@\('ci',\s*'--omit=dev'\)/);
  assert.match(atualizar,/Argumentos\s+@\('test'\)/);
  assert.match(atualizar,/estavaOnline/);
@@ -75,6 +77,9 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/configMaster\.dataDir[\s\S]*master\.db/);
  assert.match(atualizar,/verificar-banco-sqlite\.js/);
  assert.match(atualizar,/CalcularSha256Arquivo/);
+ assert.match(atualizar,/normalizar-pm2-jlist\.js/);
+ assert.match(atualizar,/ObterListaPm2 \$pm2 \$node/);
+ assert.ok(fs.existsSync(normalizador));
  const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\r?\n}/)?.[0]||'';
  assert.match(selecaoProcessos,/AdicionarProcessoJulian \$nomes \$nomePrincipal/);
  assert.match(selecaoProcessos,/configMaster\.clientsDir/);
@@ -84,6 +89,26 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.doesNotMatch(atualizar,/\$env:JULIAN_PLAY_DATA_DIR = \$PastaDados/);
  assert.match(deploy,/update-windows\.ps1/);
  assert.doesNotMatch(deploy,/git\.Source pull|npm\s+ci/);
+});
+
+test('lista do PM2 aceita chaves de ambiente que diferem somente por maiusculas',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-pm2-json-'));
+ try{
+  const entrada=path.join(raiz,'jlist.json');
+  fs.writeFileSync(entrada,JSON.stringify([{
+   name:'julian-play-admin',
+   username:'minusculo',
+   USERNAME:'maiusculo',
+   pm2_env:{status:'online',PORT:'10001',segredo:'nao-exportar',env:{PORT:'9999'}}
+  }]));
+  const resultado=spawnSync(process.execPath,[path.join(repoRoot,'scripts','normalizar-pm2-jlist.js'),entrada],{encoding:'utf8'});
+  assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
+  assert.deepEqual(JSON.parse(resultado.stdout),[{
+   name:'julian-play-admin',
+   pm2_env:{status:'online',PORT:'10001'}
+  }]);
+  assert.doesNotMatch(resultado.stdout,/username|maiusculo|segredo|nao-exportar/);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 
 test('PM2 aguarda prontidao e encerra processos por mensagem no Windows',()=>{

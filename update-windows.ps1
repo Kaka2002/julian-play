@@ -75,19 +75,32 @@ function AdicionarProcessoJulian([System.Collections.Generic.List[string]]$lista
     }
 }
 
-function ObterListaPm2($pm2) {
+function ObterListaPm2($pm2, $node) {
     $saida = (& $pm2.Source jlist --silent 2>$null) -join "`n"
     if ($LASTEXITCODE -ne 0) {
         throw 'Nao foi possivel consultar o daemon PM2 configurado.'
     }
-    $inicioJson = $saida.IndexOf('[')
-    if ($inicioJson -lt 0) {
-        throw 'O PM2 retornou uma lista de processos invalida.'
+
+    # O ambiente do Windows pode conter, ao mesmo tempo, chaves como username
+    # e USERNAME. Elas sao validas em JSON, mas o ConvertFrom-Json do Windows
+    # PowerShell 5.1 as considera duplicadas. O Node normaliza somente os quatro
+    # campos usados pelo deploy e nunca devolve segredos do ambiente do PM2.
+    $normalizador = Join-Path $diretorioProjeto 'scripts\normalizar-pm2-jlist.js'
+    if (-not (Test-Path -LiteralPath $normalizador -PathType Leaf)) {
+        throw "Normalizador da lista do PM2 nao encontrado: $normalizador"
     }
+    $arquivoTemporario = Join-Path ([IO.Path]::GetTempPath()) ("julian-pm2-{0}.json" -f ([guid]::NewGuid().ToString('N')))
     try {
-        return @($saida.Substring($inicioJson) | ConvertFrom-Json)
-    } catch {
-        throw "O PM2 retornou JSON invalido: $($_.Exception.Message)"
+        [IO.File]::WriteAllText($arquivoTemporario, $saida, (New-Object Text.UTF8Encoding($false)))
+        $saidaNormalizada = (& $node.Source $normalizador $arquivoTemporario 2>&1) -join "`n"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Nao foi possivel normalizar a lista do PM2: $saidaNormalizada"
+        }
+        return @($saidaNormalizada | ConvertFrom-Json)
+    } finally {
+        if (Test-Path -LiteralPath $arquivoTemporario) {
+            Remove-Item -LiteralPath $arquivoTemporario -Force
+        }
     }
 }
 
@@ -111,9 +124,9 @@ function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     return @($nomes)
 }
 
-function ObterEstadoProcessos($pm2, [string[]]$nomes) {
+function ObterEstadoProcessos($pm2, $node, [string[]]$nomes) {
     $porNome = @{}
-    foreach ($item in (ObterListaPm2 $pm2)) {
+    foreach ($item in (ObterListaPm2 $pm2 $node)) {
         if ($item.name -notin $nomes) { continue }
         $porta = 0
         [void][int]::TryParse([string]$item.pm2_env.PORT, [ref]$porta)
@@ -331,13 +344,13 @@ function IniciarProcessosAnteriores($pm2, $estados) {
     }
 }
 
-function AguardarSaude($pm2, $estados, [string]$versaoEsperada) {
+function AguardarSaude($pm2, $node, $estados, [string]$versaoEsperada) {
     $limite = (Get-Date).AddSeconds([Math]::Max(30, $TempoSaudeSegundos))
     $pendentes = @($estados.Values | Where-Object {
         $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados
     })
     do {
-        $listaAtual = ObterListaPm2 $pm2
+        $listaAtual = ObterListaPm2 $pm2 $node
         $falhas = [System.Collections.Generic.List[string]]::new()
         foreach ($estado in $pendentes) {
             $pm2Atual = $listaAtual | Where-Object { $_.name -eq $estado.nome } | Select-Object -First 1
@@ -389,7 +402,7 @@ foreach ($processoAdicional in $ProcessosParaManterParados) {
     AdicionarProcessoJulian $listaProcessosJulian $processoAdicional
 }
 $processosJulian = $listaProcessosJulian.ToArray()
-$estadosAntes = ObterEstadoProcessos $pm2 $processosJulian
+$estadosAntes = ObterEstadoProcessos $pm2 $node $processosJulian
 $commitAntesAtualizacao = (& $git.Source rev-parse HEAD).Trim()
 $commitAlvo = $commitAntesAtualizacao
 $dependenciasAlteradas = -not $PularDependencias
@@ -409,8 +422,6 @@ if (-not $PularGit) {
     ExecutarComando -Comando $git -Argumentos @('fetch', 'origin', 'main') -MensagemErro 'git fetch falhou.' -Diretorio $diretorioProjeto
     $commitAlvo = (& $git.Source rev-parse 'origin/main').Trim()
     if (-not $commitAlvo) { throw 'Nao foi possivel identificar origin/main.' }
-    $arquivosDependencia = @(& $git.Source diff --name-only $commitAntesAtualizacao $commitAlvo -- package.json package-lock.json)
-    $dependenciasAlteradas = $arquivosDependencia.Count -gt 0
 }
 
 try {
@@ -461,7 +472,7 @@ try {
     Etapa 'Iniciando a versao validada'
     IniciarProcessosAnteriores $pm2 $estadosAntes
     $versaoEsperada = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
-    AguardarSaude $pm2 $estadosAntes $versaoEsperada
+    AguardarSaude $pm2 $node $estadosAntes $versaoEsperada
     & $pm2.Source save --force
     if ($LASTEXITCODE -ne 0) { throw 'Nao foi possivel salvar o estado aprovado do PM2.' }
 
@@ -495,7 +506,7 @@ try {
             }
             IniciarProcessosAnteriores $pm2 $estadosAntes
             $versaoAnterior = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
-            AguardarSaude $pm2 $estadosAntes $versaoAnterior
+            AguardarSaude $pm2 $node $estadosAntes $versaoAnterior
             & $pm2.Source save --force
             Write-Warning "Rollback confirmado no commit $commitAntesAtualizacao."
         } catch {

@@ -854,5 +854,12 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `docs/ESTADO-OPERACIONAL-ATUAL.md` e
   `docs/RECUPERACAO-E-CONTINGENCIA.md`.
 - O runtime SQLite foi atualizado para `sqlite3` 6.0.1. A atualizacao foi
-  validada em release isolada com 71 testes unitarios e 7 testes de navegador;
+  validada em release isolada com 72 testes unitarios e 7 testes de navegador;
   `npm audit --omit=dev` passou sem vulnerabilidades conhecidas em 04/08/2026.
+- A versao 1.3.1 corrige a leitura de `pm2 jlist` no Windows PowerShell 5.1.
+  O ambiente real continha as chaves validas `username` e `USERNAME`, que o
+  `ConvertFrom-Json` considerava duplicadas. Um normalizador Node agora devolve
+  somente nome, status e porta, sem expor variaveis ou segredos do PM2. O deploy
+  tambem sempre instala dependencias na release temporaria, salvo uso explicito
+  de `-PularDependencias`, evitando confiar apenas na diferenca entre commits
+  quando o commit foi criado diretamente na pasta de producao.
