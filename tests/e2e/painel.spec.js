@@ -77,10 +77,34 @@ test('manutencao mantem senhas e WhatsApp opcional sem preenchimento indevido', 
 
     await expect(page.getByLabel('Usuário do painel')).toHaveValue('admin');
     await expect(page.getByLabel('Nova senha', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Nova senha', { exact: true })).toHaveAttribute('type', 'text');
+    await expect(page.getByLabel('Nova senha', { exact: true })).toHaveClass(/campo-segredo-manual/);
     await expect(page.getByLabel('Confirmar nova senha', { exact: true })).toHaveValue('');
     await expect(page.getByLabel('Senha atual para confirmar a alteração')).toHaveValue('');
     await expect(page.getByLabel('WhatsApp de controle para alertas (opcional)')).toHaveValue('');
     await expect(page.getByLabel('WhatsApp de controle para alertas (opcional)')).toHaveAttribute('data-autofill-empty', 'true');
+
+    const whatsapp = page.getByLabel('WhatsApp de controle para alertas (opcional)');
+    const senhaAtual = page.getByLabel('Senha atual para confirmar a alteração');
+    await whatsapp.evaluate(el => { el.value = 'admin'; });
+    await senhaAtual.evaluate(el => { el.value = 'senha-injetada'; });
+    await whatsapp.click();
+    await page.waitForTimeout(150);
+    await expect(whatsapp).toHaveValue('');
+    await senhaAtual.click();
+    await page.waitForTimeout(150);
+    await expect(senhaAtual).toHaveValue('');
+
+    await page.getByRole('button', { name: 'Gerar backup agora' }).click();
+    await expect(page).toHaveURL(/\/manutencao\?mensagem=/);
+    const formularioExportar = page.locator('form[action="/manutencao/backups/exportar"]').first();
+    const formularioCopiar = page.locator('form[action="/manutencao/backups/copiar"]').first();
+    await expect(formularioExportar.locator('[name="senhaExportacao"]')).toHaveValue('');
+    await expect(formularioExportar.locator('[name="senhaConfirmacao"]')).toHaveValue('');
+    await expect(formularioCopiar.locator('[name="pastaExterna"]')).toHaveValue('');
+    await expect(formularioCopiar.locator('[name="senhaConfirmacao"]')).toHaveValue('');
+    await expect(formularioExportar.locator('[name="senhaExportacao"]')).toHaveAttribute('type', 'text');
+    await expect(formularioCopiar.locator('[name="senhaConfirmacao"]')).toHaveAttribute('type', 'text');
 });
 
 test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {

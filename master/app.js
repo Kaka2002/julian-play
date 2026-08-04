@@ -1024,7 +1024,7 @@ function pagina(instalacoes, opcoes = {}) {
       </div>
     </section>
     <section class="panel" id="nova-instalacao"><h2>Nova instalação</h2><div class="sub">Crie um painel, banco e robô independentes</div>
-      <form class="fields" method="post" action="/instalacoes">
+      <form class="fields" method="post" action="/instalacoes" autocomplete="off" data-form-type="other">
         <label>Cliente / Empresa<input name="nome" required></label>
         <label>Identificador da URL<input name="slug" placeholder="ex: cliente-teste"></label>
         <label>Licença<select name="tipoLicenca"><option value="avaliacao_15">Avaliação de 15 dias</option><option value="avaliacao_30">Avaliação de 30 dias</option><option value="vitalicia">Definitiva / vitalícia</option></select></label>
@@ -1032,8 +1032,8 @@ function pagina(instalacoes, opcoes = {}) {
         <label>WhatsApp do robô<input name="whatsappEsperado" inputmode="numeric" placeholder="Ex.: 5512999999999" required></label>
         <label>Hora dos avisos<input type="number" name="horaEnvio" value="9" min="0" max="23" required></label>
         <label>Minuto dos avisos<input type="number" name="minutoEnvio" value="0" min="0" max="59" required></label>
-        <label>Usuário do painel<input name="usuarioPainel" value="admin" required></label>
-        <label>Senha inicial<input type="password" name="senhaPainel" minlength="8" required></label>
+        <label>Usuário do painel<input name="usuarioPainel" value="" autocomplete="off" data-autofill-empty="true" data-1p-ignore="true" data-bwignore="true" required></label>
+        <label>Senha inicial<input type="password" name="senhaPainel" autocomplete="off" data-autofill-empty="true" data-1p-ignore="true" data-bwignore="true" minlength="8" required></label>
         <div style="align-self:end"><button type="submit">Criar instalação</button></div>
       </form>
     </section>

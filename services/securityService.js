@@ -38,9 +38,68 @@ function desativarAtalhosGerenciadorSenhas(conteudo) {
 
     const estilo = `<style id="julian-play-password-manager-style">
         [data-lastpass-icon-root], [data-lastpass-root], div[id^="__lpform_"] { display:none!important; visibility:hidden!important; pointer-events:none!important; }
+        .campo-segredo-manual { -webkit-text-security:disc!important; }
     </style>`;
     const script = `<script id="julian-play-password-manager-control">
-        (()=>{const limpar=(raiz=document)=>{raiz.querySelectorAll?.('[data-autofill-empty="true"]').forEach(el=>{if(!el.dataset.usuarioDigitou)el.value='';});const proteger=(el)=>{el.setAttribute('data-lpignore','true');el.setAttribute('data-1p-ignore','true');el.setAttribute('data-bwignore','true');};const aplicar=(raiz=document)=>{raiz.querySelectorAll?.('form').forEach(form=>{const login=form.getAttribute('action')==='/login';const campos=form.querySelectorAll('input,textarea,select');if(login){form.removeAttribute('data-lpignore');campos.forEach(el=>{el.removeAttribute('data-lpignore');el.removeAttribute('data-1p-ignore');el.removeAttribute('data-bwignore');});return;}form.setAttribute('autocomplete','off');proteger(form);campos.forEach(el=>{proteger(el);if(el.matches('input[type="password"]'))el.setAttribute('data-autofill-empty','true');});});raiz.querySelectorAll?.('[data-autofill-empty="true"]').forEach(el=>{el.setAttribute('autocomplete','off');proteger(el);if(!el.dataset.autofillProtegido){el.dataset.autofillProtegido='true';['pointerdown','keydown','paste'].forEach(tipo=>el.addEventListener(tipo,()=>{el.dataset.usuarioDigitou='true';},{once:true}));}});limpar(raiz);raiz.querySelectorAll?.('[data-lastpass-icon-root],[data-lastpass-root],div[id^="__lpform_"]').forEach(el=>el.remove());};aplicar();addEventListener('pageshow',()=>aplicar());setTimeout(()=>limpar(),100);setTimeout(()=>limpar(),500);new MutationObserver(()=>aplicar()).observe(document.documentElement,{childList:true,subtree:true});})();
+        (() => {
+            const limpar = (raiz = document) => {
+                raiz.querySelectorAll?.('[data-autofill-empty="true"]').forEach(el => {
+                    if (!el.dataset.usuarioDigitou) el.value = '';
+                });
+            };
+            const proteger = (el) => {
+                el.setAttribute('data-lpignore', 'true');
+                el.setAttribute('data-1p-ignore', 'true');
+                el.setAttribute('data-bwignore', 'true');
+            };
+            const aplicar = (raiz = document) => {
+                raiz.querySelectorAll?.('form').forEach(form => {
+                    const login = form.getAttribute('action') === '/login';
+                    const campos = form.querySelectorAll('input,textarea,select');
+                    if (login) {
+                        form.removeAttribute('data-lpignore');
+                        campos.forEach(el => {
+                            el.removeAttribute('data-lpignore');
+                            el.removeAttribute('data-1p-ignore');
+                            el.removeAttribute('data-bwignore');
+                        });
+                        return;
+                    }
+                    form.setAttribute('autocomplete', 'off');
+                    proteger(form);
+                    campos.forEach(el => {
+                        proteger(el);
+                        if (el.matches('input[type="password"]')) {
+                            el.value = '';
+                            el.type = 'text';
+                            el.classList.add('campo-segredo-manual');
+                            el.setAttribute('data-autofill-empty', 'true');
+                        }
+                    });
+                });
+                raiz.querySelectorAll?.('[data-autofill-empty="true"]').forEach(el => {
+                    el.setAttribute('autocomplete', 'off');
+                    proteger(el);
+                    if (!el.dataset.autofillProtegido) {
+                        el.dataset.autofillProtegido = 'true';
+                        ['keydown', 'paste'].forEach(tipo => el.addEventListener(tipo, () => {
+                            el.dataset.usuarioDigitou = 'true';
+                        }, { once: true }));
+                        ['pointerdown', 'focus'].forEach(tipo => el.addEventListener(tipo, () => {
+                            setTimeout(() => limpar(el.form || document), 0);
+                            setTimeout(() => limpar(el.form || document), 100);
+                        }));
+                    }
+                });
+                limpar(raiz);
+                raiz.querySelectorAll?.('[data-lastpass-icon-root],[data-lastpass-root],div[id^="__lpform_"]').forEach(el => el.remove());
+            };
+            aplicar();
+            addEventListener('pageshow', () => aplicar());
+            const vigilancia = setInterval(() => limpar(), 250);
+            setTimeout(() => clearInterval(vigilancia), 10000);
+            new MutationObserver(() => aplicar()).observe(document.documentElement, { childList: true, subtree: true });
+        })();
     </script>`;
 
     if (!html.includes('julian-play-password-manager-style')) {

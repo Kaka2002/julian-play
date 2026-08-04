@@ -807,4 +807,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   quando ainda nao foi configurado, sem receber por engano o usuario salvo no
   navegador. O usuario de acesso exibido continua sendo o valor real gravado.
   O preenchimento automatico permanece permitido somente na pagina de login;
-  nas demais paginas, todo campo de senha e protegido e aberto vazio.
+  nas demais paginas, todo campo de senha e protegido e aberto vazio, inclusive
+  quando o navegador tenta preencher somente depois que o campo recebe foco.
+  No Painel Mestre, usuario e senha de uma nova instalacao tambem iniciam
+  vazios e precisam ser informados explicitamente; instalacoes existentes nao
+  sao alteradas.

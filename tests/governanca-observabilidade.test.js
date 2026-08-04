@@ -33,6 +33,16 @@ test('Painel Mestre compara automaticamente a versão de cada instalação', () 
     assert.match(mestre, /version: packageInfo\.version/);
 });
 
+test('nova instalação do Painel Mestre exige usuário e senha sem valores automáticos', () => {
+    const provisionador = fs.readFileSync(path.join(repoRoot, 'master', 'provisionador.js'), 'utf8');
+    const mestre = fs.readFileSync(path.join(repoRoot, 'master', 'app.js'), 'utf8');
+    assert.match(mestre, /name="usuarioPainel" value=""[^>]*data-autofill-empty="true"/);
+    assert.match(mestre, /name="senhaPainel"[^>]*data-autofill-empty="true"/);
+    assert.doesNotMatch(mestre, /name="usuarioPainel" value="admin" required/);
+    assert.match(provisionador, /String\(dados\.usuarioPainel \|\| ''\)\.trim\(\)/);
+    assert.match(provisionador, /if \(!usuarioPainel\) throw new Error/);
+});
+
 test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     const campanhas = fs.readFileSync(path.join(repoRoot, 'routes', 'campanhasRoute.js'), 'utf8');
     const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
