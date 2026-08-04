@@ -890,3 +890,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   tiver porta identificada e mostra o progresso da prontidao a cada 15
   segundos. As tabelas repetitivas do PM2 foram suprimidas durante parada,
   inicio e rollback, mantendo somente mensagens operacionais concisas.
+- A versao 1.3.4 amplia o campo Endereco MAC dos acessos por aplicativo para
+  aceitar todas as letras de A a Z e numeros de 0 a 9. Tela e servidor aplicam
+  a mesma normalizacao, em maiusculas e pares separados por dois-pontos, para
+  que letras posteriores a F nao desaparecam durante a digitacao ou ao salvar.

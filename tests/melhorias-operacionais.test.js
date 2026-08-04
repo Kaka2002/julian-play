@@ -75,6 +75,30 @@ test('cadastro e aviso anual usam aniversario sem ano', () => {
     }
 });
 
+test('campo de endereco MAC aceita todas as letras e numeros na tela', () => {
+    const fs = require('fs');
+    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    const inicio = rota.indexOf('function formatarMac(valor)');
+    const fim = rota.indexOf('function atualizarPlano()', inicio);
+    const codigo = rota.slice(inicio, fim);
+    const formatarMac = Function(`${codigo}; return formatarMac;`)();
+
+    assert.equal(formatarMac('g1-h2:i3.j4/k5 l6'), 'G1:H2:I3:J4:K5:L6');
+    assert.equal(formatarMac('z9y8x7w6v5u4'), 'Z9:Y8:X7:W6:V5:U4');
+});
+
+test('servidor preserva endereco MAC alfanumerico ao salvar cliente', () => {
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const salvo=await c.salvarCliente({nome:'Cliente MAC',telefone:'5511999999876',enderecoMac:'z9-y8:x7.w6/v5 u4',acessoAppNome:['Aplicativo'],acessoEnderecoMac:['g1-h2:i3.j4/k5 l6'],status:'ativo'});process.stdout.write(JSON.stringify({legado:salvo.enderecoMac,acesso:JSON.parse(salvo.acessosApp)[0].enderecoMac}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            legado: 'Z9:Y8:X7:W6:V5:U4',
+            acesso: 'G1:H2:I3:J4:K5:L6'
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('migracao remove ano de aniversarios ISO existentes', () => {
     const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO clientes(nome,telefone,nascimento) VALUES('Legado','5511999999999','1998-04-08')");await require('./database/migrations/007-aniversario-dia-mes').up({run});const cliente=await get("SELECT nascimento FROM clientes WHERE nome='Legado'");process.stdout.write(JSON.stringify(cliente));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

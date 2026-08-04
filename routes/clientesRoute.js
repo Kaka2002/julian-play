@@ -5882,7 +5882,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         function formatarMac(valor) {
             const limpo = String(valor || '')
-                .replace(/[^a-fA-F0-9]/g, '')
+                .replace(/[^a-zA-Z0-9]/g, '')
                 .toUpperCase()
                 .slice(0, 12);
             return (limpo.match(/.{1,2}/g) || []).join(':');

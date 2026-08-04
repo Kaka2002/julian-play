@@ -131,7 +131,7 @@ function telefoneSemDdi(telefone) {
 
 function normalizarMac(valor) {
     const limpo = limparTexto(valor)
-        .replace(/[^a-fA-F0-9]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
         .toUpperCase()
         .slice(0, 12);
 
