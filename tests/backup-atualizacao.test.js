@@ -85,12 +85,15 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/CalcularSha256Arquivo/);
  assert.match(atualizar,/normalizar-pm2-jlist\.js/);
  assert.match(atualizar,/ObterListaPm2 \$pm2 \$node/);
+ assert.match(atualizar,/Porta nao identificada antes de parar producao/);
+ assert.match(atualizar,/Ainda aguardando \(\$restantes s\)/);
+ assert.match(atualizar,/\| Out-Null/);
  assert.ok(fs.existsSync(normalizador));
  const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\r?\n}/)?.[0]||'';
  assert.match(selecaoProcessos,/AdicionarProcessoJulian \$nomes \$nomePrincipal/);
  assert.match(selecaoProcessos,/configMaster\.clientsDir/);
  assert.doesNotMatch(selecaoProcessos,/Where-Object \{ \$_\.name -like 'julian-\*' \}/);
- assert.match(atualizar,/restart \$estado\.nome\r?\n/);
+ assert.match(atualizar,/restart \$estado\.nome \| Out-Null\r?\n/);
  assert.doesNotMatch(atualizar,/restart \$estado\.nome --update-env/);
  assert.doesNotMatch(atualizar,/\$env:JULIAN_PLAY_DATA_DIR = \$PastaDados/);
  const iniciar=atualizar.match(/function IniciarProcessosAnteriores[\s\S]*?\r?\n}/)?.[0]||'';
@@ -104,18 +107,24 @@ test('lista do PM2 aceita chaves de ambiente que diferem somente por maiusculas'
  const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-pm2-json-'));
  try{
   const entrada=path.join(raiz,'jlist.json');
-  fs.writeFileSync(entrada,JSON.stringify([{
-   name:'julian-play-admin',
-   username:'minusculo',
-   USERNAME:'maiusculo',
-   pm2_env:{status:'online',PORT:'10001',segredo:'nao-exportar',env:{PORT:'9999'}}
-  }]));
+  fs.writeFileSync(entrada,JSON.stringify([
+   {
+    name:'julian-play-admin',
+    username:'minusculo',
+    USERNAME:'maiusculo',
+    pm2_env:{status:'online',PORT:'10001',segredo:'nao-exportar',env:{PORT:'9999'}}
+   },
+   {
+    name:'julian-master',
+    pm2_env:{status:'online',PORT:'9999',MASTER_PORT:'9000',MASTER_SESSION_SECRET:'nao-exportar'}
+   }
+  ]));
   const resultado=spawnSync(process.execPath,[path.join(repoRoot,'scripts','normalizar-pm2-jlist.js'),entrada],{encoding:'utf8'});
   assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
-  assert.deepEqual(JSON.parse(resultado.stdout),[{
-   name:'julian-play-admin',
-   pm2_env:{status:'online',PORT:'10001'}
-  }]);
+  assert.deepEqual(JSON.parse(resultado.stdout),[
+   {name:'julian-play-admin',pm2_env:{status:'online',PORT:'10001'}},
+   {name:'julian-master',pm2_env:{status:'online',PORT:'9000'}}
+  ]);
   assert.doesNotMatch(resultado.stdout,/username|maiusculo|segredo|nao-exportar/);
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });

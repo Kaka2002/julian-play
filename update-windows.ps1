@@ -321,8 +321,10 @@ function CriarBackupsAntesAtualizacao($Node) {
 
 function PararProcessosOnline($pm2, $estados) {
     foreach ($estado in $estados.Values | Where-Object { $_.estavaOnline }) {
-        & $pm2.Source stop $estado.nome
-        if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel parar $($estado.nome)." }
+        Write-Host "Parando $($estado.nome)..." -ForegroundColor Yellow
+        & $pm2.Source stop $estado.nome | Out-Null
+        $codigoSaida = $LASTEXITCODE
+        if ($codigoSaida -ne 0) { throw "Nao foi possivel parar $($estado.nome). Codigo $codigoSaida." }
     }
     Start-Sleep -Seconds 3
 }
@@ -331,24 +333,28 @@ function IniciarProcessosAnteriores($pm2, $estados) {
     $ecosistemaPrincipal = Join-Path $diretorioProjeto 'ecosystem.config.js'
     $ecosistemaMaster = Join-Path $diretorioProjeto 'master\ecosystem.config.js'
     foreach ($estado in $estados.Values | Where-Object { $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados }) {
+        Write-Host "Iniciando $($estado.nome)..." -ForegroundColor Cyan
         if ($estado.nome -eq $NomeProcesso) {
-            & $pm2.Source startOrReload $ecosistemaPrincipal --only $estado.nome --update-env
+            & $pm2.Source startOrReload $ecosistemaPrincipal --only $estado.nome --update-env | Out-Null
         } elseif ($estado.nome -eq 'julian-master') {
-            & $pm2.Source startOrReload $ecosistemaMaster --only $estado.nome --update-env
+            & $pm2.Source startOrReload $ecosistemaMaster --only $estado.nome --update-env | Out-Null
         } else {
             # Instalacoes comerciais ja possuem DATA_DIR, porta, licenca e
             # sessao proprios no PM2. Nao importe o ambiente do deploy nelas.
-            & $pm2.Source restart $estado.nome
+            & $pm2.Source restart $estado.nome | Out-Null
         }
-        if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel iniciar $($estado.nome)." }
+        $codigoSaida = $LASTEXITCODE
+        if ($codigoSaida -ne 0) { throw "Nao foi possivel iniciar $($estado.nome). Codigo $codigoSaida." }
     }
 }
 
 function AguardarSaude($pm2, $node, $estados, [string]$versaoEsperada) {
     $limite = (Get-Date).AddSeconds([Math]::Max(30, $TempoSaudeSegundos))
+    $proximoAviso = Get-Date
     $pendentes = @($estados.Values | Where-Object {
         $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados
     })
+    Write-Host "Aguardando prontidao de $($pendentes.Count) processo(s), limite de $TempoSaudeSegundos segundo(s)..." -ForegroundColor Cyan
     do {
         $listaAtual = ObterListaPm2 $pm2 $node
         $falhas = [System.Collections.Generic.List[string]]::new()
@@ -372,7 +378,16 @@ function AguardarSaude($pm2, $node, $estados, [string]$versaoEsperada) {
                 $falhas.Add("$($estado.nome): health indisponivel")
             }
         }
-        if ($falhas.Count -eq 0) { return }
+        if ($falhas.Count -eq 0) {
+            Write-Host 'Prontidao confirmada.' -ForegroundColor Green
+            return
+        }
+        $agora = Get-Date
+        if ($agora -ge $proximoAviso) {
+            $restantes = [Math]::Max(0, [int][Math]::Ceiling(($limite - $agora).TotalSeconds))
+            Write-Host "Ainda aguardando ($restantes s): $($falhas -join '; ')" -ForegroundColor Yellow
+            $proximoAviso = $agora.AddSeconds(15)
+        }
         if ((Get-Date) -ge $limite) {
             throw "A nova versao nao ficou saudavel: $($falhas -join '; ')."
         }
@@ -403,6 +418,12 @@ foreach ($processoAdicional in $ProcessosParaManterParados) {
 }
 $processosJulian = $listaProcessosJulian.ToArray()
 $estadosAntes = ObterEstadoProcessos $pm2 $node $processosJulian
+$processosSemPorta = @($estadosAntes.Values | Where-Object {
+    $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados -and $_.porta -le 0
+})
+if ($processosSemPorta.Count -gt 0) {
+    throw "Porta nao identificada antes de parar producao: $((@($processosSemPorta | ForEach-Object { $_.nome })) -join ', ')."
+}
 $commitAntesAtualizacao = (& $git.Source rev-parse HEAD).Trim()
 $commitAlvo = $commitAntesAtualizacao
 $dependenciasAlteradas = -not $PularDependencias
@@ -500,8 +521,14 @@ try {
     if ($parouProducao) {
         Write-Warning 'Restaurando automaticamente a ultima versao funcional...'
         try {
+            $listaAtualRollback = @(ObterListaPm2 $pm2 $node)
             foreach ($estado in $estadosAntes.Values | Where-Object { $_.estavaOnline }) {
-                & $pm2.Source stop $estado.nome 2>$null | Out-Host
+                $atual = $listaAtualRollback | Where-Object { $_.name -eq $estado.nome } | Select-Object -First 1
+                if (-not $atual -or $atual.pm2_env.status -ne 'online') { continue }
+                Write-Host "Parando $($estado.nome) para rollback..." -ForegroundColor Yellow
+                & $pm2.Source stop $estado.nome | Out-Null
+                $codigoSaida = $LASTEXITCODE
+                if ($codigoSaida -ne 0) { throw "Nao foi possivel parar $($estado.nome) para rollback. Codigo $codigoSaida." }
             }
             if ($atualizouCodigo) {
                 ExecutarComando -Comando $git -Argumentos @('reset', '--hard', $commitAntesAtualizacao) -MensagemErro 'Falha ao restaurar o commit anterior.' -Diretorio $diretorioProjeto

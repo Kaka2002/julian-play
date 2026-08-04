@@ -877,3 +877,16 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   remove a parada redundante de processos configurados para permanecer
   parados. Assim, a ausencia esperada de `julian-amplaytv` nao marca mais o
   rollback como falho.
+- Tentativa operacional de publicar 1.3.2 em 04/08/2026: a release isolada,
+  os 73 testes, os backups verificados e a troca de codigo foram concluidos,
+  mas a prontidao procurou somente `PORT`. O Painel Mestre guarda a porta em
+  `MASTER_PORT`, por isso o atualizador esperou 120 segundos, iniciou rollback
+  e esperou mais 120 segundos sem informar progresso. Administrador e Mestre
+  terminaram online e prontos em 1.3.2 nas portas 10001 e 9000; a instalacao
+  independente `julian-play-cliente` continuou intocada na porta 10000. O
+  rollback restaurou o `node_modules` anterior, ainda com `sqlite3` 5.1.7.
+- A versao 1.3.3 normaliza `MASTER_PORT` como a porta de saude do Painel
+  Mestre, recusa parar a producao se algum processo online administrado nao
+  tiver porta identificada e mostra o progresso da prontidao a cada 15
+  segundos. As tabelas repetitivas do PM2 foram suprimidas durante parada,
+  inicio e rollback, mantendo somente mensagens operacionais concisas.

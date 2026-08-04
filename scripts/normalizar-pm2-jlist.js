@@ -36,7 +36,11 @@ const normalizados = processos.map((processo) => {
     const ambienteInterno = ambiente && typeof ambiente.env === 'object' && ambiente.env
         ? ambiente.env
         : {};
-    const porta = ambiente.PORT ?? ambienteInterno.PORT ?? null;
+    const portaAplicacao = ambiente.PORT ?? ambienteInterno.PORT ?? null;
+    const portaMestre = ambiente.MASTER_PORT ?? ambienteInterno.MASTER_PORT ?? null;
+    const porta = processo?.name === 'julian-master'
+        ? portaMestre ?? portaAplicacao
+        : portaAplicacao ?? portaMestre;
 
     return {
         name: typeof processo?.name === 'string' ? processo.name : '',
