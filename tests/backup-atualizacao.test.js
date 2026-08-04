@@ -62,8 +62,14 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');
  const normalizador=path.join(repoRoot,'scripts','normalizar-pm2-jlist.js');
  const indicePreparar=atualizar.indexOf('$pastaRelease = PrepararRelease');
+ const indicePrepararSeguro=atualizar.indexOf('$resultadoPreparacao = @(PrepararRelease');
  const indiceParar=atualizar.indexOf("Etapa 'Parando somente os processos que estavam online'");
- assert.ok(indicePreparar>=0&&indiceParar>indicePreparar,'a versao candidata deve ser aprovada antes de parar producao');
+ assert.equal(indicePreparar,-1,'o retorno da preparacao nao pode ser atribuido diretamente sem validacao');
+ assert.ok(indicePrepararSeguro>=0&&indiceParar>indicePrepararSeguro,'a versao candidata deve ser aprovada antes de parar producao');
+ assert.match(atualizar,/& \$Comando\.Source @Argumentos \| Out-Host[\s\S]*\$codigoSaida = \$LASTEXITCODE/);
+ assert.match(atualizar,/Select-Object -Last 1/);
+ assert.match(atualizar,/A preparacao nao devolveu uma pasta de release valida/);
+ assert.match(atualizar,/julian-play-release-\*/);
  assert.match(atualizar,/\$dependenciasAlteradas = -not \$PularDependencias/);
  assert.doesNotMatch(atualizar,/git\.Source diff[\s\S]*package\.json package-lock\.json/);
  assert.match(atualizar,/Argumentos\s+@\('ci',\s*'--omit=dev'\)/);
@@ -87,6 +93,9 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/restart \$estado\.nome\r?\n/);
  assert.doesNotMatch(atualizar,/restart \$estado\.nome --update-env/);
  assert.doesNotMatch(atualizar,/\$env:JULIAN_PLAY_DATA_DIR = \$PastaDados/);
+ const iniciar=atualizar.match(/function IniciarProcessosAnteriores[\s\S]*?\r?\n}/)?.[0]||'';
+ assert.match(iniciar,/nome -notin \$ProcessosParaManterParados/);
+ assert.doesNotMatch(iniciar,/stop \$processo/);
  assert.match(deploy,/update-windows\.ps1/);
  assert.doesNotMatch(deploy,/git\.Source pull|npm\s+ci/);
 });
@@ -108,6 +117,21 @@ test('lista do PM2 aceita chaves de ambiente que diferem somente por maiusculas'
    pm2_env:{status:'online',PORT:'10001'}
   }]);
   assert.doesNotMatch(resultado.stdout,/username|maiusculo|segredo|nao-exportar/);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
+test('executor do deploy mostra stdout sem mistura-lo ao retorno da funcao',()=>{
+ const fonte=fs.readFileSync(path.join(repoRoot,'update-windows.ps1'),'utf8');
+ const funcao=fonte.match(/function ExecutarComando[\s\S]*?\r?\n}/)?.[0]||'';
+ assert.match(funcao,/\| Out-Host/);
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-deploy-output-'));
+ try{
+  const script=path.join(raiz,'validar.ps1');
+  fs.writeFileSync(script,`${funcao}\r\n$ErrorActionPreference='Stop'\r\n$cmd=Get-Command cmd.exe\r\n$retorno=@(ExecutarComando -Comando $cmd -Argumentos @('/d','/c','echo saida-visivel') -MensagemErro 'falhou')\r\nif($retorno.Count -ne 0){throw 'A saida do comando escapou pelo pipeline.'}\r\n$detectouFalha=$false\r\ntry{ExecutarComando -Comando $cmd -Argumentos @('/d','/c','exit 7') -MensagemErro 'falha-esperada'}catch{if($_.Exception.Message -match 'Codigo 7'){$detectouFalha=$true}else{throw}}\r\nif(-not $detectouFalha){throw 'O codigo de saida nativo foi perdido.'}\r\nWrite-Output 'retorno-limpo'\r\n`);
+  const resultado=spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',script],{encoding:'utf8'});
+  assert.equal(resultado.status,0,resultado.stderr||resultado.stdout);
+  assert.match(resultado.stdout,/saida-visivel/);
+  assert.match(resultado.stdout,/retorno-limpo/);
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 

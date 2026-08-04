@@ -854,7 +854,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `docs/ESTADO-OPERACIONAL-ATUAL.md` e
   `docs/RECUPERACAO-E-CONTINGENCIA.md`.
 - O runtime SQLite foi atualizado para `sqlite3` 6.0.1. A atualizacao foi
-  validada em release isolada com 72 testes unitarios e 7 testes de navegador;
+  validada em release isolada com 73 testes unitarios e 7 testes de navegador;
   `npm audit --omit=dev` passou sem vulnerabilidades conhecidas em 04/08/2026.
 - A versao 1.3.1 corrige a leitura de `pm2 jlist` no Windows PowerShell 5.1.
   O ambiente real continha as chaves validas `username` e `USERNAME`, que o
@@ -863,3 +863,17 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   tambem sempre instala dependencias na release temporaria, salvo uso explicito
   de `-PularDependencias`, evitando confiar apenas na diferenca entre commits
   quando o commit foi criado diretamente na pasta de producao.
+- Tentativa operacional de publicar 1.3.1 em 04/08/2026: a release isolada e
+  seus testes passaram, os processos administrador e mestre foram fechados e
+  os tres bancos foram copiados com verificacao. A troca de dependencias nao
+  ocorreu porque a saida de `npm test` escapou pelo pipeline de
+  `PrepararRelease` e transformou o caminho temporario em uma colecao com
+  valores vazios. O rollback religou `julian-play-admin` e `julian-master`,
+  ambos prontos em 1.3.1 nas portas 10001 e 9000; `julian-play-cliente`
+  permaneceu independente na porta 10000. O `node_modules` ativo nao foi
+  trocado e ainda usa `sqlite3` 5.1.7.
+- A versao 1.3.2 impede saida de comandos no pipeline, extrai e valida
+  explicitamente a unica pasta temporaria autorizada antes de parar producao e
+  remove a parada redundante de processos configurados para permanecer
+  parados. Assim, a ausencia esperada de `julian-amplaytv` nao marca mais o
+  rollback como falho.

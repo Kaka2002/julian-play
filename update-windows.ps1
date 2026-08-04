@@ -59,9 +59,12 @@ function ExecutarComando {
     $diretorioAnterior = (Get-Location).Path
     try {
         if ($Diretorio) { Set-Location $Diretorio }
-        & $Comando.Source @Argumentos
-        if ($LASTEXITCODE -ne 0) {
-            throw "$MensagemErro Codigo $LASTEXITCODE."
+        # Mostra a saida ao operador sem deixa-la escapar pelo pipeline da
+        # funcao. PrepararRelease deve devolver somente o caminho da release.
+        & $Comando.Source @Argumentos | Out-Host
+        $codigoSaida = $LASTEXITCODE
+        if ($codigoSaida -ne 0) {
+            throw "$MensagemErro Codigo $codigoSaida."
         }
     } finally {
         Set-Location $diretorioAnterior
@@ -339,9 +342,6 @@ function IniciarProcessosAnteriores($pm2, $estados) {
         }
         if ($LASTEXITCODE -ne 0) { throw "Nao foi possivel iniciar $($estado.nome)." }
     }
-    foreach ($processo in $ProcessosParaManterParados) {
-        & $pm2.Source stop $processo 2>$null | Out-Host
-    }
 }
 
 function AguardarSaude($pm2, $node, $estados, [string]$versaoEsperada) {
@@ -425,7 +425,17 @@ if (-not $PularGit) {
 }
 
 try {
-    $pastaRelease = PrepararRelease -Git $git -Npm $npm -Node $node -CommitAlvo $commitAlvo -InstalarDependencias $dependenciasAlteradas
+    $resultadoPreparacao = @(PrepararRelease -Git $git -Npm $npm -Node $node -CommitAlvo $commitAlvo -InstalarDependencias $dependenciasAlteradas)
+    $pastaRelease = [string]($resultadoPreparacao | Select-Object -Last 1)
+    $raizTemporariaEsperada = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if ([string]::IsNullOrWhiteSpace($pastaRelease) -or -not (Test-Path -LiteralPath $pastaRelease -PathType Container)) {
+        throw 'A preparacao nao devolveu uma pasta de release valida.'
+    }
+    $pastaRelease = [IO.Path]::GetFullPath($pastaRelease)
+    if (-not $pastaRelease.StartsWith($raizTemporariaEsperada, [StringComparison]::OrdinalIgnoreCase) -or
+        [IO.Path]::GetFileName($pastaRelease) -notlike 'julian-play-release-*') {
+        throw "A pasta preparada esta fora da area temporaria autorizada: $pastaRelease"
+    }
 
     Etapa 'Parando somente os processos que estavam online'
     PararProcessosOnline $pm2 $estadosAntes
