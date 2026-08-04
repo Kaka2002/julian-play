@@ -20,7 +20,7 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  for(const item of ['clientes.db','.wwebjs_auth','.wwebjs_cache','backups'])assert.match(atualizar,new RegExp(item.replace('.', '\\.'),'i'));
  assert.match(atualizar,/Preservando configuracao local/i);
  assert.match(atualizar,/Get-FileHash[\s\S]*SHA256/i);
- const paradaLocal=atualizar.match(/function PararPm2Local[\s\S]*?\n}/)?.[0]||'';
+ const paradaLocal=atualizar.match(/function PararPm2Local[\s\S]*?\r?\n}/)?.[0]||'';
  assert.match(paradaLocal,/\('stop', \$nomeProcesso\)/);
  assert.match(paradaLocal,/\('delete', \$nomeProcesso\)/);
  assert.doesNotMatch(paradaLocal,/\('save'|\('kill'/);
@@ -75,11 +75,11 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/configMaster\.dataDir[\s\S]*master\.db/);
  assert.match(atualizar,/verificar-banco-sqlite\.js/);
  assert.match(atualizar,/CalcularSha256Arquivo/);
- const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\n}/)?.[0]||'';
+ const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\r?\n}/)?.[0]||'';
  assert.match(selecaoProcessos,/AdicionarProcessoJulian \$nomes \$nomePrincipal/);
  assert.match(selecaoProcessos,/configMaster\.clientsDir/);
  assert.doesNotMatch(selecaoProcessos,/Where-Object \{ \$_\.name -like 'julian-\*' \}/);
- assert.match(atualizar,/restart \$estado\.nome\n/);
+ assert.match(atualizar,/restart \$estado\.nome\r?\n/);
  assert.doesNotMatch(atualizar,/restart \$estado\.nome --update-env/);
  assert.doesNotMatch(atualizar,/\$env:JULIAN_PLAY_DATA_DIR = \$PastaDados/);
  assert.match(deploy,/update-windows\.ps1/);
