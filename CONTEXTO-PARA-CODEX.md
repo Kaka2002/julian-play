@@ -901,5 +901,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   antigo `13188`, depois reutilizado pelo servico `KAPSService`. A trava obsoleta
   foi movida para um backup no proprio `DATA_DIR`, o PM2 recuperou a instalacao
   administradora e os endpoints local e publico `/ready` voltaram a responder
-  na versao 1.3.4. Permanece recomendada uma correcao no codigo da trava para
-  validar a identidade do processo, e nao somente a existencia numerica do PID.
+  na versao 1.3.4.
+- A versao 1.3.5 corrige permanentemente a falsa trava causada por reutilizacao
+  de PID. O arquivo passa a registrar PID, horario de inicio e identificador
+  unico da execucao; no Windows, o sistema confirma tambem que o PID pertence
+  ao mesmo processo Node iniciado naquele horario. Travas antigas com apenas o
+  PID continuam compativeis e sao substituidas quando o PID pertence a outro
+  programa, como ocorreu com o `KAPSService`.

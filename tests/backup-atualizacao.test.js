@@ -1,6 +1,24 @@
 const fs=require('fs'); const os=require('os'); const path=require('path'); const {spawnSync}=require('child_process'); const test=require('node:test'); const assert=require('node:assert/strict');
 const {criarAmbiente,executarIsolado,removerAmbiente,repoRoot}=require('./helpers/isolated');
 
+test('trava de processo substitui PID reutilizado e protege a instancia ativa',()=>{
+ const pasta=fs.mkdtempSync(path.join(os.tmpdir(),'julian-trava-processo-'));const arquivo=path.join(pasta,'.julian-play-admin.pid');
+ try{
+  const {criarGerenciadorTravaProcesso}=require('../services/travaProcessoService');
+  fs.writeFileSync(arquivo,'13188');
+  const reaproveitado=criarGerenciadorTravaProcesso({caminho:arquivo,instancia:'julian-play-admin',pidAtual:50000,inicioAtualMs:Date.parse('2026-08-05T12:00:00.000Z'),execucaoId:'execucao-atual',plataforma:'win32',processoExisteFn:()=>true,consultarProcessoFn:()=>({nome:'KAPSService',iniciadoEm:'2026-08-05T10:00:00.000Z'})});
+  const adquirido=reaproveitado.adquirir();assert.equal(adquirido.adquirida,true);assert.equal(adquirido.substituiuObsoleta,true);
+  let atual=JSON.parse(fs.readFileSync(arquivo,'utf8'));assert.equal(atual.pid,50000);assert.equal(atual.execucaoId,'execucao-atual');assert.equal(reaproveitado.liberar(),true);
+
+  fs.writeFileSync(arquivo,`${JSON.stringify({versao:2,pid:60000,instancia:'julian-play-admin',iniciadoEm:'2026-08-05T11:59:55.000Z',execucaoId:'execucao-ativa'})}\n`);
+  const bloqueado=criarGerenciadorTravaProcesso({caminho:arquivo,instancia:'julian-play-admin',pidAtual:50001,inicioAtualMs:Date.parse('2026-08-05T12:00:01.000Z'),execucaoId:'execucao-nova',plataforma:'win32',processoExisteFn:()=>true,consultarProcessoFn:()=>({nome:'node',iniciadoEm:'2026-08-05T11:59:55.000Z'})});
+  assert.equal(bloqueado.adquirir().adquirida,false);assert.equal(JSON.parse(fs.readFileSync(arquivo,'utf8')).execucaoId,'execucao-ativa');
+
+  const outroNode=criarGerenciadorTravaProcesso({caminho:arquivo,instancia:'julian-play-admin',pidAtual:50002,inicioAtualMs:Date.parse('2026-08-05T12:00:02.000Z'),execucaoId:'execucao-apos-reuso',plataforma:'win32',processoExisteFn:()=>true,consultarProcessoFn:()=>({nome:'node',iniciadoEm:'2026-08-05T10:00:00.000Z'})});
+  assert.equal(outroNode.adquirir().adquirida,true);atual=JSON.parse(fs.readFileSync(arquivo,'utf8'));assert.equal(atual.pid,50002);assert.equal(atual.execucaoId,'execucao-apos-reuso');assert.equal(outroNode.liberar(),true);
+ }finally{fs.rmSync(pasta,{recursive:true,force:true});}
+});
+
 test('backup e restauracao recuperam o banco anterior',()=>{
  const ambiente=criarAmbiente();
  try{

@@ -1,5 +1,4 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
@@ -29,6 +28,7 @@ const packageInfo = require('./package.json');
 const bancoAplicacao = require('./database/sqlite');
 const { MessageMedia } = require('whatsapp-web.js');
 const { configurarExecutorFilaPersistente } = require('./services/filaMensagensService');
+const { criarGerenciadorTravaProcesso } = require('./services/travaProcessoService');
 
 let bancoPronto = false;
 bancoAplicacao.ready.then(() => { bancoPronto = true; }).catch(err => {
@@ -66,41 +66,27 @@ const INSTANCE_NAME = String(
     || 'julian-play'
 ).replace(/[^a-zA-Z0-9_-]/g, '-');
 const PROCESS_LOCK_PATH = path.join(DATA_DIR, `.${INSTANCE_NAME}.pid`);
-
-function processoExiste(pid) {
-    if (!pid || Number(pid) === process.pid) return false;
-
-    try {
-        process.kill(Number(pid), 0);
-        return true;
-    } catch {
-        return false;
-    }
-}
+const travaProcesso = criarGerenciadorTravaProcesso({
+    caminho: PROCESS_LOCK_PATH,
+    instancia: INSTANCE_NAME
+});
 
 function adquirirTravaProcesso() {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-
-    if (fs.existsSync(PROCESS_LOCK_PATH)) {
-        const pidAtual = Number(fs.readFileSync(PROCESS_LOCK_PATH, 'utf8'));
-
-        if (processoExiste(pidAtual)) {
-            console.error(`${INSTANCE_NAME} ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
-            process.exit(1);
-        }
+    const resultado = travaProcesso.adquirir();
+    if (!resultado.adquirida) {
+        const pidAtual = resultado.registroAnterior?.pid || 'desconhecido';
+        console.error(`${INSTANCE_NAME} ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
+        process.exit(1);
     }
 
-    fs.writeFileSync(PROCESS_LOCK_PATH, String(process.pid));
+    if (resultado.substituiuObsoleta) {
+        console.log(`Trava de processo obsoleta substituida para ${INSTANCE_NAME}.`);
+    }
 }
 
 function liberarTravaProcesso() {
     try {
-        if (!fs.existsSync(PROCESS_LOCK_PATH)) return;
-
-        const pidAtual = Number(fs.readFileSync(PROCESS_LOCK_PATH, 'utf8'));
-        if (pidAtual === process.pid) {
-            fs.unlinkSync(PROCESS_LOCK_PATH);
-        }
+        travaProcesso.liberar();
     } catch (err) {
         console.log('Nao foi possivel liberar trava do processo:', err.message);
     }
