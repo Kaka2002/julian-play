@@ -894,3 +894,12 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   aceitar todas as letras de A a Z e numeros de 0 a 9. Tela e servidor aplicam
   a mesma normalizacao, em maiusculas e pares separados por dois-pontos, para
   que letras posteriores a F nao desaparecam durante a digitacao ou ao salvar.
+- Incidente operacional em 05/08/2026: `painel.julianplay.com.br` retornou 502
+  apesar do tunel `julian-play-casa` manter quatro conexoes ativas. O diagnostico
+  do `cloudflared` confirmou a rota correta para `http://127.0.0.1:10001`; a
+  origem estava parada porque a trava `.julian-play-admin.pid` continha o PID
+  antigo `13188`, depois reutilizado pelo servico `KAPSService`. A trava obsoleta
+  foi movida para um backup no proprio `DATA_DIR`, o PM2 recuperou a instalacao
+  administradora e os endpoints local e publico `/ready` voltaram a responder
+  na versao 1.3.4. Permanece recomendada uma correcao no codigo da trava para
+  validar a identidade do processo, e nao somente a existencia numerica do PID.
