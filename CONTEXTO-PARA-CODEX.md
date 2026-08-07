@@ -908,3 +908,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   ao mesmo processo Node iniciado naquele horario. Travas antigas com apenas o
   PID continuam compativeis e sao substituidas quando o PID pertence a outro
   programa, como ocorreu com o `KAPSService`.
+- A versao 1.3.6 tambem tolera a sobreposicao normal de processos criada por
+  `pm2 reload`: a nova instancia aguarda por ate 30 segundos a liberacao de uma
+  trava valida antes de recusar a inicializacao. A protecao contra duas
+  instancias permanece ativa; para recuperacao manual, `pm2 restart` continua
+  sendo o comando preferencial para os paineis com sessao WhatsApp.

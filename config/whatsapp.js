@@ -2,6 +2,7 @@
 const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
+const { execSync } = require('child_process');
 const {
     pausarParaAtendente,
     responderMensagem,
@@ -634,13 +635,33 @@ async function iniciarWhatsApp() {
     } catch (err) {
         inicializando = false;
         statusWhatsApp = 'erro';
-        console.log('Erro geral:', err);
 
-        const mensagem = err && err.message ? err.message : String(err);
+        const errMsg = err && err.message ? err.message : String(err);
+        console.log('Erro geral:', errMsg);
+        if (err && err.stack) console.log(err.stack);
 
-        if (mensagem.includes('The browser is already running')) {
+        const mensagem = errMsg;
+
+        if (mensagem.includes('The browser is already running') || mensagem.includes('userDataDir')) {
             statusWhatsApp = 'chrome_em_uso';
             console.log('Sessao do WhatsApp ja esta em uso por outro Chrome/processo. Pare o processo antigo antes de tentar novamente.');
+
+            try {
+                const processosChrome = execSync('wmic process where "name=\'chrome.exe\'" get ProcessId,CommandLine /FORMAT:LIST', { encoding: 'utf8' });
+                console.log('Processos chrome (wmic):', processosChrome);
+            } catch (listErr) {
+                console.log('Falha ao listar processos chrome:', listErr.message);
+            }
+
+            if (process.env.WWEBJS_FORCE_KILL_CHROME === 'true') {
+                try {
+                    console.log('WWEBJS_FORCE_KILL_CHROME=true -> matando processos chrome.exe (taskkill)...');
+                    execSync('taskkill /IM chrome.exe /F');
+                    console.log('taskkill executado.');
+                } catch (killErr) {
+                    console.log('Falha ao matar chrome.exe:', killErr.message);
+                }
+            }
         }
 
         if (client) {

@@ -16,6 +16,11 @@ test('trava de processo substitui PID reutilizado e protege a instancia ativa',(
 
   const outroNode=criarGerenciadorTravaProcesso({caminho:arquivo,instancia:'julian-play-admin',pidAtual:50002,inicioAtualMs:Date.parse('2026-08-05T12:00:02.000Z'),execucaoId:'execucao-apos-reuso',plataforma:'win32',processoExisteFn:()=>true,consultarProcessoFn:()=>({nome:'node',iniciadoEm:'2026-08-05T10:00:00.000Z'})});
   assert.equal(outroNode.adquirir().adquirida,true);atual=JSON.parse(fs.readFileSync(arquivo,'utf8'));assert.equal(atual.pid,50002);assert.equal(atual.execucaoId,'execucao-apos-reuso');assert.equal(outroNode.liberar(),true);
+
+  fs.writeFileSync(arquivo,`${JSON.stringify({versao:2,pid:60001,instancia:'julian-play-admin',iniciadoEm:'2026-08-05T11:59:55.000Z',execucaoId:'execucao-em-encerramento'})}\n`);
+  let relogio=0;let consultas=0;
+  const aguardandoTroca=criarGerenciadorTravaProcesso({caminho:arquivo,instancia:'julian-play-admin',pidAtual:50003,inicioAtualMs:Date.parse('2026-08-05T12:00:03.000Z'),execucaoId:'execucao-depois-da-troca',plataforma:'win32',processoExisteFn:()=>++consultas<2,consultarProcessoFn:()=>({nome:'node',iniciadoEm:'2026-08-05T11:59:55.000Z'}),agoraFn:()=>relogio,pausarFn:ms=>{relogio+=ms}});
+  const aposTroca=aguardandoTroca.adquirir({tempoEsperaMs:100,intervaloEsperaMs:20});assert.equal(aposTroca.adquirida,true);assert.equal(aposTroca.aguardouMs,20);atual=JSON.parse(fs.readFileSync(arquivo,'utf8'));assert.equal(atual.execucaoId,'execucao-depois-da-troca');assert.equal(aguardandoTroca.liberar(),true);
  }finally{fs.rmSync(pasta,{recursive:true,force:true});}
 });
 

@@ -66,17 +66,23 @@ const INSTANCE_NAME = String(
     || 'julian-play'
 ).replace(/[^a-zA-Z0-9_-]/g, '-');
 const PROCESS_LOCK_PATH = path.join(DATA_DIR, `.${INSTANCE_NAME}.pid`);
+const PROCESS_LOCK_WAIT_MS = Math.min(30000, Math.max(0, Number(process.env.PROCESS_LOCK_WAIT_MS || 30000)));
 const travaProcesso = criarGerenciadorTravaProcesso({
     caminho: PROCESS_LOCK_PATH,
     instancia: INSTANCE_NAME
 });
 
 function adquirirTravaProcesso() {
-    const resultado = travaProcesso.adquirir();
+    const resultado = travaProcesso.adquirir({ tempoEsperaMs: PROCESS_LOCK_WAIT_MS });
     if (!resultado.adquirida) {
         const pidAtual = resultado.registroAnterior?.pid || 'desconhecido';
-        console.error(`${INSTANCE_NAME} ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.`);
+        const espera = resultado.aguardouMs ? ` Aguardou ${Math.ceil(resultado.aguardouMs / 1000)} segundo(s) pela troca.` : '';
+        console.error(`${INSTANCE_NAME} ja esta rodando no PID ${pidAtual}. Encerre o processo antigo antes de iniciar outro.${espera}`);
         process.exit(1);
+    }
+
+    if (resultado.aguardouMs) {
+        console.log(`Trava de processo liberada apos ${Math.ceil(resultado.aguardouMs / 1000)} segundo(s) para ${INSTANCE_NAME}.`);
     }
 
     if (resultado.substituiuObsoleta) {
@@ -174,6 +180,18 @@ app.get('/health', (req, res) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
+});
+
+app.get('/health/whatsapp', async (req, res) => {
+    try {
+        const saude = await verificarSaudeWhatsApp();
+        console.log('Health-check WhatsApp executado via /health/whatsapp:', saude);
+        return res.status(200).json({ ok: true, saude });
+    } catch (err) {
+        console.log('Erro ao executar health-check WhatsApp:', err && err.message ? err.message : String(err));
+        if (err && err.stack) console.log(err.stack);
+        return res.status(500).json({ ok: false, erro: err && err.message ? err.message : String(err) });
+    }
 });
 
 app.use(protegerPainel);

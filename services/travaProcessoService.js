@@ -5,6 +5,16 @@ const { execFileSync } = require('child_process');
 
 const TOLERANCIA_INICIO_MS = 15000;
 
+function pausarSincronamente(milisegundos) {
+    const tempo = Math.max(0, Number(milisegundos) || 0);
+    if (!tempo) return;
+
+    // A trava e adquirida antes de o servidor HTTP iniciar. Uma pausa curta e
+    // bloqueante aqui evita duas instancias no intervalo de troca do PM2.
+    const sinal = new Int32Array(new SharedArrayBuffer(4));
+    Atomics.wait(sinal, 0, 0, tempo);
+}
+
 function lerRegistroTrava(conteudo) {
     const texto = String(conteudo || '').trim();
     if (!texto) return null;
@@ -116,7 +126,7 @@ function criarGerenciadorTravaProcesso(opcoes = {}) {
         execucaoId: String(opcoes.execucaoId || crypto.randomUUID())
     };
 
-    function adquirir() {
+    function tentarAdquirir() {
         fs.mkdirSync(path.dirname(caminho), { recursive: true });
         let registroAnterior = null;
 
@@ -140,6 +150,27 @@ function criarGerenciadorTravaProcesso(opcoes = {}) {
         };
     }
 
+    function adquirir(opcoesAquisicao = {}) {
+        const tempoEsperaMs = Math.max(0, Number(opcoesAquisicao.tempoEsperaMs) || 0);
+        const intervaloEsperaMs = Math.max(1, Number(opcoesAquisicao.intervaloEsperaMs) || 250);
+        const agoraFn = opcoes.agoraFn || Date.now;
+        const pausarFn = opcoes.pausarFn || pausarSincronamente;
+        const inicioEsperaMs = Number(agoraFn());
+        const limiteEsperaMs = inicioEsperaMs + tempoEsperaMs;
+        let resultado = tentarAdquirir();
+
+        while (!resultado.adquirida && tempoEsperaMs > 0 && Number(agoraFn()) < limiteEsperaMs) {
+            const restanteMs = Math.max(1, limiteEsperaMs - Number(agoraFn()));
+            pausarFn(Math.min(intervaloEsperaMs, restanteMs));
+            resultado = tentarAdquirir();
+        }
+
+        return {
+            ...resultado,
+            aguardouMs: Math.max(0, Number(agoraFn()) - inicioEsperaMs)
+        };
+    }
+
     function liberar() {
         if (!fs.existsSync(caminho)) return false;
         const registro = lerRegistroTrava(fs.readFileSync(caminho, 'utf8'));
@@ -160,6 +191,7 @@ module.exports = {
     consultarProcessoWindows,
     criarGerenciadorTravaProcesso,
     lerRegistroTrava,
+    pausarSincronamente,
     processoExiste,
     registroPertenceAProcessoAtivo
 };
