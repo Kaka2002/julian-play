@@ -1251,17 +1251,32 @@ function paginaLicencasLocais(licencas = [], opcoes = {}) {
     </script></main></body></html>`;
 }
 
-function paginaHistoricoLicencaLocal(licenca, eventos = []) {
+function paginaHistoricoLicencaLocal(licenca, historico = {}) {
+    const eventos = historico.eventos || [];
+    const pagina = Number(historico.pagina || 1);
+    const totalPaginas = Number(historico.totalPaginas || 1);
+    const total = Number(historico.total || 0);
+    const urlPagina = numero => `/licencas/${encodeURIComponent(licenca.instalacaoId)}/historico?pagina=${numero}`;
+    const primeiraPaginaVisivel = Math.max(1, Math.min(totalPaginas - 4, pagina - 2));
+    const paginasVisiveis = Array.from({ length: Math.min(5, totalPaginas) }, (_, indice) => primeiraPaginaVisivel + indice);
+    const navegacao = totalPaginas > 1 ? `<nav class="pagination" aria-label="Paginacao do historico da licenca">
+        ${pagina > 1 ? `<a class="page-link" href="${urlPagina(pagina - 1)}">Anterior</a>` : '<span class="page-link disabled">Anterior</span>'}
+        ${paginasVisiveis.map(numero => numero === pagina
+            ?`<span class="page-link current" aria-current="page">${numero}</span>`
+            :`<a class="page-link" href="${urlPagina(numero)}">${numero}</a>`).join('')}
+        ${pagina < totalPaginas ? `<a class="page-link" href="${urlPagina(pagina + 1)}">Próxima</a>` : '<span class="page-link disabled">Próxima</span>'}
+    </nav>` : '';
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Histórico da licença - Painel Mestre</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1100px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}.event{display:grid;grid-template-columns:160px 150px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #e8ebf0}.event:last-child{border-bottom:0}.date,.type{font-size:13px;color:#697386;font-weight:800}.msg{font-weight:800}.details{margin-top:5px;color:#697386;font-size:13px;line-height:1.4}.empty{text-align:center;padding:30px;color:#697386}@media(max-width:720px){.event{grid-template-columns:1fr}.date,.type{font-size:12px}}
+    *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1100px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}.event{display:grid;grid-template-columns:160px 150px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #e8ebf0}.event:last-child{border-bottom:0}.date,.type{font-size:13px;color:#697386;font-weight:800}.msg{font-weight:800}.details{margin-top:5px;color:#697386;font-size:13px;line-height:1.4}.empty{text-align:center;padding:30px;color:#697386}.history-summary{margin:0 0 10px;color:#697386;font-size:14px}.pagination{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px}.page-link{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:38px;padding:0 12px;border:1px solid #d8dee8;border-radius:8px;background:#fff;color:#22304a;font-weight:800;text-decoration:none}.page-link.current{background:#4368e8;border-color:#4368e8;color:#fff}.page-link.disabled{opacity:.5;cursor:default}@media(max-width:720px){.event{grid-template-columns:1fr}.date,.type{font-size:12px}}
     </style>${temaVisualMestre()}</head><body><main><a class="button" href="/licencas#licencas-locais">Voltar</a><h1>Histórico da licença</h1><div class="sub">${escapar(licenca.cliente)} | ${escapar(licenca.instalacaoId)} | vencimento ${escapar(licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem vencimento')}</div>
+    <div class="history-summary">${total} registro(s) — página ${pagina} de ${totalPaginas}. Exibindo 12 por página.</div>
     <section class="panel">
         ${eventos.length ? eventos.map(evento => `<div class="event">
             <div class="date">${escapar(formatarDataHoraPainel(evento.criadoEm))}</div>
             <div class="type">${escapar(evento.tipo)}</div>
             <div><div class="msg">${escapar(evento.mensagem)}</div>${evento.detalhes ?`<div class="details">${escapar(evento.detalhes)}</div>` : ''}</div>
         </div>`).join('') : '<div class="empty">Nenhum evento registrado para esta licença.</div>'}
-    </section></main></body></html>`;
+    </section>${navegacao}</main></body></html>`;
 }
 
 function consultaAposUltimaEmissao(licenca = {}) {
@@ -1545,14 +1560,25 @@ async function marcarLicencaLocalTransferida(licenca, novaInstalacaoId, motivo =
     );
 }
 
-async function listarHistoricoLicencaLocal(instalacaoId) {
-    return masterDb.buscarTodos(
+async function listarHistoricoLicencaLocal(instalacaoId, paginaSolicitada = 1) {
+    const tamanhoPagina = 12;
+    const paginaNormalizada = Math.max(1, Number.parseInt(paginaSolicitada, 10) || 1);
+    const id = String(instalacaoId || '').trim();
+    const totalRegistro = await masterDb.buscarUm(
+        'SELECT COUNT(*) AS total FROM eventos_licenca_local WHERE instalacaoId = ?',
+        [id]
+    );
+    const total = Number(totalRegistro?.total || 0);
+    const totalPaginas = Math.max(1, Math.ceil(total / tamanhoPagina));
+    const pagina = Math.min(paginaNormalizada, totalPaginas);
+    const eventos = await masterDb.buscarTodos(
         `SELECT * FROM eventos_licenca_local
           WHERE instalacaoId = ?
           ORDER BY criadoEm DESC
-          LIMIT 200`,
-        [String(instalacaoId || '').trim()]
+          LIMIT ? OFFSET ?`,
+        [id, tamanhoPagina, (pagina - 1) * tamanhoPagina]
     );
+    return { eventos, pagina, total, totalPaginas, tamanhoPagina };
 }
 
 async function listarLicencasLocaisEmitidas(opcoes = {}) {
@@ -2148,7 +2174,7 @@ app.get('/licencas/:instalacaoId/historico', async (req, res) => {
         const instalacaoId = String(req.params.instalacaoId || '').trim();
         const [licenca, eventos] = await Promise.all([
             buscarLicencaLocal(instalacaoId),
-            listarHistoricoLicencaLocal(instalacaoId)
+            listarHistoricoLicencaLocal(instalacaoId, req.query.pagina)
         ]);
         if (!licenca) throw new Error('Licença local não encontrada.');
         res.send(paginaHistoricoLicencaLocal(licenca, eventos));
