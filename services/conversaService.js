@@ -263,6 +263,24 @@ async function responderComDigitacao(message, texto, imagem = null) {
             await enviarImagem(message, imagem);
         }
 
+        // O WhatsApp pode expor a conversa somente pelo identificador @lid.
+        // Nesse caso getChat() falha e adiciona uma espera desnecessaria antes
+        // do texto. O envio direto ja e o caminho funcional e preserva a fila.
+        if (String(destino || '').endsWith('@lid')) {
+            const enviada = await comTimeout(
+                enfileirarEnvio(
+                    () => message.client.sendMessage(destino, resposta),
+                    'Envio direto de resposta do robo'
+                ),
+                ENVIO_TIMEOUT_MS,
+                'Envio direto de mensagem'
+            );
+
+            console.log('Resposta enviada diretamente para conversa @lid:', enviada?.id?._serialized || 'sem id');
+            registrarMensagemDoRobo(enviada);
+            return;
+        }
+
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
 
         const enviada = await comTimeout(
