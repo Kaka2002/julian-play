@@ -922,3 +922,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   indisponivel ate recuperar a chave original ou informar uma nova credencial,
   mas login, monitoramento e demais telas nao param. Nunca limpar esse valor
   cifrado como medida de recuperacao sem autorizacao do titular.
+- Em 09/08/2026, o destino de copia externa da instalacao administradora foi
+  corrigido de `C:\BackupsJulianPlay` (pasta apenas local) para
+  `G:\Meu Drive\BackupsJulianPlay`, sincronizada pelo Google Drive. Foram
+  copiadas e validadas por SHA-256 e `PRAGMA quick_check` as cinco copias de
+  04 a 08/08; cada uma possui tambem seu manifesto. A configuracao permanece
+  com limite de cinco backups no destino externo e com a protecao fora do
+  computador confirmada. Nao tratar `C:\BackupsJulianPlay` como copia em
+  nuvem sem confirmar sua sincronizacao.
