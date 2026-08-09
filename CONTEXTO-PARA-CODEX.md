@@ -959,3 +959,21 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `C:\JulianPlayClientes` e `C:\BackupsJulianPlay`. A pasta residual
   `C:\JulianPlay` nao deve ser usada por nenhum processo; sua remocao pode
   exigir assumir propriedade dos caches Chromium protegidos.
+
+## WhatsApp e entrega de melhorias em 09/08/2026
+
+- O envio de imagens do robo para conversas identificadas por `@lid` foi
+  ajustado: a midia usa envio direto quando `getChat()` nao esta disponivel e
+  a resposta curta passa como legenda da propria imagem. Assim imagem e texto
+  chegam em um unico balao, sem a espera adicional entre dois envios.
+- O processo tambem passou a agendar recuperacao do WhatsApp quando o Chrome
+  interno fecha durante a inicializacao (`TargetCloseError`). Para aplicar uma
+  mudanca compartilhada na instalacao administradora local, usar
+  `pm2 restart julian-play-admin` e `pm2 save --force` em `D:\julian-play`.
+- Convencao solicitada pelo responsavel: ao finalizar qualquer melhoria,
+  sempre informar comandos prontos para (1) revisar/adicionar apenas os
+  arquivos alterados, commit e push para `origin main`; (2) atualizar o
+  servidor; (3) recriar o pacote local; (4) gerar o ZIP externo; e (5)
+  atualizar instalacoes locais. A versao no GitHub apenas fica disponivel;
+  cada instalacao precisa executar seu deploy/atualizacao para carregar o
+  novo codigo.
