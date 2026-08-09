@@ -41,6 +41,36 @@ function assetExiste(nomeArquivo) {
     return Boolean(arquivo && fs.existsSync(arquivo));
 }
 
+async function enviarMedia(message, media, opcoes = {}, descricao = 'Envio de imagem') {
+    const destino = message?.fromMe && message?.to ? message.to : message?.from;
+
+    try {
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
+        return await comTimeout(
+            enfileirarEnvio(
+                () => chat.sendMessage(media, opcoes),
+                descricao
+            ),
+            ENVIO_TIMEOUT_MS,
+            'Envio de imagem'
+        );
+    } catch (erroChat) {
+        if (erroChat.isTimeout) throw erroChat;
+
+        if (!message?.client || !destino) throw erroChat;
+
+        console.log(`Falha ao enviar imagem pelo chat. Tentando envio direto para ${destino}: ${erroChat.message}`);
+        return comTimeout(
+            enfileirarEnvio(
+                () => message.client.sendMessage(destino, media, opcoes),
+                `${descricao} direto`
+            ),
+            ENVIO_TIMEOUT_MS,
+            'Envio direto de imagem'
+        );
+    }
+}
+
 async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
     if (!ENVIAR_IMAGENS) return false;
     if (!assetExiste(nomeArquivo)) return false;
@@ -59,15 +89,7 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
         console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
         registrarEnvioDoRobo(destino, legenda);
 
-        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
-        const enviada = await comTimeout(
-            enfileirarEnvio(
-                () => chat.sendMessage(media, { caption: legenda }),
-                `Envio de imagem ${nomeArquivo}`
-            ),
-            ENVIO_TIMEOUT_MS,
-            'Envio de imagem'
-        );
+        const enviada = await enviarMedia(message, media, { caption: legenda }, `Envio de imagem ${nomeArquivo}`);
 
         console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);
@@ -101,15 +123,7 @@ async function enviarImagem(message, nomeArquivo) {
         const destino = message?.fromMe && message?.to ? message.to : message.from;
         console.log(`Enviando imagem ${nomeArquivo} para:`, destino);
 
-        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
-        const enviada = await comTimeout(
-            enfileirarEnvio(
-                () => chat.sendMessage(media),
-                `Envio de imagem ${nomeArquivo}`
-            ),
-            ENVIO_TIMEOUT_MS,
-            'Envio de imagem'
-        );
+        const enviada = await enviarMedia(message, media, {}, `Envio de imagem ${nomeArquivo}`);
 
         console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);

@@ -930,3 +930,32 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   com limite de cinco backups no destino externo e com a protecao fora do
   computador confirmada. Nao tratar `C:\BackupsJulianPlay` como copia em
   nuvem sem confirmar sua sincronizacao.
+
+## Consolidacao definitiva no drive D em 09/08/2026
+
+- Os tres processos persistidos no PM2 foram revisados e homologados com
+  codigo em `D:\julian-play` e dados isolados em:
+  - administrador: `D:\JulianPlayDados\admin` (porta 10001);
+  - Painel Mestre: `D:\JulianPlayDados\master` (porta 9000);
+  - instalacao local independente: `D:\JulianPlayDados\cliente-local`
+    (porta 10000).
+- As variaveis internas salvas no `dump.pm2` tambem foram corrigidas. Isso e
+  essencial: editar apenas `pm_exec_path` nao basta, pois o PM2 preserva um
+  bloco `env` com os caminhos de dados antigos.
+- O banco do administrador em D e a fonte operacional escolhida: tem os 12
+  clientes, as campanhas, o historico mais completo e as imagens atuais do
+  robo. Os bancos dos tres paineis passaram em `PRAGMA quick_check` e os tres
+  endpoints `/ready` retornaram `ready: true` na versao 1.3.6 apos reinicio.
+- As imagens atuais do robo estao em
+  `D:\JulianPlayDados\admin\assets`; o WhatsApp administrador foi
+  reconectado com sucesso depois do corte.
+- Uma contingencia integral das copias anteriores do C, inclusive a
+  instalacao comercial encontrada em `C:\JulianPlayClientes`, foi preservada
+  em `D:\MigracaoJulianPlay\Consolidacao-C-20260809-123556` antes da
+  limpeza. Os cinco backups externos verificados permanecem em
+  `G:\Meu Drive\BackupsJulianPlay`.
+- Foram removidas do C as pastas operacionais antigas
+  `C:\bots\julian-play`, `C:\JulianPlayMaster`,
+  `C:\JulianPlayClientes` e `C:\BackupsJulianPlay`. A pasta residual
+  `C:\JulianPlay` nao deve ser usada por nenhum processo; sua remocao pode
+  exigir assumir propriedade dos caches Chromium protegidos.

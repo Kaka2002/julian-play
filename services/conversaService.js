@@ -279,9 +279,6 @@ async function responderComDigitacao(message, texto, imagem = null) {
         }
 
         console.log('Falha ao responder pelo chat. Tentando envio direto:', err.message);
-        if (imagem) {
-            await enviarImagem(message, imagem);
-        }
 
         const enviada = await comTimeout(
             enfileirarEnvio(
