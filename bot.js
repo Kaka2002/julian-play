@@ -31,6 +31,7 @@ const { configurarExecutorFilaPersistente } = require('./services/filaMensagensS
 const { criarGerenciadorTravaProcesso } = require('./services/travaProcessoService');
 
 let bancoPronto = false;
+let recuperacaoWhatsappAgendada = false;
 bancoAplicacao.ready.then(() => { bancoPronto = true; }).catch(err => {
     console.error('Banco nao ficou pronto:', err.message);
 });
@@ -47,7 +48,24 @@ process.on('unhandledRejection', (err) => {
         mensagem.includes('Session closed') ||
         mensagem.includes('Navigating frame was detached')
     ) {
-        console.log('WhatsApp Web demorou/recarregou durante a inicializacao. Aguardando estabilizar...');
+        console.log('WhatsApp Web demorou/recarregou durante a inicializacao. Tentando recuperar a conexao...');
+
+        if (!recuperacaoWhatsappAgendada) {
+            recuperacaoWhatsappAgendada = true;
+            const tentativa = setTimeout(() => {
+                recuperacaoWhatsappAgendada = false;
+
+                if (getStatusWhatsApp().conectado) return;
+
+                recuperarWhatsAppAutomaticamente({
+                    motivo: 'Chrome/WhatsApp Web foi fechado durante a inicializacao'
+                }).catch((erroRecuperacao) => {
+                    console.log('Falha ao recuperar WhatsApp apos fechamento do Chrome:', erroRecuperacao.message);
+                });
+            }, 2500);
+
+            tentativa.unref?.();
+        }
         return;
     }
 
