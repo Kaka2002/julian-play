@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const { executarIsolado, removerAmbiente, repoRoot } = require('./helpers/isolated');
 
 test('reclamação de campanha identifica o cliente pelo item e bloqueia marketing', () => {
@@ -124,4 +125,39 @@ test('historico de licenca do Painel Mestre e paginado em 12 registros', () => {
     assert.match(mestre, /LIMIT \? OFFSET \?/);
     assert.match(mestre, /req\.query\.pagina/);
     assert.match(mestre, /Exibindo 12 por página/);
+});
+
+test('Painel Mestre calcula armazenamento fora da requisicao e reutiliza cache', () => {
+    const provisionador = fs.readFileSync(path.join(repoRoot, 'master', 'provisionador.js'), 'utf8');
+    const mestre = fs.readFileSync(path.join(repoRoot, 'master', 'app.js'), 'utf8');
+    assert.match(provisionador, /const CACHE_ARMAZENAMENTO_MS = 10 \* 60 \* 1000;/);
+    assert.match(provisionador, /fs\.promises\.readdir/);
+    assert.match(provisionador, /function obterArmazenamentoInstalacao/);
+    assert.doesNotMatch(provisionador, /function tamanhoDiretorio/);
+    assert.match(mestre, /Calculando\.\.\./);
+});
+
+test('medicao assincrona do armazenamento soma dados, backups e sessao', () => {
+    const pasta = fs.mkdtempSync(path.join(require('os').tmpdir(), 'julian-armazenamento-'));
+    const pastaMestre = fs.mkdtempSync(path.join(require('os').tmpdir(), 'julian-mestre-teste-'));
+    try {
+        fs.mkdirSync(path.join(pasta, 'backups'), { recursive: true });
+        fs.mkdirSync(path.join(pasta, '.wwebjs_auth', 'sessao'), { recursive: true });
+        fs.writeFileSync(path.join(pasta, 'dados.txt'), '1234');
+        fs.writeFileSync(path.join(pasta, 'backups', 'backup.db'), 'SQLite format 3\u0000teste');
+        fs.writeFileSync(path.join(pasta, '.wwebjs_auth', 'sessao', 'estado.bin'), '123456');
+        const codigo = `process.env.MASTER_DATA_DIR=${JSON.stringify(pastaMestre)};const p=require('./master/provisionador');p.medirArmazenamentoInstalacao(${JSON.stringify(pasta)}).then(r=>{console.log(JSON.stringify(r));process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})`;
+        const resultado = spawnSync(process.execPath, ['-e', codigo], { cwd: repoRoot, encoding: 'utf8' });
+        assert.equal(resultado.status, 0, resultado.stderr);
+        const dados = JSON.parse(resultado.stdout.trim());
+        const tamanhoDados = fs.statSync(path.join(pasta, 'dados.txt')).size;
+        const tamanhoBackup = fs.statSync(path.join(pasta, 'backups', 'backup.db')).size;
+        const tamanhoSessao = fs.statSync(path.join(pasta, '.wwebjs_auth', 'sessao', 'estado.bin')).size;
+        assert.equal(dados.usoDiscoBytes, tamanhoDados + tamanhoBackup + tamanhoSessao);
+        assert.equal(dados.armazenamento.backupsBytes, tamanhoBackup);
+        assert.equal(dados.armazenamento.sessaoBytes, tamanhoSessao);
+    } finally {
+        fs.rmSync(pasta, { recursive: true, force: true });
+        fs.rmSync(pastaMestre, { recursive: true, force: true });
+    }
 });

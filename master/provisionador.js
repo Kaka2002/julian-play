@@ -19,6 +19,8 @@ const caddyExe = process.env.CADDY_EXE || 'C:\\caddy\\caddy.exe';
 const caddyConfig = process.env.CADDY_CONFIG || 'C:\\caddy\\Caddyfile';
 const baseDomain = String(process.env.MASTER_BASE_DOMAIN || 'julianplay.com.br').toLowerCase();
 const primeiraPorta = Number(process.env.MASTER_FIRST_PORT || 11001);
+const CACHE_ARMAZENAMENTO_MS = 10 * 60 * 1000;
+const cacheArmazenamentoInstalacoes = new Map();
 
 function lerConfiguracaoInstalacaoAtual() {
     const settingsPath = path.join(sourceDir, '.julian-play-install.json');
@@ -171,8 +173,7 @@ async function listarInstalacoes() {
     ]);
     return Promise.all(instalacoes.map(async (instalacao) => {
         const dbPath = path.join(instalacao.pastaDados, 'clientes.db');
-        const usoDiscoBytes = tamanhoDiretorio(instalacao.pastaDados);
-        const armazenamento = await resumoArquivosInstalacao(instalacao.pastaDados);
+        const { usoDiscoBytes, armazenamento } = obterArmazenamentoInstalacao(instalacao.pastaDados);
         const eventosDaInstalacao = eventosRecentes.get(Number(instalacao.id)) || [];
         if (!fs.existsSync(dbPath) || instalacao.status === 'arquivado') return { ...instalacao, usoDiscoBytes, armazenamento, eventosRecentes: eventosDaInstalacao };
         try {
@@ -275,18 +276,6 @@ function escreverArquivoSeguro(caminho, conteudo) {
     fs.writeFileSync(caminho, conteudo, { encoding: 'utf8', mode: 0o600 });
 }
 
-function tamanhoDiretorio(caminho) {
-    if (!fs.existsSync(caminho)) return 0;
-    let total = 0;
-    for (const item of fs.readdirSync(caminho, { withFileTypes: true })) {
-        const alvo = path.join(caminho, item.name);
-        try {
-            total += item.isDirectory() ? tamanhoDiretorio(alvo) : fs.statSync(alvo).size;
-        } catch (_) { /* Arquivo pode estar em uso durante a leitura. */ }
-    }
-    return total;
-}
-
 function validarBancoSqlite(arquivo) {
     return new Promise((resolve) => {
         const banco = new sqlite3.Database(arquivo, sqlite3.OPEN_READONLY, (err) => {
@@ -299,33 +288,92 @@ function validarBancoSqlite(arquivo) {
     });
 }
 
-async function resumoArquivosInstalacao(pastaDados) {
-    const pastaBackups = path.join(pastaDados, 'backups');
-    const pastaSessao = path.join(pastaDados, '.wwebjs_auth');
-    let ultimoBackup = null;
+function arquivoDentroDaPasta(arquivo, pasta) {
+    const relativo = path.relative(pasta, arquivo);
+    return Boolean(relativo) && !relativo.startsWith(`..${path.sep}`) && relativo !== '..' && !path.isAbsolute(relativo);
+}
 
-    if (fs.existsSync(pastaBackups)) {
-        const arquivos = fs.readdirSync(pastaBackups, { withFileTypes: true })
-            .filter(item => item.isFile() && /\.(db|sqlite|sqlite3)$/i.test(item.name))
-            .map(item => {
-                const arquivo = path.join(pastaBackups, item.name);
-                return { nome: item.name, arquivo, stat: fs.statSync(arquivo) };
-            })
-            .sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
-        if (arquivos[0]) {
-            ultimoBackup = {
-                nome: arquivos[0].nome,
-                tamanhoBytes: arquivos[0].stat.size,
-                criadoEm: arquivos[0].stat.mtime.toISOString(),
-                validado: await validarBancoSqlite(arquivos[0].arquivo)
-            };
+async function medirArmazenamentoInstalacao(pastaDados) {
+    const raiz = path.resolve(pastaDados);
+    const pastaBackups = path.join(raiz, 'backups');
+    const pastaSessao = path.join(raiz, '.wwebjs_auth');
+    const diretorios = [raiz];
+    const backups = [];
+    let usoDiscoBytes = 0;
+    let backupsBytes = 0;
+    let sessaoBytes = 0;
+
+    while (diretorios.length) {
+        const diretorio = diretorios.pop();
+        let entradas;
+        try {
+            entradas = await fs.promises.readdir(diretorio, { withFileTypes: true });
+        } catch (_) {
+            continue;
         }
+
+        const arquivos = entradas.filter(item => item.isFile());
+        entradas.filter(item => item.isDirectory()).forEach(item => diretorios.push(path.join(diretorio, item.name)));
+        const estatisticas = await Promise.all(arquivos.map(async item => {
+            const arquivo = path.join(diretorio, item.name);
+            try {
+                return { arquivo, nome: item.name, stat: await fs.promises.stat(arquivo) };
+            } catch (_) {
+                return null;
+            }
+        }));
+
+        estatisticas.filter(Boolean).forEach(item => {
+            const tamanho = Number(item.stat.size || 0);
+            usoDiscoBytes += tamanho;
+            if (arquivoDentroDaPasta(item.arquivo, pastaBackups)) backupsBytes += tamanho;
+            if (arquivoDentroDaPasta(item.arquivo, pastaSessao)) sessaoBytes += tamanho;
+            if (path.dirname(item.arquivo) === pastaBackups && /\.(db|sqlite|sqlite3)$/i.test(item.nome)) backups.push(item);
+        });
+    }
+
+    backups.sort((a, b) => b.stat.mtimeMs - a.stat.mtimeMs);
+    const backupMaisRecente = backups[0];
+    const ultimoBackup = backupMaisRecente ? {
+        nome: backupMaisRecente.nome,
+        tamanhoBytes: backupMaisRecente.stat.size,
+        criadoEm: backupMaisRecente.stat.mtime.toISOString(),
+        validado: await validarBancoSqlite(backupMaisRecente.arquivo)
+    } : null;
+
+    return { usoDiscoBytes, armazenamento: { backupsBytes, sessaoBytes, ultimoBackup } };
+}
+
+function obterArmazenamentoInstalacao(pastaDados) {
+    const chave = path.resolve(pastaDados);
+    const agora = Date.now();
+    let cache = cacheArmazenamentoInstalacoes.get(chave);
+    if (!cache) {
+        cache = { usoDiscoBytes: null, armazenamento: {}, atualizadoEm: 0, atualizando: false };
+        cacheArmazenamentoInstalacoes.set(chave, cache);
+    }
+
+    if (!cache.atualizando && (!cache.atualizadoEm || agora - cache.atualizadoEm >= CACHE_ARMAZENAMENTO_MS)) {
+        cache.atualizando = true;
+        medirArmazenamentoInstalacao(chave)
+            .then(resultado => {
+                cache.usoDiscoBytes = resultado.usoDiscoBytes;
+                cache.armazenamento = resultado.armazenamento;
+                cache.atualizadoEm = Date.now();
+            })
+            .catch(err => {
+                console.log(`Não foi possível atualizar o armazenamento de ${chave}: ${err.message}`);
+            })
+            .finally(() => { cache.atualizando = false; });
     }
 
     return {
-        backupsBytes: tamanhoDiretorio(pastaBackups),
-        sessaoBytes: tamanhoDiretorio(pastaSessao),
-        ultimoBackup
+        usoDiscoBytes: cache.usoDiscoBytes,
+        armazenamento: {
+            ...cache.armazenamento,
+            atualizadoEm: cache.atualizadoEm ? new Date(cache.atualizadoEm).toISOString() : '',
+            atualizando: cache.atualizando
+        }
     };
 }
 
@@ -1117,6 +1165,8 @@ module.exports = {
     obterRecursosServidor,
     limparServidorSeguro,
     limparArtefatosOperacionaisSeguro,
+    medirArmazenamentoInstalacao,
+    obterArmazenamentoInstalacao,
     otimizarMemoriaRobos,
     resetarSenhaPainel,
     gerarBackupInstalacao,

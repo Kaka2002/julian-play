@@ -787,7 +787,10 @@ function centralSaudeOperacional(instalacoes = [], recursos = {}) {
     const nivelMemoria = memoriaLivre < 512 ? 'error' : memoriaLivre < 1024 ? 'warn' : 'ok';
     const cobrancasPendentes = instalacoes.reduce((total, item) => total + Number(item.resumoComercial?.cobrancasPixPendentes || 0), 0);
     const reconexoes = instalacoes.reduce((total, item) => total + Number(item.resumoComercial?.reconexoesWhatsapp24h || 0), 0);
-    const semBackup = instalacoes.filter(item => item.status !== 'arquivado' && !item.armazenamento?.ultimoBackup).length;
+    const semBackup = instalacoes.filter(item => item.status !== 'arquivado' && !item.armazenamento?.atualizando && !item.armazenamento?.ultimoBackup).length;
+    const textoArmazenamento = (bytes, armazenamento = {}) => bytes == null
+        ?(armazenamento.atualizando ? 'Calculando...' : '-')
+        :formatarBytes(bytes);
 
     return `<section class="panel" id="central-saude">
         <div class="panel-head"><div><h2>Central de saúde operacional</h2><div class="sub">Disco, memória, dados por instalação, backups, PIX e estabilidade do WhatsApp</div></div></div>
@@ -804,12 +807,15 @@ function centralSaudeOperacional(instalacoes = [], recursos = {}) {
                 const armazenamento = item.armazenamento || {};
                 const resumo = item.resumoComercial || {};
                 const backup = armazenamento.ultimoBackup;
+                const textoUltimoBackup = backup
+                    ? `<span class="badge ${backup.validado ?'ok':'error'}">${backup.validado ?'Validado':'Inválido'}</span><div class="small">${escapar(formatarDataHoraPainel(backup.criadoEm))}</div>`
+                    : armazenamento.atualizando ? '<span class="badge warn">Calculando...</span>' : '<span class="badge warn">Não encontrado</span>';
                 return `<tr>
                     <td><strong>${escapar(item.nome)}</strong><div class="small">${escapar(item.processoPm2)}</div></td>
-                    <td>${escapar(formatarBytes(item.usoDiscoBytes || 0))}</td>
-                    <td>${escapar(formatarBytes(armazenamento.backupsBytes || 0))}</td>
-                    <td>${escapar(formatarBytes(armazenamento.sessaoBytes || 0))}</td>
-                    <td>${backup ? `<span class="badge ${backup.validado ?'ok':'error'}">${backup.validado ?'Validado':'Inválido'}</span><div class="small">${escapar(formatarDataHoraPainel(backup.criadoEm))}</div>` : '<span class="badge warn">Não encontrado</span>'}</td>
+                    <td>${escapar(textoArmazenamento(item.usoDiscoBytes, armazenamento))}</td>
+                    <td>${escapar(textoArmazenamento(armazenamento.backupsBytes, armazenamento))}</td>
+                    <td>${escapar(textoArmazenamento(armazenamento.sessaoBytes, armazenamento))}</td>
+                    <td>${textoUltimoBackup}</td>
                     <td>${resumo.ultimoPixConfirmadoEm ? escapar(formatarDataHoraPainel(resumo.ultimoPixConfirmadoEm)) : '-'}</td>
                     <td><span class="badge ${Number(resumo.cobrancasPixPendentes || 0) ?'warn':'ok'}">${escapar(resumo.cobrancasPixPendentes || 0)}</span></td>
                     <td><span class="badge ${Number(resumo.reconexoesWhatsapp24h || 0) >= 5 ?'error':Number(resumo.reconexoesWhatsapp24h || 0)?'warn':'ok'}">${escapar(resumo.reconexoesWhatsapp24h || 0)}</span></td>

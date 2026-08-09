@@ -914,3 +914,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   trava valida antes de recusar a inicializacao. A protecao contra duas
   instancias permanece ativa; para recuperacao manual, `pm2 restart` continua
   sendo o comando preferencial para os paineis com sessao WhatsApp.
+- Em 09/08/2026, uma instalacao local com um `mercadoPagoAccessToken` cifrado
+  por chave antiga ficou incapaz de carregar o login porque a leitura global
+  das configuracoes falhava. A correcao separa a leitura das credenciais de
+  acesso e torna segredos opcionais indisponiveis degradacao segura: o texto
+  cifrado fica preservado no banco, a integracao correspondente permanece
+  indisponivel ate recuperar a chave original ou informar uma nova credencial,
+  mas login, monitoramento e demais telas nao param. Nunca limpar esse valor
+  cifrado como medida de recuperacao sem autorizacao do titular.

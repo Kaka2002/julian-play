@@ -116,13 +116,23 @@ async function obterConfiguracoes() {
         campanhaPausaErroPercentual: '20',
         campanhaPausaErroMinimo: '5',
         painelUsuario: '',
-        painelSenhaHash: ''
+        painelSenhaHash: '',
+        // Credenciais que permanecem cifradas no banco, mas cuja chave original
+        // não está disponível nesta execução. Elas nunca devem impedir o painel
+        // de iniciar nem devem ser sobrescritas por uma leitura incompleta.
+        segredosIndisponiveis: []
     };
 
     const migracoes = [];
     rows.forEach((row) => {
         const valor = row.valor || '';
-        config[row.chave] = revelar(row.chave, valor);
+        try {
+            config[row.chave] = revelar(row.chave, valor);
+        } catch (err) {
+            if (!deveProteger(row.chave) || !estaProtegido(valor)) throw err;
+            config.segredosIndisponiveis.push(row.chave);
+            return;
+        }
         if (valor && deveProteger(row.chave) && !estaProtegido(valor) && proteger(row.chave, valor) !== valor) {
             migracoes.push(executar('UPDATE configuracoes SET valor = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE chave = ?', [proteger(row.chave, valor), row.chave]));
         }
@@ -130,6 +140,16 @@ async function obterConfiguracoes() {
     await Promise.all(migracoes);
 
     return config;
+}
+
+async function obterConfiguracoesAcesso() {
+    const rows = await buscarTodos(
+        "SELECT chave, valor FROM configuracoes WHERE chave IN ('painelUsuario', 'painelSenhaHash')"
+    );
+    return rows.reduce((acesso, row) => {
+        acesso[row.chave] = String(row.valor || '');
+        return acesso;
+    }, { painelUsuario: '', painelSenhaHash: '' });
 }
 
 function salvarConfiguracao(chave, valor) {
@@ -406,6 +426,7 @@ async function salvarConfiguracoesMonitoramento(dados = {}) {
 
 module.exports = {
     obterConfiguracoes,
+    obterConfiguracoesAcesso,
     salvarConfiguracao,
     salvarConfiguracoesPainel,
     salvarConfiguracoesRobo,

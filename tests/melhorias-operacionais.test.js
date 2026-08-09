@@ -232,6 +232,23 @@ test('configuracao antiga em texto e migrada sem alterar o valor usado', () => {
     }
 });
 
+test('segredo opcional com chave indisponivel nao bloqueia o acesso ao painel nem sobrescreve o cofre', () => {
+    const cifrado = executarIsolado(`const c=require('./services/cofreSegredosService');process.stdout.write(c.proteger('mercadoPagoAccessToken','token-original'))`, { env: { JULIAN_SECRET_KEY: 'chave-original' } });
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(sql,params=[])=>new Promise((ok,no)=>db.run(sql,params,e=>e?no(e):ok()));const get=(sql,params=[])=>new Promise((ok,no)=>db.get(sql,params,(e,row)=>e?no(e):ok(row)));await run("INSERT INTO configuracoes(chave,valor) VALUES('mercadoPagoAccessToken',?),('painelUsuario','admin'),('painelSenhaHash','hash')",[${JSON.stringify(cifrado.stdout)}]);const config=require('./services/configuracoesPainel');const auth=require('./services/authService');const lido=await config.obterConfiguracoes();const acesso=await config.obterConfiguracoesAcesso();const configurado=await auth.acessoConfigurado();const bruto=await get("SELECT valor FROM configuracoes WHERE chave='mercadoPagoAccessToken'");process.stdout.write(JSON.stringify({indisponivel:lido.segredosIndisponiveis,usuario:acesso.painelUsuario,senha:acesso.painelSenhaHash,configurado,preservado:bruto.valor===${JSON.stringify(cifrado.stdout)}}));db.close()})().catch(e=>{console.error(e);process.exit(1)})`, { env: { JULIAN_SECRET_KEY: 'chave-diferente' } });
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            indisponivel: ['mercadoPagoAccessToken'],
+            usuario: 'admin',
+            senha: 'hash',
+            configurado: true,
+            preservado: true
+        });
+    } finally {
+        removerAmbiente(cifrado.ambiente);
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('kit de recuperacao inclui banco e chave somente dentro do pacote cifrado', () => {
     const resultado = executarIsolado(`(async()=>{const fs=require('fs');const crypto=require('crypto');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const arquivo=await m.exportarBackupCriptografado(b.nome,'senha-de-recuperacao-forte');const dados=fs.readFileSync(arquivo);const salt=dados.subarray(8,24),iv=dados.subarray(24,36),tag=dados.subarray(36,52);const d=crypto.createDecipheriv('aes-256-gcm',crypto.scryptSync('senha-de-recuperacao-forte',salt,32),iv);d.setAuthTag(tag);const pacote=JSON.parse(Buffer.concat([d.update(dados.subarray(52)),d.final()]));process.stdout.write(JSON.stringify({magic:dados.subarray(0,8).toString(),formato:pacote.formato,temBanco:!!pacote.bancoBase64,token:pacote.recuperacao.licenseAdminToken}));})().catch(e=>{console.error(e);process.exit(1)})`, { env: { LICENSE_ADMIN_TOKEN: 'TOKEN-RECUPERAVEL' } });
     try {

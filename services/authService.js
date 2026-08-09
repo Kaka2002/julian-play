@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const db = require('../database/sqlite');
-const { obterConfiguracoes, salvarConfiguracao } = require('./configuracoesPainel');
+const { obterConfiguracoesAcesso, salvarConfiguracao } = require('./configuracoesPainel');
 const { criarHashSenha, verificarSenha, hashEhLegado, hashLegado } = require('./passwordService');
 
 const COOKIE_NAME = 'julian_play_session';
@@ -33,7 +33,7 @@ function hashSenha(senha) {
 }
 
 async function obterCredenciaisConfiguradas() {
-    const config = await obterConfiguracoes();
+    const config = await obterConfiguracoesAcesso();
     if (config.painelUsuario && config.painelSenhaHash) {
         return { usuario: config.painelUsuario, senhaHash: config.painelSenhaHash, origem: 'banco' };
     }
