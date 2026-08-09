@@ -5,7 +5,7 @@ const menuPlanos = require('../menus/planos');
 const menuDispositivos = require('../menus/dispositivos');
 const menuRenovacao = require('../menus/renovacao');
 const { isMensagemConfirmacao, isPalavraChave, isPedidoTeste } = require('../utils/helpers');
-const { enviarImagem } = require('./assetService');
+const { enviarImagem, enviarImagemComLegenda } = require('./assetService');
 const { agendarEncerramentoTeste } = require('./encerramentoTesteService');
 const { buscarPlano, enviarQRCodePIX, listarPlanosComerciais } = require('./pixService');
 const { paypalDisponivel, criarCobrancaPayPal } = require('./paypalService');
@@ -256,10 +256,14 @@ async function responderComDigitacao(message, texto, imagem = null) {
     registrarEnvioDoRobo(destino, resposta);
 
     try {
-        // Em conversas identificadas por @lid, getChat() pode falhar mesmo com o
-        // cliente conectado. A imagem possui envio direto como alternativa, por
-        // isso ela deve ser tratada antes de depender do chat para o texto.
-        if (imagem) {
+        // Uma legenda faz imagem e resposta chegarem no mesmo balão. Isso evita
+        // que o cliente espere o upload da mídia terminar para receber o texto.
+        // O WhatsApp limita legendas; acima desse tamanho preservamos o texto
+        // como uma mensagem separada.
+        if (imagem && resposta.length <= 1024) {
+            const enviadaComLegenda = await enviarImagemComLegenda(message, imagem, resposta);
+            if (enviadaComLegenda) return;
+        } else if (imagem) {
             await enviarImagem(message, imagem);
         }
 
