@@ -256,10 +256,14 @@ async function responderComDigitacao(message, texto, imagem = null) {
     registrarEnvioDoRobo(destino, resposta);
 
     try {
-        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
+        // Em conversas identificadas por @lid, getChat() pode falhar mesmo com o
+        // cliente conectado. A imagem possui envio direto como alternativa, por
+        // isso ela deve ser tratada antes de depender do chat para o texto.
         if (imagem) {
             await enviarImagem(message, imagem);
         }
+
+        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
 
         const enviada = await comTimeout(
             enfileirarEnvio(
