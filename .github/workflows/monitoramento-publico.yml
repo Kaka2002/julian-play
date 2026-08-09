@@ -1,8 +1,8 @@
 name: Monitoramento publico Julian Play
 
 on:
-  schedule:
-    - cron: '*/15 * * * *'
+  # O painel roda em computador que pode ficar desligado. A verificacao e
+  # manual para nao registrar falhas esperadas no GitHub Actions.
   workflow_dispatch:
 
 permissions:

@@ -835,10 +835,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   do codigo e de `node_modules` em caso de falha. O PM2 aguarda sinal de
   prontidao e encerra HTTP, WhatsApp e SQLite de forma graciosa; somente os
   processos antes online retornam, e AMPLAYTV permanece parada.
-- O monitoramento publico de `painel` e `gestao` roda fora do computador pelo
-  GitHub Actions a cada 15 minutos. `/live` e `/ready` sao minimos; `/health`
-  detalhado fica restrito a chamadas locais para nao publicar numeros e
-  contatos do WhatsApp.
+- O monitoramento publico de `painel` e `gestao` fica disponivel para execucao
+  manual pelo GitHub Actions. O agendamento recorrente foi removido porque a
+  maquina de producao pode ficar desligada, o que geraria falhas esperadas.
+  `/live` e `/ready` sao minimos; `/health` detalhado fica restrito a chamadas
+  locais para nao publicar numeros e contatos do WhatsApp.
 - A copia externa de backup agora e reaberta como SQLite, comparada por
   SHA-256 e usada preferencialmente no exercicio mensal de restauracao. A
   interface distingue outro disco de uma copia confirmada fora do computador.

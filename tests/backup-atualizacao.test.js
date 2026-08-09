@@ -80,6 +80,12 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
  assert.doesNotMatch(workflow,/VPS_HOST|VPS_USER|VPS_SSH_KEY|ssh\s|deploy\.ps1/i);
 });
 
+test('monitoramento publico fica disponivel somente por execucao manual',()=>{
+ const workflow=fs.readFileSync(path.join(repoRoot,'.github','workflows','monitoramento-publico.yml'),'utf8');
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.doesNotMatch(workflow,/\n\s+schedule:/);
+});
+
 test('deploy prepara e testa a versao antes da parada e possui rollback automatico',()=>{
  const atualizar=fs.readFileSync(path.join(repoRoot,'update-windows.ps1'),'utf8');
  const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');
