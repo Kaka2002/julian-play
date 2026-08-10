@@ -977,3 +977,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   atualizar instalacoes locais. A versao no GitHub apenas fica disponivel;
   cada instalacao precisa executar seu deploy/atualizacao para carregar o
   novo codigo.
+- A partir de 10/08/2026, o ZIP externo de entrega possui sempre o nome fixo
+  `entrega-cliente-local\ENVIAR_AO_CLIENTE.zip`. O gerador o substitui a cada
+  execucao e remove somente ZIPs externos antigos que ele proprio criou
+  (`JULIAN-PLAY-*.zip` e `ENVIAR_AO_CLIENTE-v*.zip`), inclusive os armazenados
+  em `ARTEFATOS_GERADOS`. O ZIP interno
+  `ENVIAR_AO_CLIENTE\julian-play-app.zip` permanece necessario para o
+  instalador e o atualizador locais.
