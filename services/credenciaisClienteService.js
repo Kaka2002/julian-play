@@ -1,5 +1,19 @@
 const db = require('../database/sqlite');
 const { proteger, revelar, estaProtegido } = require('./cofreSegredosService');
+const avisosCredenciaisIndisponiveis = new Set();
+
+function revelarCampoSeguro(chave, valor) {
+    try {
+        return revelar(chave, valor || '');
+    } catch (err) {
+        const aviso = `${chave}:${String(valor || '').slice(0, 32)}`;
+        if (!avisosCredenciaisIndisponiveis.has(aviso)) {
+            avisosCredenciaisIndisponiveis.add(aviso);
+            console.warn(`Credencial preservada, mas indisponivel para leitura (${chave}): ${err.message}`);
+        }
+        return '';
+    }
+}
 
 function protegerCredenciais(cliente = {}) {
     return {
@@ -14,9 +28,9 @@ function revelarCredenciais(cliente) {
     if (!cliente) return cliente;
     return {
         ...cliente,
-        senha: revelar('cliente.senha', cliente.senha || ''),
-        senhaApp: revelar('cliente.senhaApp', cliente.senhaApp || ''),
-        acessosApp: revelar('cliente.acessosApp', cliente.acessosApp || '')
+        senha: revelarCampoSeguro('cliente.senha', cliente.senha),
+        senhaApp: revelarCampoSeguro('cliente.senhaApp', cliente.senhaApp),
+        acessosApp: revelarCampoSeguro('cliente.acessosApp', cliente.acessosApp)
     };
 }
 

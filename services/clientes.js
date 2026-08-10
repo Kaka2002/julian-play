@@ -1,7 +1,7 @@
 const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
 const { normalizarAniversario } = require('../utils/aniversario');
-const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes } = require('./credenciaisClienteService');
+const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes, estaProtegido } = require('./credenciaisClienteService');
 let credenciaisProntas = null;
 function garantirCredenciaisProntas() {
     if (!credenciaisProntas) credenciaisProntas = migrarCredenciaisExistentes();
@@ -751,10 +751,27 @@ async function listarClientes(filtros = {}) {
 
 async function salvarCliente(dados) {
     const cliente = montarCliente(dados);
-    const clienteProtegido = protegerCredenciais(cliente);
+    let clienteProtegido = protegerCredenciais(cliente);
     const idCliente = Number.parseInt(dados.id, 10);
 
     if (Number.isFinite(idCliente) && idCliente > 0) {
+        // Se uma credencial foi cifrada por uma chave antiga, ela e exibida
+        // vazia para nao derrubar o painel. Ao salvar campos nao relacionados,
+        // preservamos o valor original no banco em vez de apagá-lo.
+        const existente = await db.ready.then(() => new Promise((resolve, reject) => {
+            db.get('SELECT senha, senhaApp, acessosApp FROM clientes WHERE id = ?', [idCliente], (err, row) => {
+                if (err) return reject(err);
+                resolve(row || null);
+            });
+        }));
+        if (existente) {
+            for (const campo of ['senha', 'senhaApp', 'acessosApp']) {
+                if (!cliente[campo] && estaProtegido(existente[campo])) {
+                    clienteProtegido[campo] = existente[campo];
+                }
+            }
+        }
+
         const resultado = await executar(
             `UPDATE clientes SET
                 nome = ?,
