@@ -117,6 +117,9 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/normalizar-pm2-jlist\.js/);
  assert.match(atualizar,/TempoMaximoSegundos = 45/);
  assert.match(atualizar,/Banco ainda esta sendo liberado/);
+ assert.match(atualizar,/EncerrarNodeOrfaoNaPortaDaInstalacao/);
+ assert.match(atualizar,/Get-NetTCPConnection -State Listen -LocalPort \$porta/);
+ assert.match(atualizar,/Encerrando Node orfao/);
  assert.match(atualizar,/ObterListaPm2 \$pm2 \$node/);
  assert.match(atualizar,/Porta nao identificada antes de parar producao/);
  assert.match(atualizar,/Ainda aguardando \(\$restantes s\)/);

@@ -185,6 +185,33 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
     if ($processos.Count -gt 0) { Start-Sleep -Seconds 3 }
 }
 
+function EncerrarNodeOrfaoNaPortaDaInstalacao([string]$nomeProcesso, [int]$porta) {
+    if ($porta -le 0) { return $false }
+    $ouvintes = @(Get-NetTCPConnection -State Listen -LocalPort $porta -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($ouvintes.Count -eq 0) { return $false }
+
+    foreach ($pidOuvinte in $ouvintes) {
+        $processo = Get-CimInstance Win32_Process -Filter "ProcessId=$pidOuvinte" -ErrorAction SilentlyContinue
+        if (-not $processo) { continue }
+        if ($processo.Name -ne 'node.exe') {
+            throw "A porta $porta de $nomeProcesso continua ocupada por $($processo.Name) (PID $pidOuvinte). A atualizacao foi interrompida sem copiar o banco."
+        }
+        Write-Host "Encerrando Node orfao de $nomeProcesso na porta $porta (PID $pidOuvinte)." -ForegroundColor Yellow
+        Stop-Process -Id $pidOuvinte -Force -ErrorAction Stop
+    }
+
+    $limite = (Get-Date).AddSeconds(15)
+    do {
+        Start-Sleep -Seconds 1
+        $restantes = @(Get-NetTCPConnection -State Listen -LocalPort $porta -ErrorAction SilentlyContinue)
+    } while ($restantes.Count -gt 0 -and (Get-Date) -lt $limite)
+    if ($restantes.Count -gt 0) {
+        throw "A porta $porta de $nomeProcesso permaneceu ocupada apos encerrar o Node orfao."
+    }
+    return $true
+}
+
 function ValidarPowerShell([string]$arquivo) {
     $tokens = $null
     $erros = $null
@@ -492,6 +519,23 @@ try {
         if ($configMasterProcessos.clientsDir) { $raizesProcessos.Add([string]$configMasterProcessos.clientsDir) }
     }
     EncerrarProcessosResiduaisJulian $raizesProcessos.ToArray()
+
+    # Uma instancia Node iniciada manualmente ou por um daemon PM2 antigo pode
+    # sobreviver sem aparecer no jlist atual. Pela porta exclusiva da instalacao
+    # identificamos somente esse orfao, encerramos antes do backup e o recriamos
+    # pelo PM2 ao final.
+    $portaInstalacao = 0
+    if ($configInstalacao -and $configInstalacao.port) {
+        [void][int]::TryParse([string]$configInstalacao.port, [ref]$portaInstalacao)
+    }
+    if ($portaInstalacao -le 0 -and $env:PORT) {
+        [void][int]::TryParse([string]$env:PORT, [ref]$portaInstalacao)
+    }
+    if (EncerrarNodeOrfaoNaPortaDaInstalacao $NomeProcesso $portaInstalacao) {
+        $estadoPrincipal = $estadosAntes[$NomeProcesso]
+        $estadoPrincipal.estavaOnline = $true
+        if ($estadoPrincipal.port -le 0) { $estadoPrincipal.port = $portaInstalacao }
+    }
 
     Etapa 'Criando backups com os bancos fechados'
     CriarBackupsAntesAtualizacao $node

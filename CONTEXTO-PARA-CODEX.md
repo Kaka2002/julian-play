@@ -1005,5 +1005,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   backups. O backup tambem tenta novamente por ate 45 segundos se o Windows
   ainda estiver liberando o arquivo apos a parada. Isso evita tentar copiar
   um banco SQLite ainda aberto por outro painel no arranjo consolidado do
-  drive D. O rollback do caso anterior foi confirmado pelo proprio
-  atualizador; nenhuma versao parcial foi publicada.
+  drive D. O atualizador tambem confere a porta exclusiva da instalacao:
+  se um `node.exe` orfao estiver atendendo nela sem constar no PM2 atual,
+  ele e encerrado antes do backup e recriado pelo PM2 ao fim. O rollback do
+  caso anterior foi confirmado pelo proprio atualizador; nenhuma versao
+  parcial foi publicada.
