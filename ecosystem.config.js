@@ -40,7 +40,10 @@ module.exports = {
                 JULIAN_PLAY_INSTALL_MODE: process.env.JULIAN_PLAY_INSTALL_MODE || settings.installMode || 'server',
                 LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',
                 LICENSE_PUBLIC_KEY: process.env.LICENSE_PUBLIC_KEY || settings.licensePublicKey || '',
-                LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0)
+                LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0),
+                RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY || settings.recaptchaSiteKey || '',
+                RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY || settings.recaptchaSecretKey || '',
+                RECAPTCHA_ALLOWED_HOSTNAMES: process.env.RECAPTCHA_ALLOWED_HOSTNAMES || settings.recaptchaAllowedHostnames || ''
             }
         }
     ]

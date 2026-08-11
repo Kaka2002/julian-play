@@ -5,7 +5,7 @@ const path = require('path');
 const packageInfo = require('../package.json');
 const masterDb = require('./db');
 const { verificarSenha } = require('../services/passwordService');
-const { csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp } = require('../services/securityService');
+const { csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, recaptchaConfigurado, validarRecaptcha } = require('../services/securityService');
 const { gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
 const { dataHojeSaoPaulo, adicionarDias } = require('../services/licencaCalculo');
 const { formatarDataHoraBrasil } = require('../utils/dataHora');
@@ -126,9 +126,10 @@ function paginaLogin(opcoes = {}) {
     const destino = destinoSeguro(opcoes.destino || '/');
     const captcha = criarCaptcha();
     const doisFatores = Boolean(String(process.env.MASTER_TOTP_SECRET || '').trim());
+    const usarRecaptcha = recaptchaConfigurado();
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Login - Painel Mestre</title><style>
     *{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif;display:grid;place-items:center}.login{width:min(460px,calc(100% - 30px));background:#fff;border:1px solid #e2e6ed;border-radius:10px;box-shadow:0 20px 50px rgba(15,23,42,.12);padding:30px}.brand{font-weight:900;font-size:20px;margin-bottom:28px}h1{font-size:38px;margin:0 0 8px}.sub{color:#697386;font-size:18px;line-height:1.35;margin-bottom:24px}.erro{padding:13px;border-radius:8px;background:#ffe5e7;color:#c52e35;font-weight:800;margin-bottom:16px}label{display:grid;gap:7px;font-weight:800;margin-top:16px}input{border:1px solid #dfe3ea;border-radius:8px;padding:13px;font:inherit;font-weight:700}button{width:100%;border:0;border-radius:8px;padding:14px;margin-top:24px;background:#4368e8;color:#fff;font:inherit;font-weight:900;cursor:pointer}.small{margin-top:18px;color:#697386;font-size:14px}
-    </style></head><body><form class="login" method="post" action="/login">
+    </style>${usarRecaptcha ? '<script src="https://www.google.com/recaptcha/api.js?hl=pt-BR" async defer></script>' : ''}</head><body><form class="login" method="post" action="/login">
       <div class="brand">Painel Mestre - Julian Play</div>
       <h1>Entrar</h1>
       <div class="sub">Informe o usu&aacute;rio e a senha para acessar o painel.</div>
@@ -137,8 +138,8 @@ function paginaLogin(opcoes = {}) {
       <label>Usu&aacute;rio<input name="usuario" autocomplete="username" autofocus required></label>
       <label>Senha<input type="password" name="senha" autocomplete="current-password" required></label>
       ${doisFatores ?'<label>Código de autenticação em duas etapas<input name="codigoTotp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" required></label>' : ''}
-      <input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
-      <label>Confirmação humana: ${escapar(captcha.pergunta)}<input name="captchaResposta" inputmode="numeric" autocomplete="off" required></label>
+      ${usarRecaptcha ? `<div class="g-recaptcha" data-sitekey="${escapar(process.env.RECAPTCHA_SITE_KEY)}"></div>` : `<input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
+      <label>Confirmação humana: ${escapar(captcha.pergunta)}<input name="captchaResposta" inputmode="numeric" autocomplete="off" required></label>`}
       <button type="submit">Acessar painel</button>
       <div class="small">Depois do login, sua sess&atilde;o fica ativa neste navegador.</div>
     </form></body></html>`;
@@ -1754,7 +1755,7 @@ app.get('/login', (req, res) => {
     return res.send(paginaLogin({ destino: req.query.destino, erro: req.query.erro }));
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const usuarioEsperado = process.env.MASTER_USER || '';
     const hashEsperado = process.env.MASTER_PASSWORD_HASH || '';
     const usuario = String(req.body.usuario || '').trim();
@@ -1767,8 +1768,11 @@ app.post('/login', (req, res) => {
     }
 
     if (bloqueio) return res.status(429).send(paginaLogin({ destino: req.body.destino, erro: 'Muitas tentativas. Aguarde o bloqueio temporario.' }));
-    if (!validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta)) {
-        falhaLoginMestre(chave); auditarMestre(req, 'seguranca_login', 'CAPTCHA invalido no Painel Mestre.');
+    const validacaoHumana = recaptchaConfigurado()
+        ? await validarRecaptcha(req.body['g-recaptcha-response'], { ip: req.ip || req.socket?.remoteAddress })
+        : { valido: validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta) };
+    if (!validacaoHumana.valido) {
+        falhaLoginMestre(chave); auditarMestre(req, 'seguranca_login', 'Validação humana inválida no Painel Mestre.');
         return res.status(401).send(paginaLogin({ destino: req.body.destino, erro: 'Confirmacao humana invalida ou expirada.' }));
     }
     const segredoTotp = String(process.env.MASTER_TOTP_SECRET || '').trim();

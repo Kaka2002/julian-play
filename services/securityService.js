@@ -139,9 +139,60 @@ function cabecalhosSeguranca(req, res, next) {
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
     res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'");
+    const fontesRecaptcha = recaptchaConfigurado()
+        ? ' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/'
+        : '';
+    res.setHeader('Content-Security-Policy', `default-src 'self'; img-src 'self' data: blob:${fontesRecaptcha}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'${fontesRecaptcha}; frame-src 'self'${fontesRecaptcha}; connect-src 'self'${fontesRecaptcha}; form-action 'self'; frame-ancestors 'none'; base-uri 'self'`);
     if (seguro(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
+}
+
+function recaptchaConfigurado() {
+    return Boolean(String(process.env.RECAPTCHA_SITE_KEY || '').trim()
+        && String(process.env.RECAPTCHA_SECRET_KEY || '').trim());
+}
+
+function hostnamesRecaptchaPermitidos() {
+    return String(process.env.RECAPTCHA_ALLOWED_HOSTNAMES || '')
+        .split(',')
+        .map(item => item.trim().toLowerCase())
+        .filter(Boolean);
+}
+
+async function validarRecaptcha(resposta, opcoes = {}) {
+    if (!recaptchaConfigurado()) return { configurado: false, valido: false, motivo: 'nao_configurado' };
+    const token = String(resposta || '').trim();
+    if (!token) return { configurado: true, valido: false, motivo: 'resposta_ausente' };
+
+    const corpo = new URLSearchParams({
+        secret: String(process.env.RECAPTCHA_SECRET_KEY || '').trim(),
+        response: token
+    });
+    const controlador = new AbortController();
+    const limite = setTimeout(() => controlador.abort(), Number(opcoes.timeoutMs || 10000));
+    try {
+        const requisicao = opcoes.fetch || globalThis.fetch;
+        const respostaGoogle = await requisicao('https://www.google.com/recaptcha/api/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: corpo.toString(),
+            signal: controlador.signal
+        });
+        const dados = await respostaGoogle.json();
+        const permitidos = hostnamesRecaptchaPermitidos();
+        const hostname = String(dados.hostname || '').trim().toLowerCase();
+        const hostnameValido = !permitidos.length || permitidos.includes(hostname);
+        return {
+            configurado: true,
+            valido: Boolean(respostaGoogle.ok && dados.success && hostnameValido),
+            motivo: dados.success && !hostnameValido ? 'hostname_nao_permitido' : (dados['error-codes'] || []).join(',') || '',
+            hostname
+        };
+    } catch (erro) {
+        return { configurado: true, valido: false, motivo: erro.name === 'AbortError' ? 'tempo_esgotado' : 'falha_de_rede' };
+    } finally {
+        clearTimeout(limite);
+    }
 }
 
 function assinar(valor) { return crypto.createHmac('sha256', SEGREDO).update(valor).digest('hex'); }
@@ -179,4 +230,4 @@ function mascararSegredos(dados = {}) {
     return Object.fromEntries(Object.entries(dados).map(([k,v]) => [k, sensivel.test(k) ? '[OCULTO]' : v]));
 }
 
-module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, desativarAtalhosGerenciadorSenhas };
+module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, desativarAtalhosGerenciadorSenhas, recaptchaConfigurado, validarRecaptcha };

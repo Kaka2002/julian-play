@@ -984,3 +984,16 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   em `ARTEFATOS_GERADOS`. O ZIP interno
   `ENVIAR_AO_CLIENTE\julian-play-app.zip` permanece necessario para o
   instalador e o atualizador locais.
+
+## reCAPTCHA v2 opcional em 11/08/2026
+
+- Os logins do Painel Mestre e dos paineis de clientes suportam Google
+  reCAPTCHA v2 de caixa de selecao. Ele somente fica ativo quando as duas
+  variaveis de ambiente `RECAPTCHA_SITE_KEY` e `RECAPTCHA_SECRET_KEY` existem;
+  sem ambas, permanece o CAPTCHA matematico assinado, preservando a operacao
+  local sem internet.
+- A validacao do token acontece no servidor e falha fechada quando o Google
+  nao responde. `RECAPTCHA_ALLOWED_HOSTNAMES` permite restringir os hostnames
+  devolvidos pelo Google. As chaves nao devem ser registradas neste arquivo,
+  no Git nem no pacote entregue ao cliente. O procedimento esta em
+  `docs/RECAPTCHA-GOOGLE.md`.

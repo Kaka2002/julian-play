@@ -17,7 +17,7 @@ const {
     salvarConfiguracoesAcesso,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
-const { criarCaptcha, validarCaptcha, validarTotp, mascararSegredos } = require('../services/securityService');
+const { criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, recaptchaConfigurado, validarRecaptcha } = require('../services/securityService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 const loginPersistente = require('../services/loginSecurityService');
 
@@ -107,6 +107,7 @@ function destinoSeguro(valor) {
 function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false, captcha = criarCaptcha() }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
+    const usarRecaptcha = !configuracaoInicial && recaptchaConfigurado();
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -116,6 +117,7 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    ${usarRecaptcha ? '<script src="https://www.google.com/recaptcha/api.js?hl=pt-BR" async defer></script>' : ''}
     <title>${configuracaoInicial ? 'Configuração inicial' : 'Login'} - ${escapar(nomeSistema)}</title>
     <style>
         :root {
@@ -282,10 +284,10 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             ${process.env.PANEL_TOTP_SECRET ? `<label>Código do autenticador
                 <input name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
             </label>` : ''}
-            <input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
+            ${usarRecaptcha ? `<div class="g-recaptcha" data-sitekey="${escapar(process.env.RECAPTCHA_SITE_KEY)}"></div>` : `<input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
             <label>Confirmação humana: ${escapar(captcha.pergunta)}
                 <input name="captchaResposta" inputmode="numeric" autocomplete="off" required>
-            </label>
+            </label>`}
             <button type="submit">Acessar painel</button>
         </form>
         <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>`}
@@ -328,10 +330,13 @@ router.post('/login', async (req, res) => {
         return res.redirect(`/login?erro=${encodeURIComponent(`Muitas tentativas. Aguarde ${minutos} minuto(s).`)}&next=${encodeURIComponent(next)}`);
     }
 
-    if (!validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta)) {
+    const validacaoHumana = recaptchaConfigurado()
+        ? await validarRecaptcha(req.body['g-recaptcha-response'], { ip: req.ip || req.socket?.remoteAddress })
+        : { valido: validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta) };
+    if (!validacaoHumana.valido) {
         registrarFalhaLogin(req, req.body.usuario);
         await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
-        await registrarEventoSistema('seguranca_login', 'alerta', 'CAPTCHA inválido no login.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario }));
+        await registrarEventoSistema('seguranca_login', 'alerta', 'Validação humana inválida no login.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario, motivo: validacaoHumana.motivo }));
         return res.redirect(`/login?erro=${encodeURIComponent('Confirmação humana inválida ou expirada.')}&next=${encodeURIComponent(next)}`);
     }
 

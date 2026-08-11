@@ -406,7 +406,10 @@ function configuracaoPm2(instalacao, senhaHash) {
                 LICENSE_CUSTOMER_NAME: instalacao.nome,
                 LICENSE_ROLE: instalacao.perfilLicenca || 'cliente',
                 RENOVACAO_HORA_ENVIO: String(instalacao.horaEnvio),
-                RENOVACAO_MINUTO_ENVIO: String(instalacao.minutoEnvio)
+                RENOVACAO_MINUTO_ENVIO: String(instalacao.minutoEnvio),
+                RECAPTCHA_SITE_KEY: String(process.env.RECAPTCHA_SITE_KEY || ''),
+                RECAPTCHA_SECRET_KEY: String(process.env.RECAPTCHA_SECRET_KEY || ''),
+                RECAPTCHA_ALLOWED_HOSTNAMES: String(process.env.RECAPTCHA_ALLOWED_HOSTNAMES || '')
             }
         }]
     };
