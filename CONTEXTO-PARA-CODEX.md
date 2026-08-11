@@ -1010,4 +1010,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   atualizador primeiro solicita `pm2 stop` para desativar o autorestart;
   somente se a porta continuar ocupada confere e encerra o Node. O processo e
   recriado pelo PM2 ao fim. O rollback do caso anterior foi confirmado pelo
-  proprio atualizador; nenhuma versao parcial foi publicada.
+  proprio atualizador; nenhuma versao parcial foi publicada. O estado interno
+  de processo deste script usa a propriedade `porta`; alteracoes futuras devem
+  preservar esse nome para que a porta recuperada possa ser atualizada sem
+  erro de propriedade no PowerShell.

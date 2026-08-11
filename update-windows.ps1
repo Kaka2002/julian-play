@@ -547,7 +547,7 @@ try {
     if (EncerrarNodeOrfaoNaPortaDaInstalacao $pm2 $NomeProcesso $portaInstalacao) {
         $estadoPrincipal = $estadosAntes[$NomeProcesso]
         $estadoPrincipal.estavaOnline = $true
-        if ($estadoPrincipal.port -le 0) { $estadoPrincipal.port = $portaInstalacao }
+        if ($estadoPrincipal.porta -le 0) { $estadoPrincipal.porta = $portaInstalacao }
     }
 
     Etapa 'Criando backups com os bancos fechados'
