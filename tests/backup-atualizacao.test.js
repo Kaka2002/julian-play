@@ -122,6 +122,8 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.ok(fs.existsSync(normalizador));
  const selecaoProcessos=atualizar.match(/function ObterProcessosJulian[\s\S]*?return @\(\$nomes\)\r?\n}/)?.[0]||'';
  assert.match(selecaoProcessos,/AdicionarProcessoJulian \$nomes \$nomePrincipal/);
+ assert.match(selecaoProcessos,/julian-play-admin/);
+ assert.match(selecaoProcessos,/julian-play-cliente/);
  assert.match(selecaoProcessos,/configMaster\.clientsDir/);
  assert.doesNotMatch(selecaoProcessos,/Where-Object \{ \$_\.name -like 'julian-\*' \}/);
  assert.match(atualizar,/restart \$estado\.nome \| Out-Null\r?\n/);

@@ -997,3 +997,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   devolvidos pelo Google. As chaves nao devem ser registradas neste arquivo,
   no Git nem no pacote entregue ao cliente. O procedimento esta em
   `docs/RECAPTCHA-GOOGLE.md`.
+
+## Correcao do deploy local em 11/08/2026
+
+- O atualizador passou a incluir explicitamente `julian-master`,
+  `julian-play-admin` e `julian-play-cliente` na parada coordenada antes dos
+  backups. Isso evita tentar copiar um banco SQLite ainda aberto por outro
+  painel no arranjo consolidado do drive D. O rollback do caso anterior foi
+  confirmado pelo proprio atualizador; nenhuma versao parcial foi publicada.

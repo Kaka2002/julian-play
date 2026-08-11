@@ -110,6 +110,12 @@ function ObterListaPm2($pm2, $node) {
 function ObterProcessosJulian($pm2, [string]$nomePrincipal) {
     $nomes = [System.Collections.Generic.List[string]]::new()
     AdicionarProcessoJulian $nomes $nomePrincipal
+    # A consolidacao no disco D usa tres processos com o mesmo codigo-fonte,
+    # mas bancos separados. Mesmo quando o arquivo do Painel Mestre nao lista
+    # mais instalacoes antigas, eles precisam parar antes do backup SQLite.
+    foreach ($nomeConhecido in @('julian-master', 'julian-play-admin', 'julian-play-cliente')) {
+        AdicionarProcessoJulian $nomes $nomeConhecido
+    }
     $arquivoMaster = Join-Path $diretorioProjeto '.julian-master-install.json'
     if (Test-Path -LiteralPath $arquivoMaster) {
         AdicionarProcessoJulian $nomes 'julian-master'
