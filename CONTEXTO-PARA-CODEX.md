@@ -1014,3 +1014,11 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   de processo deste script usa a propriedade `porta`; alteracoes futuras devem
   preservar esse nome para que a porta recuperada possa ser atualizada sem
   erro de propriedade no PowerShell.
+
+## Consistencia de paineis nos cadastros em 11/08/2026
+
+- Ao retirar um painel da secao principal de um cliente, a mesma referencia
+  agora e limpa das linhas de acesso por aplicativo antes de salvar. A regra
+  tambem e aplicada no servidor, impedindo que uma conexao antiga recoloque o
+  painel removido no cadastro ao abri-lo novamente. Os demais dados daquela
+  conexao sao preservados.

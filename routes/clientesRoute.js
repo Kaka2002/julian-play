@@ -5826,6 +5826,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${opcoesMulti('appsInstalados', 'Apps Instalados', apps, appsSelecionados, 'Adicionar app...')}
             ${opcoesMulti('dispositivosSelecionados', 'Dispositivos', dispositivos, dispositivosSelecionados, 'Adicionar dispositivo...')}
             ${opcoesMulti('paineisSelecionados', 'Painéis', paineis, paineisSelecionados, 'Adicionar painel...')}
+            <input type="hidden" name="paineisSelecionadosPresentes" value="1">
             <label class="toggle-line">
                 <input type="checkbox" name="appInstalado" value="1" ${cliente.appInstalado ?'checked' : ''}>
                 <span>App instalado no dispositivo</span>
@@ -6122,6 +6123,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
             input?.remove();
             chip.remove();
+
+            if (picker.dataset.name === 'paineisSelecionados') {
+                document.querySelectorAll('select[name="acessoPainel"]').forEach(campo => {
+                    if (campo.value === value) campo.value = '';
+                });
+            }
         });
     </script>`;
 

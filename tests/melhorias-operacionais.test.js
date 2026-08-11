@@ -99,6 +99,18 @@ test('servidor preserva endereco MAC alfanumerico ao salvar cliente', () => {
     }
 });
 
+test('painel removido nao e reintroduzido pelas conexoes do cliente', () => {
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const base={nome:'Cliente Painel',telefone:'5511999996789',paineisSelecionados:['Painel A','Painel Sigma'],paineisSelecionadosPresentes:'1',acessoAppNome:['App A','App Sigma'],acessoPainel:['Painel A','Painel Sigma'],status:'ativo'};const criado=await c.salvarCliente(base);const atualizado=await c.salvarCliente({...base,id:criado.id,paineisSelecionados:['Painel A']});process.stdout.write(JSON.stringify({paineis:JSON.parse(atualizado.paineisSelecionados),acessos:JSON.parse(atualizado.acessosApp).map(item=>item.painel)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            paineis: ['Painel A'],
+            acessos: ['Painel A', '']
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('migracao remove ano de aniversarios ISO existentes', () => {
     const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO clientes(nome,telefone,nascimento) VALUES('Legado','5511999999999','1998-04-08')");await require('./database/migrations/007-aniversario-dia-mes').up({run});const cliente=await get("SELECT nascimento FROM clientes WHERE nome='Legado'");process.stdout.write(JSON.stringify(cliente));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

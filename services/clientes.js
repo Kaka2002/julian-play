@@ -216,7 +216,18 @@ function normalizarAcessosApp(dados = {}) {
 
 function acessosDoCliente(dados = {}) {
     const acessos = JSON.parse(normalizarAcessosApp(dados));
-    return Array.isArray(acessos) ? acessos : [];
+    if (!Array.isArray(acessos)) return [];
+
+    // A tela principal e a grade de acessos precisam apontar para os mesmos
+    // painéis. Quando um painel e removido da tela principal, eliminamos
+    // somente a referência daquela conexão, preservando os demais dados dela.
+    if (!dados.paineisSelecionadosPresentes) return acessos;
+
+    const paineisSelecionados = new Set(normalizarLista(dados.paineisSelecionados));
+    return acessos.map(acesso => {
+        if (!acesso.painel || paineisSelecionados.has(acesso.painel)) return acesso;
+        return { ...acesso, painel: '' };
+    });
 }
 
 function listaUnicaComAcessos(lista, acessos, campo) {
@@ -267,6 +278,8 @@ function montarCliente(dados = {}) {
 
     const acessos = acessosDoCliente(dados);
     const acessosApp = JSON.stringify(acessos);
+    const paineisSelecionados = normalizarLista(dados.paineisSelecionados);
+    const paineisForamInformados = Boolean(dados.paineisSelecionadosPresentes);
 
     return {
         nome: limparTexto(dados.nome),
@@ -290,7 +303,9 @@ function montarCliente(dados = {}) {
         dataVencimento: limparTexto(dados.dataVencimento),
         appsInstalados: listaUnicaComAcessos(dados.appsInstalados, acessos, 'app'),
         dispositivosSelecionados: listaUnicaComAcessos(dados.dispositivosSelecionados, acessos, 'dispositivo'),
-        paineisSelecionados: listaUnicaComAcessos(dados.paineisSelecionados, acessos, 'painel'),
+        paineisSelecionados: paineisForamInformados
+            ? JSON.stringify(paineisSelecionados)
+            : listaUnicaComAcessos(dados.paineisSelecionados, acessos, 'painel'),
         conexoesPainel: Math.max(0, Number.parseInt(dados.conexoesPainel || 0, 10) || 0),
         appInstalado: dados.appInstalado ? 1 : 0,
         usuarioApp: limparTexto(dados.usuarioApp),
