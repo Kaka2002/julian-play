@@ -185,11 +185,24 @@ function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
     if ($processos.Count -gt 0) { Start-Sleep -Seconds 3 }
 }
 
-function EncerrarNodeOrfaoNaPortaDaInstalacao([string]$nomeProcesso, [int]$porta) {
+function EncerrarNodeOrfaoNaPortaDaInstalacao($pm2, [string]$nomeProcesso, [int]$porta) {
     if ($porta -le 0) { return $false }
     $ouvintes = @(Get-NetTCPConnection -State Listen -LocalPort $porta -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty OwningProcess -Unique)
     if ($ouvintes.Count -eq 0) { return $false }
+
+    # Alguns estados transitórios do PM2 aparecem sem a palavra "online" no
+    # jlist, apesar do filho Node ainda atender a porta. Pare pelo nome antes
+    # de recorrer ao encerramento do PID, para desativar o autorestart do PM2.
+    Write-Host "Solicitando parada de $nomeProcesso no PM2 antes do backup." -ForegroundColor Yellow
+    & $pm2.Source stop $nomeProcesso 2>$null | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "PM2 nao confirmou a parada de $nomeProcesso; verificando o processo que ocupa a porta."
+    }
+    Start-Sleep -Seconds 3
+    $ouvintes = @(Get-NetTCPConnection -State Listen -LocalPort $porta -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique)
+    if ($ouvintes.Count -eq 0) { return $true }
 
     foreach ($pidOuvinte in $ouvintes) {
         $processo = Get-CimInstance Win32_Process -Filter "ProcessId=$pidOuvinte" -ErrorAction SilentlyContinue
@@ -531,7 +544,7 @@ try {
     if ($portaInstalacao -le 0 -and $env:PORT) {
         [void][int]::TryParse([string]$env:PORT, [ref]$portaInstalacao)
     }
-    if (EncerrarNodeOrfaoNaPortaDaInstalacao $NomeProcesso $portaInstalacao) {
+    if (EncerrarNodeOrfaoNaPortaDaInstalacao $pm2 $NomeProcesso $portaInstalacao) {
         $estadoPrincipal = $estadosAntes[$NomeProcesso]
         $estadoPrincipal.estavaOnline = $true
         if ($estadoPrincipal.port -le 0) { $estadoPrincipal.port = $portaInstalacao }

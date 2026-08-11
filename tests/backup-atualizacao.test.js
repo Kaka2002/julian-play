@@ -119,6 +119,8 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(atualizar,/Banco ainda esta sendo liberado/);
  assert.match(atualizar,/EncerrarNodeOrfaoNaPortaDaInstalacao/);
  assert.match(atualizar,/Get-NetTCPConnection -State Listen -LocalPort \$porta/);
+ assert.match(atualizar,/Solicitando parada de \$nomeProcesso no PM2 antes do backup/);
+ assert.match(atualizar,/\$pm2\.Source stop \$nomeProcesso/);
  assert.match(atualizar,/Encerrando Node orfao/);
  assert.match(atualizar,/ObterListaPm2 \$pm2 \$node/);
  assert.match(atualizar,/Porta nao identificada antes de parar producao/);

@@ -1006,7 +1006,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   ainda estiver liberando o arquivo apos a parada. Isso evita tentar copiar
   um banco SQLite ainda aberto por outro painel no arranjo consolidado do
   drive D. O atualizador tambem confere a porta exclusiva da instalacao:
-  se um `node.exe` orfao estiver atendendo nela sem constar no PM2 atual,
-  ele e encerrado antes do backup e recriado pelo PM2 ao fim. O rollback do
-  caso anterior foi confirmado pelo proprio atualizador; nenhuma versao
-  parcial foi publicada.
+  se um `node.exe` estiver atendendo nela sem o status `online` no PM2, o
+  atualizador primeiro solicita `pm2 stop` para desativar o autorestart;
+  somente se a porta continuar ocupada confere e encerra o Node. O processo e
+  recriado pelo PM2 ao fim. O rollback do caso anterior foi confirmado pelo
+  proprio atualizador; nenhuma versao parcial foi publicada.
