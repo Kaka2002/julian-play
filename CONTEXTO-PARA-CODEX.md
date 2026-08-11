@@ -1002,6 +1002,8 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 
 - O atualizador passou a incluir explicitamente `julian-master`,
   `julian-play-admin` e `julian-play-cliente` na parada coordenada antes dos
-  backups. Isso evita tentar copiar um banco SQLite ainda aberto por outro
-  painel no arranjo consolidado do drive D. O rollback do caso anterior foi
-  confirmado pelo proprio atualizador; nenhuma versao parcial foi publicada.
+  backups. O backup tambem tenta novamente por ate 45 segundos se o Windows
+  ainda estiver liberando o arquivo apos a parada. Isso evita tentar copiar
+  um banco SQLite ainda aberto por outro painel no arranjo consolidado do
+  drive D. O rollback do caso anterior foi confirmado pelo proprio
+  atualizador; nenhuma versao parcial foi publicada.

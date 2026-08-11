@@ -268,29 +268,44 @@ function CopiarBancoFechado {
         [Parameter(Mandatory = $true)][string]$Origem,
         [Parameter(Mandatory = $true)][string]$PastaBackup,
         [Parameter(Mandatory = $true)][string]$NomeBackup,
-        [Parameter(Mandatory = $true)]$Node
+        [Parameter(Mandatory = $true)]$Node,
+        [int]$TempoMaximoSegundos = 45
     )
     New-Item -ItemType Directory -Path $PastaBackup -Force | Out-Null
     $destino = Join-Path $PastaBackup $NomeBackup
-    Copy-Item -LiteralPath $Origem -Destination $destino
-    $verificador = Join-Path $diretorioProjeto 'scripts\verificar-banco-sqlite.js'
-    ExecutarComando -Comando $Node -Argumentos @($verificador, $destino) -MensagemErro "O backup $NomeBackup falhou no PRAGMA quick_check."
-    $hashOrigem = CalcularSha256Arquivo $Origem
-    $hashDestino = CalcularSha256Arquivo $destino
-    if ($hashOrigem -ne $hashDestino) {
-        throw "O backup $NomeBackup nao corresponde ao banco de origem."
+    $limite = (Get-Date).AddSeconds($TempoMaximoSegundos)
+    $tentativa = 0
+    while ($true) {
+        $tentativa++
+        try {
+            if (Test-Path -LiteralPath $destino) { Remove-Item -LiteralPath $destino -Force }
+            Copy-Item -LiteralPath $Origem -Destination $destino
+            $verificador = Join-Path $diretorioProjeto 'scripts\verificar-banco-sqlite.js'
+            ExecutarComando -Comando $Node -Argumentos @($verificador, $destino) -MensagemErro "O backup $NomeBackup falhou no PRAGMA quick_check."
+            $hashOrigem = CalcularSha256Arquivo $Origem
+            $hashDestino = CalcularSha256Arquivo $destino
+            if ($hashOrigem -ne $hashDestino) {
+                throw "O backup $NomeBackup nao corresponde ao banco de origem."
+            }
+            [PSCustomObject]@{
+                versao = 1
+                arquivo = $NomeBackup
+                criadoEm = (Get-Date).ToUniversalTime().ToString('o')
+                tamanho = (Get-Item -LiteralPath $destino).Length
+                hashSha256 = $hashDestino
+                integridade = 'ok'
+                finalidade = 'antes_atualizacao'
+            } | ConvertTo-Json | Set-Content -LiteralPath "$destino.json" -Encoding UTF8
+            Write-Host "Backup verificado: $destino" -ForegroundColor Green
+            return $destino
+        } catch {
+            $causa = $_.Exception
+            while ($causa -and -not ($causa -is [IO.IOException])) { $causa = $causa.InnerException }
+            if (-not $causa -or (Get-Date) -ge $limite) { throw }
+            Write-Host "Banco ainda esta sendo liberado; nova tentativa de backup em 2 segundos ($tentativa)." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+        }
     }
-    [PSCustomObject]@{
-        versao = 1
-        arquivo = $NomeBackup
-        criadoEm = (Get-Date).ToUniversalTime().ToString('o')
-        tamanho = (Get-Item -LiteralPath $destino).Length
-        hashSha256 = $hashDestino
-        integridade = 'ok'
-        finalidade = 'antes_atualizacao'
-    } | ConvertTo-Json | Set-Content -LiteralPath "$destino.json" -Encoding UTF8
-    Write-Host "Backup verificado: $destino" -ForegroundColor Green
-    return $destino
 }
 
 function CriarBackupsAntesAtualizacao($Node) {
