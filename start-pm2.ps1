@@ -16,38 +16,19 @@ if ($LASTEXITCODE -ne 0) {
     throw "PM2 resurrect terminou com codigo $LASTEXITCODE."
 }
 
-function TestarProcessoPm2Online {
-    param([Parameter(Mandatory = $true)][string]$Nome)
-
-    $pids = @(& $pm2.Source pid $Nome 2>$null)
-    if ($LASTEXITCODE -ne 0) {
-        return $false
-    }
-
-    foreach ($linha in $pids) {
-        $pidEncontrado = 0
-        if ([int]::TryParse(([string]$linha).Trim(), [ref]$pidEncontrado) -and $pidEncontrado -gt 0) {
-            return $true
-        }
-    }
-
-    return $false
-}
-
-function IniciarProcessoPm2SeNecessario {
+function RecriarProcessoPm2ComConfiguracaoRegistrada {
     param(
         [Parameter(Mandatory = $true)][string]$Nome,
         [Parameter(Mandatory = $true)][string]$ArquivoEcossistema
     )
 
-    if (TestarProcessoPm2Online -Nome $Nome) {
-        return $false
-    }
-
     if (-not (Test-Path -LiteralPath $ArquivoEcossistema -PathType Leaf)) {
         throw "Arquivo de configuracao PM2 ausente: $ArquivoEcossistema"
     }
 
+    # O resurrect recupera tambem as variaveis de ambiente antigas. Recriar os
+    # processos registrados evita que DATA_DIR de outra instalacao seja usado.
+    & $pm2.Source delete $Nome 2>$null
     & $pm2.Source start $ArquivoEcossistema --only $Nome --update-env
     if ($LASTEXITCODE -ne 0) {
         throw "Nao foi possivel iniciar o processo PM2 $Nome. Codigo $LASTEXITCODE."
@@ -65,7 +46,7 @@ if (Test-Path -LiteralPath $configuracaoInstalacao -PathType Leaf) {
     $nomePainel = ([string]$instalacao.appName).Trim()
 
     if ($nomePainel) {
-        if (IniciarProcessoPm2SeNecessario -Nome $nomePainel -ArquivoEcossistema $ecossistemaPainel) {
+        if (RecriarProcessoPm2ComConfiguracaoRegistrada -Nome $nomePainel -ArquivoEcossistema $ecossistemaPainel) {
             $alterouLista = $true
         }
     }
@@ -81,7 +62,7 @@ if (Test-Path -LiteralPath $configuracaoInstalacao -PathType Leaf) {
                 $nomeMaster = 'julian-master'
             }
 
-            if (IniciarProcessoPm2SeNecessario -Nome $nomeMaster -ArquivoEcossistema $ecossistemaMaster) {
+            if (RecriarProcessoPm2ComConfiguracaoRegistrada -Nome $nomeMaster -ArquivoEcossistema $ecossistemaMaster) {
                 $alterouLista = $true
             }
         }

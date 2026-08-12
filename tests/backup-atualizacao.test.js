@@ -206,15 +206,34 @@ test('PM2 aguarda prontidao e encerra processos por mensagem no Windows',()=>{
 });
 
 test('inicializacao PM2 recupera painel e mestre sem iniciar AMPLAYTV',()=>{
- const script=fs.readFileSync(path.join(repoRoot,'start-pm2.ps1'),'utf8');
- assert.match(script,/pm2\.Source resurrect/);
- assert.match(script,/\.julian-play-install\.json/);
- assert.match(script,/IniciarProcessoPm2SeNecessario/);
+    const script=fs.readFileSync(path.join(repoRoot,'start-pm2.ps1'),'utf8');
+    assert.match(script,/pm2\.Source resurrect/);
+    assert.match(script,/\.julian-play-install\.json/);
+    assert.match(script,/RecriarProcessoPm2ComConfiguracaoRegistrada/);
+    assert.match(script,/pm2\.Source delete \$Nome 2>\$null/);
+    assert.match(script,/start \$ArquivoEcossistema --only \$Nome --update-env/);
  assert.match(script,/julian-play-admin/);
  assert.match(script,/\.julian-master-install\.json/);
  assert.match(script,/master\\ecosystem\.config\.js/);
  assert.match(script,/save --force/);
- assert.doesNotMatch(script,/julian-amplaytv/);
+    assert.doesNotMatch(script,/julian-amplaytv/);
+});
+
+test('configuracao registrada vence DATA_DIR herdado pelo PM2',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-instalacao-runtime-'));
+ try{
+  const dadosRegistrados=path.join(raiz,'dados-registrados');
+  fs.writeFileSync(path.join(raiz,'.julian-play-install.json'),JSON.stringify({appName:'julian-play-admin',port:10001,dataDir:dadosRegistrados,installMode:'server'}));
+  const runtime=require('../config/instalacaoRuntime');
+  const env={DATA_DIR:path.join(raiz,'dados-errados'),JULIAN_PLAY_DATA_DIR:path.join(raiz,'dados-errados'),PORT:'9000'};
+  const resolvida=runtime.aplicarDiretorioRegistrado({appDir:raiz,env});
+  assert.equal(resolvida.appName,'julian-play-admin');
+  assert.equal(resolvida.port,'10001');
+  assert.equal(resolvida.dataDir,dadosRegistrados);
+  assert.equal(resolvida.conflitoDataDir,true);
+  assert.equal(env.DATA_DIR,dadosRegistrados);
+  assert.equal(env.JULIAN_PLAY_DATA_DIR,dadosRegistrados);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{

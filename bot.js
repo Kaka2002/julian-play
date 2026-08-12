@@ -1,5 +1,12 @@
-const express = require('express');
 const path = require('path');
+const { aplicarDiretorioRegistrado } = require('./config/instalacaoRuntime');
+
+const configuracaoRuntime = aplicarDiretorioRegistrado({ appDir: __dirname });
+if (configuracaoRuntime.conflitoDataDir) {
+    console.warn('[seguranca] DATA_DIR herdado pelo PM2 foi ignorado; usando o diretorio registrado desta instalacao.');
+}
+
+const express = require('express');
 const authRoute = require('./routes/authRoute');
 const qrRoute = require('./routes/qrRoute');
 const clientesRoute = require('./routes/clientesRoute');

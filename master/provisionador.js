@@ -41,13 +41,13 @@ function normalizarDominio(valor) {
 
 function obterSugestaoInstalacaoAdministradoraAtual() {
     const settings = lerConfiguracaoInstalacaoAtual();
-    const appName = process.env.JULIAN_PLAY_APP_NAME || settings.appName || 'julian-play';
+    const appName = settings.appName || process.env.JULIAN_PLAY_APP_NAME || 'julian-play';
     return {
         nome: settings.nomeSistema || 'Controle de Cliente',
         slug: 'painel',
         dominio: normalizarDominio(process.env.JULIAN_PLAY_DOMAIN || settings.domain || `painel.${baseDomain}`),
-        porta: Number(process.env.PORT || process.env.JULIAN_PLAY_PORT || settings.port || 10000),
-        pastaDados: path.resolve(process.env.DATA_DIR || process.env.JULIAN_PLAY_DATA_DIR || settings.dataDir || sourceDir),
+        porta: Number(settings.port || process.env.JULIAN_PLAY_PORT || process.env.PORT || 10000),
+        pastaDados: path.resolve(settings.dataDir || process.env.JULIAN_PLAY_DATA_DIR || process.env.DATA_DIR || sourceDir),
         processoPm2: appName,
         usuarioPainel: process.env.PANEL_USER || settings.panelUser || 'admin',
         codigoFornecedor: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || ''

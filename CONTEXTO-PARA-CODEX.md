@@ -275,6 +275,12 @@ delas, confirmar o estado real no código e nos testes:
 
 ## Cuidados importantes
 
+- Em 12/08/2026 foi reforcada a isolacao dos dados no inicio: quando existir
+  `.julian-play-install.json`, seu `dataDir`, porta e nome de processo vencem
+  variaveis antigas herdadas pelo PM2. O `start-pm2.ps1` recria os processos
+  registrados depois do `resurrect`, evitando que um painel abra o banco de
+  outra instalacao ou mostre a configuracao inicial indevidamente.
+
 - Nunca copiar a sessão de WhatsApp enquanto o processo correspondente estiver
   em execução.
 - Nunca rodar a mesma sessão do WhatsApp em duas máquinas.

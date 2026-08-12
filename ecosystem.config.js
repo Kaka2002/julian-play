@@ -1,18 +1,11 @@
 const path = require('path');
-const fs = require('fs');
+const { resolverConfiguracaoInstalacao } = require('./config/instalacaoRuntime');
 
 const appDir = __dirname;
-const settingsPath = path.join(appDir, '.julian-play-install.json');
-let settings = {};
-
-try {
-    settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8').replace(/^\uFEFF/, ''));
-} catch (_) {
-    settings = {};
-}
-
-const appName = process.env.JULIAN_PLAY_APP_NAME || settings.appName || 'julian-play';
-const dataDir = process.env.JULIAN_PLAY_DATA_DIR || process.env.DATA_DIR || settings.dataDir || appDir;
+const instalacao = resolverConfiguracaoInstalacao({ appDir });
+const settings = instalacao.settings;
+const appName = instalacao.appName;
+const dataDir = instalacao.dataDir;
 
 module.exports = {
     apps: [
@@ -35,9 +28,9 @@ module.exports = {
             env: {
                 NODE_ENV: 'production',
                 JULIAN_PLAY_APP_NAME: appName,
-                PORT: String(process.env.JULIAN_PLAY_PORT || process.env.PORT || settings.port || 10000),
+                PORT: String(instalacao.port),
                 DATA_DIR: dataDir,
-                JULIAN_PLAY_INSTALL_MODE: process.env.JULIAN_PLAY_INSTALL_MODE || settings.installMode || 'server',
+                JULIAN_PLAY_INSTALL_MODE: instalacao.installMode,
                 LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',
                 LICENSE_PUBLIC_KEY: process.env.LICENSE_PUBLIC_KEY || settings.licensePublicKey || '',
                 LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0),
