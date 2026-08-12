@@ -57,6 +57,17 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2, mostrarNovoQr = f
                 cursor: pointer;
                 font-weight: 700;
             }
+
+            .voltar-painel {
+                display: inline-block;
+                margin-top: 16px;
+                border: 1px solid #6d7a99;
+                border-radius: 8px;
+                padding: 11px 16px;
+                color: #fff;
+                font-weight: 700;
+                text-decoration: none;
+            }
         </style>
     </head>
     <body>
@@ -64,6 +75,7 @@ function pagina({ titulo, mensagem, qrImage = '', refresh = 2, mostrarNovoQr = f
             <h2>${titulo}</h2>
             ${qrImage ? `<img src="${qrImage}" alt="QR Code WhatsApp">` : ''}
             <p>${mensagem}</p>
+            <a class="voltar-painel" href="/clientes">Voltar ao painel</a>
             ${mostrarNovoQr ? `<form method="post" action="/qr/novo" onsubmit="return confirm('Isso vai encerrar a sessao atual do WhatsApp e gerar um novo QR Code. Continuar?')"><button type="submit">Gerar novo QR Code</button></form>` : ''}
             <small>Esta página atualiza automaticamente.</small>
         </main>

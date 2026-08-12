@@ -38,6 +38,12 @@ test('upload de imagem rejeita texto com extensao PNG', () => {
     );
 });
 
+test('tela do WhatsApp permite voltar ao painel', () => {
+    const fs = require('fs');
+    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'qrRoute.js'), 'utf8');
+    assert.match(rota,/class="voltar-painel" href="\/clientes">Voltar ao painel/);
+});
+
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
