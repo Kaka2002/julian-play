@@ -1028,3 +1028,17 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   tambem e aplicada no servidor, impedindo que uma conexao antiga recoloque o
   painel removido no cadastro ao abri-lo novamente. Os demais dados daquela
   conexao sao preservados.
+
+## Recuperacao segura do WhatsApp em 13/08/2026
+
+- A Manutencao passou a oferecer **Corrigir conexao** na area Saude do robo.
+  A acao reinicia somente o cliente WhatsApp e tenta reutilizar a sessao
+  existente; nao remove QR, `.wwebjs_auth`, banco, configuracoes nem
+  conversas. O comando separado **Gerar novo QR Code** continua sendo a acao
+  destrutiva de sessao, para ser usada somente quando a recuperacao segura nao
+  resolver.
+- A inicializacao pelo Windows continua sendo feita pela tarefa `Julian Play -
+  Iniciar PM2`, que executa `start-pm2.ps1` no boot e recria processos
+  registrados com seu `DATA_DIR` correto. Nunca manter a mesma conta WhatsApp
+  ativa em duas instalacoes ou duas maquinas ao mesmo tempo: isso pode deixar
+  uma tela aguardando QR enquanto outra instancia ainda envia mensagens.

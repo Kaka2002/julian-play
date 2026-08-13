@@ -38,7 +38,12 @@ const {
     verificarClientesVencendoUmaHora,
     verificarClientesVencidosPorDias
 } = require('../services/renovacaoAutomatica');
-const { getClient, getStatusWhatsApp, gerarNovoQrCodeWhatsApp } = require('../config/whatsapp');
+const {
+    getClient,
+    getStatusWhatsApp,
+    gerarNovoQrCodeWhatsApp,
+    recuperarWhatsAppAutomaticamente
+} = require('../config/whatsapp');
 const {
     listarModelos,
     buscarModeloPorId,
@@ -7993,6 +7998,9 @@ function painelSaudeRobo(status = {}) {
             </div>
             <div class="actions">
                 <a class="button secondary" href="/qr">${icon('whats')} WhatsApp</a>
+                <form method="post" action="/manutencao/whatsapp/reconectar" onsubmit="return confirm('O sistema vai tentar reconectar o WhatsApp usando a sessao atual. Nenhum QR Code, banco, configuracao ou conversa sera apagado. Continuar?')">
+                    <button class="button secondary" type="submit">${icon('refresh')} Corrigir conexao</button>
+                </form>
                 <form method="post" action="/manutencao/whatsapp/novo-qr" onsubmit="return confirm('Isso vai encerrar a sessao atual do WhatsApp e gerar um novo QR Code. Os clientes, licenca e configuracoes serao mantidos. Continuar?')">
                     <button class="button secondary" type="submit">${icon('refresh')} Gerar novo QR Code</button>
                 </form>
@@ -10882,6 +10890,30 @@ router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
             erro: err.message
         });
         res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao gerar novo QR Code: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/whatsapp/reconectar', async (req, res) => {
+    try {
+        const resultado = await recuperarWhatsAppAutomaticamente({
+            limparSessao: false,
+            motivo: 'Recuperacao segura solicitada pelo painel de manutencao'
+        });
+
+        logControleClientes('Recuperacao segura do WhatsApp solicitada pelo painel de manutencao', {
+            status: resultado.status,
+            motivo: resultado.motivo || ''
+        });
+
+        const mensagem = resultado.status === 'ignorado'
+            ? 'A recuperacao do WhatsApp ja esta em andamento. Aguarde alguns segundos e atualize esta pagina.'
+            : 'Reconexao segura iniciada. A sessao atual foi preservada; aguarde alguns segundos e confira o status do WhatsApp.';
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        logControleClientes('Erro na recuperacao segura do WhatsApp pelo painel de manutencao', {
+            erro: err.message
+        });
+        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao tentar reconectar o WhatsApp: ${err.message}`)}`);
     }
 });
 

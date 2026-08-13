@@ -44,6 +44,14 @@ test('tela do WhatsApp permite voltar ao painel', () => {
     assert.match(rota,/class="voltar-painel" href="\/clientes">Voltar ao painel/);
 });
 
+test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
+    const fs = require('fs');
+    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /action="\/manutencao\/whatsapp\/reconectar"/);
+    assert.match(rota, /router\.post\('\/manutencao\/whatsapp\/reconectar'/);
+    assert.match(rota, /recuperarWhatsAppAutomaticamente\(\{\s*limparSessao: false,/);
+});
+
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
