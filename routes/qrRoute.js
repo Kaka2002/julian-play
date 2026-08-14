@@ -2,7 +2,11 @@ const express = require('express');
 const QRCode = require('qrcode');
 const router = express.Router();
 
-const { getQrCode, getStatusWhatsApp, gerarNovoQrCodeWhatsApp } = require('../config/whatsapp');
+const {
+    getQrCode,
+    getStatusWhatsApp,
+    gerarNovoQrCodeWhatsApp
+} = require('../config/whatsapp');
 
 function pagina({ titulo, mensagem, qrImage = '', refresh = 2, mostrarNovoQr = false }) {
     return `
@@ -115,7 +119,7 @@ router.get('/qr', async (req, res) => {
     if (!qr) {
         return res.send(pagina({
             titulo: 'Aguardando QR Code',
-            mensagem: 'O WhatsApp ainda está iniciando. Aguarde alguns segundos nesta tela.'
+            mensagem: 'O WhatsApp ainda está iniciando. Aguarde alguns segundos nesta tela. Se permanecer assim, use a recuperação segura em Manutenção; ela não apaga sua sessão.',
         }));
     }
 

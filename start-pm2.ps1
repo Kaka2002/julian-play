@@ -10,6 +10,22 @@ if (-not $pm2) {
 }
 
 $env:PM2_HOME = Join-Path $env:USERPROFILE '.pm2'
+
+# Quando o Windows acabou de ligar, aguarda a rede e os servicos basicos antes
+# de abrir os Chromes invisiveis do WhatsApp. Isso preserva a sessao existente
+# e reduz a chance de o cliente ficar preso em "Aguardando QR Code" no boot.
+try {
+    $iniciadoEm = (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+    $segundosDesdeBoot = [int][Math]::Floor(((Get-Date) - $iniciadoEm).TotalSeconds)
+    $esperaInicial = [Math]::Max(0, 25 - $segundosDesdeBoot)
+    if ($esperaInicial -gt 0) {
+        Write-Output "Aguardando $esperaInicial segundo(s) apos o boot antes de iniciar o PM2."
+        Start-Sleep -Seconds $esperaInicial
+    }
+} catch {
+    Write-Warning "Nao foi possivel verificar o tempo desde o boot: $($_.Exception.Message)"
+}
+
 & $pm2.Source resurrect
 
 if ($LASTEXITCODE -ne 0) {

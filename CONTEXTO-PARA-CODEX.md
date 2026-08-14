@@ -1042,3 +1042,17 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   registrados com seu `DATA_DIR` correto. Nunca manter a mesma conta WhatsApp
   ativa em duas instalacoes ou duas maquinas ao mesmo tempo: isso pode deixar
   uma tela aguardando QR enquanto outra instancia ainda envia mensagens.
+
+## Supervisao de inicializacao do WhatsApp em 14/08/2026
+
+- `start-pm2.ps1` aguarda somente o tempo restante ate 25 segundos apos o
+  boot do Windows antes de restaurar o PM2. Isso da tempo para rede e servicos
+  basicos subirem antes de iniciar o Chrome invisivel do WhatsApp.
+- Se o navegador falhar ao iniciar, o bot tenta reconectar de forma limitada
+  (padrao: tres tentativas). Tambem ha supervisoes seguras aos 45 e 120
+  segundos de inicializacao para o caso de o navegador travar sem emitir erro.
+  Nenhuma dessas acoes remove `.wwebjs_auth`, QR, banco ou configuracoes.
+- Estados que exigem intervencao no celular (`aguardando_qr` e
+  `falha_autenticacao`) nao entram em repeticao automatica. A correcao manual
+  permanece no painel autenticado, em **Manutencao > Corrigir conexao**; a
+  tela publica de QR nao executa reinicios remotos.

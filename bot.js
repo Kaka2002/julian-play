@@ -39,6 +39,7 @@ const { criarGerenciadorTravaProcesso } = require('./services/travaProcessoServi
 
 let bancoPronto = false;
 let recuperacaoWhatsappAgendada = false;
+let supervisaoInicialWhatsappAgendada = false;
 bancoAplicacao.ready.then(() => { bancoPronto = true; }).catch(err => {
     console.error('Banco nao ficou pronto:', err.message);
 });
@@ -78,6 +79,31 @@ process.on('unhandledRejection', (err) => {
 
     console.log('Erro nao tratado:', err);
 });
+
+function agendarSupervisaoInicialWhatsApp() {
+    if (supervisaoInicialWhatsappAgendada) return;
+    supervisaoInicialWhatsappAgendada = true;
+
+    // Cobre o caso em que o Chrome fica preso sem emitir erro nem QR durante
+    // a partida do Windows. Sao somente duas tentativas seguras: a sessao,
+    // banco e arquivos de autenticacao permanecem intactos.
+    for (const atrasoMs of [45000, 120000]) {
+        const tentativa = setTimeout(() => {
+            const status = getStatusWhatsApp();
+            const estadosQueExigemCelular = ['aguardando_qr', 'falha_autenticacao'];
+            if (status.conectado || estadosQueExigemCelular.includes(status.status)) return;
+
+            console.log(`WhatsApp ainda nao conectou apos ${Math.floor(atrasoMs / 1000)}s. Tentando recuperacao segura da inicializacao.`);
+            recuperarWhatsAppAutomaticamente({
+                limparSessao: false,
+                motivo: `supervisao de inicializacao apos ${Math.floor(atrasoMs / 1000)} segundos`
+            }).catch((err) => {
+                console.log('Falha na recuperacao segura da inicializacao do WhatsApp:', err.message);
+            });
+        }, atrasoMs);
+        tentativa.unref?.();
+    }
+}
 
 const app = express();
 if (process.env.TRUST_PROXY === '1' || process.env.RENDER) {
@@ -256,6 +282,7 @@ const server = app.listen(PORT, async () => {
             return clienteWhatsapp.sendMessage(payload.destino, payload.texto);
         });
         iniciarWhatsApp();
+        agendarSupervisaoInicialWhatsApp();
         iniciarAgendadorRenovacao({ getClient, getStatusWhatsApp });
         iniciarMonitoramentoComercial({
             getClient,

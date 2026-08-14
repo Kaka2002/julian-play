@@ -21,6 +21,7 @@ const CACHE_DATA_PATH = process.env.WWEBJS_CACHE_PATH || path.join(DATA_DIR, '.w
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
+const RECONEXAO_AUTOMATICA_MAX_TENTATIVAS = Math.max(1, Number(process.env.WWEBJS_RECONEXAO_MAX_TENTATIVAS || 3));
 const SESSION_DATA_PATH = path.join(AUTH_DATA_PATH, 'session-julianplay');
 const ARQUIVO_AVISOS_FORA_HORARIO = path.join(DATA_DIR, 'database', 'avisos-fora-horario.json');
 
@@ -29,6 +30,7 @@ let qrAtual = '';
 let inicializando = false;
 let conectado = false;
 let tentativaReconexao = null;
+let tentativasReconexao = 0;
 let statusWhatsApp = 'iniciando';
 let ultimoQrEm = null;
 let limpandoCliente = false;
@@ -252,6 +254,16 @@ function jaProcessouMensagem(message) {
 function agendarReconexao() {
     if (tentativaReconexao) return;
 
+    if (['aguardando_qr', 'falha_autenticacao'].includes(statusWhatsApp)) {
+        console.log(`Reconexao automatica pausada: status ${statusWhatsApp} exige uma acao no celular.`);
+        return;
+    }
+
+    if (tentativasReconexao >= RECONEXAO_AUTOMATICA_MAX_TENTATIVAS) {
+        console.log(`Reconexao automatica interrompida apos ${tentativasReconexao} tentativa(s), preservando a sessao atual.`);
+        return;
+    }
+
     tentativaReconexao = setTimeout(() => {
         tentativaReconexao = null;
 
@@ -260,6 +272,8 @@ function agendarReconexao() {
             return;
         }
 
+        tentativasReconexao += 1;
+        console.log(`Tentativa segura de reconexao do WhatsApp (${tentativasReconexao}/${RECONEXAO_AUTOMATICA_MAX_TENTATIVAS}).`);
         iniciarWhatsApp();
     }, 5000);
 }
@@ -575,6 +589,7 @@ async function iniciarWhatsApp() {
             inicializando = false;
             statusWhatsApp = 'conectado';
             qrAtual = '';
+            tentativasReconexao = 0;
             console.log('WhatsApp conectado');
         });
 
@@ -674,14 +689,9 @@ async function iniciarWhatsApp() {
             }
         }
 
-        if (
-            mensagem.includes('Execution context was destroyed') ||
-            mensagem.includes('Runtime.callFunctionOn timed out') ||
-            mensagem.includes('ProtocolError') ||
-            mensagem.includes('auth timeout')
-        ) {
-            agendarReconexao();
-        }
+        // Falhas ao abrir o Chrome nao podem deixar o painel aguardando para
+        // sempre. As tentativas sao limitadas e nunca removem a sessao.
+        agendarReconexao();
     }
 }
 

@@ -44,6 +44,18 @@ test('tela do WhatsApp permite voltar ao painel', () => {
     assert.match(rota,/class="voltar-painel" href="\/clientes">Voltar ao painel/);
 });
 
+test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
+    const fs = require('fs');
+    const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
+    const bot = fs.readFileSync(path.join(__dirname, '..', 'bot.js'), 'utf8');
+    assert.match(whatsapp, /WWEBJS_RECONEXAO_MAX_TENTATIVAS/);
+    assert.match(whatsapp, /Reconexao automatica interrompida/);
+    assert.match(whatsapp, /agendarReconexao\(\);/);
+    assert.match(bot, /agendarSupervisaoInicialWhatsApp/);
+    assert.match(bot, /\[45000, 120000\]/);
+    assert.match(bot, /limparSessao: false/);
+});
+
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
