@@ -38,7 +38,14 @@ function obterChaveCofrePersistente({ dataDir, env = process.env, settings = {} 
     if (!dataDir) throw new Error('dataDir e obrigatorio para obter a chave do cofre.');
 
     const chaveInformada = texto(env.JULIAN_SECRET_KEY);
-    if (chaveInformada) return chaveInformada;
+    // O PM2 pode restaurar uma chave antiga no ambiente. Se o cofre ainda
+    // nao existe, grave essa mesma chave antes de prosseguir: assim os dados
+    // ja cifrados continuam legiveis e a proxima reinicializacao nao depende
+    // do ambiente temporario do PM2.
+    if (chaveInformada) {
+        const chavePersistidaComAmbiente = lerChaveCofre(dataDir);
+        return chavePersistidaComAmbiente || gravarChaveCofre(dataDir, chaveInformada);
+    }
 
     const chavePersistida = lerChaveCofre(dataDir);
     if (chavePersistida) return chavePersistida;

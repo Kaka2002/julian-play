@@ -248,6 +248,16 @@ test('chave do cofre fica persistida no DATA_DIR e nao depende de troca do token
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 
+test('chave herdada do ambiente do PM2 e gravada no cofre na primeira inicializacao',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-cofre-pm2-'));
+ try{
+  const runtime=require('../config/instalacaoRuntime');
+  const chave=runtime.obterChaveCofrePersistente({dataDir:raiz,env:{JULIAN_SECRET_KEY:'chave-herdada-do-pm2'}});
+  assert.equal(chave,'chave-herdada-do-pm2');
+  assert.equal(JSON.parse(fs.readFileSync(path.join(raiz,'.julian-play-cofre.json'),'utf8')).chaveCofre,chave);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true});}
+});
+
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{
  const exportar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','1-EXPORTAR-NO-SERVIDOR.ps1'),'utf8');
  const importar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','2-IMPORTAR-NESTE-COMPUTADOR.ps1'),'utf8');
