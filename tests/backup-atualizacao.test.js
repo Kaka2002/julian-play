@@ -236,6 +236,18 @@ test('configuracao registrada vence DATA_DIR herdado pelo PM2',()=>{
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 
+test('chave do cofre fica persistida no DATA_DIR e nao depende de troca do token de licenca',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-cofre-'));
+ try{
+  const runtime=require('../config/instalacaoRuntime');
+  const primeira=runtime.obterChaveCofrePersistente({dataDir:raiz,env:{LICENSE_ADMIN_TOKEN:'token-legado'}});
+  const segunda=runtime.obterChaveCofrePersistente({dataDir:raiz,env:{LICENSE_ADMIN_TOKEN:'token-renovado'}});
+  assert.equal(primeira,'token-legado');
+  assert.equal(segunda,'token-legado');
+  assert.ok(fs.existsSync(runtime.caminhoChaveCofre(raiz)));
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
 test('migracao servidor para local preserva instalacao independente e exige corte confirmado',()=>{
  const exportar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','1-EXPORTAR-NO-SERVIDOR.ps1'),'utf8');
  const importar=fs.readFileSync(path.join(repoRoot,'scripts','migracao-servidor-local','2-IMPORTAR-NESTE-COMPUTADOR.ps1'),'utf8');

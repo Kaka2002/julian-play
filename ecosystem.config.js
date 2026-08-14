@@ -1,11 +1,17 @@
 const path = require('path');
-const { resolverConfiguracaoInstalacao } = require('./config/instalacaoRuntime');
+const { resolverConfiguracaoInstalacao, obterChaveCofrePersistente } = require('./config/instalacaoRuntime');
 
 const appDir = __dirname;
 const instalacao = resolverConfiguracaoInstalacao({ appDir });
 const settings = instalacao.settings;
 const appName = instalacao.appName;
 const dataDir = instalacao.dataDir;
+const licenseAdminToken = process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '';
+const julianSecretKey = obterChaveCofrePersistente({
+    dataDir,
+    settings,
+    env: { ...process.env, LICENSE_ADMIN_TOKEN: licenseAdminToken }
+});
 
 module.exports = {
     apps: [
@@ -31,7 +37,9 @@ module.exports = {
                 PORT: String(instalacao.port),
                 DATA_DIR: dataDir,
                 JULIAN_PLAY_INSTALL_MODE: instalacao.installMode,
-                LICENSE_ADMIN_TOKEN: process.env.LICENSE_ADMIN_TOKEN || settings.licenseAdminToken || '',
+                LICENSE_ADMIN_TOKEN: licenseAdminToken,
+                JULIAN_SECRET_KEY: julianSecretKey,
+                JULIAN_SECRET_KEY_PREVIOUS: process.env.JULIAN_SECRET_KEY_PREVIOUS || '',
                 LICENSE_PUBLIC_KEY: process.env.LICENSE_PUBLIC_KEY || settings.licensePublicKey || '',
                 LICENSE_DEFAULT_TRIAL_DAYS: String(process.env.LICENSE_DEFAULT_TRIAL_DAYS || settings.trialDays || 0),
                 RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY || settings.recaptchaSiteKey || '',

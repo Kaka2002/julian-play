@@ -1,8 +1,51 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 function texto(valor) {
     return String(valor || '').trim();
+}
+
+function caminhoChaveCofre(dataDir) {
+    return path.join(dataDir, '.julian-play-cofre.json');
+}
+
+function lerChaveCofre(dataDir) {
+    try {
+        const conteudo = JSON.parse(fs.readFileSync(caminhoChaveCofre(dataDir), 'utf8').replace(/^\uFEFF/, ''));
+        return texto(conteudo.chaveCofre);
+    } catch (_) {
+        return '';
+    }
+}
+
+function gravarChaveCofre(dataDir, chaveCofre) {
+    const arquivo = caminhoChaveCofre(dataDir);
+    const temporario = `${arquivo}.${process.pid}.tmp`;
+    const conteudo = JSON.stringify({ formato: 'JPLAY-COFRE-1', chaveCofre }, null, 2);
+
+    fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(temporario, conteudo, { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(temporario, arquivo);
+    return chaveCofre;
+}
+
+// A chave do cofre nao pode depender de um token que possa ser trocado numa
+// renovacao de licenca. Ela fica somente no DATA_DIR, fora do Git e do pacote.
+// Em instalacoes antigas, o token de licenca atual e usado uma unica vez para
+// manter legiveis os valores que ja tenham sido cifrados por ele.
+function obterChaveCofrePersistente({ dataDir, env = process.env, settings = {} } = {}) {
+    if (!dataDir) throw new Error('dataDir e obrigatorio para obter a chave do cofre.');
+
+    const chaveInformada = texto(env.JULIAN_SECRET_KEY);
+    if (chaveInformada) return chaveInformada;
+
+    const chavePersistida = lerChaveCofre(dataDir);
+    if (chavePersistida) return chavePersistida;
+
+    const chaveLegada = texto(env.LICENSE_ADMIN_TOKEN) || texto(settings.licenseAdminToken);
+    const chaveNova = chaveLegada || crypto.randomBytes(32).toString('base64url');
+    return gravarChaveCofre(dataDir, chaveNova);
 }
 
 function lerConfiguracaoInstalacao(appDir) {
@@ -53,5 +96,7 @@ function aplicarDiretorioRegistrado({ appDir, env = process.env, settings } = {}
 module.exports = {
     lerConfiguracaoInstalacao,
     resolverConfiguracaoInstalacao,
-    aplicarDiretorioRegistrado
+    aplicarDiretorioRegistrado,
+    caminhoChaveCofre,
+    obterChaveCofrePersistente
 };

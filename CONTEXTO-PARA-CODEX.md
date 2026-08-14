@@ -1056,3 +1056,20 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `falha_autenticacao`) nao entram em repeticao automatica. A correcao manual
   permanece no painel autenticado, em **Manutencao > Corrigir conexao**; a
   tela publica de QR nao executa reinicios remotos.
+
+## Cofre de credenciais e rota QR em 14/08/2026
+
+- A rota `/qr` e o endpoint `/qr/status` permanecem atras do mesmo login e
+  da mesma licenca do painel. O teste automatizado impede que o roteador seja
+  montado antes de `protegerPainel`.
+- A chave do cofre passou a ser persistida em
+  `DATA_DIR/.julian-play-cofre.json`, fora do Git, do codigo e do pacote de
+  entrega. Na primeira execucao de uma instalacao antiga sem chave propria,
+  o token de licenca atual e gravado uma unica vez como chave legada; depois
+  disso, renovar ou trocar o token de licenca nao torna as credenciais
+  existentes ilegiveis. A chave segue apenas dentro de um kit de recuperacao
+  protegido por senha forte.
+- Nunca apagar esse arquivo do `DATA_DIR`. Se dados ja estiverem cifrados por
+  uma chave perdida, nao substituir nem recriar o banco: procurar um kit de
+  recuperacao que contenha a chave original; caso ele nao exista, manter os
+  dados e cadastrar novamente somente as credenciais que ficaram inacessiveis.

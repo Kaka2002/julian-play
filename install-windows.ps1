@@ -192,7 +192,7 @@ New-Item -ItemType Directory -Path $PastaDados -Force | Out-Null
 
 if ($PastaDados -ne [IO.Path]::GetFullPath($diretorioProjeto)) {
     Etapa 'Migrando dados existentes para a pasta escolhida'
-    $itensPersistentes = @('clientes.db', '.wwebjs_auth', 'backups')
+    $itensPersistentes = @('clientes.db', '.wwebjs_auth', 'backups', '.julian-play-cofre.json')
     foreach ($item in $itensPersistentes) {
         $origem = Join-Path $diretorioProjeto $item
         $destino = Join-Path $PastaDados $item

@@ -1,7 +1,13 @@
 const path = require('path');
-const { aplicarDiretorioRegistrado } = require('./config/instalacaoRuntime');
+const { aplicarDiretorioRegistrado, obterChaveCofrePersistente } = require('./config/instalacaoRuntime');
 
 const configuracaoRuntime = aplicarDiretorioRegistrado({ appDir: __dirname });
+// Garante uma chave estavel mesmo quando o processo for restaurado pelo PM2
+// com um ambiente antigo. A chave permanece somente no DATA_DIR da instalacao.
+process.env.JULIAN_SECRET_KEY = obterChaveCofrePersistente({
+    dataDir: configuracaoRuntime.dataDir,
+    settings: configuracaoRuntime.settings
+});
 if (configuracaoRuntime.conflitoDataDir) {
     console.warn('[seguranca] DATA_DIR herdado pelo PM2 foi ignorado; usando o diretorio registrado desta instalacao.');
 }

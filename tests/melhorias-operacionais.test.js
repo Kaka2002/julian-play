@@ -44,6 +44,19 @@ test('tela do WhatsApp permite voltar ao painel', () => {
     assert.match(rota,/class="voltar-painel" href="\/clientes">Voltar ao painel/);
 });
 
+test('tela do WhatsApp permanece protegida pelo login do painel', () => {
+    const fs = require('fs');
+    const bot = fs.readFileSync(path.join(__dirname, '..', 'bot.js'), 'utf8');
+    assert.ok(bot.indexOf('app.use(protegerPainel);') < bot.indexOf("app.use('/', qrRoute);"));
+});
+
+test('inicializacao do painel restaura a chave persistente do cofre antes dos servicos', () => {
+    const fs = require('fs');
+    const bot = fs.readFileSync(path.join(__dirname, '..', 'bot.js'), 'utf8');
+    assert.match(bot, /obterChaveCofrePersistente/);
+    assert.ok(bot.indexOf('process.env.JULIAN_SECRET_KEY = obterChaveCofrePersistente') < bot.indexOf("require('./services/authService')"));
+});
+
 test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
     const fs = require('fs');
     const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
