@@ -68,7 +68,15 @@ function lerConfiguracaoInstalacao(appDir) {
 function resolverConfiguracaoInstalacao({ appDir, env = process.env, settings } = {}) {
     if (!appDir) throw new Error('appDir e obrigatorio para resolver a instalacao.');
 
-    const configuracao = settings || lerConfiguracaoInstalacao(appDir);
+    const configuracaoLida = settings || lerConfiguracaoInstalacao(appDir);
+    const appNameAmbiente = texto(env.JULIAN_PLAY_APP_NAME);
+    const appNameRegistrado = texto(configuracaoLida.appName);
+    // Na maquina que hospeda mais de uma instalacao, processos diferentes
+    // podem compartilhar o mesmo diretorio de codigo. Nesse caso, o arquivo
+    // .julian-play-install.json da raiz pertence apenas a uma delas e nao
+    // pode sobrescrever DATA_DIR/porta dos demais processos do PM2.
+    const registroPertenceAoProcesso = !appNameAmbiente || !appNameRegistrado || appNameAmbiente === appNameRegistrado;
+    const configuracao = registroPertenceAoProcesso ? configuracaoLida : {};
     const dataDirRegistrado = texto(configuracao.dataDir);
     const dataDirHerdado = texto(env.JULIAN_PLAY_DATA_DIR || env.DATA_DIR);
     const dataDir = dataDirRegistrado || dataDirHerdado || appDir;
@@ -80,12 +88,13 @@ function resolverConfiguracaoInstalacao({ appDir, env = process.env, settings } 
 
     return {
         settings: configuracao,
-        appName: texto(configuracao.appName) || texto(env.JULIAN_PLAY_APP_NAME) || 'julian-play',
+        appName: appNameAmbiente || texto(configuracao.appName) || 'julian-play',
         dataDir,
         port: texto(configuracao.port) || texto(env.JULIAN_PLAY_PORT) || texto(env.PORT) || '10000',
         installMode: texto(configuracao.installMode) || texto(env.JULIAN_PLAY_INSTALL_MODE) || 'server',
         dataDirRegistrado,
-        conflitoDataDir
+        conflitoDataDir,
+        registroPertenceAoProcesso
     };
 }
 

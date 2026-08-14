@@ -236,6 +236,20 @@ test('configuracao registrada vence DATA_DIR herdado pelo PM2',()=>{
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
 
+test('processo PM2 de outra instalacao nao herda DATA_DIR do arquivo raiz',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-instalacao-isolada-'));
+ try{
+  fs.writeFileSync(path.join(raiz,'.julian-play-install.json'),JSON.stringify({appName:'julian-play-admin',port:10001,dataDir:path.join(raiz,'admin')}));
+  const runtime=require('../config/instalacaoRuntime');
+  const dadosCliente=path.join(raiz,'cliente-local');
+  const resolvida=runtime.resolverConfiguracaoInstalacao({appDir:raiz,env:{JULIAN_PLAY_APP_NAME:'julian-play-cliente',DATA_DIR:dadosCliente,PORT:'10000'}});
+  assert.equal(resolvida.appName,'julian-play-cliente');
+  assert.equal(resolvida.dataDir,dadosCliente);
+  assert.equal(resolvida.port,'10000');
+  assert.equal(resolvida.registroPertenceAoProcesso,false);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
 test('chave do cofre fica persistida no DATA_DIR e nao depende de troca do token de licenca',()=>{
  const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-play-cofre-'));
  try{

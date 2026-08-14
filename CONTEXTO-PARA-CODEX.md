@@ -1073,3 +1073,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   uma chave perdida, nao substituir nem recriar o banco: procurar um kit de
   recuperacao que contenha a chave original; caso ele nao exista, manter os
   dados e cadastrar novamente somente as credenciais que ficaram inacessiveis.
+- Quando varios processos PM2 compartilham `D:\julian-play` como codigo, o
+  `.julian-play-install.json` da raiz pode pertencer apenas ao painel
+  administrador. `resolverConfiguracaoInstalacao()` compara o `appName` do
+  arquivo com `JULIAN_PLAY_APP_NAME`: se forem diferentes, usa o `DATA_DIR` e
+  a porta do ambiente do processo. Essa regra e obrigatoria para impedir que
+  cliente, administrador e mestre leiam o banco ou o cofre uns dos outros.
+- Se uma instalacao antiga ja tiver `JULIAN_SECRET_KEY` no ambiente do PM2,
+  mas ainda nao possuir `.julian-play-cofre.json`, a primeira inicializacao
+  grava a mesma chave no seu proprio `DATA_DIR`. Isso preserva a leitura de
+  dados existentes e elimina dependencia do ambiente temporario do PM2.
