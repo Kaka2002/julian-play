@@ -77,6 +77,16 @@ test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', ()
     assert.match(rota, /recuperarWhatsAppAutomaticamente\(\{\s*limparSessao: false,/);
 });
 
+test('saude do robo usa textos em portugues acentuados', () => {
+    const fs = require('fs');
+    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /Saúde do robô/);
+    assert.match(rota, /atendimento automático está recebendo e respondendo mensagens/);
+    assert.match(rota, /Corrigir conexão/);
+    assert.match(rota, /WhatsApp do robô/);
+    assert.doesNotMatch(rota, /Saude do robo/);
+});
+
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');

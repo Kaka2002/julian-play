@@ -7986,22 +7986,22 @@ function painelSaudeRobo(status = {}) {
     const pausas = atendimentosHumanos.length
         ? atendimentosHumanos.slice(0, 6).map(item => `<div class="note-item">
             <strong>${escapar(item.nome || item.telefone)}</strong>
-            <span>${escapar(item.telefone)} &middot; pausado até ${escapar(formatarDataHoraCurta(item.pausaAte))}${item.expirada ?' &middot; expirada' : ''}</span>
+            <span>${escapar(item.telefone)} &middot; pausado até ${escapar(formatarDataHoraCurta(item.pausaAte))}${item.expirada ?' &middot; pausa expirada' : ''}</span>
         </div>`).join('')
         : '<div class="empty">Nenhum atendimento manual pausado agora.</div>';
 
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Saude do robo</h2>
-                <div class="subtitle">Sinais rapidos para saber se o atendimento automatico esta recebendo e respondendo mensagens</div>
+                <h2 class="panel-title">Saúde do robô</h2>
+                <div class="subtitle">Sinais rápidos para saber se o atendimento automático está recebendo e respondendo mensagens</div>
             </div>
             <div class="actions">
                 <a class="button secondary" href="/qr">${icon('whats')} WhatsApp</a>
-                <form method="post" action="/manutencao/whatsapp/reconectar" onsubmit="return confirm('O sistema vai tentar reconectar o WhatsApp usando a sessao atual. Nenhum QR Code, banco, configuracao ou conversa sera apagado. Continuar?')">
-                    <button class="button secondary" type="submit">${icon('refresh')} Corrigir conexao</button>
+                <form method="post" action="/manutencao/whatsapp/reconectar" onsubmit="return confirm('O sistema vai tentar reconectar o WhatsApp usando a sessão atual. Nenhum QR Code, banco, configuração ou conversa será apagado. Continuar?')">
+                    <button class="button secondary" type="submit">${icon('refresh')} Corrigir conexão</button>
                 </form>
-                <form method="post" action="/manutencao/whatsapp/novo-qr" onsubmit="return confirm('Isso vai encerrar a sessao atual do WhatsApp e gerar um novo QR Code. Os clientes, licenca e configuracoes serao mantidos. Continuar?')">
+                <form method="post" action="/manutencao/whatsapp/novo-qr" onsubmit="return confirm('Isso vai encerrar a sessão atual do WhatsApp e gerar um novo QR Code. Os clientes, licença e configurações serão mantidos. Continuar?')">
                     <button class="button secondary" type="submit">${icon('refresh')} Gerar novo QR Code</button>
                 </form>
             </div>
@@ -8021,12 +8021,12 @@ function painelSaudeRobo(status = {}) {
             </tbody>
         </table>
         ${!instalacaoAdministrador() ?`<div style="padding:18px 20px 0;border-top:1px solid #eef2f7;">
-            <form method="post" action="/manutencao/whatsapp/numero" onsubmit="return confirm('Ao trocar o numero, a sessao atual sera encerrada e um novo QR Code sera gerado. Continuar?')" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:end;">
-                <label style="display:grid;gap:6px;font-weight:700;">WhatsApp do robo
+            <form method="post" action="/manutencao/whatsapp/numero" onsubmit="return confirm('Ao trocar o número, a sessão atual será encerrada e um novo QR Code será gerado. Continuar?')" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;align-items:end;">
+                <label style="display:grid;gap:6px;font-weight:700;">WhatsApp do robô
                     <input type="text" name="numeroWhatsappRobo" value="${escapar(numeroRoboExibido)}" placeholder="5511999999999" inputmode="numeric" required>
                 </label>
-                <div class="subtitle" style="align-self:center;">Use DDI + DDD + numero. Exemplo: 5511999999999. Ao salvar, o sistema abre um novo QR Code.</div>
-                <button class="button primary" type="submit">${icon('refresh')} Salvar numero e gerar QR Code</button>
+                <div class="subtitle" style="align-self:center;">Use DDI + DDD + número. Exemplo: 5511999999999. Ao salvar, o sistema abre um novo QR Code.</div>
+                <button class="button primary" type="submit">${icon('refresh')} Salvar número e gerar QR Code</button>
             </form>
         </div>` : ''}
         ${risco.pontos?.length ?`<div class="notice" style="margin:16px 20px 0;">${risco.pontos.map(escapar).join(' ')}</div>` : ''}
