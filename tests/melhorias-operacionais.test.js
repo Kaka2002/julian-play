@@ -166,6 +166,18 @@ test('servidor preserva endereco MAC alfanumerico ao salvar cliente', () => {
     }
 });
 
+test('salva e atualiza quem indicou o cliente sem alterar a origem', () => {
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const criado=await c.salvarCliente({nome:'Cliente Indicado',telefone:'5511999998010',origem:'Indicação pessoal',indicadoPor:'Maria da Silva',status:'ativo'});const atualizado=await c.salvarCliente({...criado,indicadoPor:'João Santos'});process.stdout.write(JSON.stringify({origem:atualizado.origem,indicadoPor:atualizado.indicadoPor}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            origem: 'Indicação pessoal',
+            indicadoPor: 'João Santos'
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('painel removido nao e reintroduzido pelas conexoes do cliente', () => {
     const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const base={nome:'Cliente Painel',telefone:'5511999996789',paineisSelecionados:['Painel A','Painel Sigma'],paineisSelecionadosPresentes:'1',acessoAppNome:['App A','App Sigma'],acessoPainel:['Painel A','Painel Sigma'],status:'ativo'};const criado=await c.salvarCliente(base);const atualizado=await c.salvarCliente({...base,id:criado.id,paineisSelecionados:['Painel A']});process.stdout.write(JSON.stringify({paineis:JSON.parse(atualizado.paineisSelecionados),acessos:JSON.parse(atualizado.acessosApp).map(item=>item.painel)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

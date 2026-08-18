@@ -315,6 +315,7 @@ function montarCliente(dados = {}) {
         acessosApp,
         observacoes: limparTexto(dados.observacoes),
         origem: limparTexto(dados.origem),
+        indicadoPor: limparTexto(dados.indicadoPor),
         tags: normalizarTags(dados.tags),
         bonusMeses: Math.max(0, Number.parseInt(dados.bonusMeses || 0, 10) || 0),
         whatsappMarketingConsentimento: dados.whatsappMarketingConsentimento ? 1 : 0,
@@ -728,9 +729,9 @@ async function listarClientes(filtros = {}) {
     const where = [];
 
     if (busca) {
-        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ? OR origem LIKE ? OR tags LIKE ?)');
+        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ? OR origem LIKE ? OR indicadoPor LIKE ? OR tags LIKE ?)');
         const termo = `%${busca}%`;
-        params.push(termo, termo, termo, termo, termo, termo, termo);
+        params.push(termo, termo, termo, termo, termo, termo, termo, termo);
     }
 
     if (status === 'inadimplente') {
@@ -820,6 +821,7 @@ async function salvarCliente(dados) {
                 acessosApp = ?,
                 observacoes = ?,
                 origem = ?,
+                indicadoPor = ?,
                 tags = ?,
                 bonusMeses = ?,
                 whatsappMarketingConsentimento = ?,
@@ -860,6 +862,7 @@ async function salvarCliente(dados) {
                 clienteProtegido.acessosApp,
                 cliente.observacoes,
                 cliente.origem,
+                cliente.indicadoPor,
                 cliente.tags,
                 cliente.bonusMeses,
                 cliente.whatsappMarketingConsentimento,
@@ -885,9 +888,9 @@ async function salvarCliente(dados) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, tags, bonusMeses,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, indicadoPor, tags, bonusMeses,
             whatsappMarketingConsentimento, whatsappMarketingConsentidoEm, whatsappOptOutEm, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -920,6 +923,7 @@ async function salvarCliente(dados) {
             clienteProtegido.acessosApp,
             cliente.observacoes,
             cliente.origem,
+            cliente.indicadoPor,
             cliente.tags,
             cliente.bonusMeses,
             cliente.whatsappMarketingConsentimento,

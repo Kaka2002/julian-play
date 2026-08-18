@@ -12,7 +12,8 @@ const migrations = [
     require('./006-campanhas-eventos-historicos'),
     require('./007-aniversario-dia-mes'),
     require('./008-fila-mensagens-persistente'),
-    require('./009-governanca-privacidade')
+    require('./009-governanca-privacidade'),
+    require('./010-indicacao-cliente')
 ];
 
 function run(db, sql, params = []) {

@@ -3370,6 +3370,7 @@ function gerarCsvClientes(clientes = []) {
         'ID do aplicativo',
         'Dados por app instalado',
         'Origem',
+        'Indicado por',
         'Tags',
         'Bônus disponíveis',
         'Observações'
@@ -3399,6 +3400,7 @@ function gerarCsvClientes(clientes = []) {
         valoresAcessosAppCsv(cliente, 'idAplicativo'),
         descreverAcessosAppCsv(cliente),
         cliente.origem,
+        cliente.indicadoPor,
         juntarListaCsv(cliente.tags || ''),
         cliente.bonusMeses || 0,
         cliente.observacoes
@@ -5742,6 +5744,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     ...ORIGENS_CLIENTE.map(origem => ({ valor: origem, texto: origem }))
                 ]
             })}
+            ${campo({
+                nome: 'indicadoPor',
+                label: 'Indicado por',
+                valor: cliente.indicadoPor || '',
+                tipo: 'text',
+                attrs: 'maxlength="120" placeholder="Nome de quem fez a indicação (opcional)"'
+            })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
             <label class="toggle-line full">
@@ -7075,6 +7084,7 @@ function tabelaClientes(clientes) {
             <div class="cell-title">${bandeira}${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
             ${cliente.origem ?`<div class="cell-muted">Origem: ${escapar(cliente.origem)}</div>` : ''}
+            ${cliente.indicadoPor ?`<div class="cell-muted">Indicado por: ${escapar(cliente.indicadoPor)}</div>` : ''}
             ${cliente.nascimento ?`<div class="cell-muted">🎂 ${escapar(formatarAniversario(cliente.nascimento))}</div>` : ''}
             ${Number(cliente.bonusMeses || 0) > 0 ?`<div class="cell-muted">🎁 ${escapar(cliente.bonusMeses)} bônus</div>` : ''}
             ${renderTagsCliente(cliente.tags)}
