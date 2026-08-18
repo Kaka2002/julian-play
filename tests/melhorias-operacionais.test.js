@@ -136,6 +136,24 @@ test('campo de endereco MAC aceita todas as letras e numeros na tela', () => {
     assert.equal(formatarMac('z9y8x7w6v5u4'), 'Z9:Y8:X7:W6:V5:U4');
 });
 
+test('modelo de teste expirado convida para assinatura e inclui planos dinamicos', () => {
+    const resultado = executarIsolado(`(async()=>{const m=require('./services/modelosMensagem');const modelos=await m.listarModelos();const modelo=modelos.find(item=>item.chave===m.CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA);const mensagem=await m.montarMensagemTesteExpiradoAssinatura({nome:'Ana Cliente'},'1 - Mensal — R$ 35,00\\n2 - Trimestral — R$ 96,00');process.stdout.write(JSON.stringify({modelo:{plano:modelo?.plano,titulo:modelo?.titulo,ativo:modelo?.ativo},mensagem}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.deepEqual(retorno.modelo, {
+            plano: 'teste_expirado',
+            titulo: 'Teste grátis encerrado — convite para assinatura',
+            ativo: 1
+        });
+        assert.match(retorno.mensagem, /Olá, \*Ana\*!/);
+        assert.match(retorno.mensagem, /Mensal — R\$ 35,00/);
+        assert.match(retorno.mensagem, /Trimestral — R\$ 96,00/);
+        assert.match(retorno.mensagem, /responda \*atendente\*/i);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('servidor preserva endereco MAC alfanumerico ao salvar cliente', () => {
     const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const salvo=await c.salvarCliente({nome:'Cliente MAC',telefone:'5511999999876',enderecoMac:'z9-y8:x7.w6/v5 u4',acessoAppNome:['Aplicativo'],acessoEnderecoMac:['g1-h2:i3.j4/k5 l6'],status:'ativo'});process.stdout.write(JSON.stringify({legado:salvo.enderecoMac,acesso:JSON.parse(salvo.acessosApp)[0].enderecoMac}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

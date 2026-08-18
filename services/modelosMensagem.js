@@ -140,6 +140,16 @@ const modeloCampanhaAmizade = {
     texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
 };
 
+const CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA = 'teste_expirado_assinatura';
+
+const modeloTesteExpiradoAssinatura = {
+    chave: CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA,
+    plano: 'teste_expirado',
+    titulo: 'Teste grátis encerrado — convite para assinatura',
+    cor: 'orange',
+    texto: '⚠️ *SEU TESTE GRÁTIS TERMINOU*\n\nOlá, *{{nome}}*! Esperamos que você tenha gostado da experiência.\n\nPara continuar com acesso sem interrupções, escolha o plano que mais combina com você:\n\n{{planos}}\n\n✅ Valores apresentados antes da ativação\n✅ Atendimento para ajudar quando precisar\n\nResponda apenas com o número do plano desejado. Se precisar de ajuda para escolher, responda *atendente*. Para encerrar, digite *sair*.'
+};
+
 function executar(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
         db.run(sql, params, function onRun(err) {
@@ -174,6 +184,7 @@ function limparTexto(valor) {
 function normalizarPlano(plano) {
     const valor = limparTexto(plano).toLowerCase();
 
+    if (valor.includes('teste') && valor.includes('expir')) return 'teste_expirado';
     if (valor.includes('cobranca') || valor.includes('cobran')) return 'cobranca';
     if (valor.includes('mensal')) return 'mensal';
     if (valor.includes('trimestral')) return 'trimestral';
@@ -280,20 +291,51 @@ async function garantirModeloCampanhaAmizade() {
     );
 }
 
+async function garantirModeloTesteExpiradoAssinatura() {
+    const chaveSeed = `seed_${CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA}`;
+    const jaProcessado = await buscarUm(
+        'SELECT valor FROM configuracoes WHERE chave = ?',
+        [chaveSeed]
+    );
+
+    if (jaProcessado) return;
+
+    await executar(
+        `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
+        VALUES (?, ?, ?, ?, ?, 1)`,
+        [
+            modeloTesteExpiradoAssinatura.chave,
+            modeloTesteExpiradoAssinatura.plano,
+            modeloTesteExpiradoAssinatura.titulo,
+            modeloTesteExpiradoAssinatura.texto,
+            modeloTesteExpiradoAssinatura.cor
+        ]
+    );
+
+    await executar(
+        `INSERT INTO configuracoes (chave, valor)
+        VALUES (?, ?)
+        ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor`,
+        [chaveSeed, '1']
+    );
+}
+
 async function listarModelos() {
     await garantirModelosPadrao();
     await garantirModeloCampanhaAmizade();
+    await garantirModeloTesteExpiradoAssinatura();
 
     return buscarTodos(
         `SELECT * FROM modelos_mensagem
         ORDER BY
             CASE plano
-                WHEN 'mensal' THEN 1
-                WHEN 'trimestral' THEN 2
-                WHEN 'semestral' THEN 3
-                WHEN 'anual' THEN 4
-                WHEN 'padrao' THEN 5
-                ELSE 6
+                WHEN 'teste_expirado' THEN 1
+                WHEN 'mensal' THEN 2
+                WHEN 'trimestral' THEN 3
+                WHEN 'semestral' THEN 4
+                WHEN 'anual' THEN 5
+                WHEN 'padrao' THEN 6
+                ELSE 7
             END,
             titulo ASC`
     );
@@ -302,6 +344,7 @@ async function listarModelos() {
 async function buscarModeloPorId(id) {
     await garantirModelosPadrao();
     await garantirModeloCampanhaAmizade();
+    await garantirModeloTesteExpiradoAssinatura();
     return buscarUm('SELECT * FROM modelos_mensagem WHERE id = ?', [id]);
 }
 
@@ -398,6 +441,7 @@ function aplicarVariaveis(texto, variaveis = {}) {
 async function obterModeloPorChave(chave) {
     await garantirModelosPadrao();
     await garantirModeloCampanhaAmizade();
+    await garantirModeloTesteExpiradoAssinatura();
 
     return buscarUm(
         `SELECT * FROM modelos_mensagem
@@ -536,6 +580,17 @@ async function montarMensagemModeloManual(cliente, modelo, opcoes = {}) {
     return aplicarVariaveis(modelo?.texto || '', montarVariaveisCliente(cliente, opcoes));
 }
 
+async function montarMensagemTesteExpiradoAssinatura(cliente, planos = []) {
+    const modelo = await obterModeloPorChave(CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA);
+    const listaPlanos = String(planos || '').trim();
+    const variaveis = {
+        ...montarVariaveisCliente(cliente),
+        planos: listaPlanos || 'Nenhum plano está disponível no momento. Fale com um atendente para conhecer as opções.'
+    };
+
+    return aplicarVariaveis(modelo?.texto || modeloTesteExpiradoAssinatura.texto, variaveis);
+}
+
 module.exports = {
     listarModelos,
     buscarModeloPorId,
@@ -547,6 +602,8 @@ module.exports = {
     montarMensagemCobrancaVencido,
     montarMensagemCampanhaAmizade,
     montarMensagemModeloManual,
+    montarMensagemTesteExpiradoAssinatura,
+    CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA,
     normalizarPlano,
     aplicarVariaveis,
     modelosPadrao

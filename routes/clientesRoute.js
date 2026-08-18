@@ -52,7 +52,9 @@ const {
     montarMensagemPorModelo,
     montarMensagemCobrancaVencido,
     montarMensagemCampanhaAmizade,
-    montarMensagemModeloManual
+    montarMensagemModeloManual,
+    montarMensagemTesteExpiradoAssinatura,
+    CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA
 } = require('../services/modelosMensagem');
 const {
     obterConfiguracoes,
@@ -4891,16 +4893,8 @@ async function obterPlanosRenovacaoManual() {
     }
 }
 
-function montarMensagemPlanosTesteExpiradoManual(cliente = {}, planos = []) {
-    return `⚠️ *TESTE GRÁTIS EXPIRADO*
---------------------
-Olá, *${cliente.nome || 'cliente'}*! Seu teste grátis expirou.
-
-Para reativar seu acesso, escolha um plano fixo:
-
-${menuRenovacao(planos)}
-
-Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
+async function montarMensagemPlanosTesteExpiradoManual(cliente = {}, planos = []) {
+    return montarMensagemTesteExpiradoAssinatura(cliente, menuRenovacao(planos));
 }
 
 function clientePodeReceberReativacao(cliente = {}) {
@@ -7652,6 +7646,7 @@ function variaveisDisponiveis(clicavel = false) {
         ['{{vencimento}}', 'Data de vencimento'],
         ['{{dias}}', 'Dias restantes ou vencidos'],
         ['{{valor}}', 'Valor do plano'],
+        ['{{planos}}', 'Lista de planos e valores; usada no modelo de teste grátis encerrado'],
         ['{{telefoneWhatsApp}}', 'WhatsApp da instalação usado em campanhas']
     ];
 
@@ -7669,7 +7664,13 @@ function variaveisDisponiveis(clicavel = false) {
 }
 
 function chipPlano(modelo) {
-    const label = modelo.plano === 'padrao' ? 'Padrão (todos os planos)' : modelo.plano === 'campanha' ? 'Campanha' : modelo.plano;
+    const label = modelo.plano === 'padrao'
+        ? 'Padrão (todos os planos)'
+        : modelo.plano === 'campanha'
+            ? 'Campanha'
+            : modelo.plano === 'teste_expirado'
+                ? 'Teste grátis encerrado'
+                : modelo.plano;
     return `<span class="chip ${escapar(modelo.cor || 'blue')}">${escapar(label)}</span>`;
 }
 
@@ -7754,6 +7755,7 @@ function formularioModelo(modelo = {}) {
                 valor: modelo.plano || 'padrao',
                 opcoes: [
                     { valor: 'padrao', texto: 'Padrão (todos os planos)' },
+                    { valor: 'teste_expirado', texto: 'Teste grátis encerrado' },
                     { valor: 'campanha', texto: 'Campanha' },
                     { valor: 'mensal', texto: 'Mensal' },
                     { valor: 'trimestral', texto: 'Trimestral' },
@@ -9057,7 +9059,9 @@ router.get('/clientes/:id/enviar-modelo', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const modelosAtivos = modelos.filter(modelo => Number(modelo.ativo) !== 0);
+    const modelosAtivos = modelos.filter(modelo => (
+        Number(modelo.ativo) !== 0 && modelo.chave !== CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA
+    ));
 
     await renderizar(res, {
         titulo: 'Enviar modelo',
@@ -10640,7 +10644,7 @@ router.post('/clientes/:id/enviar-planos-teste-expirado', async (req, res) => {
 
     try {
         const planos = await obterPlanosRenovacaoManual();
-        const mensagem = montarMensagemPlanosTesteExpiradoManual(cliente, planos);
+        const mensagem = await montarMensagemPlanosTesteExpiradoManual(cliente, planos);
         const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
             client,
             cliente.telefone,
