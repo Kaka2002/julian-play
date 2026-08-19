@@ -17,6 +17,38 @@ function Etapa($texto) {
     Write-Host "`n==> $texto" -ForegroundColor Cyan
 }
 
+function AguardarPainelPronto([int]$porta, [int]$tempoMaximoSegundos = 120) {
+    Etapa 'Aguardando o painel voltar a responder'
+
+    $urlProntidao = "http://127.0.0.1:$porta/ready"
+    $limite = (Get-Date).AddSeconds($tempoMaximoSegundos)
+    $ultimaFalha = $null
+    $proximaMensagem = Get-Date
+
+    do {
+        try {
+            $estado = Invoke-RestMethod -Uri $urlProntidao -TimeoutSec 5
+            if ($estado.ok -eq $true -and $estado.ready -eq $true) {
+                $versao = if ($estado.version) { " (versao $($estado.version))" } else { '' }
+                Write-Host "Painel confirmado como pronto$versao." -ForegroundColor Green
+                return
+            }
+            $ultimaFalha = 'O painel respondeu, mas ainda esta iniciando.'
+        } catch {
+            $ultimaFalha = $_.Exception.Message
+        }
+
+        if ((Get-Date) -ge $proximaMensagem) {
+            $restantes = [Math]::Max(0, [Math]::Ceiling(($limite - (Get-Date)).TotalSeconds))
+            Write-Host "Ainda aguardando o painel na porta $porta ($restantes s restantes)..." -ForegroundColor Yellow
+            $proximaMensagem = (Get-Date).AddSeconds(10)
+        }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $limite)
+
+    throw "O painel nao respondeu em $tempoMaximoSegundos segundos na porta $porta. Ultimo detalhe: $ultimaFalha"
+}
+
 function ExigirComando($nome, $mensagem) {
     $cmd = Get-Command $nome -ErrorAction SilentlyContinue
     if (-not $cmd) {
@@ -40,6 +72,7 @@ function TestarAdministrador {
 function GarantirAdministrador {
     if (TestarAdministrador) { return }
 
+    Etapa 'Solicitando permissao de administrador'
     Write-Host 'A atualizacao precisa de permissao de administrador para encerrar o painel antigo.' -ForegroundColor Yellow
     Write-Host 'Confirme a janela de permissao do Windows para continuar.' -ForegroundColor Yellow
 
@@ -63,6 +96,8 @@ function GarantirAdministrador {
 }
 
 GarantirAdministrador
+
+Etapa 'Atualizador iniciado. Nao feche esta janela durante o processo'
 
 function ExecutarPm2Opcional([string[]]$argumentos) {
     $pm2 = Get-Command pm2.cmd -ErrorAction SilentlyContinue
@@ -319,12 +354,15 @@ try {
         throw "Atualizacao terminou com codigo $LASTEXITCODE."
     }
 
+    AguardarPainelPronto -porta $Porta
+
     Etapa 'Atualizacao finalizada'
     Write-Host "Painel: $urlPainel" -ForegroundColor Green
     if ($nomeLocalConfigurado) {
         Write-Host "Endereco alternativo: http://localhost:$Porta" -ForegroundColor Yellow
     }
     Write-Host "Backup da versao anterior: $backupApp" -ForegroundColor Yellow
+    Write-Host 'Abrindo o painel no navegador...' -ForegroundColor Cyan
     Start-Process $urlPainel
 } catch {
     Write-Host "`nFalha na atualizacao: $($_.Exception.Message)" -ForegroundColor Red

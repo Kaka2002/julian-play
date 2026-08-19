@@ -43,6 +43,9 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  for(const item of ['clientes.db','.wwebjs_auth','.wwebjs_cache','backups'])assert.match(atualizar,new RegExp(item.replace('.', '\\.'),'i'));
  assert.match(atualizar,/Preservando configuracao local/i);
  assert.match(atualizar,/Get-FileHash[\s\S]*SHA256/i);
+ assert.match(atualizar,/function AguardarPainelPronto[\s\S]*\/ready[\s\S]*Invoke-RestMethod/);
+ assert.match(atualizar,/AguardarPainelPronto -porta \$Porta[\s\S]*Start-Process \$urlPainel/);
+ assert.match(atualizar,/tempoMaximoSegundos = 120/);
  const paradaLocal=atualizar.match(/function PararPm2Local[\s\S]*?\r?\n}/)?.[0]||'';
  assert.match(paradaLocal,/\('stop', \$nomeProcesso\)/);
  assert.match(paradaLocal,/\('delete', \$nomeProcesso\)/);

@@ -1107,3 +1107,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `localhost`, loopback ou rede privada ele usa o CAPTCHA matemático assinado
   já existente. A validação do POST segue exatamente a mesma regra da tela,
   evitando tanto o erro visual do Google quanto uma divergência de segurança.
+
+## Atualização local com confirmação visual em 19/08/2026
+
+- O atualizador entregue ao cliente agora mostra um cabeçalho no lançador,
+  mantém a janela aberta ao fim e aguarda até 120 segundos pelo endpoint
+  local `/ready` antes de declarar sucesso e abrir o navegador. Isso evita a
+  falsa impressão de atualização concluída quando o PM2 ainda está iniciando.
+  Em caso de prazo excedido, a atualização falha de forma explícita e segue o
+  fluxo já existente de reabrir/restaurar a instalação anterior, sem tocar em
+  banco, backups, configurações ou sessão do WhatsApp.
