@@ -152,6 +152,30 @@ function recaptchaConfigurado() {
         && String(process.env.RECAPTCHA_SECRET_KEY || '').trim());
 }
 
+function hostnameDaRequisicao(req) {
+    const host = String(req?.hostname || req?.headers?.host || '')
+        .trim()
+        .toLowerCase()
+        .replace(/^\[/, '')
+        .replace(/\]$/, '')
+        .split(':')[0];
+    return host;
+}
+
+function hostnameLocal(hostname) {
+    const host = String(hostname || '').trim().toLowerCase();
+    if (!host || host === 'localhost' || host === '::1' || host === '0.0.0.0') return true;
+    if (/^127(?:\.\d{1,3}){3}$/.test(host)) return true;
+    const partes = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+    if (!partes) return false;
+    const [a, b] = partes.slice(1).map(Number);
+    return a === 10 || a === 127 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31);
+}
+
+function recaptchaDisponivelParaRequisicao(req) {
+    return recaptchaConfigurado() && !hostnameLocal(hostnameDaRequisicao(req));
+}
+
 function hostnamesRecaptchaPermitidos() {
     return String(process.env.RECAPTCHA_ALLOWED_HOSTNAMES || '')
         .split(',')
@@ -230,4 +254,4 @@ function mascararSegredos(dados = {}) {
     return Object.fromEntries(Object.entries(dados).map(([k,v]) => [k, sensivel.test(k) ? '[OCULTO]' : v]));
 }
 
-module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, desativarAtalhosGerenciadorSenhas, recaptchaConfigurado, validarRecaptcha };
+module.exports={ csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, desativarAtalhosGerenciadorSenhas, recaptchaConfigurado, recaptchaDisponivelParaRequisicao, validarRecaptcha };

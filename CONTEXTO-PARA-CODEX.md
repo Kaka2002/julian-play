@@ -1098,3 +1098,12 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   incluindo vencimento e saldo antes/depois. A repetição do mesmo vencimento
   não desconta novamente; também fica uma nota auditável no histórico do
   cliente apontando para o registro do Financeiro.
+
+## reCAPTCHA em instalações locais em 19/08/2026
+
+- Chaves reCAPTCHA cadastradas para domínios públicos não são válidas em
+  `localhost` nem nos IPs privados da rede local. O login agora seleciona o
+  reCAPTCHA somente quando o acesso chega por hostname público; em
+  `localhost`, loopback ou rede privada ele usa o CAPTCHA matemático assinado
+  já existente. A validação do POST segue exatamente a mesma regra da tela,
+  evitando tanto o erro visual do Google quanto uma divergência de segurança.

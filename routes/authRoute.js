@@ -17,7 +17,7 @@ const {
     salvarConfiguracoesAcesso,
     salvarConfiguracoesPainel
 } = require('../services/configuracoesPainel');
-const { criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, recaptchaConfigurado, validarRecaptcha } = require('../services/securityService');
+const { criarCaptcha, validarCaptcha, validarTotp, mascararSegredos, recaptchaDisponivelParaRequisicao, validarRecaptcha } = require('../services/securityService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 const loginPersistente = require('../services/loginSecurityService');
 
@@ -104,10 +104,10 @@ function destinoSeguro(valor) {
     return destino;
 }
 
-function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false, captcha = criarCaptcha() }) {
+function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPainel = '', configuracaoInicial = false, captcha = criarCaptcha(), usarRecaptcha = false }) {
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
-    const usarRecaptcha = !configuracaoInicial && recaptchaConfigurado();
+    usarRecaptcha = !configuracaoInicial && usarRecaptcha;
 
     return `<!doctype html>
 <html lang="pt-BR">
@@ -315,7 +315,8 @@ router.get('/login', async (req, res) => {
         mensagem: req.query.erro || '',
         next: destinoSeguro(req.query.next),
         config,
-        usuarioPainel
+        usuarioPainel,
+        usarRecaptcha: recaptchaDisponivelParaRequisicao(req)
     }));
 });
 
@@ -330,7 +331,7 @@ router.post('/login', async (req, res) => {
         return res.redirect(`/login?erro=${encodeURIComponent(`Muitas tentativas. Aguarde ${minutos} minuto(s).`)}&next=${encodeURIComponent(next)}`);
     }
 
-    const validacaoHumana = recaptchaConfigurado()
+    const validacaoHumana = recaptchaDisponivelParaRequisicao(req)
         ? await validarRecaptcha(req.body['g-recaptcha-response'], { ip: req.ip || req.socket?.remoteAddress })
         : { valido: validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta) };
     if (!validacaoHumana.valido) {
