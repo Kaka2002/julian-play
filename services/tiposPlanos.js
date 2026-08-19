@@ -1,5 +1,7 @@
 const db = require('../database/sqlite');
 
+const NOME_PLANO_BONUS_MENSAL = 'Bônus Mensal';
+
 const planosPadrao = [
     ['Teste Grátis', 0, '0,00'],
     ['Mensal', 30, ''],
@@ -61,16 +63,29 @@ function marcarSeedPlanosProcessado() {
 }
 
 async function garantirPlanosPadrao() {
-    if (await seedPlanosJaProcessado()) return;
+    if (!await seedPlanosJaProcessado()) {
+        for (const [nome, dias, valor] of planosPadrao) {
+            await executar(
+                'INSERT OR IGNORE INTO tipos_planos (nome, dias, valor) VALUES (?, ?, ?)',
+                [nome, dias, valor]
+            );
+        }
 
-    for (const [nome, dias, valor] of planosPadrao) {
-        await executar(
-            'INSERT OR IGNORE INTO tipos_planos (nome, dias, valor) VALUES (?, ?, ?)',
-            [nome, dias, valor]
-        );
+        await marcarSeedPlanosProcessado();
     }
 
-    await marcarSeedPlanosProcessado();
+    // Este plano é controlado pelo saldo de bônus do cliente. Ele é criado
+    // mesmo em instalações que já tinham um catálogo personalizado.
+    await executar(
+        'INSERT OR IGNORE INTO tipos_planos (nome, dias, valor, ativo) VALUES (?, ?, ?, 1)',
+        [NOME_PLANO_BONUS_MENSAL, 30, '0,00']
+    );
+}
+
+function ehPlanoBonusMensal(plano = {}) {
+    return limparTexto(plano.nome).localeCompare(NOME_PLANO_BONUS_MENSAL, 'pt-BR', {
+        sensitivity: 'base'
+    }) === 0;
 }
 
 async function listarTiposPlanos() {
@@ -120,6 +135,8 @@ function removerTipoPlano(id) {
 }
 
 module.exports = {
+    NOME_PLANO_BONUS_MENSAL,
+    ehPlanoBonusMensal,
     listarTiposPlanos,
     buscarTipoPlanoPorId,
     salvarTipoPlano,

@@ -178,6 +178,43 @@ test('salva e atualiza quem indicou o cliente sem alterar a origem', () => {
     }
 });
 
+test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');
+        const p=require('./services/tiposPlanos');
+        const db=require('./database/sqlite');
+        const planos=await p.listarTiposPlanos();
+        const mensal=planos.find(x=>x.nome==='Mensal');
+        const bonus=planos.find(x=>x.nome==='Bônus Mensal');
+        const base={nome:'Cliente Bônus',telefone:'5511999998011',tipoPlanoId:String(mensal.id),plano:'Mensal',diasContrato:30,valorPlano:'35,00',dataInicio:'2026-08-01T00:00',dataVencimento:'2026-09-01T23:59',bonusMeses:2,status:'ativo'};
+        const criado=await c.salvarCliente(base);
+        const primeiro=await c.salvarCliente({...criado,tipoPlanoId:String(bonus.id),dataInicio:'2026-09-02T00:00',dataVencimento:'2026-10-02T23:59'});
+        const repetido=await c.salvarCliente({...primeiro,tipoPlanoId:String(bonus.id),dataInicio:'2026-09-02T00:00',dataVencimento:'2026-10-02T23:59'});
+        const segundo=await c.salvarCliente({...repetido,tipoPlanoId:String(bonus.id),dataInicio:'2026-10-03T00:00',dataVencimento:'2026-11-03T23:59'});
+        let semSaldo=false;
+        try { await c.salvarCliente({...segundo,tipoPlanoId:String(bonus.id),dataInicio:'2026-11-04T00:00',dataVencimento:'2026-12-04T23:59'}); } catch (erro) { semSaldo=/não possui bônus disponível/i.test(erro.message); }
+        await db.ready;
+        const pagamentos=await new Promise((ok,no)=>db.all("SELECT plano, valorTotal, formaPagamento FROM cliente_pagamentos WHERE clienteId=? ORDER BY id",[criado.id],(e,r)=>e?no(e):ok(r)));
+        const notas=await c.listarNotasCliente(criado.id);
+        process.stdout.write(JSON.stringify({primeiroSaldo:primeiro.bonusMeses,repetidoSaldo:repetido.bonusMeses,segundoSaldo:segundo.bonusMeses,semSaldo,pagamentos,temNota:notas.some(x=>x.texto.includes('Bônus mensal utilizado'))}));
+        process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.equal(retorno.primeiroSaldo, 1);
+        assert.equal(retorno.repetidoSaldo, 1);
+        assert.equal(retorno.segundoSaldo, 0);
+        assert.equal(retorno.semSaldo, true);
+        assert.deepEqual(retorno.pagamentos, [
+            { plano: 'Bônus Mensal', valorTotal: '0,00', formaPagamento: 'Bônus mensal' },
+            { plano: 'Bônus Mensal', valorTotal: '0,00', formaPagamento: 'Bônus mensal' }
+        ]);
+        assert.equal(retorno.temNota, true);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('painel removido nao e reintroduzido pelas conexoes do cliente', () => {
     const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const base={nome:'Cliente Painel',telefone:'5511999996789',paineisSelecionados:['Painel A','Painel Sigma'],paineisSelecionadosPresentes:'1',acessoAppNome:['App A','App Sigma'],acessoPainel:['Painel A','Painel Sigma'],status:'ativo'};const criado=await c.salvarCliente(base);const atualizado=await c.salvarCliente({...base,id:criado.id,paineisSelecionados:['Painel A']});process.stdout.write(JSON.stringify({paineis:JSON.parse(atualizado.paineisSelecionados),acessos:JSON.parse(atualizado.acessosApp).map(item=>item.painel)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
     try {

@@ -2,6 +2,7 @@ const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
 const { normalizarAniversario } = require('../utils/aniversario');
 const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes, estaProtegido } = require('./credenciaisClienteService');
+const { buscarTipoPlanoPorId, ehPlanoBonusMensal, NOME_PLANO_BONUS_MENSAL } = require('./tiposPlanos');
 let credenciaisProntas = null;
 function garantirCredenciaisProntas() {
     if (!credenciaisProntas) credenciaisProntas = migrarCredenciaisExistentes();
@@ -765,6 +766,130 @@ async function listarClientes(filtros = {}) {
     );
 }
 
+async function prepararUsoPlanoBonusMensal(cliente, existente) {
+    const tipoPlanoId = Number.parseInt(cliente.tipoPlanoId, 10);
+    if (!tipoPlanoId) return { ativo: false };
+
+    const tipoPlano = await buscarTipoPlanoPorId(tipoPlanoId);
+    if (!tipoPlano || !ehPlanoBonusMensal(tipoPlano)) return { ativo: false };
+
+    if (!existente?.id) {
+        throw new Error('O plano Bônus Mensal só pode ser usado por um cliente que já possua bônus disponível.');
+    }
+
+    const vencimentoNovo = limparTexto(cliente.dataVencimento || cliente.vencimento);
+    if (!vencimentoNovo) {
+        throw new Error('Informe o vencimento do ciclo antes de usar o Bônus Mensal.');
+    }
+
+    cliente.plano = NOME_PLANO_BONUS_MENSAL;
+    cliente.diasContrato = 30;
+    cliente.valorPlano = '0,00';
+    cliente.assinaturaApp = '0,00';
+    cliente.status = 'ativo';
+
+    const pagamentoExistente = await buscarUm(
+        `SELECT id FROM cliente_pagamentos
+         WHERE clienteId = ?
+           AND formaPagamento = ?
+           AND vencimentoNovo = ?
+           AND (excluidoEm IS NULL OR excluidoEm = '')
+         LIMIT 1`,
+        [existente.id, 'Bônus mensal', vencimentoNovo]
+    );
+
+    if (pagamentoExistente) {
+        // Reabrir e salvar o mesmo contrato não pode descontar o bônus outra vez.
+        cliente.bonusMeses = Math.max(0, Number.parseInt(existente.bonusMeses || 0, 10) || 0);
+        return { ativo: true, deveRegistrar: false };
+    }
+
+    const saldoAnterior = Math.max(0, Number.parseInt(existente.bonusMeses || 0, 10) || 0);
+    if (saldoAnterior < 1) {
+        throw new Error('Este cliente não possui bônus disponível para usar o plano Bônus Mensal.');
+    }
+
+    cliente.bonusMeses = saldoAnterior - 1;
+    return {
+        ativo: true,
+        deveRegistrar: true,
+        saldoAnterior,
+        saldoRestante: cliente.bonusMeses,
+        vencimentoNovo
+    };
+}
+
+function dadosPagamentoBonusMensal(cliente, usoBonus) {
+    return [
+        cliente.id,
+        cliente.tipoPlanoId,
+        NOME_PLANO_BONUS_MENSAL,
+        30,
+        '0,00',
+        '0,00',
+        '0,00',
+        'Bônus mensal',
+        agoraLocalInput(),
+        '',
+        usoBonus.vencimentoNovo,
+        `Bônus mensal utilizado. Saldo de bônus: ${usoBonus.saldoAnterior} → ${usoBonus.saldoRestante}.`,
+        0
+    ];
+}
+
+function inserirPagamentoBonusMensal(sql, cliente, usoBonus) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, dadosPagamentoBonusMensal(cliente, usoBonus), function onRun(err) {
+            if (err) return reject(err);
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    });
+}
+
+async function atualizarClienteComUsoBonusMensal(sqlAtualizacao, paramsAtualizacao, cliente, usoBonus) {
+    await db.ready;
+
+    const sqlPagamento = `INSERT INTO cliente_pagamentos (
+            clienteId, tipoPlanoId, plano, diasContrato, valorPlano, assinaturaApp,
+            valorTotal, formaPagamento, dataPagamento, vencimentoAnterior,
+            vencimentoNovo, observacoes, mensagemEnviada
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+
+    return new Promise((resolve, reject) => {
+        const cancelar = (erro) => db.run('ROLLBACK', () => reject(erro));
+
+        db.serialize(() => {
+            db.run('BEGIN IMMEDIATE', (erroInicio) => {
+                if (erroInicio) return reject(erroInicio);
+
+                db.run(sqlAtualizacao, paramsAtualizacao, function onAtualizar(erroAtualizacao) {
+                    if (erroAtualizacao) return cancelar(erroAtualizacao);
+                    if (!this.changes) {
+                        return cancelar(new Error('O bônus não foi utilizado porque o saldo do cliente foi alterado. Atualize a página e tente novamente.'));
+                    }
+
+                    inserirPagamentoBonusMensal(sqlPagamento, cliente, usoBonus)
+                        .then((pagamento) => {
+                            db.run('COMMIT', (erroCommit) => {
+                                if (erroCommit) return cancelar(erroCommit);
+                                resolve({ changes: 1, pagamento });
+                            });
+                        })
+                        .catch(cancelar);
+                });
+            });
+        });
+    });
+}
+
+async function registrarNotaUsoPlanoBonusMensal(cliente, usoBonus, pagamento) {
+    if (!usoBonus?.deveRegistrar || !pagamento?.id) return;
+    await adicionarNotaCliente(
+        cliente.id,
+        `Bônus mensal utilizado: 30 dias sem cobrança. Saldo restante: ${usoBonus.saldoRestante}. Registro ${pagamento.id} enviado ao Financeiro.`
+    );
+}
+
 async function salvarCliente(dados) {
     const cliente = montarCliente(dados);
     let clienteProtegido = protegerCredenciais(cliente);
@@ -775,7 +900,7 @@ async function salvarCliente(dados) {
         // vazia para nao derrubar o painel. Ao salvar campos nao relacionados,
         // preservamos o valor original no banco em vez de apagá-lo.
         const existente = await db.ready.then(() => new Promise((resolve, reject) => {
-            db.get('SELECT senha, senhaApp, acessosApp FROM clientes WHERE id = ?', [idCliente], (err, row) => {
+            db.get('SELECT * FROM clientes WHERE id = ?', [idCliente], (err, row) => {
                 if (err) return reject(err);
                 resolve(row || null);
             });
@@ -788,8 +913,9 @@ async function salvarCliente(dados) {
             }
         }
 
-        const resultado = await executar(
-            `UPDATE clientes SET
+        const usoBonus = await prepararUsoPlanoBonusMensal(cliente, existente);
+
+        const sqlAtualizacao = `UPDATE clientes SET
                 nome = ?,
                 telefone = ?,
                 ddiTelefone = ?,
@@ -829,8 +955,8 @@ async function salvarCliente(dados) {
                 whatsappOptOutEm = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
-            WHERE id = ?`,
-            [
+            WHERE id = ?${usoBonus.deveRegistrar ? ' AND COALESCE(bonusMeses, 0) >= 1' : ''}`;
+        const paramsAtualizacao = [
                 cliente.nome,
                 cliente.telefone,
                 cliente.ddiTelefone,
@@ -870,14 +996,25 @@ async function salvarCliente(dados) {
                 cliente.whatsappOptOutEm,
                 cliente.status,
                 idCliente
-            ]
-        );
+            ];
+        const resultado = usoBonus.deveRegistrar
+            ? await atualizarClienteComUsoBonusMensal(sqlAtualizacao, paramsAtualizacao, { id: idCliente, ...cliente }, usoBonus)
+            : await executar(sqlAtualizacao, paramsAtualizacao);
 
         if (!resultado.changes) {
             throw new Error(`Cliente ${idCliente} nao foi encontrado para atualizacao.`);
         }
 
-        return buscarClientePorId(idCliente);
+        const clienteAtualizado = await buscarClientePorId(idCliente);
+        await registrarNotaUsoPlanoBonusMensal(clienteAtualizado, usoBonus, resultado.pagamento);
+        return clienteAtualizado;
+    }
+
+    const planoEscolhido = Number.parseInt(cliente.tipoPlanoId, 10)
+        ? await buscarTipoPlanoPorId(cliente.tipoPlanoId)
+        : null;
+    if (planoEscolhido && ehPlanoBonusMensal(planoEscolhido)) {
+        throw new Error('Cadastre o cliente primeiro e conceda bônus antes de usar o plano Bônus Mensal.');
     }
 
     const credenciais = gerarCredenciais();

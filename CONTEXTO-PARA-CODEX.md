@@ -1083,3 +1083,18 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   mas ainda nao possuir `.julian-play-cofre.json`, a primeira inicializacao
   grava a mesma chave no seu proprio `DATA_DIR`. Isso preserva a leitura de
   dados existentes e elimina dependencia do ambiente temporario do PM2.
+
+## Bônus Mensal controlado em 19/08/2026
+
+- O catálogo garante o plano técnico **Bônus Mensal** (30 dias e R$ 0,00),
+  inclusive em instalações que já possuíam catálogo de planos personalizado.
+  Ele só é oferecido na edição de clientes com saldo de `bonusMeses`; um
+  contrato de bônus em andamento continua visível apenas para poder salvar
+  alterações que não iniciem um novo ciclo.
+- A confirmação de uso ocorre no servidor: não é possível criar cliente novo
+  diretamente com esse plano nem usar saldo inexistente alterando o formulário.
+  Ao iniciar um ciclo novo, uma transação SQLite reduz exatamente um crédito e
+  grava em `cliente_pagamentos` o lançamento **Bônus mensal**, de R$ 0,00,
+  incluindo vencimento e saldo antes/depois. A repetição do mesmo vencimento
+  não desconta novamente; também fica uma nota auditável no histórico do
+  cliente apontando para o registro do Financeiro.

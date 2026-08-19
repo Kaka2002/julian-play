@@ -5711,6 +5711,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
+    const saldoBonusDisponivel = Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0);
+    const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtual)
+        && String(plano.nome || '').trim().toLocaleLowerCase('pt-BR') === 'bônus mensal');
+    const planosDisponiveis = planos.filter(plano => {
+        const ehBonusMensal = String(plano.nome || '').trim().toLocaleLowerCase('pt-BR') === 'bônus mensal';
+        return !ehBonusMensal || saldoBonusDisponivel > 0 || planoAtualEhBonus;
+    });
     const topoCliente = cliente.id
         ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos)}
             ${acoesRapidasCliente(cliente, opcoesFormulario.config)}
@@ -5768,12 +5775,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 attrs: 'id="tipoPlanoId" required',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
-                    ...planos.map(plano => ({
+                    ...planosDisponiveis.map(plano => ({
                         valor: plano.id,
                         texto: plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
                     }))
                 ]
             })}
+            <div class="helper full">${saldoBonusDisponivel > 0
+                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Ao salvar o plano <strong>Bônus Mensal</strong>, será usado 1 bônus, aplicado um ciclo de 30 dias por R$ 0,00 e criado um histórico no Financeiro.`
+                : planoAtualEhBonus
+                    ?'Este ciclo de Bônus Mensal já foi registrado. Para iniciar outro ciclo, conceda um novo bônus antes de salvar uma nova data de vencimento.'
+                    :'O plano Bônus Mensal aparece somente quando o cliente possui bônus disponível.'}</div>
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
@@ -5852,7 +5864,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         </form>
     </section>
     <script>
-        const planos = ${JSON.stringify(planos.map(plano => ({
+        const planos = ${JSON.stringify(planosDisponiveis.map(plano => ({
             id: String(plano.id),
             nome: plano.nome,
             dias: plano.dias,
