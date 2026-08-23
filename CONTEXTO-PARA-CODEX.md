@@ -1127,3 +1127,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   aplicativos, dispositivos e painéis, preservando a pesquisa já existente por
   nome, telefone, plano, origem, indicador e tags.
 - A melhoria usa os campos existentes e não cria migração nem altera os bancos.
+- A orientação de entrega foi corrigida para usar `D:\julian-play\deploy.ps1`
+  no computador de produção atual. `C:\bots\julian-play` é um caminho
+  histórico removido na consolidação de 09/08/2026 e não deve mais aparecer
+  como comando operacional atual.

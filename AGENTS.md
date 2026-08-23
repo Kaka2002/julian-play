@@ -14,9 +14,9 @@ cookies, chaves ou outros segredos.
 
 ## Ambientes suportados
 
-### Servidor Windows
+### Servidor Windows / computador de produção atual
 
-- Codigo publicado em `C:\bots\julian-play`.
+- Codigo publicado em `D:\julian-play` no computador `Julianelli-CP`.
 - O Painel Mestre cria e administra instalacoes isoladas.
 - Cada instalacao possui porta, banco, sessao do WhatsApp, processo PM2 e `DATA_DIR` proprios.
 - O perfil e definido principalmente por `LICENSE_ROLE`, `LICENSE_CUSTOMER_NAME` e `JULIAN_PLAY_APP_NAME`.
@@ -72,7 +72,7 @@ Quando a alteracao afetar perfil ou permissao, validar ao menos os cenarios:
 Sempre informar comandos prontos para:
 
 1. revisar, adicionar somente os arquivos da mudanca, criar commit e fazer push para `origin main`;
-2. atualizar manualmente o servidor com `C:\bots\julian-play\deploy.ps1`;
+2. atualizar manualmente a produção com `D:\julian-play\deploy.ps1`;
 3. gerar ou recriar o pacote `ENVIAR_AO_CLIENTE` localmente;
 4. gerar o ZIP externo da pasta para envio;
 5. instalar uma nova copia local ou atualizar uma instalacao local existente, conforme o caso.
