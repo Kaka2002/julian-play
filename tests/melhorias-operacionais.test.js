@@ -1,7 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('fs');
 const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
+const repoRoot = path.join(__dirname, '..');
 
 test('upload multipart ignora o campo CSRF e extrai o arquivo real', () => {
     const { extrairArquivoMultipart, validarCsrfMultipart } = require('../services/uploadMultipartService');
@@ -198,6 +200,54 @@ test('busca clientes por MAC, usuario IPTV, dispositivo, painel e indicador', ()
     } finally {
         removerAmbiente(resultado.ambiente);
     }
+});
+
+test('auditoria registra alteracoes operacionais com responsavel e sem senhas', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');const a=require('./services/clienteAuditoriaService');
+        const criado=await c.salvarCliente({nome:'Cliente Auditável',telefone:'5511999998222',plano:'Mensal',senha:'segredo-antigo',bonusMeses:2,status:'ativo'},{responsavel:'admin',origem:'painel_cliente'});
+        await c.salvarCliente({...criado,plano:'Trimestral',senha:'segredo-novo',bonusMeses:1,paineisSelecionados:['Painel Novo']},{responsavel:'operador',origem:'painel_cliente',motivo:'Renovação solicitada'});
+        const eventos=await a.listarAuditoriaCliente(criado.id);
+        process.stdout.write(JSON.stringify(eventos));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const eventos = JSON.parse(resultado.stdout);
+        assert.ok(eventos.some(item => item.campo === 'Plano' && item.valorAnterior === 'Mensal' && item.valorNovo === 'Trimestral'));
+        assert.ok(eventos.some(item => item.campo === 'Bônus disponíveis' && item.responsavel === 'operador'));
+        assert.ok(eventos.some(item => item.campo === 'Painéis' && item.motivo === 'Renovação solicitada'));
+        assert.equal(JSON.stringify(eventos).includes('segredo-antigo'), false);
+        assert.equal(JSON.stringify(eventos).includes('segredo-novo'), false);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('filtros de renovacao separam hoje, tres dias e teste vencido', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');
+        const iso=(dias)=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+dias);return d.toISOString().slice(0,19)};
+        await c.salvarCliente({nome:'Vence Hoje',telefone:'5511999998301',plano:'Mensal',dataVencimento:iso(0),status:'ativo'});
+        await c.salvarCliente({nome:'Vence Em Dois',telefone:'5511999998302',plano:'Mensal',dataVencimento:iso(2),status:'ativo'});
+        await c.salvarCliente({nome:'Teste Vencido',telefone:'5511999998303',plano:'Teste Grátis',dataVencimento:iso(-2),status:'teste'});
+        const nomes=async renovacao=>(await c.listarClientes({renovacao})).map(x=>x.nome).sort();
+        process.stdout.write(JSON.stringify({hoje:await nomes('hoje'),tres:await nomes('tres_dias'),teste:await nomes('teste_vencido')}));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const retorno = JSON.parse(resultado.stdout);
+        assert.deepEqual(retorno.hoje, ['Vence Hoje']);
+        assert.deepEqual(retorno.tres, ['Vence Em Dois', 'Vence Hoje']);
+        assert.deepEqual(retorno.teste, ['Teste Vencido']);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('acoes de renovacao em lote exigem selecao, confirmacao e possuem limite', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /router\.post\('\/clientes\/acoes-lote'/);
+    assert.match(rota, /\.slice\(0, 50\)/);
+    assert.match(rota, /Confirmar o envio para os clientes selecionados/);
+    assert.match(rota, /req\.usuarioPainel/);
 });
 
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {

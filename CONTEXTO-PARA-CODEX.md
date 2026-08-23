@@ -1131,3 +1131,20 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   no computador de produção atual. `C:\bots\julian-play` é um caminho
   histórico removido na consolidação de 09/08/2026 e não deve mais aparecer
   como comando operacional atual.
+
+## Auditoria e renovação operacional na versão 1.3.8
+
+- A migração formal `011` cria `cliente_auditoria`, uma linha do tempo
+  estruturada com campo alterado, valores anterior/novo, responsável, origem,
+  motivo e data. Senhas não entram na auditoria; conexões registram somente os
+  dados operacionais necessários e omitem suas senhas.
+- A edição do cliente registra mudanças de plano, datas, status, aplicativos,
+  dispositivos, painéis, conexões, MAC, ID do aplicativo, origem, indicação,
+  bônus e autorização de marketing. Renovação, alteração/remoção de pagamento,
+  aplicação de bônus e envios em lote também identificam o responsável.
+- O histórico unificado da ficha passou a exibir os eventos da auditoria junto
+  com financeiro, notas, atendimentos e interações do robô.
+- A lista de clientes oferece os filtros `Vence hoje`, `Vence em até 3 dias` e
+  `Teste vencido`. Clientes explicitamente selecionados podem receber aviso ou
+  cobrança em lote, com confirmação, limite de 50 por operação, envio
+  sequencial, validação de elegibilidade e registro individual do resultado.

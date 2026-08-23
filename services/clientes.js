@@ -3,6 +3,7 @@ const { agoraSaoPauloInput } = require('../utils/dataHora');
 const { normalizarAniversario } = require('../utils/aniversario');
 const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes, estaProtegido } = require('./credenciaisClienteService');
 const { buscarTipoPlanoPorId, ehPlanoBonusMensal, NOME_PLANO_BONUS_MENSAL } = require('./tiposPlanos');
+const { registrarAlteracoesCliente, registrarEventoCliente } = require('./clienteAuditoriaService');
 let credenciaisProntas = null;
 function garantirCredenciaisProntas() {
     if (!credenciaisProntas) credenciaisProntas = migrarCredenciaisExistentes();
@@ -765,13 +766,34 @@ async function listarClientes(filtros = {}) {
     const limiteSql = limite > 0 ? 'LIMIT ?' : '';
     if (limite > 0) params.push(limite);
 
-    return buscarTodos(
+    const clientes = await buscarTodos(
         `SELECT * FROM clientes
         ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
         ORDER BY nome COLLATE NOCASE ASC
         ${limiteSql}`,
         params
     );
+
+    const renovacao = limparTexto(filtros.renovacao);
+    if (!renovacao) return clientes;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const limiteTresDias = new Date(hoje);
+    limiteTresDias.setDate(limiteTresDias.getDate() + 3);
+
+    return clientes.filter(cliente => {
+        const vencimentoTexto = cliente.dataVencimento || cliente.vencimento;
+        if (!vencimentoTexto) return false;
+        const vencimento = new Date(vencimentoTexto);
+        if (Number.isNaN(vencimento.getTime())) return false;
+        const dia = new Date(vencimento);
+        dia.setHours(0, 0, 0, 0);
+        if (renovacao === 'hoje') return dia.getTime() === hoje.getTime();
+        if (renovacao === 'tres_dias') return dia >= hoje && dia <= limiteTresDias;
+        if (renovacao === 'teste_vencido') return /teste/i.test(cliente.plano || '') && dia < hoje;
+        return true;
+    });
 }
 
 async function prepararUsoPlanoBonusMensal(cliente, existente) {
@@ -898,7 +920,7 @@ async function registrarNotaUsoPlanoBonusMensal(cliente, usoBonus, pagamento) {
     );
 }
 
-async function salvarCliente(dados) {
+async function salvarCliente(dados, contextoAuditoria = {}) {
     const cliente = montarCliente(dados);
     let clienteProtegido = protegerCredenciais(cliente);
     const idCliente = Number.parseInt(dados.id, 10);
@@ -1015,6 +1037,7 @@ async function salvarCliente(dados) {
 
         const clienteAtualizado = await buscarClientePorId(idCliente);
         await registrarNotaUsoPlanoBonusMensal(clienteAtualizado, usoBonus, resultado.pagamento);
+        await registrarAlteracoesCliente(idCliente, revelarCredenciais(existente), clienteAtualizado, contextoAuditoria);
         return clienteAtualizado;
     }
 
@@ -1078,7 +1101,9 @@ async function salvarCliente(dados) {
         ]
     );
 
-    return buscarClientePorId(resultado.id);
+    const clienteCriado = await buscarClientePorId(resultado.id);
+    await registrarEventoCliente(resultado.id, 'criacao', 'Cliente criado.', contextoAuditoria);
+    return clienteCriado;
 }
 
 function buscarClientePorId(id) {

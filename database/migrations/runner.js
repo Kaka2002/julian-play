@@ -13,7 +13,8 @@ const migrations = [
     require('./007-aniversario-dia-mes'),
     require('./008-fila-mensagens-persistente'),
     require('./009-governanca-privacidade'),
-    require('./010-indicacao-cliente')
+    require('./010-indicacao-cliente'),
+    require('./011-auditoria-clientes')
 ];
 
 function run(db, sql, params = []) {

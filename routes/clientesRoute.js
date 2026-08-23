@@ -151,6 +151,7 @@ const { confirmarSenhaAtual } = require('../services/authService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
+const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
 const {
     salvarProtecaoWhatsapp
 } = require('../services/protecaoWhatsappService');
@@ -427,7 +428,8 @@ function filtrosClientesQuery(query = {}) {
         busca: query.busca || '',
         status: query.status || '',
         origem: query.origem || '',
-        tag: query.tag || ''
+        tag: query.tag || '',
+        renovacao: ['hoje', 'tres_dias', 'teste_vencido'].includes(String(query.renovacao || '')) ? String(query.renovacao) : ''
     };
 }
 
@@ -5609,7 +5611,7 @@ function recomendacoesCliente(cliente = {}, pagamentos = [], atendimentos = []) 
     </section>`;
 }
 
-function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], atendimentos = [], interacoesRobo = [] } = {}) {
+function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], atendimentos = [], interacoesRobo = [], auditoria = [] } = {}) {
     const itens = [];
 
     pagamentos.forEach(item => itens.push({
@@ -5638,6 +5640,15 @@ function montarHistoricoUnificado(cliente = {}, { notas = [], pagamentos = [], a
         tipo: 'Nota',
         titulo: 'Registro manual',
         detalhe: item.texto || ''
+    }));
+
+    auditoria.forEach(item => itens.push({
+        data: item.criadoEm,
+        tipo: 'Alteração',
+        titulo: item.campo
+            ? `${item.campo}: ${item.valorAnterior || '-'} → ${item.valorNovo || '-'}`
+            : item.motivo || item.tipo,
+        detalhe: `${item.responsavel || 'sistema'} · ${item.origem || 'painel'}${item.motivo && item.campo ? ` · ${item.motivo}` : ''}`
     }));
 
     return itens
@@ -5700,11 +5711,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const alertas = opcoesFormulario.alertas || [];
     const atendimentos = opcoesFormulario.atendimentos || [];
     const interacoesRobo = opcoesFormulario.interacoesRobo || [];
+    const auditoria = opcoesFormulario.auditoria || [];
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginaLinha = paginaAtual(opcoesFormulario.paginaLinha);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
     const historicoUnificado = cliente.id
-        ? montarHistoricoUnificado(cliente, { notas, pagamentos, atendimentos, interacoesRobo })
+        ? montarHistoricoUnificado(cliente, { notas, pagamentos, atendimentos, interacoesRobo, auditoria })
         : [];
     const paginacaoHistoricoUnificado = cliente.id
         ? paginarItens(historicoUnificado, paginaLinha, REGISTROS_POR_PAGINA)
@@ -5864,6 +5876,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             <input type="hidden" name="plano" id="planoLegado" value="${escapar(cliente.plano || '')}">
             ${areaTexto({ nome: 'observacoes', label: 'Observações', valor: cliente.observacoes })}
             ${cliente.id ?camposNovaNotaAtendimento() : ''}
+            ${cliente.id ? campo({ nome: 'motivoAlteracao', label: 'Motivo da alteração (opcional)', valor: '', attrs: 'maxlength="500" placeholder="Ex.: renovação solicitada pelo cliente"' }) : ''}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar cliente</button>
                 <a class="button secondary" href="/clientes/todos">Cancelar</a>
@@ -7090,7 +7103,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function tabelaClientes(clientes) {
+function tabelaClientes(clientes, { selecaoLote = false } = {}) {
     if (!clientes.length) {
         return '<div class="empty">Nenhum cliente encontrado.</div>';
     }
@@ -7099,6 +7112,7 @@ function tabelaClientes(clientes) {
         const bandeira = imagemBandeiraPaisTelefone(cliente);
 
         return `<tr>
+        ${selecaoLote ? `<td data-label="Selecionar"><input type="checkbox" name="clienteIds" value="${escapar(cliente.id)}" form="form-acoes-lote" aria-label="Selecionar ${escapar(cliente.nome)}"></td>` : ''}
         <td data-label="Cliente">
             <div class="cell-title">${bandeira}${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
@@ -7159,6 +7173,7 @@ function tabelaClientes(clientes) {
     return `<table class="clients-table">
         <thead>
             <tr>
+                ${selecaoLote ? '<th><input type="checkbox" aria-label="Selecionar todos" onclick="document.querySelectorAll(\'input[form=form-acoes-lote][name=clienteIds]\').forEach(item=>item.checked=this.checked)"></th>' : ''}
                 <th>Cliente</th>
                 <th>Plano</th>
                 <th>Início</th>
@@ -7279,9 +7294,9 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
     </script>`;
 }
 
-function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes }) {
+function listaClientes({ clientes, busca, status, origem, tag, renovacao, paginacaoClientes }) {
     const totalClientes = paginacaoClientes?.total ?? clientes.length;
-    const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag });
+    const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag, renovacao });
 
     return `<section class="page-title">
         <h1>Clientes</h1>
@@ -7290,7 +7305,7 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
     <form class="clients-toolbar" method="get" action="/clientes/todos">
         <div class="clients-search">
             ${icon('search')}
-            <input name="busca" value="${escapar(busca)}" placeholder="Buscar por nome, telefone ou email...">
+            <input name="busca" value="${escapar(busca)}" placeholder="Nome, telefone, MAC, usuário, dispositivo ou painel...">
         </div>
         <select name="status" onchange="this.form.submit()">
             ${[
@@ -7316,6 +7331,14 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
                 ...TAGS_CLIENTE.map(item => [item, item])
             ].map(([valor, texto]) => `<option value="${escapar(valor)}" ${valor === tag ?'selected' : ''}>${escapar(texto)}</option>`).join('')}
         </select>
+        <select name="renovacao" onchange="this.form.submit()">
+            ${[
+                ['', 'Todos os vencimentos'],
+                ['hoje', 'Vence hoje'],
+                ['tres_dias', 'Vence em até 3 dias'],
+                ['teste_vencido', 'Teste vencido']
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === renovacao ? 'selected' : ''}>${texto}</option>`).join('')}
+        </select>
     </form>
     <div class="toolbar">
         <span></span>
@@ -7328,10 +7351,16 @@ function listaClientes({ clientes, busca, status, origem, tag, paginacaoClientes
         </div>
     </div>
     <section class="clients-panel">
-        ${tabelaClientes(clientes)}
+        <form id="form-acoes-lote" method="post" action="/clientes/acoes-lote" onsubmit="return document.querySelectorAll('input[form=form-acoes-lote][name=clienteIds]:checked').length > 0 && confirm('Confirmar o envio para os clientes selecionados?');" style="padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input type="hidden" name="retorno" value="${escapar(montarUrlComFiltros('/clientes/todos', { busca, status, origem, tag, renovacao }))}">
+            <strong>Ações com selecionados:</strong>
+            <button class="button green" type="submit" name="acao" value="aviso">${icon('whats')} Enviar aviso</button>
+            <button class="button secondary" type="submit" name="acao" value="cobranca">${icon('financeiro')} Enviar cobrança</button>
+        </form>
+        ${tabelaClientes(clientes, { selecaoLote: true })}
         ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',
-            params: { busca, status, origem, tag },
+            params: { busca, status, origem, tag, renovacao },
             pagina: paginacaoClientes.pagina,
             totalPaginas: paginacaoClientes.totalPaginas,
             total: paginacaoClientes.total,
@@ -8723,9 +8752,9 @@ async function renderizarPaginaCampanhas(req, res) {
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
-    const { busca, status, origem, tag } = filtrosClientesQuery(req.query);
+    const { busca, status, origem, tag, renovacao } = filtrosClientesQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
-    const todosClientes = await listarClientes({ busca, status, origem, tag });
+    const todosClientes = await listarClientes({ busca, status, origem, tag, renovacao });
     const paginacaoClientes = paginarItens(todosClientes, pagina, CLIENTES_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
@@ -8737,6 +8766,7 @@ router.get('/clientes/todos', async (req, res) => {
             status,
             origem,
             tag,
+            renovacao,
             paginacaoClientes
         }),
         mensagem,
@@ -9107,13 +9137,14 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, config] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, config] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
         buscarAlertasCadastroCliente(cliente),
         listarAtendimentosCliente(cliente.id),
         listarInteracoesCliente(cliente, 60),
+        listarAuditoriaCliente(cliente.id, 100),
         obterConfiguracoes()
     ]);
 
@@ -9125,6 +9156,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             alertas,
             atendimentos,
             interacoesRobo,
+            auditoria,
             config,
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha
@@ -9156,7 +9188,11 @@ router.post('/clientes/salvar', async (req, res) => {
     try {
         const novoCadastro = !req.body.id;
         const alertas = await buscarAlertasCadastroCliente(req.body);
-        const clienteSalvo = await salvarCliente(req.body);
+        const clienteSalvo = await salvarCliente(req.body, {
+            responsavel: req.usuarioPainel || 'sistema',
+            origem: 'painel_cliente',
+            motivo: req.body.motivoAlteracao || ''
+        });
         const novaNota = String(req.body.novaNotaTexto || req.body.novaNotaPadrao || '').trim();
         const adicionandoNota = req.body.acao === 'adicionarNota';
 
@@ -9475,6 +9511,9 @@ router.post('/clientes/:id/renovar', async (req, res) => {
             clienteId: req.params.id
         });
         const clienteAtualizado = resultado.cliente;
+        await registrarEventoCliente(clienteAtualizado.id, 'renovacao', `Renovação registrada: ${resultado.plano}; vencimento ${resultado.vencimentoNovo}; valor ${resultado.valorTotal}.`, {
+            responsavel: req.usuarioPainel || 'sistema', origem: 'painel_cliente'
+        });
         const deveEnviar = Boolean(req.body.enviarMensagem);
         let mensagemRetorno = 'Renovação registrada com sucesso';
 
@@ -9606,6 +9645,9 @@ router.post('/clientes/:id/enviar-reativacao', async (req, res) => {
 router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) => {
     try {
         const pagamento = await removerPagamentoCliente(req.params.id, req.params.pagamentoId);
+        await registrarEventoCliente(req.params.id, 'pagamento_removido', `Pagamento ${req.params.pagamentoId} removido do histórico financeiro.`, {
+            responsavel: req.usuarioPainel || 'sistema', origem: 'financeiro'
+        });
         logControleClientes('Pagamento removido do historico', {
             clienteId: req.params.id,
             pagamentoId: req.params.pagamentoId,
@@ -9626,6 +9668,9 @@ router.post('/clientes/:id/pagamentos/:pagamentoId/excluir', async (req, res) =>
 router.post('/clientes/:id/pagamentos/:pagamentoId/salvar', async (req, res) => {
     try {
         const pagamento = await atualizarPagamentoCliente(req.params.id, req.params.pagamentoId, req.body);
+        await registrarEventoCliente(req.params.id, 'pagamento_alterado', `Pagamento ${req.params.pagamentoId} atualizado no histórico financeiro.`, {
+            responsavel: req.usuarioPainel || 'sistema', origem: 'financeiro'
+        });
         logControleClientes('Pagamento editado no historico', {
             clienteId: req.params.id,
             pagamentoId: req.params.pagamentoId,
@@ -9717,6 +9762,9 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
 
         const resultado = await aplicarBonusCliente(cliente.id, meses);
         const clienteAtualizado = resultado.cliente;
+        await registrarEventoCliente(cliente.id, 'bonus_aplicado', `${meses} bônus aplicado(s); saldo atual ${resultado.saldoRestante}.`, {
+            responsavel: req.usuarioPainel || 'sistema', origem: 'painel_cliente', motivo: req.body.observacaoBonus || ''
+        });
 
         if (String(req.body.observacaoBonus || '').trim()) {
             await adicionarNotaCliente(cliente.id, `Observação da bonificação: ${req.body.observacaoBonus}`);
@@ -10799,6 +10847,62 @@ router.post('/clientes/:id/enviar-modelo', async (req, res) => {
         });
         return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent(`Erro ao enviar modelo: ${err.message}`)}`);
     }
+});
+
+router.post('/clientes/acoes-lote', async (req, res) => {
+    const idsRecebidos = Array.isArray(req.body.clienteIds) ? req.body.clienteIds : [req.body.clienteIds];
+    const ids = [...new Set(idsRecebidos.map(valor => Number.parseInt(valor, 10)).filter(Number.isFinite))].slice(0, 50);
+    const acao = req.body.acao === 'cobranca' ? 'cobranca' : 'aviso';
+    const retornoInformado = String(req.body.retorno || '');
+    const retorno = retornoInformado.startsWith('/clientes/todos') ? retornoInformado : '/clientes/todos';
+
+    if (!ids.length) return res.redirect(`${retorno}${retorno.includes('?') ? '&' : '?'}mensagem=${encodeURIComponent('Selecione ao menos um cliente.')}`);
+
+    const statusWhatsapp = getStatusWhatsApp();
+    const client = getClient();
+    if (!client || !statusWhatsapp.conectado) {
+        return res.redirect(`${retorno}${retorno.includes('?') ? '&' : '?'}mensagem=${encodeURIComponent('WhatsApp não está conectado.')}`);
+    }
+
+    const planosTeste = acao === 'aviso' ? await obterPlanosRenovacaoManual() : [];
+    let enviados = 0;
+    let ignorados = 0;
+
+    for (const id of ids) {
+        const cliente = await buscarClientePorId(id);
+        const vencimento = cliente?.dataVencimento || cliente?.vencimento || '';
+        if (!cliente || !normalizarTelefone(cliente.telefone) || !vencimento) {
+            ignorados += 1;
+            continue;
+        }
+
+        const expirado = vencimentoExpirou(vencimento);
+        if ((acao === 'cobranca' && !expirado) || (acao === 'aviso' && expirado && !clienteTesteExpirado(cliente))) {
+            ignorados += 1;
+            continue;
+        }
+
+        try {
+            const mensagem = acao === 'cobranca'
+                ? await montarMensagemCobrancaVencido(cliente)
+                : clienteTesteExpirado(cliente)
+                    ? await montarMensagemPlanosTesteExpiradoManual(cliente, planosTeste)
+                    : await montarMensagemPorModelo(cliente, Math.max(0, calcularDiasRestantes(vencimento) || 0));
+            await enviarMensagemWhatsAppComFallback(client, cliente.telefone, mensagem, `Ação em lote: ${acao}`);
+            await adicionarNotaCliente(cliente.id, `${acao === 'cobranca' ? 'Cobrança' : 'Aviso de renovação'} enviado em lote pelo WhatsApp.`);
+            await registrarEventoCliente(cliente.id, `envio_${acao}_lote`, `${acao === 'cobranca' ? 'Cobrança' : 'Aviso de renovação'} enviado em lote.`, {
+                responsavel: req.usuarioPainel || 'sistema', origem: 'painel_clientes'
+            });
+            enviados += 1;
+        } catch (err) {
+            ignorados += 1;
+            logControleClientes('Falha em ação de renovação em lote', { clienteId: cliente.id, acao, erro: err.message });
+        }
+    }
+
+    logControleClientes('Ação de renovação em lote concluída', { acao, selecionados: ids.length, enviados, ignorados });
+    const separador = retorno.includes('?') ? '&' : '?';
+    return res.redirect(`${retorno}${separador}mensagem=${encodeURIComponent(`${enviados} envio(s) concluído(s); ${ignorados} ignorado(s).`)}`);
 });
 
 router.post('/clientes/:id/enviar-aviso-vencimento', async (req, res) => {
