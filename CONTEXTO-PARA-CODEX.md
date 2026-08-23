@@ -1148,3 +1148,12 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   `Teste vencido`. Clientes explicitamente selecionados podem receber aviso ou
   cobrança em lote, com confirmação, limite de 50 por operação, envio
   sequencial, validação de elegibilidade e registro individual do resultado.
+
+## Ajuste visual posterior da versão 1.3.8
+
+- As caixas de seleção e a barra de ações em lote foram retiradas da lista de
+  clientes, restaurando a tabela compacta anterior. O serviço protegido de lote
+  permanece no backend, mas não é exposto nessa tela.
+- Os cards da ficha rápida não abreviam mais vencimento, origem/indicação nem o
+  último contato com reticências. O conteúdo pode quebrar linha e aparecer por
+  completo dentro de cada bloco.

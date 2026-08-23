@@ -242,12 +242,20 @@ test('filtros de renovacao separam hoje, tres dias e teste vencido', () => {
     }
 });
 
-test('acoes de renovacao em lote exigem selecao, confirmacao e possuem limite', () => {
+test('lista de clientes preserva tabela limpa sem caixas de selecao em lote', () => {
     const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
     assert.match(rota, /router\.post\('\/clientes\/acoes-lote'/);
     assert.match(rota, /\.slice\(0, 50\)/);
-    assert.match(rota, /Confirmar o envio para os clientes selecionados/);
+    assert.doesNotMatch(rota, /id="form-acoes-lote"/);
+    assert.doesNotMatch(rota, /form="form-acoes-lote"/);
     assert.match(rota, /req\.usuarioPainel/);
+});
+
+test('cards operacionais exibem informacoes completas sem reticencias', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /\.client-summary-metrics \.metric-value[\s\S]*white-space: normal/);
+    assert.doesNotMatch(rota, /rotuloCurto\(origem/);
+    assert.doesNotMatch(rota, /rotuloCurto\(ultimaInteracao/);
 });
 
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {

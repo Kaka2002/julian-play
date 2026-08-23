@@ -1121,11 +1121,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             padding: 16px 12px;
             gap: 7px;
             min-width: 0;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .client-summary-metrics .metric > div {
             min-width: 0;
+            flex: 1 1 auto;
         }
 
         .client-summary-metrics .metric-label {
@@ -1135,18 +1136,22 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .client-summary-metrics .metric-value {
-            font-size: 24px;
+            font-size: clamp(18px, 1.2vw, 24px);
             font-weight: 800;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            overflow: visible;
+            text-overflow: clip;
+            white-space: normal;
+            overflow-wrap: anywhere;
             max-width: 100%;
+            line-height: 1.08;
         }
 
         .client-summary-metrics .metric-note {
             margin-top: 8px;
             font-size: 11px;
             line-height: 1.2;
+            white-space: normal;
+            overflow-wrap: anywhere;
         }
 
         .metric-label {
@@ -1177,7 +1182,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .client-summary-metrics .metric-date .metric-value {
             font-size: clamp(18px, 1.05vw, 21px);
-            white-space: nowrap;
+            white-space: normal;
         }
 
         .client-summary-metrics .metric-icon {
@@ -5462,9 +5467,9 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
         ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
         ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'Último pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histórico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
-        ${metricCard({ label: 'Origem / indicação', valor: rotuloCurto(origem, 24), nota: cliente.indicadoPor ? 'Responsável pela indicação' : 'Origem comercial', tipo: cliente.origem || cliente.indicadoPor ? 'info' : 'orange', icone: 'clientes' })}
+        ${metricCard({ label: 'Origem / indicação', valor: origem, nota: cliente.indicadoPor ? 'Responsável pela indicação' : 'Origem comercial', tipo: cliente.origem || cliente.indicadoPor ? 'info' : 'orange', icone: 'clientes' })}
         ${metricCard({ label: 'Bônus disponível', valor: Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0), nota: 'Ciclos mensais disponíveis', tipo: Number(cliente.bonusMeses || 0) > 0 ? 'green' : 'info', icone: 'planos' })}
-        ${metricCard({ label: 'Último contato WhatsApp', valor: ultimaInteracao ?formatarDataHoraCurta(ultimaInteracao.criadoEm) : '-', nota: ultimaInteracao ?rotuloCurto(ultimaInteracao.titulo || ultimaInteracao.resumo || 'Interação registrada', 32) : 'Sem interação registrada', tipo: ultimaInteracao ? 'green' : 'orange', icone: 'whats', classe: 'metric-date' })}
+        ${metricCard({ label: 'Último contato WhatsApp', valor: ultimaInteracao ?formatarDataHoraCurta(ultimaInteracao.criadoEm) : '-', nota: ultimaInteracao ?(ultimaInteracao.titulo || ultimaInteracao.resumo || 'Interação registrada') : 'Sem interação registrada', tipo: ultimaInteracao ? 'green' : 'orange', icone: 'whats', classe: 'metric-date' })}
     </section>`;
 }
 
@@ -7103,7 +7108,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function tabelaClientes(clientes, { selecaoLote = false } = {}) {
+function tabelaClientes(clientes) {
     if (!clientes.length) {
         return '<div class="empty">Nenhum cliente encontrado.</div>';
     }
@@ -7112,7 +7117,6 @@ function tabelaClientes(clientes, { selecaoLote = false } = {}) {
         const bandeira = imagemBandeiraPaisTelefone(cliente);
 
         return `<tr>
-        ${selecaoLote ? `<td data-label="Selecionar"><input type="checkbox" name="clienteIds" value="${escapar(cliente.id)}" form="form-acoes-lote" aria-label="Selecionar ${escapar(cliente.nome)}"></td>` : ''}
         <td data-label="Cliente">
             <div class="cell-title">${bandeira}${escapar(cliente.nome)}</div>
             <div class="cell-muted">${escapar(cliente.telefone || '')}</div>
@@ -7173,7 +7177,6 @@ function tabelaClientes(clientes, { selecaoLote = false } = {}) {
     return `<table class="clients-table">
         <thead>
             <tr>
-                ${selecaoLote ? '<th><input type="checkbox" aria-label="Selecionar todos" onclick="document.querySelectorAll(\'input[form=form-acoes-lote][name=clienteIds]\').forEach(item=>item.checked=this.checked)"></th>' : ''}
                 <th>Cliente</th>
                 <th>Plano</th>
                 <th>Início</th>
@@ -7351,13 +7354,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, pagina
         </div>
     </div>
     <section class="clients-panel">
-        <form id="form-acoes-lote" method="post" action="/clientes/acoes-lote" onsubmit="return document.querySelectorAll('input[form=form-acoes-lote][name=clienteIds]:checked').length > 0 && confirm('Confirmar o envio para os clientes selecionados?');" style="padding:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-            <input type="hidden" name="retorno" value="${escapar(montarUrlComFiltros('/clientes/todos', { busca, status, origem, tag, renovacao }))}">
-            <strong>Ações com selecionados:</strong>
-            <button class="button green" type="submit" name="acao" value="aviso">${icon('whats')} Enviar aviso</button>
-            <button class="button secondary" type="submit" name="acao" value="cobranca">${icon('financeiro')} Enviar cobrança</button>
-        </form>
-        ${tabelaClientes(clientes, { selecaoLote: true })}
+        ${tabelaClientes(clientes)}
         ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',
             params: { busca, status, origem, tag, renovacao },
