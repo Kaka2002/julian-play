@@ -258,6 +258,15 @@ test('cards operacionais exibem informacoes completas sem reticencias', () => {
     assert.doesNotMatch(rota, /rotuloCurto\(ultimaInteracao/);
 });
 
+test('layout oferece botao de voltar ao topo somente em paginas longas e roladas', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /class="back-to-top"/);
+    assert.match(rota, /documentElement\.scrollHeight > window\.innerHeight \+ 160/);
+    assert.match(rota, /window\.scrollY > 360/);
+    assert.match(rota, /window\.scrollTo\(\{ top: 0, behavior: 'smooth' \}\)/);
+    assert.match(rota, /aria-label="Voltar ao topo da página"/);
+});
+
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {
     const resultado = executarIsolado(`(async()=>{
         const c=require('./services/clientes');

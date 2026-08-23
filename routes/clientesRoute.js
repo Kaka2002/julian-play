@@ -1199,6 +1199,46 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 600;
         }
 
+        .back-to-top {
+            position: fixed;
+            right: max(22px, env(safe-area-inset-right));
+            bottom: max(22px, env(safe-area-inset-bottom));
+            z-index: 90;
+            width: 48px;
+            height: 48px;
+            border: 0;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, var(--blue), var(--cyan));
+            color: #fff;
+            box-shadow: 0 12px 28px rgba(30, 64, 175, .28);
+            font-size: 25px;
+            font-weight: 900;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(12px);
+            transition: opacity .2s ease, transform .2s ease, visibility .2s;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 32px rgba(30, 64, 175, .34);
+        }
+
+        .back-to-top:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, .35);
+            outline-offset: 3px;
+        }
+
         .dashboard-metrics .metric-note {
             margin-top: 8px;
             font-size: 11px;
@@ -2662,6 +2702,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .model-send-actions .button {
                 width: 100%;
             }
+
+            .back-to-top {
+                right: max(14px, env(safe-area-inset-right));
+                bottom: max(14px, env(safe-area-inset-bottom));
+                width: 44px;
+                height: 44px;
+            }
         }
     </style>
 </head>
@@ -2702,6 +2749,23 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         ${mensagem ?`<div class="notice">${escapar(mensagem)}</div>` : ''}
         ${conteudo}
     </main>
+    <button class="back-to-top" type="button" aria-label="Voltar ao topo da página" title="Voltar ao topo">↑</button>
+    <script>
+        (() => {
+            const botaoTopo = document.querySelector('.back-to-top');
+            if (!botaoTopo) return;
+
+            const atualizarBotaoTopo = () => {
+                const paginaLonga = document.documentElement.scrollHeight > window.innerHeight + 160;
+                botaoTopo.classList.toggle('visible', paginaLonga && window.scrollY > 360);
+            };
+
+            window.addEventListener('scroll', atualizarBotaoTopo, { passive: true });
+            window.addEventListener('resize', atualizarBotaoTopo);
+            botaoTopo.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+            atualizarBotaoTopo();
+        })();
+    </script>
 </body>
     </html>`;
 }

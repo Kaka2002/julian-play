@@ -1157,3 +1157,12 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Os cards da ficha rápida não abreviam mais vencimento, origem/indicação nem o
   último contato com reticências. O conteúdo pode quebrar linha e aparecer por
   completo dentro de cada bloco.
+
+## Navegação em páginas longas na versão 1.3.10
+
+- O layout compartilhado do painel possui um botão flutuante para voltar
+  suavemente ao topo. Ele só aparece quando a página realmente possui rolagem e
+  o usuário já desceu, permanecendo oculto em páginas curtas e no início.
+- O botão respeita telas pequenas e áreas seguras de celulares, possui foco de
+  teclado, texto acessível e funciona em todas as páginas renderizadas pelo
+  layout administrativo compartilhado.
