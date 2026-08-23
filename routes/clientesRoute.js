@@ -5429,7 +5429,7 @@ function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null)
     </section>`;
 }
 
-function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = []) {
+function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = [], interacoesRobo = []) {
     if (!cliente.id) return '';
 
     const vencimento = cliente.dataVencimento || cliente.vencimento || '';
@@ -5439,6 +5439,10 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
     const apps = lerListaSalva(cliente.appsInstalados);
     const dispositivos = lerListaSalva(cliente.dispositivosSelecionados);
     const ultimoPagamento = pagamentos[0] || null;
+    const ultimaInteracao = interacoesRobo[0] || null;
+    const origem = cliente.indicadoPor
+        ? `${cliente.origem || 'Indicação'} · ${cliente.indicadoPor}`
+        : cliente.origem || '-';
     const abertos = atendimentos.filter(item => item.status !== 'resolvido');
     const classeVencimento = clienteEhTeste(cliente)
         ? 'info'
@@ -5456,6 +5460,9 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
         ${metricCard({ label: 'Dispositivos', valor: dispositivos.length || 0, nota: dispositivos.slice(0, 2).join(', ') || 'Nenhum dispositivo informado', tipo: 'info', icone: 'dispositivos' })}
         ${metricCard({ label: 'Atendimentos', valor: abertos.length, nota: abertos.length ? 'Abertos para acompanhar' : 'Sem pendências', tipo: abertos.length ? 'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'Último pagamento', valor: ultimoPagamento ?`R$ ${ultimoPagamento.valorTotal || ultimoPagamento.valorPlano || '0,00'}` : '-', nota: ultimoPagamento ?formatarDataHoraCurta(ultimoPagamento.dataPagamento || ultimoPagamento.criadoEm) : 'Sem histórico financeiro', tipo: ultimoPagamento ? 'green' : 'orange', icone: 'financeiro' })}
+        ${metricCard({ label: 'Origem / indicação', valor: rotuloCurto(origem, 24), nota: cliente.indicadoPor ? 'Responsável pela indicação' : 'Origem comercial', tipo: cliente.origem || cliente.indicadoPor ? 'info' : 'orange', icone: 'clientes' })}
+        ${metricCard({ label: 'Bônus disponível', valor: Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0), nota: 'Ciclos mensais disponíveis', tipo: Number(cliente.bonusMeses || 0) > 0 ? 'green' : 'info', icone: 'planos' })}
+        ${metricCard({ label: 'Último contato WhatsApp', valor: ultimaInteracao ?formatarDataHoraCurta(ultimaInteracao.criadoEm) : '-', nota: ultimaInteracao ?rotuloCurto(ultimaInteracao.titulo || ultimaInteracao.resumo || 'Interação registrada', 32) : 'Sem interação registrada', tipo: ultimaInteracao ? 'green' : 'orange', icone: 'whats', classe: 'metric-date' })}
     </section>`;
 }
 
@@ -5719,7 +5726,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         return !ehBonusMensal || saldoBonusDisponivel > 0 || planoAtualEhBonus;
     });
     const topoCliente = cliente.id
-        ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos)}
+        ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
             ${acoesRapidasCliente(cliente, opcoesFormulario.config)}
             ${recomendacoesCliente(cliente, pagamentos, atendimentos)}`
         : '';

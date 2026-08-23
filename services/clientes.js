@@ -730,9 +730,17 @@ async function listarClientes(filtros = {}) {
     const where = [];
 
     if (busca) {
-        where.push('(nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ? OR plano LIKE ? OR origem LIKE ? OR indicadoPor LIKE ? OR tags LIKE ?)');
+        where.push(`(
+            nome LIKE ? OR telefone LIKE ? OR usuario LIKE ? OR usuarioApp LIKE ?
+            OR enderecoMac LIKE ? OR idAplicativo LIKE ? OR plano LIKE ?
+            OR appsInstalados LIKE ? OR dispositivosSelecionados LIKE ?
+            OR paineisSelecionados LIKE ? OR origem LIKE ? OR indicadoPor LIKE ? OR tags LIKE ?
+        )`);
         const termo = `%${busca}%`;
-        params.push(termo, termo, termo, termo, termo, termo, termo, termo);
+        params.push(
+            termo, termo, termo, termo, termo, termo, termo,
+            termo, termo, termo, termo, termo, termo
+        );
     }
 
     if (status === 'inadimplente') {

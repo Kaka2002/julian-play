@@ -178,6 +178,28 @@ test('salva e atualiza quem indicou o cliente sem alterar a origem', () => {
     }
 });
 
+test('busca clientes por MAC, usuario IPTV, dispositivo, painel e indicador', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');
+        await c.salvarCliente({
+            nome:'Cliente Busca Ampliada',telefone:'5511999998123',usuario:'iptv-especial',
+            enderecoMac:'Z9:Y8:X7:W6:V5:U4',dispositivosSelecionados:['Fire TV Sala'],
+            paineisSelecionados:['Sigma Genial'],origem:'Indicação pessoal',indicadoPor:'Parceiro Ouro',status:'ativo'
+        });
+        const termos=['Z9:Y8','iptv-especial','Fire TV Sala','Sigma Genial','Parceiro Ouro'];
+        const encontrados=[];
+        for(const termo of termos) encontrados.push((await c.listarClientes({busca:termo})).map(x=>x.nome));
+        process.stdout.write(JSON.stringify(encontrados));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const encontrados = JSON.parse(resultado.stdout);
+        assert.equal(encontrados.length, 5);
+        encontrados.forEach(lista => assert.deepEqual(lista, ['Cliente Busca Ampliada']));
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {
     const resultado = executarIsolado(`(async()=>{
         const c=require('./services/clientes');

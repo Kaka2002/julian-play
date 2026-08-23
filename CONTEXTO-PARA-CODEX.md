@@ -1117,3 +1117,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   Em caso de prazo excedido, a atualização falha de forma explícita e segue o
   fluxo já existente de reabrir/restaurar a instalação anterior, sem tocar em
   banco, backups, configurações ou sessão do WhatsApp.
+
+## Ficha rápida e busca operacional em 23/08/2026
+
+- A ficha de edição do cliente passou a reunir no topo origem/indicador, bônus
+  mensal disponível e o último contato persistido do robô/WhatsApp, além de
+  status, vencimento e último pagamento que já eram exibidos.
+- A busca de clientes também encontra MAC, ID do aplicativo, usuário IPTV,
+  aplicativos, dispositivos e painéis, preservando a pesquisa já existente por
+  nome, telefone, plano, origem, indicador e tags.
+- A melhoria usa os campos existentes e não cria migração nem altera os bancos.
