@@ -267,6 +267,13 @@ test('layout oferece botao de voltar ao topo somente em paginas longas e roladas
     assert.match(rota, /aria-label="Voltar ao topo da página"/);
 });
 
+test('historicos da ficha respeitam o espacamento interno dos paineis', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /\.panel > \.form-section[\s\S]*padding-left: 28px/);
+    assert.match(rota, /class="fields panel-content"/);
+    assert.match(rota, /\.panel-content \{[\s\S]*padding: 28px/);
+});
+
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {
     const resultado = executarIsolado(`(async()=>{
         const c=require('./services/clientes');

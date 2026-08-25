@@ -152,6 +152,7 @@ const { registrarEventoSistema } = require('../services/eventosSistema');
 const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
+const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
 } = require('../services/protecaoWhatsappService');
@@ -2086,6 +2087,34 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             text-transform: uppercase;
         }
 
+        .panel > .form-section {
+            padding-left: 28px;
+            padding-right: 28px;
+        }
+
+        .panel-content {
+            padding: 28px;
+        }
+
+        .panel-content .form-section:first-child {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: 0;
+        }
+
+        .danger-zone {
+            margin-top: 24px;
+            padding: 20px;
+            border: 1px solid rgba(239, 68, 68, .3);
+            border-radius: 12px;
+            background: rgba(254, 242, 242, .72);
+        }
+
+        .danger-zone h3 {
+            margin: 0 0 6px;
+            color: #b91c1c;
+        }
+
         .client-form .form-section:first-of-type {
             margin-top: 0;
             padding-top: 0;
@@ -2860,7 +2889,7 @@ function secaoNotasCliente(cliente = {}, notas = [], paginacaoNotas = null) {
         : '<div class="empty">Nenhuma nota registrada para este cliente.</div>';
 
     return `<section class="panel" style="margin-top:24px;">
-        <div class="fields">
+        <div class="fields panel-content">
             <div class="form-section full">Histórico de atendimento</div>
             <div class="full">${listaNotas}</div>
             ${paginacaoNotas ?`<div class="full">${paginacao({
@@ -5106,7 +5135,7 @@ function camposFaltandoTesteLiberado(dados = {}) {
         .map(([, label]) => label);
 }
 
-function secaoPrivacidadeCliente(cliente = {}) {
+function secaoPrivacidadeCliente(cliente = {}, exclusaoDefinitiva = {}) {
     if (!cliente.id) return '';
     const anonimizado = Boolean(cliente.anonimizadoEm);
 
@@ -5142,6 +5171,16 @@ function secaoPrivacidadeCliente(cliente = {}) {
                     <div class="full"><button class="button danger" type="submit">Anonimizar dados pessoais</button></div>
                 </div>
             </form>`}
+            ${exclusaoDefinitiva.permitida ? `<form class="full danger-zone" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/excluir" onsubmit="return confirm('Excluir definitivamente este cliente? Todos os seus dados serão apagados e a ação não poderá ser desfeita.');">
+                <h3>Excluir cliente definitivamente</h3>
+                <p class="subtitle">Disponível porque este cadastro não possui pagamentos, cobranças nem renovações financeiras.</p>
+                <div class="fields" style="padding:0;margin-top:16px;">
+                    ${campo({ nome: 'motivo', label: 'Motivo da exclusão', valor: '', attrs: 'required minlength="10" placeholder="Ex.: cliente desistiu antes do pagamento"' })}
+                    ${campo({ nome: 'confirmacao', label: 'Digite EXCLUIR', valor: '', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required pattern="EXCLUIR" readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
+                    ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
+                    <div style="align-self:end;"><button class="button danger" type="submit">Excluir definitivamente</button></div>
+                </div>
+            </form>` : ''}
         </div>
     </section>`;
 }
@@ -5781,6 +5820,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const atendimentos = opcoesFormulario.atendimentos || [];
     const interacoesRobo = opcoesFormulario.interacoesRobo || [];
     const auditoria = opcoesFormulario.auditoria || [];
+    const exclusaoDefinitiva = opcoesFormulario.exclusaoDefinitiva || {};
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginaLinha = paginaAtual(opcoesFormulario.paginaLinha);
     const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
@@ -6250,7 +6290,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         cliente.id ?secaoHistoricoUnificado(cliente, {}, paginacaoHistoricoUnificado) : '',
         secaoAtendimentosCliente(cliente, atendimentos),
         secaoNotasCliente(cliente, notas, paginacaoNotas),
-        secaoPrivacidadeCliente(cliente)
+        secaoPrivacidadeCliente(cliente, exclusaoDefinitiva)
     ].filter(Boolean).join('');
 
     return `${topoCliente}${formulario}${extras}`;
@@ -9198,7 +9238,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, config] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, exclusaoDefinitiva, config] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
@@ -9206,6 +9246,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
         listarAtendimentosCliente(cliente.id),
         listarInteracoesCliente(cliente, 60),
         listarAuditoriaCliente(cliente.id, 100),
+        verificarExclusaoDefinitivaCliente(cliente.id),
         obterConfiguracoes()
     ]);
 
@@ -9218,6 +9259,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             atendimentos,
             interacoesRobo,
             auditoria,
+            exclusaoDefinitiva,
             config,
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha

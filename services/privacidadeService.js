@@ -229,8 +229,65 @@ async function listarSolicitacoesPrivacidade(clienteId, limite = 20) {
         ORDER BY datetime(criadoEm) DESC, id DESC LIMIT ?`, [clienteId, total]);
 }
 
+async function verificarExclusaoDefinitivaCliente(clienteId) {
+    await db.ready;
+    const cliente = await buscarUm('SELECT * FROM clientes WHERE id = ?', [clienteId]);
+    if (!cliente) return { permitida: false, motivo: 'Cliente não encontrado.' };
+
+    const financeiro = await buscarUm(`SELECT
+        (SELECT COUNT(*) FROM cliente_pagamentos WHERE clienteId = ?) AS pagamentos,
+        (SELECT COUNT(*) FROM cobrancas_pix WHERE clienteId = ?) AS cobrancas,
+        (SELECT COUNT(*) FROM renovacoes_painel_fila WHERE clienteId = ?) AS renovacoes`,
+    [cliente.id, cliente.id, cliente.id]);
+    const totalFinanceiro = Number(financeiro?.pagamentos || 0)
+        + Number(financeiro?.cobrancas || 0)
+        + Number(financeiro?.renovacoes || 0);
+    if (totalFinanceiro > 0) {
+        return { permitida: false, motivo: 'Este cadastro possui histórico financeiro e só pode ser anonimizado.' };
+    }
+
+    return { permitida: true, motivo: '', cliente };
+}
+
+async function excluirClienteDefinitivamente(clienteId, { motivo = '', responsavel = '' } = {}) {
+    const elegibilidade = await verificarExclusaoDefinitivaCliente(clienteId);
+    if (!elegibilidade.permitida) throw new Error(elegibilidade.motivo);
+
+    const motivoSeguro = String(motivo || '').trim();
+    if (motivoSeguro.length < 10) {
+        throw new Error('Descreva o motivo da exclusão com pelo menos 10 caracteres.');
+    }
+
+    const cliente = elegibilidade.cliente;
+    const telefone = String(cliente.telefone || '');
+    await executar('BEGIN IMMEDIATE');
+    try {
+        await executar('UPDATE leads SET clienteId = NULL WHERE clienteId = ?', [cliente.id]);
+        await executar('UPDATE campanha_itens SET clienteId = NULL WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM testes_gratis_historico WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
+        await executar('DELETE FROM cliente_interacoes_robo WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
+        await executar('DELETE FROM avisos_renovacao WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM solicitacoes_privacidade WHERE clienteId = ?', [cliente.id]);
+        const resultado = await executar('DELETE FROM clientes WHERE id = ?', [cliente.id]);
+        if (resultado.alteracoes !== 1) throw new Error('O cliente não foi encontrado para exclusão.');
+        await executar('COMMIT');
+    } catch (err) {
+        await executar('ROLLBACK').catch(() => {});
+        throw err;
+    }
+
+    await registrarEventoSistema('privacidade_cliente', 'warn', 'Cliente sem histórico financeiro excluído definitivamente', {
+        clienteId: cliente.id,
+        responsavel: String(responsavel || '').slice(0, 120),
+        motivo: motivoSeguro.slice(0, 500)
+    }).catch(() => {});
+    return { id: cliente.id };
+}
+
 module.exports = {
     exportarDadosCliente,
     anonimizarCliente,
-    listarSolicitacoesPrivacidade
+    listarSolicitacoesPrivacidade,
+    verificarExclusaoDefinitivaCliente,
+    excluirClienteDefinitivamente
 };

@@ -1173,3 +1173,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   Além dos bloqueios gerais contra gerenciadores de senhas, ambos ficam somente
   leitura até receberem foco e são limpos nesse momento, impedindo que usuário
   ou senha salvos pelo navegador apareçam automaticamente na ação irreversível.
+
+## Exclusão definitiva sem financeiro na versão 1.3.12
+
+- Qualquer cadastro sem pagamentos, cobranças ou renovações financeiras pode
+  ser excluído definitivamente na área Privacidade, inclusive se já tiver sido
+  anonimizado. A ação exige motivo, a palavra literal `EXCLUIR`, senha atual e
+  confirmação visual; referências auxiliares são removidas ou desvinculadas em
+  transação e o cliente deixa de aparecer na lista.
+- Se existir qualquer registro financeiro, a exclusão é recusada no serviço e
+  permanece disponível somente a anonimização, preservando receita e auditoria.
+- Os títulos e estados vazios dos históricos de pagamentos e atendimento agora
+  usam o mesmo espaçamento interno dos demais blocos da ficha.

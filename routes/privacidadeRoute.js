@@ -1,6 +1,6 @@
 const express = require('express');
 const { confirmarSenhaAtual } = require('../services/authService');
-const { exportarDadosCliente, anonimizarCliente } = require('../services/privacidadeService');
+const { exportarDadosCliente, anonimizarCliente, excluirClienteDefinitivamente } = require('../services/privacidadeService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 
 const router = express.Router();
@@ -63,6 +63,25 @@ router.post('/privacidade/clientes/:id/anonimizar', async (req, res) => {
             req.params.id,
             'Cliente anonimizado. Registros financeiros minimos foram preservados para auditoria.'
         ));
+    } catch (err) {
+        return res.redirect(voltarCliente(req.params.id, err.message));
+    }
+});
+
+router.post('/privacidade/clientes/:id/excluir', async (req, res) => {
+    try {
+        if (String(req.body.confirmacao || '').trim().toUpperCase() !== 'EXCLUIR') {
+            throw new Error('Digite EXCLUIR para confirmar a exclusão definitiva.');
+        }
+        if (!await confirmarSenhaAtual(req, req.body.senhaConfirmacao)) {
+            throw new Error('A senha atual do painel não confere.');
+        }
+
+        await excluirClienteDefinitivamente(req.params.id, {
+            motivo: req.body.motivo,
+            responsavel: req.usuarioPainel || ''
+        });
+        return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente excluído definitivamente.')}`);
     } catch (err) {
         return res.redirect(voltarCliente(req.params.id, err.message));
     }

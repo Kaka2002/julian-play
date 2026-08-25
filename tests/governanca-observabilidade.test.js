@@ -108,6 +108,35 @@ test('privacidade exporta os dados e anonimiza sem apagar o historico financeiro
     }
 });
 
+test('exclusao definitiva remove cliente sem financeiro inclusive apos anonimizacao', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');const p=require('./services/privacidadeService');
+        const cliente=await c.salvarCliente({nome:'Cadastro Descartável',telefone:'5511999994555',plano:'Mensal',status:'ativo'});
+        await p.anonimizarCliente(cliente.id,{motivo:'Cadastro criado por engano',responsavel:'admin'});
+        const antes=await p.verificarExclusaoDefinitivaCliente(cliente.id);
+        await p.excluirClienteDefinitivamente(cliente.id,{motivo:'Cadastro criado por engano',responsavel:'admin'});
+        const depois=await c.buscarClientePorId(cliente.id);
+        process.stdout.write(JSON.stringify({permitida:antes.permitida,excluido:!depois}));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { permitida: true, excluido: true });
+    } finally { removerAmbiente(resultado.ambiente); }
+});
+
+test('exclusao definitiva bloqueia cliente com qualquer historico financeiro', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const c=require('./services/clientes');const p=require('./services/privacidadeService');const db=require('./database/sqlite');
+        const cliente=await c.salvarCliente({nome:'Cliente com Financeiro',telefone:'5511999994666',plano:'Mensal',status:'ativo'});
+        await db.ready;await new Promise((ok,no)=>db.run("INSERT INTO cliente_pagamentos(clienteId,plano,valorTotal) VALUES(?,?,?)",[cliente.id,'Mensal','35,00'],e=>e?no(e):ok()));
+        const estado=await p.verificarExclusaoDefinitivaCliente(cliente.id);let bloqueou=false;
+        try{await p.excluirClienteDefinitivamente(cliente.id,{motivo:'Tentativa indevida de exclusão',responsavel:'admin'});}catch(e){bloqueou=/histórico financeiro/i.test(e.message)}
+        process.stdout.write(JSON.stringify({permitida:estado.permitida,bloqueou,existe:!!(await c.buscarClientePorId(cliente.id))}));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), { permitida: false, bloqueou: true, existe: true });
+    } finally { removerAmbiente(resultado.ambiente); }
+});
+
 test('exclusao direta foi substituida por privacidade protegida por senha', () => {
     const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
     const privacidade = fs.readFileSync(path.join(repoRoot, 'routes', 'privacidadeRoute.js'), 'utf8');
