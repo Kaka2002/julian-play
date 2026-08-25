@@ -274,6 +274,18 @@ test('historicos da ficha respeitam o espacamento interno dos paineis', () => {
     assert.match(rota, /\.panel-content \{[\s\S]*padding: 28px/);
 });
 
+test('paginacoes permitem escolher quantidade com padrao inicial de seis', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /const OPCOES_POR_PAGINA = \[6, 10, 20, 40, 60, 80, 100\]/);
+    assert.match(rota, /function quantidadePorPagina\(valor, padrao = 6\)/);
+    assert.match(rota, /aria-label="Quantidade por página"/);
+    assert.match(rota, /parametroPorPagina = 'porPagina'/);
+    assert.match(rota, /parametroPorPagina: 'historicoPorPagina'/);
+    assert.match(rota, /parametroPorPagina: 'linhaPorPagina'/);
+    assert.match(rota, /const FINANCEIRO_POR_PAGINA = 6/);
+    assert.match(rota, /const DASHBOARD_VENCIMENTOS_POR_PAGINA = 6/);
+});
+
 test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro', () => {
     const resultado = executarIsolado(`(async()=>{
         const c=require('./services/clientes');

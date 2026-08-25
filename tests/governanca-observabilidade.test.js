@@ -55,7 +55,8 @@ test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     assert.doesNotMatch(clientes, /ID do cliente que reclamou/);
     assert.match(clientes, /paginaClientes/);
     assert.match(clientes, /Execução #/);
-    assert.match(clientes, /paginarItens\(todosItens, paginaAtual\(req\.query\.paginaClientes\), 10\)/);
+    assert.match(clientes, /paginarItens\(todosItens, paginaAtual\(req\.query\.paginaClientes\), porPaginaClientes\)/);
+    assert.match(clientes, /const porPaginaClientes = quantidadePorPagina\(req\.query\.porPaginaClientes\)/);
 });
 
 test('pacote possui verificação automatizada de instalação limpa', () => {

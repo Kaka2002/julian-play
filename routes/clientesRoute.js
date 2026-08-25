@@ -200,9 +200,10 @@ const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
 const CLIENTES_POR_PAGINA = 6;
-const FINANCEIRO_POR_PAGINA = 10;
+const FINANCEIRO_POR_PAGINA = 6;
 const REGISTROS_POR_PAGINA = 6;
-const DASHBOARD_VENCIMENTOS_POR_PAGINA = 4;
+const DASHBOARD_VENCIMENTOS_POR_PAGINA = 6;
+const OPCOES_POR_PAGINA = [6, 10, 20, 40, 60, 80, 100];
 const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-presente.png');
 const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
 const CHAVE_IMAGEM_CAMPANHA_AMIZADE = 'imagemCampanhaAmizade';
@@ -381,7 +382,12 @@ function paginaAtual(valor) {
     return Number.isFinite(pagina) && pagina > 0 ?pagina : 1;
 }
 
-function paginarItens(itens = [], pagina = 1, porPagina = 10) {
+function quantidadePorPagina(valor, padrao = 6) {
+    const quantidade = Number.parseInt(valor, 10);
+    return OPCOES_POR_PAGINA.includes(quantidade) ? quantidade : padrao;
+}
+
+function paginarItens(itens = [], pagina = 1, porPagina = 6) {
     const total = itens.length;
     const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
     const paginaSegura = Math.min(Math.max(1, pagina), totalPaginas);
@@ -430,7 +436,8 @@ function filtrosClientesQuery(query = {}) {
         status: query.status || '',
         origem: query.origem || '',
         tag: query.tag || '',
-        renovacao: ['hoje', 'tres_dias', 'teste_vencido'].includes(String(query.renovacao || '')) ? String(query.renovacao) : ''
+        renovacao: ['hoje', 'tres_dias', 'teste_vencido'].includes(String(query.renovacao || '')) ? String(query.renovacao) : '',
+        porPagina: quantidadePorPagina(query.porPagina)
     };
 }
 
@@ -442,7 +449,8 @@ function filtrosFinanceiroQuery(query = {}) {
         mes: String(query.mes || mesAtualInput()).slice(0, 7),
         dataInicio: String(query.dataInicio || '').slice(0, 10),
         dataFim: String(query.dataFim || '').slice(0, 10),
-        status: ['validos', 'removidos', 'todos'].includes(status) ?status : 'validos'
+        status: ['validos', 'removidos', 'todos'].includes(status) ?status : 'validos',
+        porPagina: quantidadePorPagina(query.porPagina)
     };
 }
 
@@ -1463,6 +1471,27 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .pagination-info {
             margin-right: auto;
             font-size: 14px;
+        }
+
+        .pagination-size {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: var(--muted);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .pagination-size select {
+            width: auto;
+            min-width: 70px;
+            margin: 0;
+            padding: 7px 28px 7px 10px;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            background-color: #fff;
+            color: var(--ink);
+            font-weight: 800;
         }
 
         .page-link {
@@ -2894,7 +2923,8 @@ function secaoNotasCliente(cliente = {}, notas = [], paginacaoNotas = null) {
             <div class="full">${listaNotas}</div>
             ${paginacaoNotas ?`<div class="full">${paginacao({
                 base: `/clientes/${cliente.id}/editar`,
-                params: { parametroPagina: 'historico' },
+                params: { parametroPagina: 'historico', historicoPorPagina: paginacaoNotas.porPagina },
+                parametroPorPagina: 'historicoPorPagina',
                 pagina: paginacaoNotas.pagina,
                 totalPaginas: paginacaoNotas.totalPaginas,
                 total: paginacaoNotas.total,
@@ -5533,7 +5563,8 @@ function secaoHistoricoRobo(cliente = {}, interacoes = [], paginacaoRobo = null)
             ${itens}
             ${paginacaoRobo ?paginacao({
                 base: `/clientes/${cliente.id}/editar`,
-                params: { parametroPagina: 'robo' },
+                params: { parametroPagina: 'robo', roboPorPagina: paginacaoRobo.porPagina },
+                parametroPorPagina: 'roboPorPagina',
                 pagina: paginacaoRobo.pagina,
                 totalPaginas: paginacaoRobo.totalPaginas,
                 total: paginacaoRobo.total,
@@ -5792,7 +5823,8 @@ function secaoHistoricoUnificado(cliente = {}, dados = {}, paginacaoHistoricoUni
             ${conteudo}
             ${paginacaoHistoricoUnificado ?paginacao({
                 base: `/clientes/${cliente.id}/editar`,
-                params: { parametroPagina: 'linha' },
+                params: { parametroPagina: 'linha', linhaPorPagina: paginacaoHistoricoUnificado.porPagina },
+                parametroPorPagina: 'linhaPorPagina',
                 pagina: paginacaoHistoricoUnificado.pagina,
                 totalPaginas: paginacaoHistoricoUnificado.totalPaginas,
                 total: paginacaoHistoricoUnificado.total,
@@ -5827,12 +5859,14 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const exclusaoDefinitiva = opcoesFormulario.exclusaoDefinitiva || {};
     const paginaHistorico = paginaAtual(opcoesFormulario.paginaHistorico);
     const paginaLinha = paginaAtual(opcoesFormulario.paginaLinha);
-    const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, REGISTROS_POR_PAGINA) : null;
+    const historicoPorPagina = quantidadePorPagina(opcoesFormulario.historicoPorPagina, REGISTROS_POR_PAGINA);
+    const linhaPorPagina = quantidadePorPagina(opcoesFormulario.linhaPorPagina, REGISTROS_POR_PAGINA);
+    const paginacaoNotas = cliente.id ? paginarItens(notas, paginaHistorico, historicoPorPagina) : null;
     const historicoUnificado = cliente.id
         ? montarHistoricoUnificado(cliente, { notas, pagamentos, atendimentos, interacoesRobo, auditoria })
         : [];
     const paginacaoHistoricoUnificado = cliente.id
-        ? paginarItens(historicoUnificado, paginaLinha, REGISTROS_POR_PAGINA)
+        ? paginarItens(historicoUnificado, paginaLinha, linhaPorPagina)
         : null;
     const inicio = inputDateTime(cliente.dataInicio) || agoraLocalDateTime();
     const vencimento = inputDateTime(cliente.dataVencimento || cliente.vencimento);
@@ -6843,7 +6877,7 @@ function pluralCliente(total) {
     return Number(total) === 1 ?'cliente' : 'clientes';
 }
 
-function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }) {
+function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, parametroPorPagina = 'porPagina' }) {
     if (totalPaginas <= 1) return '';
 
     const inicio = total ?((pagina - 1) * porPagina) + 1 : 0;
@@ -6856,8 +6890,24 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina }
         paginas.push(`<a class="page-link ${numero === pagina ?'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
     }
 
+    const parametroPagina = String(params.parametroPagina || 'pagina');
+    const parametrosQuantidade = { ...params };
+    delete parametrosQuantidade.parametroPagina;
+    delete parametrosQuantidade[parametroPorPagina];
+    const opcoesQuantidade = OPCOES_POR_PAGINA.map(quantidade => {
+        const destino = montarUrlPaginacao(base, {
+            ...parametrosQuantidade,
+            parametroPagina,
+            [parametroPorPagina]: quantidade
+        }, 1);
+        return `<option value="${escapar(destino)}" ${quantidade === porPagina ? 'selected' : ''}>${quantidade}</option>`;
+    }).join('');
+
     return `<nav class="pagination" aria-label="Paginação">
         <span class="pagination-info">${escapar(inicio)}-${escapar(fim)} de ${escapar(total)}</span>
+        <label class="pagination-size">Por página
+            <select aria-label="Quantidade por página" onchange="window.location.href=this.value">${opcoesQuantidade}</select>
+        </label>
         <a class="page-link ${pagina <= 1 ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
         ${paginas.join('')}
         <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
@@ -7040,7 +7090,8 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
             </tr>`).join('')}</tbody>
         </table></div>${paginacaoItens ? paginacao({
             base: '/campanhas',
-            params: { id: campanhaSelecionada.id, parametroPagina: 'paginaClientes' },
+            params: { id: campanhaSelecionada.id, parametroPagina: 'paginaClientes', porPaginaClientes: paginacaoItens.porPagina },
+            parametroPorPagina: 'porPaginaClientes',
             pagina: paginacaoItens.pagina,
             totalPaginas: paginacaoItens.totalPaginas,
             total: paginacaoItens.total,
@@ -7116,11 +7167,11 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
-function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const proximos = clientesComVencimentoProximo(clientes);
-    const proximosPaginados = paginarItens(proximos, pagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
+    const proximosPaginados = paginarItens(proximos, pagina, porPagina);
     const suporteAberto = Number(resumoSuporte.abertos || 0) + Number(resumoSuporte.emAndamento || 0);
     const opcoesClientesCampanha = clientes
         .filter(cliente => normalizarTelefone(cliente.telefone))
@@ -7207,6 +7258,7 @@ function dashboard(clientes, pagina = 1, receitaBase = clientes, aniversariantes
         ${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
         ${paginacao({
             base: '/clientes',
+            params: { porPagina },
             pagina: proximosPaginados.pagina,
             totalPaginas: proximosPaginados.totalPaginas,
             total: proximosPaginados.total,
@@ -7405,7 +7457,7 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
     </script>`;
 }
 
-function listaClientes({ clientes, busca, status, origem, tag, renovacao, paginacaoClientes }) {
+function listaClientes({ clientes, busca, status, origem, tag, renovacao, porPagina, paginacaoClientes }) {
     const totalClientes = paginacaoClientes?.total ?? clientes.length;
     const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag, renovacao });
 
@@ -7414,6 +7466,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, pagina
         <div class="subtitle">${totalClientes} clientes cadastrados</div>
     </section>
     <form class="clients-toolbar" method="get" action="/clientes/todos">
+        <input type="hidden" name="porPagina" value="${escapar(porPagina || CLIENTES_POR_PAGINA)}">
         <div class="clients-search">
             ${icon('search')}
             <input name="busca" value="${escapar(busca)}" placeholder="Nome, telefone, MAC, usuário, dispositivo ou painel...">
@@ -7465,7 +7518,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, pagina
         ${tabelaClientes(clientes)}
         ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',
-            params: { busca, status, origem, tag, renovacao },
+            params: { busca, status, origem, tag, renovacao, porPagina },
             pagina: paginacaoClientes.pagina,
             totalPaginas: paginacaoClientes.totalPaginas,
             total: paginacaoClientes.total,
@@ -7696,6 +7749,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     </section>
 
     <form class="clients-toolbar" method="get" action="/financeiro">
+        <input type="hidden" name="porPagina" value="${escapar(filtros.porPagina || FINANCEIRO_POR_PAGINA)}">
         <div class="clients-search">
             ${icon('search')}
             <input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar por cliente, telefone, plano ou pagamento...">
@@ -7989,6 +8043,7 @@ function telaApps(apps, paginacaoApps = null) {
         ${appsVisiveis.length ?appsVisiveis.map(appRow).join('') : '<div class="empty">Nenhum app cadastrado.</div>'}
         ${paginacaoApps ?paginacao({
             base: '/apps',
+            params: { porPagina: paginacaoApps.porPagina },
             pagina: paginacaoApps.pagina,
             totalPaginas: paginacaoApps.totalPaginas,
             total: paginacaoApps.total,
@@ -8053,6 +8108,7 @@ function telaDispositivos(dispositivos, paginacaoDispositivos = null) {
     </section>
     ${paginacaoDispositivos ?paginacao({
         base: '/dispositivos',
+        params: { porPagina: paginacaoDispositivos.porPagina },
         pagina: paginacaoDispositivos.pagina,
         totalPaginas: paginacaoDispositivos.totalPaginas,
         total: paginacaoDispositivos.total,
@@ -8118,6 +8174,7 @@ function telaPaineis(paineis, paginacaoPaineis = null) {
     </section>
     ${paginacaoPaineis ?paginacao({
         base: '/paineis',
+        params: { porPagina: paginacaoPaineis.porPagina },
         pagina: paginacaoPaineis.pagina,
         totalPaginas: paginacaoPaineis.totalPaginas,
         total: paginacaoPaineis.total,
@@ -8814,10 +8871,11 @@ router.get('/clientes', async (req, res) => {
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
+    const porPagina = quantidadePorPagina(req.query.porPagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial),
         mensagem,
         ativo: 'painel'
     });
@@ -8829,7 +8887,8 @@ async function renderizarPaginaCampanhas(req, res) {
     const idSelecionado = req.query.id || campanhas[0]?.id;
     const campanha = idSelecionado ? await buscarCampanha(idSelecionado) : null;
     const todosItens = campanha ? await listarItensCampanha(campanha.id, 5000) : [];
-    const paginacaoItensCampanha = paginarItens(todosItens, paginaAtual(req.query.paginaClientes), 10);
+    const porPaginaClientes = quantidadePorPagina(req.query.porPaginaClientes);
+    const paginacaoItensCampanha = paginarItens(todosItens, paginaAtual(req.query.paginaClientes), porPaginaClientes);
     const campanhaRetomavel = campanhaAmizadeExecucao.emAndamento ? null : await buscarCampanhaRetomavel();
     const [clientes, clientesElegiveis, config] = await Promise.all([
         listarClientes(),
@@ -8857,10 +8916,10 @@ async function renderizarPaginaCampanhas(req, res) {
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
-    const { busca, status, origem, tag, renovacao } = filtrosClientesQuery(req.query);
+    const { busca, status, origem, tag, renovacao, porPagina } = filtrosClientesQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
     const todosClientes = await listarClientes({ busca, status, origem, tag, renovacao });
-    const paginacaoClientes = paginarItens(todosClientes, pagina, CLIENTES_POR_PAGINA);
+    const paginacaoClientes = paginarItens(todosClientes, pagina, porPagina || CLIENTES_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
@@ -8872,6 +8931,7 @@ router.get('/clientes/todos', async (req, res) => {
             origem,
             tag,
             renovacao,
+            porPagina,
             paginacaoClientes
         }),
         mensagem,
@@ -9121,7 +9181,7 @@ router.get('/financeiro', async (req, res) => {
         listarPagamentosFinanceiro(filtros),
         listarClientes()
     ]);
-    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, FINANCEIRO_POR_PAGINA);
+    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, filtros.porPagina || FINANCEIRO_POR_PAGINA);
 
     await renderizar(res, {
         titulo: 'Financeiro',
@@ -9266,7 +9326,9 @@ router.get('/clientes/:id/editar', async (req, res) => {
             exclusaoDefinitiva,
             config,
             paginaHistorico: req.query.historico || req.query.pagina,
-            paginaLinha: req.query.linha
+            paginaLinha: req.query.linha,
+            historicoPorPagina: req.query.historicoPorPagina,
+            linhaPorPagina: req.query.linhaPorPagina
         }),
         mensagem: req.query.mensagem || '',
         ativo: 'clientes'
@@ -9958,7 +10020,7 @@ router.post('/planos/:id/excluir', async (req, res) => {
 router.get('/apps', async (req, res) => {
     const apps = await listarApps();
     const pagina = paginaAtual(req.query.pagina);
-    const paginacaoApps = paginarItens(apps, pagina, REGISTROS_POR_PAGINA);
+    const paginacaoApps = paginarItens(apps, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
@@ -10017,7 +10079,7 @@ router.post('/apps/:id/excluir', async (req, res) => {
 router.get('/dispositivos', async (req, res) => {
     const dispositivos = await listarDispositivos();
     const pagina = paginaAtual(req.query.pagina);
-    const paginacaoDispositivos = paginarItens(dispositivos, pagina, REGISTROS_POR_PAGINA);
+    const paginacaoDispositivos = paginarItens(dispositivos, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {
@@ -10076,7 +10138,7 @@ router.post('/dispositivos/:id/excluir', async (req, res) => {
 router.get('/paineis', async (req, res) => {
     const paineis = await listarPaineis();
     const pagina = paginaAtual(req.query.pagina);
-    const paginacaoPaineis = paginarItens(paineis, pagina, REGISTROS_POR_PAGINA);
+    const paginacaoPaineis = paginarItens(paineis, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
     const mensagem = req.query.mensagem || '';
 
     await renderizar(res, {

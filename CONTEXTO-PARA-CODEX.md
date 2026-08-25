@@ -1197,3 +1197,14 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   campanhas vinculadas, leads vinculados, testes, interações, avisos, registros
   de privacidade e o cadastro. Um evento administrativo mínimo registra que a
   exclusão ocorreu, sem preservar os dados pessoais removidos.
+
+## Paginação configurável na versão 1.3.14
+
+- As telas paginadas iniciam com 6 registros por página e permitem escolher
+  6, 10, 20, 40, 60, 80 ou 100. A quantidade escolhida acompanha os links de
+  página e filtros atuais; ao mudar a quantidade, a navegação retorna à página
+  1 para evitar uma página inexistente.
+- Clientes, financeiro, campanhas, vencimentos do painel, apps, dispositivos,
+  painéis e históricos internos da ficha usam o mesmo controle. Históricos de
+  atendimento e linha do tempo possuem parâmetros independentes para uma
+  escolha não alterar a outra.
