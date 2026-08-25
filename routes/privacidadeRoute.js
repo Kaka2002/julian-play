@@ -1,6 +1,6 @@
 const express = require('express');
 const { confirmarSenhaAtual } = require('../services/authService');
-const { exportarDadosCliente, anonimizarCliente, excluirClienteDefinitivamente } = require('../services/privacidadeService');
+const { exportarDadosCliente, anonimizarCliente, verificarExclusaoDefinitivaCliente, excluirClienteDefinitivamente } = require('../services/privacidadeService');
 const { registrarEventoSistema } = require('../services/eventosSistema');
 
 const router = express.Router();
@@ -70,8 +70,11 @@ router.post('/privacidade/clientes/:id/anonimizar', async (req, res) => {
 
 router.post('/privacidade/clientes/:id/excluir', async (req, res) => {
     try {
-        if (String(req.body.confirmacao || '').trim().toUpperCase() !== 'EXCLUIR') {
-            throw new Error('Digite EXCLUIR para confirmar a exclusão definitiva.');
+        const elegibilidade = await verificarExclusaoDefinitivaCliente(req.params.id);
+        if (!elegibilidade.permitida) throw new Error(elegibilidade.motivo);
+        const confirmacaoEsperada = elegibilidade.possuiFinanceiro ? 'EXCLUIR TUDO' : 'EXCLUIR';
+        if (String(req.body.confirmacao || '').trim().toUpperCase() !== confirmacaoEsperada) {
+            throw new Error(`Digite ${confirmacaoEsperada} para confirmar a exclusão definitiva.`);
         }
         if (!await confirmarSenhaAtual(req, req.body.senhaConfirmacao)) {
             throw new Error('A senha atual do painel não confere.');
@@ -79,7 +82,8 @@ router.post('/privacidade/clientes/:id/excluir', async (req, res) => {
 
         await excluirClienteDefinitivamente(req.params.id, {
             motivo: req.body.motivo,
-            responsavel: req.usuarioPainel || ''
+            responsavel: req.usuarioPainel || '',
+            permitirComFinanceiro: elegibilidade.possuiFinanceiro
         });
         return res.redirect(`/clientes/todos?mensagem=${encodeURIComponent('Cliente excluído definitivamente.')}`);
     } catch (err) {

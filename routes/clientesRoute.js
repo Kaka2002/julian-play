@@ -5138,6 +5138,9 @@ function camposFaltandoTesteLiberado(dados = {}) {
 function secaoPrivacidadeCliente(cliente = {}, exclusaoDefinitiva = {}) {
     if (!cliente.id) return '';
     const anonimizado = Boolean(cliente.anonimizadoEm);
+    const possuiFinanceiro = Boolean(exclusaoDefinitiva.possuiFinanceiro);
+    const financeiroExclusao = exclusaoDefinitiva.financeiro || {};
+    const confirmacaoExclusao = possuiFinanceiro ? 'EXCLUIR TUDO' : 'EXCLUIR';
 
     return `<section class="panel" id="privacidade" style="margin-top:24px;">
         <div class="panel-head">
@@ -5173,10 +5176,11 @@ function secaoPrivacidadeCliente(cliente = {}, exclusaoDefinitiva = {}) {
             </form>`}
             ${exclusaoDefinitiva.permitida ? `<form class="full danger-zone" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/excluir" onsubmit="return confirm('Excluir definitivamente este cliente? Todos os seus dados serão apagados e a ação não poderá ser desfeita.');">
                 <h3>Excluir cliente definitivamente</h3>
-                <p class="subtitle">Disponível porque este cadastro não possui pagamentos, cobranças nem renovações financeiras.</p>
+                <p class="subtitle">O cliente desaparecerá do sistema junto com seus dados e históricos vinculados.</p>
+                ${possuiFinanceiro ? `<div class="notice warn" style="margin:16px 0 0;">Atenção: também serão apagados ${escapar(financeiroExclusao.pagamentos || 0)} pagamento(s), ${escapar(financeiroExclusao.cobrancas || 0)} cobrança(s) e ${escapar(financeiroExclusao.renovacoes || 0)} renovação(ões) de painel.</div>` : '<div class="notice" style="margin:16px 0 0;">Este cadastro não possui histórico financeiro.</div>'}
                 <div class="fields" style="padding:0;margin-top:16px;">
                     ${campo({ nome: 'motivo', label: 'Motivo da exclusão', valor: '', attrs: 'required minlength="10" placeholder="Ex.: cliente desistiu antes do pagamento"' })}
-                    ${campo({ nome: 'confirmacao', label: 'Digite EXCLUIR', valor: '', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required pattern="EXCLUIR" readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
+                    ${campo({ nome: 'confirmacao', label: `Digite ${confirmacaoExclusao}`, valor: '', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required pattern="${confirmacaoExclusao}" readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
                     ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
                     <div style="align-self:end;"><button class="button danger" type="submit">Excluir definitivamente</button></div>
                 </div>

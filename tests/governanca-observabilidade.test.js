@@ -123,17 +123,19 @@ test('exclusao definitiva remove cliente sem financeiro inclusive apos anonimiza
     } finally { removerAmbiente(resultado.ambiente); }
 });
 
-test('exclusao definitiva bloqueia cliente com qualquer historico financeiro', () => {
+test('exclusao definitiva com financeiro exige confirmacao reforcada e remove historicos', () => {
     const resultado = executarIsolado(`(async()=>{
         const c=require('./services/clientes');const p=require('./services/privacidadeService');const db=require('./database/sqlite');
         const cliente=await c.salvarCliente({nome:'Cliente com Financeiro',telefone:'5511999994666',plano:'Mensal',status:'ativo'});
         await db.ready;await new Promise((ok,no)=>db.run("INSERT INTO cliente_pagamentos(clienteId,plano,valorTotal) VALUES(?,?,?)",[cliente.id,'Mensal','35,00'],e=>e?no(e):ok()));
         const estado=await p.verificarExclusaoDefinitivaCliente(cliente.id);let bloqueou=false;
-        try{await p.excluirClienteDefinitivamente(cliente.id,{motivo:'Tentativa indevida de exclusão',responsavel:'admin'});}catch(e){bloqueou=/histórico financeiro/i.test(e.message)}
-        process.stdout.write(JSON.stringify({permitida:estado.permitida,bloqueou,existe:!!(await c.buscarClientePorId(cliente.id))}));process.exit(0);
+        try{await p.excluirClienteDefinitivamente(cliente.id,{motivo:'Exclusão de dados de desenvolvimento',responsavel:'admin'});}catch(e){bloqueou=/confirme explicitamente/i.test(e.message)}
+        await p.excluirClienteDefinitivamente(cliente.id,{motivo:'Exclusão de dados de desenvolvimento',responsavel:'admin',permitirComFinanceiro:true});
+        const pagamento=await new Promise((ok,no)=>db.get('SELECT id FROM cliente_pagamentos WHERE clienteId=?',[cliente.id],(e,r)=>e?no(e):ok(r)));
+        process.stdout.write(JSON.stringify({permitida:estado.permitida,possuiFinanceiro:estado.possuiFinanceiro,bloqueou,existe:!!(await c.buscarClientePorId(cliente.id)),pagamento:!!pagamento}));process.exit(0);
     })().catch(e=>{console.error(e);process.exit(1)})`);
     try {
-        assert.deepEqual(JSON.parse(resultado.stdout), { permitida: false, bloqueou: true, existe: true });
+        assert.deepEqual(JSON.parse(resultado.stdout), { permitida: true, possuiFinanceiro: true, bloqueou: true, existe: false, pagamento: false });
     } finally { removerAmbiente(resultado.ambiente); }
 });
 

@@ -1185,3 +1185,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   permanece disponível somente a anonimização, preservando receita e auditoria.
 - Os títulos e estados vazios dos históricos de pagamentos e atendimento agora
   usam o mesmo espaçamento interno dos demais blocos da ficha.
+
+## Exclusão definitiva ampliada na versão 1.3.13
+
+- A exclusão definitiva pode ser usada em qualquer cliente quando o operador
+  realmente desejar remover também seus históricos vinculados. Se houver
+  pagamentos, cobranças ou renovações, a tela mostra as quantidades e exige a
+  confirmação reforçada `EXCLUIR TUDO`, além de motivo, senha atual e diálogo
+  final. Sem financeiro, permanece a confirmação `EXCLUIR`.
+- A operação apaga em transação pagamentos, cobranças, fila de renovação,
+  campanhas vinculadas, leads vinculados, testes, interações, avisos, registros
+  de privacidade e o cadastro. Um evento administrativo mínimo registra que a
+  exclusão ocorreu, sem preservar os dados pessoais removidos.

@@ -242,16 +242,25 @@ async function verificarExclusaoDefinitivaCliente(clienteId) {
     const totalFinanceiro = Number(financeiro?.pagamentos || 0)
         + Number(financeiro?.cobrancas || 0)
         + Number(financeiro?.renovacoes || 0);
-    if (totalFinanceiro > 0) {
-        return { permitida: false, motivo: 'Este cadastro possui histórico financeiro e só pode ser anonimizado.' };
-    }
-
-    return { permitida: true, motivo: '', cliente };
+    return {
+        permitida: true,
+        motivo: '',
+        cliente,
+        possuiFinanceiro: totalFinanceiro > 0,
+        financeiro: {
+            pagamentos: Number(financeiro?.pagamentos || 0),
+            cobrancas: Number(financeiro?.cobrancas || 0),
+            renovacoes: Number(financeiro?.renovacoes || 0)
+        }
+    };
 }
 
-async function excluirClienteDefinitivamente(clienteId, { motivo = '', responsavel = '' } = {}) {
+async function excluirClienteDefinitivamente(clienteId, { motivo = '', responsavel = '', permitirComFinanceiro = false } = {}) {
     const elegibilidade = await verificarExclusaoDefinitivaCliente(clienteId);
     if (!elegibilidade.permitida) throw new Error(elegibilidade.motivo);
+    if (elegibilidade.possuiFinanceiro && !permitirComFinanceiro) {
+        throw new Error('Confirme explicitamente a exclusão de todo o histórico financeiro deste cliente.');
+    }
 
     const motivoSeguro = String(motivo || '').trim();
     if (motivoSeguro.length < 10) {
@@ -262,8 +271,12 @@ async function excluirClienteDefinitivamente(clienteId, { motivo = '', responsav
     const telefone = String(cliente.telefone || '');
     await executar('BEGIN IMMEDIATE');
     try {
-        await executar('UPDATE leads SET clienteId = NULL WHERE clienteId = ?', [cliente.id]);
-        await executar('UPDATE campanha_itens SET clienteId = NULL WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM renovacoes_painel_fila WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM cobrancas_pix WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM cliente_pagamentos WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM campanha_reclamacoes WHERE clienteId = ?', [cliente.id]);
+        await executar('DELETE FROM campanha_itens WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
+        await executar('DELETE FROM leads WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
         await executar('DELETE FROM testes_gratis_historico WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
         await executar('DELETE FROM cliente_interacoes_robo WHERE clienteId = ? OR telefone = ?', [cliente.id, telefone]);
         await executar('DELETE FROM avisos_renovacao WHERE clienteId = ?', [cliente.id]);
@@ -276,10 +289,12 @@ async function excluirClienteDefinitivamente(clienteId, { motivo = '', responsav
         throw err;
     }
 
-    await registrarEventoSistema('privacidade_cliente', 'warn', 'Cliente sem histórico financeiro excluído definitivamente', {
+    await registrarEventoSistema('privacidade_cliente', 'warn', 'Cliente excluído definitivamente com históricos vinculados', {
         clienteId: cliente.id,
         responsavel: String(responsavel || '').slice(0, 120),
-        motivo: motivoSeguro.slice(0, 500)
+        motivo: motivoSeguro.slice(0, 500),
+        historicoFinanceiroRemovido: elegibilidade.possuiFinanceiro,
+        financeiro: elegibilidade.financeiro
     }).catch(() => {});
     return { id: cliente.id };
 }
