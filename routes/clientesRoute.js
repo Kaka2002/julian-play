@@ -5137,8 +5137,8 @@ function secaoPrivacidadeCliente(cliente = {}) {
             ${anonimizado ? '' : `<form class="full" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/anonimizar" onsubmit="return confirm('Anonimizar definitivamente os dados pessoais deste cliente? Esta operação não pode ser desfeita.');">
                 <div class="fields">
                     ${areaTexto({ nome: 'motivo', label: 'Motivo da solicitação de anonimização', valor: '' })}
-                    ${campo({ nome: 'confirmacao', label: 'Digite ANONIMIZAR', valor: '', attrs: 'required autocomplete="off" pattern="ANONIMIZAR"' })}
-                    ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required` })}
+                    ${campo({ nome: 'confirmacao', label: 'Digite ANONIMIZAR', valor: '', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required pattern="ANONIMIZAR" readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
+                    ${campo({ nome: 'senhaConfirmacao', label: 'Senha atual do painel', valor: '', tipo: 'password', attrs: `${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required readonly onfocus="this.removeAttribute('readonly');this.value=''"` })}
                     <div class="full"><button class="button danger" type="submit">Anonimizar dados pessoais</button></div>
                 </div>
             </form>`}

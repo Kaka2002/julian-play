@@ -1166,3 +1166,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - O botão respeita telas pequenas e áreas seguras de celulares, possui foco de
   teclado, texto acessível e funciona em todas as páginas renderizadas pelo
   layout administrativo compartilhado.
+
+## Campos protegidos da anonimização na versão 1.3.11
+
+- Os campos `Digite ANONIMIZAR` e `Senha atual do painel` abrem sempre vazios.
+  Além dos bloqueios gerais contra gerenciadores de senhas, ambos ficam somente
+  leitura até receberem foco e são limpos nesse momento, impedindo que usuário
+  ou senha salvos pelo navegador apareçam automaticamente na ação irreversível.
