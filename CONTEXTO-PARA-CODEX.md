@@ -1208,3 +1208,49 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   painéis e históricos internos da ficha usam o mesmo controle. Históricos de
   atendimento e linha do tempo possuem parâmetros independentes para uma
   escolha não alterar a outra.
+
+## Continuidade após renomear ou recriar a pasta `.codex` em 25/08/2026
+
+- Este arquivo versionado, `AGENTS.md`, o código e o histórico do Git são a
+  fonte de continuidade do projeto. O histórico local de conversas da pasta
+  `C:\Users\carlo\.codex` é auxiliar e pode deixar de estar disponível se a
+  pasta for renomeada; isso não altera o código, os bancos nem os pacotes do
+  Julian Play.
+- Antes de renomear a pasta `.codex`, concluir a mudança pendente, conferir
+  `git status`, criar o commit e fazer `git push origin main`. Não considerar
+  uma melhoria preservada no GitHub enquanto o push não tiver sido concluído.
+- Uma sessão nova deve abrir `D:\julian-play`, ler `AGENTS.md` e este arquivo
+  por completo, executar `git status --short`, `git log -5 --oneline` e
+  `git fetch origin`. Se houver alterações locais, preservá-las e descobrir sua
+  origem antes de atualizar ou editar arquivos sobrepostos.
+- Estado funcional acumulado até aqui: ficha rápida e busca ampliadas;
+  auditoria e histórico unificado; filtros de renovação; cards sem reticências;
+  botão flutuante de voltar ao topo; campos protegidos de anonimização vazios;
+  exclusão definitiva com confirmação reforçada; espaçamento dos históricos;
+  e paginação configurável iniciando em 6 registros na versão 1.3.14.
+- Toda melhoria concluída deve continuar usando a sequência: atualizar versão
+  quando aplicável; atualizar este contexto; validar JavaScript com
+  `node --check`; executar `npm.cmd test` e `git diff --check`; recriar o pacote
+  oficial com `CRIAR-PACOTE-APP.ps1`; informar o SHA-256; e entregar comandos
+  prontos para commit/push, deploy de produção, geração do pacote, ZIP externo,
+  instalação nova e atualização local.
+- O computador de produção atual usa `D:\julian-play\deploy.ps1`. O caminho
+  antigo `C:\bots\julian-play` é apenas histórico e não deve voltar a ser usado
+  nos comandos atuais.
+- Artefatos gerados (`ENVIAR_AO_CLIENTE.zip` e `julian-play-app.zip`) não devem
+  ser adicionados ao Git. O conteúdo versionado deve permanecer livre de
+  bancos, sessões do WhatsApp, backups, arquivos locais e segredos.
+
+### Comando de retomada para uma sessão nova
+
+> Retome o projeto em `D:\julian-play`. Leia `AGENTS.md` e
+> `CONTEXTO-PARA-CODEX.md` por completo, confira `git status`, os cinco últimos
+> commits e a diferença para `origin/main`. Preserve qualquer alteração local e
+> continue seguindo a validação, o GitHub, a geração de pacotes e os comandos de
+> aplicação definidos no projeto.
+
+## Ícone da aba do navegador na versão 1.3.15
+
+- As páginas do painel e do login usam a logo configurada da instalação como
+  favicon ao lado do título da aba do navegador. Quando a instalação ainda não
+  possui logo personalizada, o sistema usa `assets/Logo.png` como padrão.
