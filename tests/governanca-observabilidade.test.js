@@ -44,6 +44,15 @@ test('nova instalação do Painel Mestre exige usuário e senha sem valores auto
     assert.match(provisionador, /if \(!usuarioPainel\) throw new Error/);
 });
 
+test('todas as páginas do Painel Mestre usam o logo na aba do navegador', () => {
+    const mestre = fs.readFileSync(path.join(repoRoot, 'master', 'app.js'), 'utf8');
+    const paginasHtml = mestre.match(/<!doctype html>/g) || [];
+    const favicons = mestre.match(/<link rel="icon" href="\/assets\/Logo\.png">/g) || [];
+
+    assert.ok(paginasHtml.length > 0);
+    assert.equal(favicons.length, paginasHtml.length);
+});
+
 test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     const campanhas = fs.readFileSync(path.join(repoRoot, 'routes', 'campanhasRoute.js'), 'utf8');
     const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');

@@ -1254,3 +1254,9 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - As páginas do painel e do login usam a logo configurada da instalação como
   favicon ao lado do título da aba do navegador. Quando a instalação ainda não
   possui logo personalizada, o sistema usa `assets/Logo.png` como padrão.
+
+## Ícone da aba do Painel Mestre na versão 1.3.16
+
+- Todas as páginas HTML do Painel Mestre, incluindo login, painel principal,
+  saúde, logs, históricos, licenças e renovações, usam `assets/Logo.png` como
+  favicon ao lado do título da aba do navegador.
