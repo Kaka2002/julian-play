@@ -387,6 +387,13 @@ function quantidadePorPagina(valor, padrao = 6) {
     return OPCOES_POR_PAGINA.includes(quantidade) ? quantidade : padrao;
 }
 
+function quantidadeVencimentosDashboard(valor, padrao = DASHBOARD_VENCIMENTOS_POR_PAGINA) {
+    const quantidade = Number.parseInt(valor, 10);
+    return Number.isFinite(quantidade) && quantidade >= 1 && quantidade <= DASHBOARD_VENCIMENTOS_POR_PAGINA
+        ? quantidade
+        : padrao;
+}
+
 function paginarItens(itens = [], pagina = 1, porPagina = 6) {
     const total = itens.length;
     const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
@@ -822,7 +829,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const logoUrl = config.logoUrl || '';
     const marcaDaguaUrl = '/assets/julian-play-fundo-painel.png';
-    const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : '';
+    const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : ativo === 'painel' ? 'dashboard-page' : '';
     const licenca = calcularEstadoLicenca(config);
     const avisoLicenca = (() => {
         if (!licenca.bloqueioAtivo || !licenca.permitida || licenca.vitalicia) return '';
@@ -1519,6 +1526,44 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .page-link.disabled {
             pointer-events: none;
             opacity: .45;
+        }
+
+        @media (min-width: 981px) {
+            .dashboard-page main { padding-top: 16px; padding-bottom: 12px; font-size: 14px; }
+            .dashboard-page .page-title { margin-bottom: 12px; }
+            .dashboard-page h1 { margin-bottom: 2px; font-size: 28px; }
+            .dashboard-page .subtitle { font-size: 14px; }
+            .dashboard-page .dashboard-metrics { gap: 8px; margin-bottom: 12px; }
+            .dashboard-page .dashboard-metrics .metric { min-height: 78px; padding: 11px 10px; }
+            .dashboard-page .dashboard-metrics .metric-label { margin-bottom: 5px; font-size: 11px; }
+            .dashboard-page .dashboard-metrics .metric-value { font-size: 23px; }
+            .dashboard-page .dashboard-metrics .metric-note { margin-top: 4px; font-size: 9px; }
+            .dashboard-page .dashboard-metrics .metric-icon { width: 28px; height: 28px; }
+            .dashboard-page .dashboard-campaign { margin-bottom: 12px !important; }
+            .dashboard-page .panel-head { min-height: 66px; padding: 12px 18px; }
+            .dashboard-page .panel-title { margin-bottom: 3px; font-size: 18px; }
+            .dashboard-page .button { min-height: 32px; padding: 0 12px; font-size: 13px; }
+            .dashboard-page select { min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 13px; }
+            .dashboard-page .revenue-card { margin-bottom: 12px; padding: 14px 20px; }
+            .dashboard-page .revenue-head { align-items: center; margin-bottom: 10px; }
+            .dashboard-page .revenue-title { font-size: 13px; }
+            .dashboard-page .revenue-total { display: inline-block; margin-top: 4px; margin-right: 10px; font-size: 27px; }
+            .dashboard-page .revenue-note { display: inline; margin-top: 0; font-size: 11px; }
+            .dashboard-page .revenue-icon { width: 38px; height: 38px; border-radius: 10px; }
+            .dashboard-page .revenue-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 28px; padding-top: 9px; }
+            .dashboard-page .revenue-row { grid-template-columns: minmax(85px, 1fr) auto 74px auto; gap: 8px; }
+            .dashboard-page .revenue-plan,
+            .dashboard-page .revenue-count,
+            .dashboard-page .revenue-value { font-size: 12px; }
+            .dashboard-page .client-row { min-height: 48px; grid-template-columns: 38px minmax(170px, 1fr) minmax(170px, auto) auto auto; padding: 6px 14px; }
+            .dashboard-page .avatar { width: 34px; height: 34px; font-size: 12px; }
+            .dashboard-page .client-name,
+            .dashboard-page .due { font-size: 13px; }
+            .dashboard-page .due-date,
+            .dashboard-page .helper { font-size: 11px; }
+            .dashboard-page .badge { min-height: 23px; padding: 0 9px; font-size: 11px; }
+            .dashboard-page .pagination { gap: 5px; padding: 7px 12px; }
+            .dashboard-page .page-link { min-width: 30px; min-height: 28px; padding: 0 8px; font-size: 12px; }
         }
 
         .commercial-mode main {
@@ -6878,7 +6923,7 @@ function pluralCliente(total) {
     return Number(total) === 1 ?'cliente' : 'clientes';
 }
 
-function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, parametroPorPagina = 'porPagina' }) {
+function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, parametroPorPagina = 'porPagina', mostrarQuantidade = true }) {
     if (totalPaginas <= 1) return '';
 
     const inicio = total ?((pagina - 1) * porPagina) + 1 : 0;
@@ -6906,9 +6951,9 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, 
 
     return `<nav class="pagination" aria-label="Paginação">
         <span class="pagination-info">${escapar(inicio)}-${escapar(fim)} de ${escapar(total)}</span>
-        <label class="pagination-size">Por página
+        ${mostrarQuantidade ? `<label class="pagination-size">Por página
             <select aria-label="Quantidade por página" onchange="window.location.href=this.value">${opcoesQuantidade}</select>
-        </label>
+        </label>` : ''}
         <a class="page-link ${pagina <= 1 ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
         ${paginas.join('')}
         <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
@@ -7168,6 +7213,31 @@ function cardVencimento(cliente) {
     </div>`;
 }
 
+function ajustarPaginacaoVencimentosScript(total, porPagina) {
+    return `<script>
+        (() => {
+            if (!window.matchMedia('(min-width: 981px)').matches) return;
+
+            const lista = document.querySelector('[data-dashboard-due-list]');
+            const primeiraLinha = lista?.querySelector('.client-row');
+            if (!lista || !primeiraLinha) return;
+
+            const url = new URL(window.location.href);
+            const espacoAteRodape = Math.max(0, window.innerHeight - lista.getBoundingClientRect().top - 44);
+            const alturaLinha = Math.max(1, primeiraLinha.getBoundingClientRect().height);
+            const quantidade = Math.max(1, Math.min(${DASHBOARD_VENCIMENTOS_POR_PAGINA}, Math.floor(espacoAteRodape / alturaLinha)));
+            const atual = ${Number(porPagina)};
+            const total = ${Number(total)};
+
+            if (total > 0 && quantidade !== atual) {
+                url.searchParams.set('porPagina', String(quantidade));
+                url.searchParams.set('pagina', '1');
+                window.location.replace(url.toString());
+            }
+        })();
+    </script>`;
+}
+
 function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
@@ -7203,7 +7273,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
     </section>
-    <section class="panel" style="margin-bottom:24px;">
+    <section class="panel dashboard-campaign" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Campanha de indicação</h2>
@@ -7256,16 +7326,18 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
                 <a class="button secondary" href="/clientes/todos">Ver todos ${icon('arrow')}</a>
             </div>
         </div>
-        ${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}
+        <div data-dashboard-due-list>${proximosPaginados.itens.length ?proximosPaginados.itens.map(cardVencimento).join('') : '<div class="empty">Nenhum cliente vencendo nos próximos dias.</div>'}</div>
         ${paginacao({
             base: '/clientes',
             params: { porPagina },
             pagina: proximosPaginados.pagina,
             totalPaginas: proximosPaginados.totalPaginas,
             total: proximosPaginados.total,
-            porPagina: proximosPaginados.porPagina
+            porPagina: proximosPaginados.porPagina,
+            mostrarQuantidade: false
         })}
     </section>
+    ${ajustarPaginacaoVencimentosScript(proximosPaginados.total, proximosPaginados.porPagina)}
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
@@ -8872,7 +8944,7 @@ router.get('/clientes', async (req, res) => {
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
-    const porPagina = quantidadePorPagina(req.query.porPagina, DASHBOARD_VENCIMENTOS_POR_PAGINA);
+    const porPagina = quantidadeVencimentosDashboard(req.query.porPagina);
 
     await renderizar(res, {
         titulo: 'Painel',

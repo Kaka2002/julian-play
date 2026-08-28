@@ -1260,3 +1260,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Todas as páginas HTML do Painel Mestre, incluindo login, painel principal,
   saúde, logs, históricos, licenças e renovações, usam `assets/Logo.png` como
   favicon ao lado do título da aba do navegador.
+
+## Painel compacto e paginação pela altura na versão 1.3.17
+
+- Em desktop, o Painel usa tipografia e espaçamentos mais compactos, com cards,
+  campanha, receita e linhas dimensionados pelo próprio conteúdo para aproveitar
+  melhor a altura visível sem afetar as demais telas nem o layout móvel.
+- A lista de clientes com vencimento próximo calcula quantas linhas, entre uma
+  e seis, cabem no espaço restante da janela e ajusta automaticamente a
+  paginação. Assim, clientes excedentes seguem para a próxima página antes de
+  provocar rolagem vertical no Painel.

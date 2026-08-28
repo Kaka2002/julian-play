@@ -286,6 +286,17 @@ test('paginacoes permitem escolher quantidade com padrao inicial de seis', () =>
     assert.match(rota, /const DASHBOARD_VENCIMENTOS_POR_PAGINA = 6/);
 });
 
+test('painel compacto pagina vencimentos conforme a altura disponivel', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(rota, /ativo === 'painel' \? 'dashboard-page'/);
+    assert.match(rota, /@media \(min-width: 981px\) \{[\s\S]*\.dashboard-page \.dashboard-metrics \.metric/);
+    assert.match(rota, /function quantidadeVencimentosDashboard\(valor/);
+    assert.match(rota, /window\.innerHeight - lista\.getBoundingClientRect\(\)\.top/);
+    assert.match(rota, /Math\.max\(1, Math\.min\(\$\{DASHBOARD_VENCIMENTOS_POR_PAGINA\}/);
+    assert.match(rota, /data-dashboard-due-list/);
+    assert.match(rota, /mostrarQuantidade: false/);
+});
+
 test('aba do navegador usa a logo configurada como icone', () => {
     const rotaClientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
     const rotaLogin = fs.readFileSync(path.join(repoRoot, 'routes', 'authRoute.js'), 'utf8');
