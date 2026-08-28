@@ -1270,3 +1270,10 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   e seis, cabem no espaço restante da janela e ajusta automaticamente a
   paginação. Assim, clientes excedentes seguem para a próxima página antes de
   provocar rolagem vertical no Painel.
+
+## Tipografia do Painel alinhada à página Clientes na versão 1.3.18
+
+- O Painel preserva a distribuição compacta e a paginação calculada pela altura,
+  mas volta a usar a escala tipográfica confortável da página Clientes. Título,
+  subtítulos, métricas, botões, receita e vencimentos deixam de aparecer
+  excessivamente pequenos em monitores de alta resolução.

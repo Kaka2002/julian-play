@@ -1529,41 +1529,41 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         @media (min-width: 981px) {
-            .dashboard-page main { padding-top: 16px; padding-bottom: 12px; font-size: 14px; }
+            .dashboard-page main { padding-top: 16px; padding-bottom: 12px; }
             .dashboard-page .page-title { margin-bottom: 12px; }
-            .dashboard-page h1 { margin-bottom: 2px; font-size: 28px; }
-            .dashboard-page .subtitle { font-size: 14px; }
+            .dashboard-page h1 { margin-bottom: 2px; font-size: 34px; }
+            .dashboard-page .subtitle { font-size: 16px; }
             .dashboard-page .dashboard-metrics { gap: 8px; margin-bottom: 12px; }
             .dashboard-page .dashboard-metrics .metric { min-height: 78px; padding: 11px 10px; }
-            .dashboard-page .dashboard-metrics .metric-label { margin-bottom: 5px; font-size: 11px; }
-            .dashboard-page .dashboard-metrics .metric-value { font-size: 23px; }
-            .dashboard-page .dashboard-metrics .metric-note { margin-top: 4px; font-size: 9px; }
+            .dashboard-page .dashboard-metrics .metric-label { margin-bottom: 5px; font-size: 13px; }
+            .dashboard-page .dashboard-metrics .metric-value { font-size: 28px; }
+            .dashboard-page .dashboard-metrics .metric-note { margin-top: 4px; font-size: 11px; }
             .dashboard-page .dashboard-metrics .metric-icon { width: 28px; height: 28px; }
             .dashboard-page .dashboard-campaign { margin-bottom: 12px !important; }
             .dashboard-page .panel-head { min-height: 66px; padding: 12px 18px; }
-            .dashboard-page .panel-title { margin-bottom: 3px; font-size: 18px; }
-            .dashboard-page .button { min-height: 32px; padding: 0 12px; font-size: 13px; }
-            .dashboard-page select { min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 13px; }
+            .dashboard-page .panel-title { margin-bottom: 3px; font-size: 22px; }
+            .dashboard-page .button { min-height: 32px; padding: 0 12px; font-size: 14px; }
+            .dashboard-page select { min-height: 32px; padding-top: 5px; padding-bottom: 5px; font-size: 14px; }
             .dashboard-page .revenue-card { margin-bottom: 12px; padding: 14px 20px; }
             .dashboard-page .revenue-head { align-items: center; margin-bottom: 10px; }
-            .dashboard-page .revenue-title { font-size: 13px; }
-            .dashboard-page .revenue-total { display: inline-block; margin-top: 4px; margin-right: 10px; font-size: 27px; }
-            .dashboard-page .revenue-note { display: inline; margin-top: 0; font-size: 11px; }
+            .dashboard-page .revenue-title { font-size: 16px; }
+            .dashboard-page .revenue-total { display: inline-block; margin-top: 4px; margin-right: 10px; font-size: 34px; }
+            .dashboard-page .revenue-note { display: inline; margin-top: 0; font-size: 13px; }
             .dashboard-page .revenue-icon { width: 38px; height: 38px; border-radius: 10px; }
             .dashboard-page .revenue-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 28px; padding-top: 9px; }
             .dashboard-page .revenue-row { grid-template-columns: minmax(85px, 1fr) auto 74px auto; gap: 8px; }
             .dashboard-page .revenue-plan,
             .dashboard-page .revenue-count,
-            .dashboard-page .revenue-value { font-size: 12px; }
+            .dashboard-page .revenue-value { font-size: 14px; }
             .dashboard-page .client-row { min-height: 48px; grid-template-columns: 38px minmax(170px, 1fr) minmax(170px, auto) auto auto; padding: 6px 14px; }
-            .dashboard-page .avatar { width: 34px; height: 34px; font-size: 12px; }
+            .dashboard-page .avatar { width: 34px; height: 34px; font-size: 13px; }
             .dashboard-page .client-name,
-            .dashboard-page .due { font-size: 13px; }
+            .dashboard-page .due { font-size: 15px; }
             .dashboard-page .due-date,
-            .dashboard-page .helper { font-size: 11px; }
-            .dashboard-page .badge { min-height: 23px; padding: 0 9px; font-size: 11px; }
+            .dashboard-page .helper { font-size: 13px; }
+            .dashboard-page .badge { min-height: 23px; padding: 0 9px; font-size: 12px; }
             .dashboard-page .pagination { gap: 5px; padding: 7px 12px; }
-            .dashboard-page .page-link { min-width: 30px; min-height: 28px; padding: 0 8px; font-size: 12px; }
+            .dashboard-page .page-link { min-width: 30px; min-height: 28px; padding: 0 8px; font-size: 14px; }
         }
 
         .commercial-mode main {
