@@ -1287,3 +1287,9 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   quebram linha; telas intermediárias podem rolar somente a tabela.
 - Mudança visual compartilhada pelos painéis que possuem CRM, incluindo a
   instalação local. Não altera permissões, rotas de ação, banco ou WhatsApp.
+
+## Filtros de Atendimentos na versão 1.3.20
+
+- Busca, status e botão Filtrar ficam em linha ao lado do título da lista no
+  desktop e se reorganizam no celular. Alteração somente visual, compartilhada
+  por instalações com Atendimentos, sem mudar filtros, permissões ou dados.

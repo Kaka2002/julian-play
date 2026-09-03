@@ -1789,6 +1789,21 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             width: min(380px, 100%);
         }
 
+        .atendimentos-filters {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+            max-width: 720px;
+        }
+        .atendimentos-filters input { flex: 2 1 220px; min-width: 0; }
+        .atendimentos-filters select { flex: 1 1 180px; width: auto; min-width: 0; }
+        @media (max-width: 640px) {
+            .atendimentos-filters { width: 100%; }
+            .atendimentos-filters input, .atendimentos-filters select { flex-basis: 100%; width: 100%; }
+        }
+
         form.fields {
             display: grid;
             grid-template-columns: repeat(4, minmax(150px, 1fr));
@@ -6489,9 +6504,9 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
                 <h2 class="panel-title">Atendimentos</h2>
                 <div class="subtitle">${atendimentos.length} registro(s) no filtro atual</div>
             </div>
-            <form class="actions" method="get" action="/atendimentos">
-                <input name="busca" value="${escapar(busca)}" placeholder="Buscar cliente ou motivo" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
-                <select name="status" onchange="this.form.submit()">
+            <form class="atendimentos-filters" method="get" action="/atendimentos">
+                <input name="busca" aria-label="Buscar cliente ou motivo" value="${escapar(busca)}" placeholder="Buscar cliente ou motivo" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
+                <select name="status" aria-label="Filtrar atendimentos por status" onchange="this.form.submit()">
                     ${[
                         ['abertos', 'Abertos'],
                         ['aberto', 'Somente abertos'],

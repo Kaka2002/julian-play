@@ -5,6 +5,15 @@ const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 const repoRoot = path.join(__dirname, '..');
 
+test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
+    assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);
+    assert.match(fonte, /name="busca" aria-label="Buscar cliente ou motivo"/);
+    assert.match(fonte, /name="status" aria-label="Filtrar atendimentos por status" onchange="this.form.submit\(\)"/);
+    assert.match(fonte, /\.atendimentos-filters \{\s*display: flex;/);
+    assert.match(fonte, /\.atendimentos-filters input, \.atendimentos-filters select \{ flex-basis: 100%;/);
+});
+
 test('CRM distribui relatório e preserva ações e dados dos leads', () => {
     const vm = require('node:vm');
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
