@@ -5,6 +5,37 @@ const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 const repoRoot = path.join(__dirname, '..');
 
+test('CRM distribui relatório e preserva ações e dados dos leads', () => {
+    const vm = require('node:vm');
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
+    const trecho = fonte.slice(fonte.indexOf('function tabelaLeads('), fonte.indexOf('function telaEditarLead('));
+    const contexto = vm.createContext({
+        escapar: valor => String(valor).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
+        icon: () => '', classeStatusLead: () => 'muted', rotuloStatusLead: valor => valor,
+        formatarDataHoraCurta: valor => valor, cardsFunilCrm: () => '', formularioLead: () => ''
+    });
+    vm.runInContext(trecho, contexto);
+    const html = contexto.telaCrm({
+        leads: [{ id: 7, nome: 'Lead <teste>', observacoes: 'Texto longo '.repeat(50), status: 'novo' }],
+        clientes: [{ id: 3, nome: 'Cliente teste' }],
+        relatorio: { porStatus: [{ nome: 'novo', quantidade: 1 }], porOrigem: [{ nome: 'Indicação', quantidade: 1 }] }
+    });
+    assert.match(html, /class="crm-report-grid"/);
+    assert.equal((html.match(/class="crm-report-row"/g) || []).length, 2);
+    assert.doesNotMatch(html, /class="client-row"/);
+    for (const label of ['Lead', 'Funil', 'Agenda', 'Histórico', 'Ações']) {
+        assert.ok(html.includes(`data-label="${label}"`));
+    }
+    for (const acao of ['enviar', 'status', 'criar-cliente', 'editar', 'excluir', 'converter']) {
+        assert.ok(html.includes(`/crm/7/${acao}`));
+    }
+    assert.match(html, /Lead &lt;teste>/);
+    assert.match(html, /value="3"/);
+    assert.match(html, /@media\(max-width:640px\)/);
+    assert.match(contexto.telaCrm({}), /Nenhum lead encontrado/);
+    assert.equal((contexto.telaCrm({}).match(/Sem dados\./g) || []).length, 2);
+});
+
 test('upload multipart ignora o campo CSRF e extrai o arquivo real', () => {
     const { extrairArquivoMultipart, validarCsrfMultipart } = require('../services/uploadMultipartService');
     const boundary = 'julian-play-boundary';
@@ -364,7 +395,7 @@ test('migracao remove ano de aniversarios ISO existentes', () => {
 });
 
 test('cliente novo exige consentimento explicito para entrar em campanhas', () => {
-    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const base={nome:'Cliente Teste',telefone:'5511999990000',tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:'2026-07-28T10:00',dataVencimento:'2026-08-28T23:59',status:'ativo'};const sem=await c.salvarCliente(base);const antes=await c.listarClientesAtivosComerciais();const com=await c.salvarCliente({...base,id:sem.id,whatsappMarketingConsentimento:'1'});const depois=await c.listarClientesAtivosComerciais();process.stdout.write(JSON.stringify({sem:sem.whatsappMarketingConsentimento,antes:antes.length,com:com.whatsappMarketingConsentimento,depois:depois.length}));})().catch(e=>{console.error(e);process.exit(1)})`);
+    const resultado = executarIsolado(`(async()=>{const c=require('./services/clientes');const agora=new Date();const vencimento=new Date(agora.getTime()+30*86400000);const base={nome:'Cliente Teste',telefone:'5511999990000',tipoPlanoId:'1',diasContrato:30,valorPlano:'10,00',dataInicio:agora.toISOString(),dataVencimento:vencimento.toISOString(),status:'ativo'};const sem=await c.salvarCliente(base);const antes=await c.listarClientesAtivosComerciais();const com=await c.salvarCliente({...base,id:sem.id,whatsappMarketingConsentimento:'1'});const depois=await c.listarClientesAtivosComerciais();process.stdout.write(JSON.stringify({sem:sem.whatsappMarketingConsentimento,antes:antes.length,com:com.whatsappMarketingConsentimento,depois:depois.length}));})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         assert.deepEqual(JSON.parse(resultado.stdout), { sem: 0, antes: 0, com: 1, depois: 1 });
     } finally {

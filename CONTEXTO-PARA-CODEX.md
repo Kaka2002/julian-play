@@ -1277,3 +1277,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   mas volta a usar a escala tipográfica confortável da página Clientes. Título,
   subtítulos, métricas, botões, receita e vencimentos deixam de aparecer
   excessivamente pequenos em monitores de alta resolução.
+
+## Distribuição do CRM na versão 1.3.19
+
+- Relatório comercial usa duas colunas no desktop e uma no celular, com
+  nomes e contagens separados. Deixou de reutilizar o grid de vencimentos.
+- Funil possui larguras equilibradas, ações alinhadas à esquerda, filtros
+  em linha quando há espaço e rótulos por campo no celular. Textos longos
+  quebram linha; telas intermediárias podem rolar somente a tabela.
+- Mudança visual compartilhada pelos painéis que possuem CRM, incluindo a
+  instalação local. Não altera permissões, rotas de ação, banco ou WhatsApp.

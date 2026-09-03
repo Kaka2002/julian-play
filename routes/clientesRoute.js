@@ -6649,30 +6649,31 @@ function tabelaLeads(leads = [], clientes = []) {
         .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome)} - ${escapar(cliente.telefone || '')}</option>`)
         .join('');
 
-    return `<table>
+    return `<div class="crm-table-scroll"><table class="crm-table">
+        <colgroup><col style="width:22%"><col style="width:17%"><col style="width:16%"><col style="width:19%"><col style="width:26%"></colgroup>
         <thead><tr><th>Lead</th><th>Funil</th><th>Agenda</th><th>Histórico</th><th>Ações</th></tr></thead>
         <tbody>
             ${leads.map(lead => `<tr>
-                <td>
+                <td data-label="Lead">
                     <strong>${escapar(lead.nome)}</strong>
                     <div class="cell-muted">${escapar(lead.telefone || '')}</div>
                     ${lead.origem ?`<div class="cell-muted">Origem: ${escapar(lead.origem)}</div>` : ''}
                     ${lead.interesse ?`<div class="cell-muted">Interesse: ${escapar(lead.interesse)}</div>` : ''}
                 </td>
-                <td>
+                <td data-label="Funil">
                     <span class="badge ${classeStatusLead(lead.status, lead.prioridade)}">${escapar(rotuloStatusLead(lead.status))}</span>
                     ${lead.prioridade === 'urgente' ?'<div class="cell-muted">Urgente</div>' : ''}
                     ${lead.valorEstimado ?`<div class="cell-muted">Estimado: R$ ${escapar(lead.valorEstimado)}</div>` : ''}
                 </td>
-                <td>
+                <td data-label="Agenda">
                     ${lead.proximoContato ?`<div>${escapar(formatarDataHoraCurta(lead.proximoContato))}</div>` : '-'}
                     ${lead.ultimoContato ?`<div class="cell-muted">Último: ${escapar(formatarDataHoraCurta(lead.ultimoContato))}</div>` : ''}
                 </td>
-                <td>
+                <td data-label="Histórico">
                     ${lead.observacoes ?`<div class="cell-muted">${escapar(lead.observacoes)}</div>` : '-'}
                     ${lead.clienteNome ?`<div class="cell-muted">Cliente: ${escapar(lead.clienteNome)}</div>` : ''}
                 </td>
-                <td>
+                <td data-label="Ações">
                     <div class="row-actions">
                         <a class="button icon-only icon-action whats" href="https://wa.me/${escapar(String(lead.telefone || '').replace(/\\D/g, ''))}" title="WhatsApp">${icon('whats')}</a>
                         <form method="post" action="/crm/${escapar(lead.id)}/enviar" onsubmit="return confirm('Enviar mensagem comercial para este lead?');"><button class="button icon-only icon-action green" type="submit" title="Enviar acompanhamento">${icon('atendimento')}</button></form>
@@ -6682,8 +6683,8 @@ function tabelaLeads(leads = [], clientes = []) {
                         <a class="button icon-only icon-action" href="/crm/${escapar(lead.id)}/editar" title="Editar">${icon('edit')}</a>
                         <form method="post" action="/crm/${escapar(lead.id)}/excluir" onsubmit="return confirm('Apagar este lead?');"><button class="button icon-only icon-action" type="submit" title="Apagar">${icon('trash')}</button></form>
                     </div>
-                    <form class="actions" method="post" action="/crm/${escapar(lead.id)}/converter" style="margin-top:8px;">
-                        <select name="clienteId" required>
+                    <form class="crm-converter" method="post" action="/crm/${escapar(lead.id)}/converter">
+                        <select name="clienteId" aria-label="Cliente para vincular a ${escapar(lead.nome)}" required>
                             <option value="">Converter para cliente...</option>
                             ${opcoesClientes}
                         </select>
@@ -6692,14 +6693,40 @@ function tabelaLeads(leads = [], clientes = []) {
                 </td>
             </tr>`).join('')}
         </tbody>
-    </table>`;
+    </table></div>`;
 }
 
 function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relatorio = {} }) {
     const statusAtual = filtros.status || 'ativos';
     const busca = filtros.busca || '';
 
-    return `<section class="page-title">
+    return `<style>
+        .crm-report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; padding:0 28px 24px; }
+        .crm-report-grid h3 { margin:0 0 10px; color:var(--muted); font-size:14px; }
+        .crm-report-row { display:flex; justify-content:space-between; align-items:baseline; gap:16px; padding:10px 0; border-bottom:1px solid var(--line); }
+        .crm-report-row strong { overflow-wrap:anywhere; }
+        .crm-report-row span { white-space:nowrap; color:var(--muted); }
+        .crm-report-grid .empty { padding:12px 0; text-align:left; }
+        .crm-filters { display:flex; align-items:center; flex-wrap:wrap; gap:8px; flex:1; max-width:720px; }
+        .crm-filters input { flex:2 1 220px; min-width:0; }
+        .crm-filters select { flex:1 1 180px; width:auto; min-width:0; }
+        .crm-table-scroll { overflow-x:auto; }
+        .crm-table { table-layout:fixed; min-width:900px; }
+        .crm-table td { vertical-align:top; overflow-wrap:anywhere; padding:18px 16px; }
+        .crm-table th { padding:14px 16px; }
+        .crm-table .row-actions { justify-content:flex-start; flex-wrap:wrap; gap:6px; }
+        .crm-table .badge { white-space:normal; }
+        .crm-converter { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .crm-converter select { width:100%; min-width:0; }
+        @media(max-width:640px) {
+            .crm-report-grid { grid-template-columns:1fr; gap:20px; padding:0 20px 20px; }
+            .crm-filters { width:100%; }
+            .crm-filters input,.crm-filters select { flex-basis:100%; width:100%; }
+            .crm-table { min-width:0; }
+            .crm-table colgroup { display:none; }
+            .crm-table td { padding:8px 20px; }
+        }
+    </style><section class="page-title">
         <h1>CRM de vendas</h1>
         <div class="subtitle">Funil comercial, retornos e conversão de interessados em clientes</div>
     </section>
@@ -6712,14 +6739,14 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
                 <div class="subtitle">${relatorio.conversoesMes || 0} conversão(ões) neste mês</div>
             </div>
         </div>
-        <div class="fields" style="padding-top:0;">
+        <div class="crm-report-grid">
             <div>
-                <div class="form-section">Por status</div>
-                ${(relatorio.porStatus || []).map(item => `<div class="client-row"><strong>${escapar(rotuloStatusLead(item.nome))}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
+                <h3>Por status</h3>
+                ${(relatorio.porStatus || []).map(item => `<div class="crm-report-row"><strong>${escapar(rotuloStatusLead(item.nome))}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
             </div>
             <div>
-                <div class="form-section">Por origem</div>
-                ${(relatorio.porOrigem || []).map(item => `<div class="client-row"><strong>${escapar(item.nome)}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
+                <h3>Por origem</h3>
+                ${(relatorio.porOrigem || []).map(item => `<div class="crm-report-row"><strong>${escapar(item.nome)}</strong><span>${escapar(item.quantidade)} lead(s)</span></div>`).join('') || '<div class="empty">Sem dados.</div>'}
             </div>
         </div>
     </section>
@@ -6729,9 +6756,9 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
                 <h2 class="panel-title">Funil de leads</h2>
                 <div class="subtitle">${leads.length} lead(s) no filtro atual</div>
             </div>
-            <form class="actions" method="get" action="/crm">
-                <input name="busca" value="${escapar(busca)}" placeholder="Buscar lead, telefone ou origem" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
-                <select name="status" onchange="this.form.submit()">
+            <form class="crm-filters" method="get" action="/crm">
+                <input name="busca" aria-label="Buscar leads" value="${escapar(busca)}" placeholder="Buscar lead, telefone ou origem" style="padding:10px;border:1px solid var(--line);border-radius:8px;">
+                <select name="status" aria-label="Filtrar por status" onchange="this.form.submit()">
                     ${[
                         ['ativos', 'Ativos'],
                         ['novo', 'Novo'],
