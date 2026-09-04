@@ -6575,12 +6575,26 @@ function opcoesStatusLead(statusAtual = '') {
     ].map(([valor, texto]) => `<option value="${valor}" ${valor === statusAtual ?'selected' : ''}>${texto}</option>`).join('');
 }
 
-function mensagemLeadPadrao(lead = {}) {
-    return `Olá, ${lead.nome || 'tudo bem'}!
+function mensagemLeadPadrao(lead = {}, config = {}, planos = []) {
+    const nomeEmpresa = String(config.nomeEmpresaRobo || 'Julian Play').trim();
+    const interesse = String(lead.interesse || '').trim();
+    const listaPlanos = planos.length
+        ? planos.map((plano, index) => {
+            const valor = plano.valorConfigurado === false ? 'valor a consultar' : `R$ ${plano.valor}`;
+            return `*${index + 1}* - ${plano.nome} (${valor})`;
+        }).join('\n')
+        : '*Planos e valores disponíveis com nosso atendimento*';
 
-Passando para acompanhar seu atendimento sobre ${lead.interesse || 'o sistema'}.
+    return `Olá, *${lead.nome || 'tudo bem'}*! 👋
 
-Fico à disposição para ajudar e liberar os próximos passos.`;
+Aqui é da *${nomeEmpresa}*.
+${interesse ? `Vi que você demonstrou interesse no plano *${interesse}*.` : 'Estou passando para acompanhar seu atendimento.'}
+
+Estas são as opções disponíveis:
+
+${listaPlanos}
+
+Responda com o *número do plano* que deseja conhecer. Se preferir ajuda para escolher, responda *atendente*.`;
 }
 
 function cardsFunilCrm(resumo = {}) {
@@ -6594,7 +6608,16 @@ function cardsFunilCrm(resumo = {}) {
     </section>`;
 }
 
-function formularioLead(lead = {}) {
+function formularioLead(lead = {}, planos = []) {
+    const interesseAtual = String(lead.interesse || '').trim();
+    const opcoesPlanos = planos.map(plano => ({
+        valor: plano.nome,
+        texto: `${plano.nome} (${plano.dias} dias - ${plano.valorConfigurado === false ? 'valor a consultar' : `R$ ${plano.valor}`})`
+    }));
+    if (interesseAtual && !opcoesPlanos.some(plano => plano.valor === interesseAtual)) {
+        opcoesPlanos.unshift({ valor: interesseAtual, texto: `${interesseAtual} (interesse já cadastrado)` });
+    }
+
     return `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -6615,7 +6638,15 @@ function formularioLead(lead = {}) {
                     ...ORIGENS_CLIENTE.map(origem => ({ valor: origem, texto: origem }))
                 ]
             })}
-            ${campo({ nome: 'interesse', label: 'Interesse', valor: lead.interesse || '', attrs: 'placeholder="Ex: mensal, app, revenda, teste"' })}
+            ${campo({
+                nome: 'interesse',
+                label: 'Plano de interesse',
+                valor: interesseAtual,
+                opcoes: [
+                    { valor: '', texto: 'Escolha um plano...' },
+                    ...opcoesPlanos
+                ]
+            })}
             <label>Status
                 <select name="status">${opcoesStatusLead(lead.status || 'novo')}</select>
             </label>
@@ -6711,7 +6742,7 @@ function tabelaLeads(leads = [], clientes = []) {
     </table></div>`;
 }
 
-function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relatorio = {} }) {
+function telaCrm({ leads = [], clientes = [], planos = [], filtros = {}, resumo = {}, relatorio = {} }) {
     const statusAtual = filtros.status || 'ativos';
     const busca = filtros.busca || '';
 
@@ -6746,7 +6777,7 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
         <div class="subtitle">Funil comercial, retornos e conversão de interessados em clientes</div>
     </section>
     ${cardsFunilCrm(resumo)}
-    ${formularioLead({})}
+    ${formularioLead({}, planos)}
     <section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -6792,12 +6823,12 @@ function telaCrm({ leads = [], clientes = [], filtros = {}, resumo = {}, relator
     </section>`;
 }
 
-function telaEditarLead({ lead = {}, historico = [] }) {
+function telaEditarLead({ lead = {}, historico = [], planos = [] }) {
     return `<section class="page-title">
         <h1>Lead comercial</h1>
         <div class="subtitle">${escapar(lead.nome || '')}</div>
     </section>
-    ${formularioLead(lead)}
+    ${formularioLead(lead, planos)}
     ${historicoLeadHtml(lead, historico)}`;
 }
 
@@ -9080,25 +9111,27 @@ router.get('/crm', async (req, res) => {
         status: String(req.query.status || 'ativos'),
         busca: String(req.query.busca || '').trim()
     };
-    const [leads, clientes, resumo, relatorio] = await Promise.all([
+    const [leads, clientes, planos, resumo, relatorio] = await Promise.all([
         listarLeads(filtros),
         listarClientes(),
+        listarPlanosComerciais(),
         resumoCrm(),
         relatorioComercial()
     ]);
 
     await renderizar(res, {
         titulo: 'CRM',
-        conteudo: telaCrm({ leads, clientes, filtros, resumo, relatorio }),
+        conteudo: telaCrm({ leads, clientes, planos, filtros, resumo, relatorio }),
         mensagem: req.query.mensagem || '',
         ativo: 'crm'
     });
 });
 
 router.get('/crm/:id/editar', async (req, res) => {
-    const [lead, historico] = await Promise.all([
+    const [lead, historico, planos] = await Promise.all([
         buscarLeadPorId(req.params.id),
-        listarHistoricoLead(req.params.id)
+        listarHistoricoLead(req.params.id),
+        listarPlanosComerciais()
     ]);
 
     if (!lead) {
@@ -9107,7 +9140,7 @@ router.get('/crm/:id/editar', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Editar lead',
-        conteudo: telaEditarLead({ lead, historico }),
+        conteudo: telaEditarLead({ lead, historico, planos }),
         mensagem: req.query.mensagem || '',
         ativo: 'crm'
     });
@@ -9200,10 +9233,14 @@ router.post('/crm/:id/enviar', async (req, res) => {
             return res.redirect('/crm?mensagem=WhatsApp nao esta conectado.');
         }
 
+        const [config, planos] = await Promise.all([
+            obterConfiguracoes(),
+            listarPlanosComerciais()
+        ]);
         const envio = await enviarMensagemWhatsAppComFallback(
             client,
             lead.telefone,
-            mensagemLeadPadrao(lead),
+            mensagemLeadPadrao(lead, config, planos),
             'Envio comercial para lead'
         );
 

@@ -1293,3 +1293,14 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Busca, status e botão Filtrar ficam em linha ao lado do título da lista no
   desktop e se reorganizam no celular. Alteração somente visual, compartilhada
   por instalações com Atendimentos, sem mudar filtros, permissões ou dados.
+
+## Abordagem comercial de leads na versão 1.3.21
+
+- O cadastro de leads permite escolher o plano de interesse usando o catálogo
+  comercial ativo, preservando interesses antigos que tenham sido digitados
+  livremente.
+- A mensagem de acompanhamento identifica a empresa configurada (com fallback
+  para Julian Play), apresenta os planos e valores disponíveis e orienta o
+  interessado a responder com o número do plano desejado ou pedir atendente.
+- A mudança é compartilhada entre instalações e não altera permissões, banco,
+  sessões do WhatsApp ou dados já cadastrados.

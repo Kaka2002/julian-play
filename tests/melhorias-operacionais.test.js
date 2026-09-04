@@ -45,6 +45,32 @@ test('CRM distribui relatório e preserva ações e dados dos leads', () => {
     assert.equal((contexto.telaCrm({}).match(/Sem dados\./g) || []).length, 2);
 });
 
+test('CRM oferece planos cadastrados e envia abordagem identificada ao lead', () => {
+    const vm = require('node:vm');
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
+    const inicio = fonte.indexOf('function mensagemLeadPadrao(');
+    const fim = fonte.indexOf('function cardsFunilCrm(', inicio);
+    const contexto = vm.createContext({});
+    vm.runInContext(fonte.slice(inicio, fim), contexto);
+
+    const mensagem = contexto.mensagemLeadPadrao(
+        { nome: 'André', interesse: 'Mensal' },
+        { nomeEmpresaRobo: 'Julian Play' },
+        [
+            { nome: 'Mensal', valor: '35,00', valorConfigurado: true },
+            { nome: 'Anual', valor: '300,00', valorConfigurado: true }
+        ]
+    );
+
+    assert.match(mensagem, /Aqui é da \*Julian Play\*/);
+    assert.match(mensagem, /\*1\* - Mensal \(R\$ 35,00\)/);
+    assert.match(mensagem, /\*2\* - Anual \(R\$ 300,00\)/);
+    assert.match(mensagem, /número do plano/);
+    assert.match(fonte, /label: 'Plano de interesse'/);
+    assert.match(fonte, /listarPlanosComerciais\(\)/);
+    assert.match(fonte, /mensagemLeadPadrao\(lead, config, planos\)/);
+});
+
 test('upload multipart ignora o campo CSRF e extrai o arquivo real', () => {
     const { extrairArquivoMultipart, validarCsrfMultipart } = require('../services/uploadMultipartService');
     const boundary = 'julian-play-boundary';
