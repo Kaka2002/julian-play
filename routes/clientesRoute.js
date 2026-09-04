@@ -84,7 +84,8 @@ const {
     listarTiposPlanos,
     buscarTipoPlanoPorId,
     salvarTipoPlano,
-    removerTipoPlano
+    removerTipoPlano,
+    ehPlanoBonusMensal
 } = require('../services/tiposPlanos');
 const {
     listarApps,
@@ -6578,8 +6579,9 @@ function opcoesStatusLead(statusAtual = '') {
 function mensagemLeadPadrao(lead = {}, config = {}, planos = []) {
     const nomeEmpresa = String(config.nomeEmpresaRobo || 'Julian Play').trim();
     const interesse = String(lead.interesse || '').trim();
-    const listaPlanos = planos.length
-        ? planos.map((plano, index) => {
+    const planosDisponiveis = planos.filter(plano => !ehPlanoBonusMensal(plano));
+    const listaPlanos = planosDisponiveis.length
+        ? planosDisponiveis.map((plano, index) => {
             const valor = plano.valorConfigurado === false ? 'valor a consultar' : `R$ ${plano.valor}`;
             return `*${index + 1}* - ${plano.nome} (${valor})`;
         }).join('\n')
@@ -6610,7 +6612,7 @@ function cardsFunilCrm(resumo = {}) {
 
 function formularioLead(lead = {}, planos = []) {
     const interesseAtual = String(lead.interesse || '').trim();
-    const opcoesPlanos = planos.map(plano => ({
+    const opcoesPlanos = planos.filter(plano => !ehPlanoBonusMensal(plano)).map(plano => ({
         valor: plano.nome,
         texto: `${plano.nome} (${plano.dias} dias - ${plano.valorConfigurado === false ? 'valor a consultar' : `R$ ${plano.valor}`})`
     }));

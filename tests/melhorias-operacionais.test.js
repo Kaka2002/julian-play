@@ -50,13 +50,16 @@ test('CRM oferece planos cadastrados e envia abordagem identificada ao lead', ()
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     const inicio = fonte.indexOf('function mensagemLeadPadrao(');
     const fim = fonte.indexOf('function cardsFunilCrm(', inicio);
-    const contexto = vm.createContext({});
+    const contexto = vm.createContext({
+        ehPlanoBonusMensal: plano => plano.nome === 'Bônus Mensal'
+    });
     vm.runInContext(fonte.slice(inicio, fim), contexto);
 
     const mensagem = contexto.mensagemLeadPadrao(
         { nome: 'André', interesse: 'Mensal' },
         { nomeEmpresaRobo: 'Julian Play' },
         [
+            { nome: 'Bônus Mensal', valor: 'valor a consultar', valorConfigurado: false },
             { nome: 'Mensal', valor: '35,00', valorConfigurado: true },
             { nome: 'Anual', valor: '300,00', valorConfigurado: true }
         ]
@@ -65,6 +68,7 @@ test('CRM oferece planos cadastrados e envia abordagem identificada ao lead', ()
     assert.match(mensagem, /Aqui é da \*Julian Play\*/);
     assert.match(mensagem, /\*1\* - Mensal \(R\$ 35,00\)/);
     assert.match(mensagem, /\*2\* - Anual \(R\$ 300,00\)/);
+    assert.doesNotMatch(mensagem, /Bônus Mensal/);
     assert.match(mensagem, /número do plano/);
     assert.match(fonte, /label: 'Plano de interesse'/);
     assert.match(fonte, /listarPlanosComerciais\(\)/);

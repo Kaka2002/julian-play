@@ -1302,5 +1302,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - A mensagem de acompanhamento identifica a empresa configurada (com fallback
   para Julian Play), apresenta os planos e valores disponíveis e orienta o
   interessado a responder com o número do plano desejado ou pedir atendente.
+- O plano interno Bônus Mensal não aparece no seletor nem na mensagem enviada
+  ao lead; a numeração comercial começa no primeiro plano vendável.
 - A mudança é compartilhada entre instalações e não altera permissões, banco,
   sessões do WhatsApp ou dados já cadastrados.
