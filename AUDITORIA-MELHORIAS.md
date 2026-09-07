@@ -5,6 +5,22 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.33: Central de Pendências protegida e compartilhada pelos painéis
+  de clientes. A tela consolida vencimentos e testes, contatos de CRM e
+  atendimentos, cobranças pendentes ou falhas, mensagens incertas, renovações
+  de painéis, campanhas pausadas, WhatsApp desconectado e backup atrasado.
+  Prioridade, área responsável, referência de prazo, cliente ou origem e link
+  de resolução são calculados diretamente das fontes existentes. Busca,
+  filtros e paginação não criam cópias dos dados; o item desaparece quando a
+  condição real é resolvida e o histórico permanece na área de origem.
+- Perfis da 1.3.33: painel administrador, cliente comercial no servidor e
+  instalação local recebem a central dentro do painel já autenticado. O
+  Painel Mestre mantém sua Central de Saúde própria. Bancos, configurações,
+  pagamentos, históricos, backups e sessões são preservados; não existe nova
+  tabela, migração, seed nem ação manual após deploy. Validada com testes de
+  consolidação e resolução, suíte interna, navegação real, sintaxe, diff e
+  pacote local limpo.
+
 - Versão 1.3.32: 22 rotas de cadastro e ações individuais extraídas para
   `routes/clientesAcoesRoute.js`, com dependências injetadas e proteção de
   renovação duplicada por instância. Status, consentimento, ficha, notas,
@@ -111,7 +127,7 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Cloudflare Access no Painel Mestre, que depende de configuração na conta
   Cloudflare e de uma política de acesso definida pelo proprietário.
-- Central de tarefas, pesquisa global, linha do tempo unificada, detecção de duplicados,
+- Pesquisa global, linha do tempo unificada, detecção de duplicados,
   conciliação diária, exportação de auditoria e política operacional de
   retenção/exclusão.
 - Execução do instalador completo em uma máquina Windows física recém-formatada

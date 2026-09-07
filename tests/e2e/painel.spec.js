@@ -62,6 +62,21 @@ test('campanhas disponiveis aparecem separadas do historico', async ({ page }) =
     await expect(page.getByRole('heading', { name: 'Campanhas registradas' })).toBeVisible();
 });
 
+test('central de pendencias consolida riscos e permite filtrar por area', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/pendencias');
+
+    await expect(page.getByRole('heading', { name: 'Central de Pendências' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Pendências/ })).toHaveClass(/active/);
+    await expect(page.getByText('WhatsApp desconectado')).toBeVisible();
+    await expect(page.getByText('Total aberto')).toBeVisible();
+    await page.getByLabel('Filtrar área').selectOption('whatsapp');
+    await page.getByRole('button', { name: 'Filtrar' }).click();
+    await expect(page).toHaveURL(/area=whatsapp/);
+    await expect(page.getByText('WhatsApp desconectado')).toBeVisible();
+    await expect(page.locator('.pending-item .badge.muted')).toHaveText('Área responsável: WhatsApp');
+});
+
 test('manutencao exibe controles independentes para o robo', async ({ page }) => {
     await autenticar(page);
     await page.goto('/manutencao');

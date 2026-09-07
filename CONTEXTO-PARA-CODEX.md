@@ -1485,3 +1485,26 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   histórico. Próximas etapas: controles operacionais restantes da Manutenção;
   dashboard e listagens; modelos de mensagens; preparação comercial e
   renovação; revisão final do agregador.
+
+## Central de Pendências Operacionais na versão 1.3.33
+
+- A rota autenticada `/pendencias` reúne em uma fila diária clientes vencidos
+  ou vencendo, testes próximos do fim, retornos atrasados de CRM e
+  atendimentos, cobranças sem conclusão, falhas ou incertezas da fila do
+  WhatsApp, renovações externas com falha, campanhas pausadas, WhatsApp
+  desconectado e ausência de backup verificado nas últimas 36 horas.
+- Cada item mostra prioridade, área responsável, cliente ou origem, referência
+  de prazo e um link para resolver na tela que já controla aquele domínio. A
+  central oferece busca, filtros por prioridade e área e paginação configurável.
+- O serviço consulta somente o banco do `DATA_DIR` da instalação e o estado
+  operacional do próprio processo. Não persiste uma cópia das pendências: ao
+  resolver a condição na origem, ela deixa a lista, enquanto pagamentos,
+  notas, eventos, campanhas e demais trilhas continuam preservando a auditoria.
+- A mudança afeta o painel administrador, clientes comerciais provisionados e
+  instalações locais. O Painel Mestre continua com sua Central de Saúde e não
+  recebe funções duplicadas. Não há migração, seed, novos valores iniciais ou
+  ação manual posterior ao deploy/atualização.
+- Validação: `node --check` nos arquivos JavaScript, três testes específicos em
+  bancos temporários, suíte interna com 136 testes, oito testes Playwright em
+  Chrome incluindo navegação e filtro da central, `git diff --check`, geração
+  oficial e teste de instalação limpa do pacote.

@@ -1,4 +1,5 @@
 const criarClientesAcoesRoute = require('./clientesAcoesRoute');
+const criarPendenciasRoute = require('./pendenciasRoute');
 const express = require('express');
 const criarCatalogosRoute = require('./catalogosRoute');
 const criarPaineisRoute = require('./paineisRoute');
@@ -163,6 +164,7 @@ const { registrarEventoSistema } = require('../services/eventosSistema');
 const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
+const { listarPendenciasOperacionais } = require('../services/pendenciasOperacionaisService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
@@ -1396,6 +1398,28 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .panel {
             overflow: hidden;
+        }
+
+        .pending-list { display: grid; }
+        .pending-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            padding: 20px 28px;
+            border-bottom: 1px solid var(--line);
+        }
+        .pending-item:last-child { border-bottom: 0; }
+        .pending-item h3 { margin: 9px 0 5px; font-size: 17px; }
+        .pending-item p { margin: 0 0 6px; color: var(--muted); }
+        .pending-item small { color: var(--muted); }
+        .pending-filters {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(150px, auto)) auto;
+            gap: 10px;
+            padding: 18px 28px;
+            margin: 0;
+            border-bottom: 1px solid var(--line);
         }
 
         .panel-head {
@@ -2837,6 +2861,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 width: 44px;
                 height: 44px;
             }
+
+            .pending-filters { grid-template-columns: 1fr; padding: 16px; }
+            .pending-item { align-items: flex-start; flex-direction: column; padding: 18px 16px; }
         }
     </style>
 </head>
@@ -2854,6 +2881,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             </div>
             <nav>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
+                <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
                 <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
                 <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
@@ -9316,6 +9344,18 @@ router.use(criarClientesAcoesRoute({
     valorPrimeiroItem,
     vencimentoExpirou,
     verificarExclusaoDefinitivaCliente
+}));
+
+router.use(criarPendenciasRoute({
+    listarPendenciasOperacionais,
+    obterStatusSistema,
+    getStatusWhatsApp,
+    renderizar,
+    escapar,
+    desativarCache,
+    paginarItens,
+    paginaAtual,
+    quantidadePorPagina
 }));
 
 router.use(criarCatalogosRoute({
