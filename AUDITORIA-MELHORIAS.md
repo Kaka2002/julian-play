@@ -1,6 +1,6 @@
 # Auditoria das melhorias recomendadas
 
-Atualizada em 28/07/2026. Este documento registra o estado comprovado no
+Atualizada em 07/09/2026. Este documento registra o estado comprovado no
 código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
@@ -42,6 +42,19 @@ código; itens operacionais externos não são marcados como implementados.
   totalmente isolado.
 - A otimização de memória consulta o estado real do PM2 e reinicia somente
   processos `online`; processos parados ou com erro permanecem intocados.
+- A fila persistente elimina texto e mídia cifrados após confirmação do envio,
+  preservando metadados de auditoria e mantendo conteúdo somente para mensagens
+  pendentes, incertas ou com falha.
+- Campanhas calculam a previsão real antes do disparo e permitem novo envio
+  depois do limite semanal, sem bloqueio permanente pelo histórico antigo.
+- Manutenção mede páginas livres e conteúdo protegido do SQLite e oferece
+  compactação por senha, com backup verificado, `VACUUM` e `quick_check`.
+- Rotas de campanhas, pagamentos manuais, catálogos (Planos, Apps e
+  Dispositivos) e Painéis possuem módulos próprios. As ações sensíveis de
+  Painéis preservam a confirmação da senha atual.
+- Toda mudança funcional, correção ou refatoração relevante passa a atualizar
+  este arquivo e `CONTEXTO-PARA-CODEX.md` na mesma entrega; `AGENTS.md` recebe
+  novas regras permanentes quando aplicável.
 
 ## Parcial
 
@@ -51,8 +64,8 @@ código; itens operacionais externos não são marcados como implementados.
   Privacidade, campanhas, itens e eventos históricos já possuem migrações
   formais; a inicialização compatível permanece temporariamente como rede de
   segurança para instalações antigas.
-- Rotas: pagamentos manuais e a entrada/governança de campanhas foram
-  extraídos para módulos próprios. Os outros domínios do arquivo histórico
+- Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos e
+  Painéis foram extraídos para módulos próprios. Os outros domínios do arquivo histórico
   continuam sendo separados somente quando forem alterados, evitando uma
   reescrita ampla sem benefício funcional.
 - Observabilidade: o Painel Mestre compara automaticamente a versão devolvida

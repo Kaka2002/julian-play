@@ -12,6 +12,20 @@ Depois de mudancas importantes de infraestrutura, arquitetura, entrega ou
 operacao, atualize `CONTEXTO-PARA-CODEX.md`. Nunca grave nele senhas, tokens,
 cookies, chaves ou outros segredos.
 
+Toda alteracao funcional, correcao, refatoracao relevante, migracao ou mudanca
+operacional deve ser documentada na mesma entrega, sem depender do historico
+da conversa. Atualize obrigatoriamente:
+
+- `CONTEXTO-PARA-CODEX.md`, com versao, comportamento, impacto nos perfis,
+  preservacao de dados e cuidados operacionais;
+- `AUDITORIA-MELHORIAS.md`, movendo ou acrescentando o item em Implementado,
+  Parcial ou Pendente e registrando limitacoes conhecidas;
+- `AGENTS.md`, somente quando a mudanca criar uma regra permanente de
+  desenvolvimento, validacao, seguranca, operacao ou entrega.
+
+Documentacao nunca deve conter senhas, tokens, cookies, chaves, dados pessoais
+de clientes ou outros segredos.
+
 ## Ambientes suportados
 
 ### Servidor Windows / computador de produção atual
@@ -42,6 +56,11 @@ cookies, chaves ou outros segredos.
 8. Nao colocar dados reais da JULIAN PLAY como padrao de novas instalacoes. Nome da empresa, imagens e dados PIX devem iniciar vazios para o cliente preencher.
 9. Nao executar seed de demonstracao em instalacoes reais.
 10. Nao incluir `entrega-cliente-local\ENVIAR_AO_CLIENTE.zip` ou `julian-play-app.zip` no Git. Esses arquivos sao artefatos gerados.
+11. Registrar no contexto e na auditoria toda nova funcionalidade, correcao e
+    refatoracao relevante na mesma alteracao de codigo.
+12. Ao documentar, informar quais dos quatro perfis sao afetados, quais dados
+    sao preservados, quais testes foram executados e se existe acao manual
+    necessaria depois do deploy.
 
 ## Validacao obrigatoria
 
@@ -78,3 +97,9 @@ Sempre informar comandos prontos para:
 5. instalar uma nova copia local ou atualizar uma instalacao local existente, conforme o caso.
 
 O `deploy.ps1` deve recriar o pacote de instalacao local no servidor depois de uma atualizacao bem-sucedida.
+
+Antes do commit final, confirmar que codigo, versao, `CONTEXTO-PARA-CODEX.md` e
+`AUDITORIA-MELHORIAS.md` descrevem a mesma entrega. Depois do push para `main`,
+acompanhar o workflow `Validacao do Julian Play` ate o resultado final sempre
+que houver acesso ao GitHub; se a API estiver indisponivel ou limitada,
+informar claramente que a confirmacao remota ficou pendente.

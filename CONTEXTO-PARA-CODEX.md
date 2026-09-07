@@ -1377,3 +1377,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   do roteador principal.
 - A extração é compartilhada pelos quatro perfis e não altera bancos,
   configurações, tokens cifrados, integrações ou dados existentes.
+
+## Registro permanente de melhorias em 07/09/2026
+
+- Toda funcionalidade, correção, refatoração relevante, migração ou alteração
+  operacional deve atualizar na mesma entrega este contexto e
+  `AUDITORIA-MELHORIAS.md`; `AGENTS.md` deve ser atualizado quando surgir uma
+  regra permanente de desenvolvimento, validação, segurança ou operação.
+- O registro deve identificar versão, perfis afetados, preservação de dados,
+  testes executados, limitações conhecidas e ações manuais posteriores. Nenhum
+  desses arquivos pode conter segredos ou dados pessoais de clientes.
+- Depois de push para `main`, a execução `Validacao do Julian Play` deve ser
+  acompanhada até o resultado final quando a API do GitHub estiver disponível.
