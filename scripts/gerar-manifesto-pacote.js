@@ -7,7 +7,10 @@ const configPath = path.resolve('.julian-master-install.json');
 let config = {};
 try { config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (_) {}
 const chave = String(process.env.LICENSE_PRIVATE_KEY || config.licenseSigningPrivateKey || '').replace(/\\n/g, '\n').trim();
-if (!chave) throw new Error('Chave privada Ed25519 ausente para assinar o manifesto.');
+if (!chave) {
+    console.warn('Manifesto nao assinado: configure LICENSE_PRIVATE_KEY no Painel Mestre.');
+    process.exit(0);
+}
 const dados = fs.readFileSync(pacote);
 const hash = crypto.createHash('sha256').update(dados).digest('hex');
 const payload = { versao: 1, arquivo: path.basename(pacote), tamanho: dados.length, sha256: hash, publicadoEm: new Date().toISOString() };
