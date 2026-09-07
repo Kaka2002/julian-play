@@ -85,6 +85,8 @@ New-Item -ItemType Directory -Path (Split-Path -Parent $Destino) -Force | Out-Nu
 Compress-Archive -Path (Join-Path $temporario '*') -DestinationPath $Destino -Force
 $hash = (Get-FileHash -LiteralPath $Destino -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText("$Destino.sha256", "$hash  $([IO.Path]::GetFileName($Destino))`r`n", (New-Object Text.UTF8Encoding($false)))
+& node (Join-Path $raizProjeto 'scripts\gerar-manifesto-pacote.js') $Destino
+if ($LASTEXITCODE -ne 0) { Write-Warning 'Manifesto nao assinado: configure LICENSE_PRIVATE_KEY no Painel Mestre antes da distribuicao.' }
 Remove-Item -LiteralPath $temporario -Recurse -Force
 
 Write-Host "Pacote criado: $Destino" -ForegroundColor Green

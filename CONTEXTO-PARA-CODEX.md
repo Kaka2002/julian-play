@@ -1578,3 +1578,7 @@ O lápis da lista de atendimentos abre a edição do registro selecionado em /at
 ## Ativação atômica por máquina
 
 O endpoint de consulta remota vincula a primeira máquina com fingerprint por UPDATE condicional, evitando duas ativações simultâneas. Tentativas concorrentes em outra máquina são registradas no histórico e recebem autorização suspensa. Instalações e dados existentes permanecem preservados.
+
+## Manifesto assinado de pacote
+
+O gerador scripts/gerar-manifesto-pacote.js cria manifesto externo com SHA-256 e assinatura Ed25519 usando somente a chave privada do Painel Mestre. O script de empacotamento tenta gerar o manifesto e alerta quando a chave não está configurada; não grava segredo no pacote.

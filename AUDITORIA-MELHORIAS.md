@@ -187,3 +187,5 @@ código; itens operacionais externos não são marcados como implementados.
 - Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.
 
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
+
+- Manifesto de pacote: gerador Ed25519 criado para registrar versão, arquivo, tamanho e SHA-256; a distribuição só deve ser feita após configurar a chave privada do Painel Mestre.
