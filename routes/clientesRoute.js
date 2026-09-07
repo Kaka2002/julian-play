@@ -26,7 +26,6 @@ const {
     removerPagamentoCliente,
     normalizarTelefone,
     listarNotasCliente,
-    campanhaAmizadeJaEnviada,
     adicionarNotaCliente,
     buscarAlertasCadastroCliente,
     listarClientesVencidosParaCobranca,
@@ -4802,17 +4801,6 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
                         telefone,
                         status: 'ignorado',
                         motivo
-                    });
-                    continue;
-                }
-
-                if (await campanhaAmizadeJaEnviada(cliente.id)) {
-                    campanhaAmizadeExecucao.jaEnviados += 1;
-                    registrarClienteCampanha(campanhaAmizadeExecucao.clientesJaEnviados, cliente, 'ja enviado');
-                    await registrarItemCampanha(campanhaAmizadeExecucao.id, cliente, {
-                        telefone,
-                        status: 'ja_enviado',
-                        motivo: 'ja enviado anteriormente'
                     });
                     continue;
                 }

@@ -1306,3 +1306,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   ao lead; a numeração comercial começa no primeiro plano vendável.
 - A mudança é compartilhada entre instalações e não altera permissões, banco,
   sessões do WhatsApp ou dados já cadastrados.
+
+## Reenvio periódico de campanhas na versão 1.3.22
+
+- Uma nova execução da campanha não bloqueia mais permanentemente clientes que
+  tiveram envio confirmado em meses anteriores. A proteção contra repetição
+  passa a usar o limite semanal configurado, atualmente de uma campanha por
+  cliente a cada sete dias.
+- Retomadas continuam usando os itens pendentes da mesma execução e não
+  reenviam para quem já foi concluído nela. Consentimento, opt-out, testes,
+  telefone, limite diário e pausa por erros permanecem protegidos.
+- Os registros históricos `ja_enviado` existentes são preservados apenas como
+  auditoria; não impedem novas campanhas após o período de proteção.

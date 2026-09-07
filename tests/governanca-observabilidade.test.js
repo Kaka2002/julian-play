@@ -68,6 +68,17 @@ test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     assert.match(clientes, /const porPaginaClientes = quantidadePorPagina\(req\.query\.porPaginaClientes\)/);
 });
 
+test('nova execução de campanha não bloqueia para sempre quem recebeu em mês anterior', () => {
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    const inicio = clientes.indexOf('async function executarCampanhaAmizadeEmLotes(');
+    const fim = clientes.indexOf('function obterCampanhaAmizadeExecucao(', inicio);
+    const execucao = clientes.slice(inicio, fim > inicio ? fim : clientes.length);
+
+    assert.doesNotMatch(execucao, /campanhaAmizadeJaEnviada/);
+    assert.match(execucao, /contarEnviosClienteDesde\(cliente\.id, inicioSemana\)/);
+    assert.match(execucao, /limite semanal de/);
+});
+
 test('pacote possui verificação automatizada de instalação limpa', () => {
     const script = fs.readFileSync(path.join(repoRoot, 'entrega-cliente-local', 'USO_INTERNO_NAO_ENVIAR', 'TESTAR-PACOTE-LIMPO.ps1'), 'utf8');
     assert.match(script, /Expand-Archive/);
