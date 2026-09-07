@@ -1389,3 +1389,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   desses arquivos pode conter segredos ou dados pessoais de clientes.
 - Depois de push para `main`, a execução `Validacao do Julian Play` deve ser
   acompanhada até o resultado final quando a API do GitHub estiver disponível.
+
+## Manutenção de banco e backups separada na versão 1.3.27
+
+- A página principal de Manutenção e as rotas de diagnóstico, backup manual,
+  teste de restauração, compactação do SQLite, restauração, exportação cifrada
+  e cópia externa foram movidas para `routes/manutencaoBackupsRoute.js`.
+- Confirmação da senha e bloqueios por perfil permanecem injetados nas mesmas
+  ações críticas. Dados, bancos, sessões do WhatsApp, configurações e arquivos
+  de backup não são alterados por esta refatoração.
+- A mudança é compartilhada pelos quatro perfis. Rotas de importação,
+  configurações e controle do WhatsApp permanecem temporariamente no roteador
+  histórico para serem separadas em etapas menores e verificáveis.

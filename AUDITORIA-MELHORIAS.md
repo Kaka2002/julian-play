@@ -52,6 +52,9 @@ código; itens operacionais externos não são marcados como implementados.
 - Rotas de campanhas, pagamentos manuais, catálogos (Planos, Apps e
   Dispositivos) e Painéis possuem módulos próprios. As ações sensíveis de
   Painéis preservam a confirmação da senha atual.
+- A página de Manutenção e as operações de diagnóstico, backup, restauração,
+  exportação, cópia externa e compactação do banco possuem módulo próprio com
+  as mesmas confirmações de senha e restrições por perfil.
 - Toda mudança funcional, correção ou refatoração relevante passa a atualizar
   este arquivo e `CONTEXTO-PARA-CODEX.md` na mesma entrega; `AGENTS.md` recebe
   novas regras permanentes quando aplicável.
@@ -64,8 +67,9 @@ código; itens operacionais externos não são marcados como implementados.
   Privacidade, campanhas, itens e eventos históricos já possuem migrações
   formais; a inicialização compatível permanece temporariamente como rede de
   segurança para instalações antigas.
-- Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos e
-  Painéis foram extraídos para módulos próprios. Os outros domínios do arquivo histórico
+- Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos,
+  Painéis e manutenção de banco/backups foram extraídos para módulos próprios.
+  Os outros domínios do arquivo histórico
   continuam sendo separados somente quando forem alterados, evitando uma
   reescrita ampla sem benefício funcional.
 - Observabilidade: o Painel Mestre compara automaticamente a versão devolvida

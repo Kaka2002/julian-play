@@ -717,3 +717,14 @@ test('paineis possuem modulo proprio e preservam senha nas acoes criticas', () =
     assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/paineis/);
     assert.match(clientes, /router\.use\(criarPaineisRoute\(/);
 });
+
+test('manutencao de banco e backups possui modulo proprio com protecoes', () => {
+    const manutencao = fs.readFileSync(path.join(repoRoot, 'routes', 'manutencaoBackupsRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(manutencao, /router\.get\('\/manutencao'/);
+    assert.match(manutencao, /\/manutencao\/banco\/otimizar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica/);
+    assert.match(manutencao, /\/manutencao\/restaurar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica/);
+    assert.match(manutencao, /\/manutencao\/backups\/exportar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica/);
+    assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/manutencao\/(?:backup|banco\/otimizar|restaurar|diagnostico)/);
+    assert.match(clientes, /router\.use\(criarManutencaoBackupsRoute\(/);
+});
