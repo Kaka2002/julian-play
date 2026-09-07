@@ -145,6 +145,7 @@ const {
     buscarAtendimentoPorId,
     criarAtendimento,
     atualizarStatusAtendimento,
+    atualizarAtendimento,
     removerAtendimento,
     resumoAtendimentos
 } = require('../services/atendimentos');
@@ -6475,11 +6476,13 @@ Estou acompanhando seu atendimento de ${rotuloMotivoAtendimento(atendimento.moti
 Vou verificar e retorno por aqui.`;
 }
 
-function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resumo = {} }) {
+function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resumo = {}, atendimentoEdicao = null }) {
     const statusAtual = filtros.status || 'abertos';
     const busca = filtros.busca || '';
 
-    return `<section class="page-title">
+    const formularioEdicao = atendimentoEdicao ? `<section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">Editar atendimento</h2><div class="subtitle">Altere o motivo, a prioridade, a descrição e a data do próximo contato.</div></div></div><form class="fields" method="post" action="/atendimentos/${escapar(atendimentoEdicao.id)}/editar"><label>Motivo<select name="motivo">${[['instalacao','Instalação'],['travamento','Travamento'],['renovacao','Renovação'],['pagamento','Pagamento'],['troca_app','Troca de app'],['whatsapp','WhatsApp'],['outro','Outro']].map(([valor,texto]) => `<option value="${valor}" ${valor === atendimentoEdicao.motivo ? 'selected' : ''}>${texto}</option>`).join('')}</select></label><label>Prioridade<select name="prioridade"><option value="normal" ${atendimentoEdicao.prioridade === 'normal' ? 'selected' : ''}>Normal</option><option value="urgente" ${atendimentoEdicao.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></label>${campo({ nome: 'proximoContato', label: 'Próximo contato', tipo: 'datetime-local', valor: atendimentoEdicao.proximoContato || '' })}${areaTexto({ nome: 'descricao', label: 'Descrição', valor: atendimentoEdicao.descricao || '' })}<div class="actions full"><button class="button" type="submit">Salvar alterações</button><a class="button secondary" href="/atendimentos">Cancelar</a></div></form></section>` : '';
+
+    return `${formularioEdicao}<section class="page-title">
         <h1>Central de Suporte</h1>
         <div class="subtitle">Organize solicitações, prioridades e retornos dos clientes</div>
     </section>
@@ -6562,7 +6565,7 @@ function telaAtendimentos({ atendimentos = [], clientes = [], filtros = {}, resu
                             <form method="post" action="/atendimentos/${escapar(atendimento.id)}/enviar" onsubmit="return confirm('Enviar mensagem de acompanhamento para este cliente?');"><button class="button icon-only icon-action green" type="submit" title="Enviar acompanhamento">${icon('atendimento')}</button></form>
                             ${atendimento.status !== 'em_andamento' && atendimento.status !== 'resolvido' ?`<form method="post" action="/atendimentos/${escapar(atendimento.id)}/status"><input type="hidden" name="status" value="em_andamento"><button class="button icon-only icon-action refresh" type="submit" title="Marcar em andamento">${icon('refresh')}</button></form>` : ''}
                             ${atendimento.status !== 'resolvido' ?`<form method="post" action="/atendimentos/${escapar(atendimento.id)}/status"><input type="hidden" name="status" value="resolvido"><button class="button icon-only icon-action green" type="submit" title="Resolver">${icon('check')}</button></form>` : ''}
-                            <a class="button icon-only icon-action" href="/clientes/${escapar(atendimento.clienteId)}/editar#atendimentos" title="Abrir cliente">${icon('edit')}</a>
+                            <a class="button icon-only icon-action" href="/atendimentos?editar=${escapar(atendimento.id)}" title="Editar atendimento">${icon('edit')}</a>
                             <form method="post" action="/atendimentos/${escapar(atendimento.id)}/excluir" onsubmit="return confirm('Apagar este atendimento?');"><button class="button icon-only icon-action" type="submit" title="Apagar">${icon('trash')}</button></form>
                         </div>
                     </td>
@@ -9171,6 +9174,7 @@ router.use(criarAtendimentosRoute({
     rotuloMotivoAtendimento,
     montarUrlClienteMensagem,
     atualizarStatusAtendimento,
+    atualizarAtendimento,
     rotuloStatusAtendimento,
     buscarAtendimentoPorId,
     removerAtendimento,

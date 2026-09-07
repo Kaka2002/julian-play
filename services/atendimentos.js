@@ -145,6 +145,18 @@ async function atualizarStatusAtendimento(id, status) {
     return buscarAtendimentoPorId(id);
 }
 
+async function atualizarAtendimento(id, dados = {}) {
+    const motivo = normalizarMotivo(dados.motivo);
+    const prioridade = normalizarPrioridade(dados.prioridade);
+    const descricao = limparTexto(dados.descricao);
+    const proximoContato = limparTexto(dados.proximoContato).slice(0, 16);
+    await executar(
+        `UPDATE cliente_atendimentos SET motivo = ?, prioridade = ?, descricao = ?, proximoContato = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`,
+        [motivo, prioridade, descricao, proximoContato, id]
+    );
+    return buscarAtendimentoPorId(id);
+}
+
 async function removerAtendimento(id) {
     return executar('DELETE FROM cliente_atendimentos WHERE id = ?', [id]);
 }
@@ -180,6 +192,7 @@ module.exports = {
     buscarAtendimentoPorId,
     criarAtendimento,
     atualizarStatusAtendimento,
+    atualizarAtendimento,
     removerAtendimento,
     resumoAtendimentos,
     normalizarMotivo,

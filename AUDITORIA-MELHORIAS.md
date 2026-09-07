@@ -183,3 +183,5 @@ código; itens operacionais externos não são marcados como implementados.
 - Manter `julian-amplaytv` parado enquanto a cliente utilizar a instalação
   local.
 
+
+- Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.

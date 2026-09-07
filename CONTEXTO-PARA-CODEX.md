@@ -1570,3 +1570,7 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   instalações locais; o Painel Mestre permanece inalterado. Não há seed nem
   ação manual após deploy ou atualização. Foram executados sete testes
   específicos, `node --check` nos arquivos alterados e `git diff --check`.
+
+## Edição de atendimentos na versão 1.3.37
+
+O lápis da lista de atendimentos abre a edição do registro selecionado em /atendimentos?editar=<id>, permitindo atualizar motivo, prioridade, descrição e próximo contato com data e hora. A rota preserva status, cliente e histórico, registra uma nota e mantém autenticação e CSRF. A correção atende os quatro perfis de instalação; o Painel Mestre não é afetado. Foram executados 143 testes internos, 11 E2E, sintaxe, diff e pacote limpo; atualizações preservam banco, configurações, backups e sessão do WhatsApp.

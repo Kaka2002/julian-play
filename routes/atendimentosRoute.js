@@ -6,7 +6,7 @@ function criarAtendimentosRoute(deps = {}) {
         desativarCache, listarAtendimentos, listarClientes, resumoAtendimentos,
         renderizar, telaAtendimentos, criarAtendimento, adicionarNotaCliente,
         rotuloMotivoAtendimento, montarUrlClienteMensagem,
-        atualizarStatusAtendimento, rotuloStatusAtendimento,
+        atualizarStatusAtendimento, atualizarAtendimento, rotuloStatusAtendimento,
         buscarAtendimentoPorId, removerAtendimento, getStatusWhatsApp,
         getClient, enviarMensagemWhatsAppComFallback, mensagemAtendimentoPadrao
     } = deps;
@@ -17,14 +17,24 @@ function criarAtendimentosRoute(deps = {}) {
             status: String(req.query.status || 'abertos'),
             busca: String(req.query.busca || '').trim()
         };
-        const [atendimentos, clientes, resumo] = await Promise.all([
-            listarAtendimentos(filtros), listarClientes(), resumoAtendimentos()
+        const [atendimentos, clientes, resumo, atendimentoEdicao] = await Promise.all([
+            listarAtendimentos(filtros), listarClientes(), resumoAtendimentos(),
+            req.query.editar ? buscarAtendimentoPorId(req.query.editar) : null
         ]);
         return renderizar(res, {
             titulo: 'Atendimentos',
-            conteudo: telaAtendimentos({ atendimentos, clientes, filtros, resumo }),
+            conteudo: telaAtendimentos({ atendimentos, clientes, filtros, resumo, atendimentoEdicao }),
             mensagem: req.query.mensagem || '', ativo: 'atendimentos'
         });
+    });
+
+    router.post('/atendimentos/:id/editar', async (req, res) => {
+        try {
+            const atendimento = await atualizarAtendimento(req.params.id, req.body || {});
+            if (!atendimento) return res.redirect('/atendimentos?mensagem=Atendimento não encontrado.');
+            await adicionarNotaCliente(atendimento.clienteId, `Atendimento editado: ${rotuloMotivoAtendimento(atendimento.motivo)}.`);
+            return res.redirect('/atendimentos?mensagem=Atendimento atualizado com sucesso.');
+        } catch (err) { return res.redirect(`/atendimentos?mensagem=${encodeURIComponent(err.message)}`); }
     });
 
     router.post('/atendimentos', async (req, res) => {
