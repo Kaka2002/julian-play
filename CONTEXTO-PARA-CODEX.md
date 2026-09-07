@@ -1420,3 +1420,13 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   refatoração é compartilhada pelos quatro perfis e não altera dados.
 - As vulnerabilidades transitivas do Puppeteer/WhatsApp e Express continuam
   documentadas e não recebem `npm audit fix --force`.
+
+## Rotas de Atendimentos separadas na versão 1.3.29
+
+- Listagem e filtros de Atendimentos, abertura pela página geral ou ficha do
+  cliente, alteração de status, exclusão e acompanhamento pelo WhatsApp foram
+  movidos para `routes/atendimentosRoute.js`.
+- Notas na ficha, textos, redirecionamentos, proteção global de login/licença e
+  verificação da conexão do WhatsApp permanecem iguais. A refatoração é
+  compartilhada pelos quatro perfis e não altera dados, configurações ou
+  sessões.

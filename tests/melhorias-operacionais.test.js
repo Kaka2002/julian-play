@@ -758,3 +758,14 @@ test('CRM possui modulo proprio sem duplicar endpoints no roteador historico', (
     assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/crm/);
     assert.match(clientes, /router\.use\(criarCrmRoute\(/);
 });
+
+test('Atendimentos possui modulo proprio e preserva notas e envio WhatsApp', () => {
+    const atendimentos = fs.readFileSync(path.join(repoRoot, 'routes', 'atendimentosRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(atendimentos, /router\.get\('\/atendimentos'/);
+    assert.match(atendimentos, /router\.post\('\/clientes\/:id\/atendimentos'/);
+    assert.match(atendimentos, /mensagemAtendimentoPadrao\(atendimento\)/);
+    assert.match(atendimentos, /adicionarNotaCliente/);
+    assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/atendimentos/);
+    assert.match(clientes, /router\.use\(criarAtendimentosRoute\(/);
+});

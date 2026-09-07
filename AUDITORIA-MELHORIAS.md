@@ -62,6 +62,8 @@ código; itens operacionais externos não são marcados como implementados.
   privacidade, auditoria, exclusões e reclamações são permanentes.
 - CRM/leads possui módulo de rotas próprio, incluindo conversão em cliente e
   envio comercial pelo WhatsApp.
+- Atendimentos possui módulo de rotas próprio, preservando filtros, notas na
+  ficha do cliente, estados e acompanhamento pelo WhatsApp.
 - Toda mudança funcional, correção ou refatoração relevante passa a atualizar
   este arquivo e `CONTEXTO-PARA-CODEX.md` na mesma entrega; `AGENTS.md` recebe
   novas regras permanentes quando aplicável.
@@ -75,7 +77,7 @@ código; itens operacionais externos não são marcados como implementados.
   formais; a inicialização compatível permanece temporariamente como rede de
   segurança para instalações antigas.
 - Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos,
-  Painéis, CRM/leads e manutenção de banco/backups foram extraídos para módulos próprios.
+  Painéis, CRM/leads, Atendimentos e manutenção de banco/backups foram extraídos para módulos próprios.
   Os outros domínios do arquivo histórico
   continuam sendo separados somente quando forem alterados, evitando uma
   reescrita ampla sem benefício funcional.
