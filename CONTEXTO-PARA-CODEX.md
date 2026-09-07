@@ -1444,3 +1444,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - As mudanças são compartilhadas pelos quatro perfis e não alteram bancos,
   configurações ou sessões. As demais configurações da Manutenção continuam
   no roteador histórico para extração posterior.
+
+## Configurações da Manutenção separadas na versão 1.3.31
+
+- Licença, identidade do robô, imagens das mensagens, PIX, provedor PIX,
+  PayPal, monitoramento e credenciais de acesso foram movidos para
+  `routes/manutencaoConfiguracoesRoute.js`.
+- As proteções por senha e os bloqueios centrais por perfil continuam na mesma
+  ordem das rotas anteriores. O teste de monitoramento mantém a verificação de
+  permissão antes de enviar pelo WhatsApp.
+- Uploads continuam restritos ao `DATA_DIR` da instalação, preservando imagens
+  e configurações já gravadas. Nenhum banco, sessão ou configuração inicial foi
+  alterado.

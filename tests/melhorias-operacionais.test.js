@@ -792,3 +792,18 @@ test('controles do WhatsApp em Manutencao possuem modulo proprio e restricao por
     assert.doesNotMatch(clientes, /router\.post\('\/manutencao\/whatsapp/);
     assert.match(clientes, /router\.use\(criarManutencaoWhatsappRoute\(/);
 });
+
+test('configuracoes da Manutencao possuem modulo proprio e preservam protecoes', () => {
+    const configuracoes = fs.readFileSync(path.join(repoRoot, 'routes', 'manutencaoConfiguracoesRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    for (const rota of ['licenca', 'robo', 'pix', 'pix-provedor', 'paypal', 'monitoramento', 'acesso']) {
+        assert.match(configuracoes, new RegExp(`/manutencao/${rota}`));
+    }
+    assert.match(configuracoes, /bloquearManutencaoRestritaCliente/);
+    assert.match(configuracoes, /confirmarSenhaAcaoCritica/);
+    assert.match(configuracoes, /bloquearMonitoramentoOperacional/);
+    assert.match(configuracoes, /exigirEnvioPainelPermitido/);
+    assert.match(configuracoes, /fs\.writeFileSync\(path\.join\(assetsDir/);
+    assert.doesNotMatch(clientes, /router\.post\('\/manutencao\/(?:licenca|robo'|pix|pix-provedor|paypal|monitoramento|acesso)/);
+    assert.match(clientes, /router\.use\(criarManutencaoConfiguracoesRoute\(/);
+});
