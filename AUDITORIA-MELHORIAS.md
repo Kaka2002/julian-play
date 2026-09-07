@@ -5,6 +5,21 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.34: conciliação financeira diagnóstica executada diariamente e
+  também sob demanda em `/financeiro/conciliacao`. A rotina aponta cobrança
+  aprovada sem pagamento vinculado, pagamento removido ou ausente, divergência
+  de valor e vencimento do cliente anterior ao vencimento concedido pelo
+  pagamento. As ocorrências entram na Central de Pendências com link para a
+  conferência financeira e cada execução registra evento de auditoria.
+- Perfis da 1.3.34: painel administrador, cliente comercial no servidor e
+  instalação local recebem a rotina; o Painel Mestre permanece inalterado. A
+  conciliação não corrige valores, receitas ou acessos automaticamente, não
+  cria tabela, migração ou seed e preserva bancos, configurações, pagamentos,
+  históricos, backups e sessões. Não há ação manual após deploy. Validada com
+  testes isolados das quatro divergências e do cenário íntegro, proteção da
+  rota, agendamento, suíte interna, navegação real, sintaxe, diff e pacote
+  local limpo.
+
 - Versão 1.3.33: Central de Pendências protegida e compartilhada pelos painéis
   de clientes. A tela consolida vencimentos e testes, contatos de CRM e
   atendimentos, cobranças pendentes ou falhas, mensagens incertas, renovações
@@ -127,9 +142,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Cloudflare Access no Painel Mestre, que depende de configuração na conta
   Cloudflare e de uma política de acesso definida pelo proprietário.
-- Pesquisa global, linha do tempo unificada, detecção de duplicados,
-  conciliação diária, exportação de auditoria e política operacional de
-  retenção/exclusão.
+- Pesquisa global, linha do tempo unificada, detecção de duplicados, exportação
+  de auditoria e política operacional de retenção/exclusão.
 - Execução do instalador completo em uma máquina Windows física recém-formatada
   permanece como homologação externa; conteúdo, ausência de dados persistentes
   e atualização com preservação são testados automaticamente.

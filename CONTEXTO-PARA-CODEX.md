@@ -1508,3 +1508,26 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   bancos temporários, suíte interna com 136 testes, oito testes Playwright em
   Chrome incluindo navegação e filtro da central, `git diff --check`, geração
   oficial e teste de instalação limpa do pacote.
+
+## Conciliação financeira diária na versão 1.3.34
+
+- A rota autenticada `/financeiro/conciliacao` oferece uma conferência
+  diagnóstica que também roda automaticamente 60 segundos após iniciar o
+  processo e, depois, a cada 24 horas.
+- A rotina compara cobranças PIX aprovadas com `cliente_pagamentos` e o cadastro
+  atual do cliente. Ela aponta cobrança sem pagamento vinculado, vínculo cujo
+  pagamento foi removido, diferença entre os valores da cobrança e do
+  pagamento e vencimento do cliente anterior ao novo vencimento registrado no
+  pagamento.
+- O diagnóstico não altera receita, pagamento, cobrança, vencimento ou acesso.
+  As divergências entram na Central de Pendências e direcionam para a própria
+  tela de conciliação. Cada execução registra `pagamento_conciliacao` nos
+  eventos do sistema, inclusive quando não encontra divergências.
+- A mudança afeta o painel administrador, clientes comerciais provisionados e
+  instalações locais. O Painel Mestre permanece inalterado. Cada processo lê
+  somente o banco de seu `DATA_DIR`; não há tabela, migração, seed, configuração
+  inicial ou ação manual posterior ao deploy/atualização. Bancos,
+  configurações, pagamentos, históricos, backups e sessões são preservados.
+- Validação: `node --check` nos arquivos JavaScript, três testes específicos em
+  bancos temporários, suíte interna com 139 testes, testes Playwright em Chrome,
+  `git diff --check`, geração oficial e teste de instalação limpa do pacote.

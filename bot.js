@@ -33,6 +33,7 @@ const {
 } = require('./config/whatsapp');
 const { iniciarAgendadorRenovacao } = require('./services/renovacaoAutomatica');
 const { iniciarMonitoramentoComercial } = require('./services/monitoramentoComercial');
+const { iniciarConciliacaoFinanceira } = require('./services/conciliacaoFinanceiraService');
 const { protegerPainel } = require('./services/authService');
 const { protegerLicenca } = require('./services/licencaService');
 const { csrfMiddleware, cabecalhosSeguranca } = require('./services/securityService');
@@ -296,6 +297,7 @@ const server = app.listen(PORT, async () => {
             verificarSaudeWhatsApp,
             recuperarWhatsAppAutomaticamente
         });
+        iniciarConciliacaoFinanceira();
     }
 });
 

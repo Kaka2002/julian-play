@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { listarDivergenciasFinanceiras } = require('./conciliacaoFinanceiraService');
 
 const PRIORIDADE_PESO = { critica: 0, alta: 1, media: 2, baixa: 3 };
 
@@ -165,19 +166,22 @@ function aplicarFiltros(itens, filtros = {}) {
 
 async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
     const agora = opcoes.agora instanceof Date ? opcoes.agora : new Date();
-    const [clientes, atendimentos, leads, cobrancas, mensagens, renovacoes, campanhas] = await Promise.all([
+    const [clientes, atendimentos, leads, cobrancas, mensagens, renovacoes, campanhas, divergenciasFinanceiras] = await Promise.all([
         buscarTodos(`SELECT id,nome,status,vencimento,dataVencimento FROM clientes WHERE anonimizadoEm IS NULL OR anonimizadoEm = ''`),
         buscarTodos(`SELECT a.*,c.nome clienteNome FROM cliente_atendimentos a JOIN clientes c ON c.id=a.clienteId WHERE a.status IN ('aberto','em_andamento')`),
         buscarTodos(`SELECT * FROM leads WHERE status NOT IN ('ganho','perdido')`),
         buscarTodos(`SELECT c.*,cl.nome clienteNome FROM cobrancas_pix c JOIN clientes cl ON cl.id=c.clienteId ORDER BY c.id DESC LIMIT 500`),
         buscarTodos(`SELECT id,status,destino,descricao,erro,atualizadoEm FROM mensagens_saida_fila WHERE status IN ('incerto','falhou') ORDER BY id DESC LIMIT 200`),
         buscarTodos(`SELECT r.*,c.nome clienteNome,p.nome painelNome FROM renovacoes_painel_fila r JOIN clientes c ON c.id=r.clienteId JOIN paineis p ON p.id=r.painelId WHERE r.status='falha' ORDER BY r.id DESC LIMIT 200`),
-        buscarTodos(`SELECT id,nome,status,erros,mensagem,atualizadoEm FROM campanhas WHERE status='pausada' OR (erros>0 AND status NOT IN ('cancelada','concluida')) ORDER BY id DESC LIMIT 100`)
+        buscarTodos(`SELECT id,nome,status,erros,mensagem,atualizadoEm FROM campanhas WHERE status='pausada' OR (erros>0 AND status NOT IN ('cancelada','concluida')) ORDER BY id DESC LIMIT 100`),
+        listarDivergenciasFinanceiras()
     ]);
     const todos = [
         ...pendenciasClientes(clientes, agora), ...pendenciasAtendimentos(atendimentos, agora),
         ...pendenciasLeads(leads, agora), ...pendenciasCobrancas(cobrancas),
-        ...pendenciasFilas(mensagens, renovacoes), ...pendenciasCampanhas(campanhas)
+        ...pendenciasFilas(mensagens, renovacoes), ...pendenciasCampanhas(campanhas),
+        ...divergenciasFinanceiras.map(item => criarItem({ ...item, id: item.chave, area: 'financeiro',
+            prazo: item.atualizadoEm, href: '/financeiro/conciliacao' }))
     ];
     adicionarPendenciasOperacionais(todos, opcoes.operacional);
     todos.sort((a, b) => (PRIORIDADE_PESO[a.prioridade] - PRIORIDADE_PESO[b.prioridade])

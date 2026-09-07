@@ -77,6 +77,18 @@ test('central de pendencias consolida riscos e permite filtrar por area', async 
     await expect(page.locator('.pending-item .badge.muted')).toHaveText('Área responsável: WhatsApp');
 });
 
+test('financeiro abre conciliacao diagnostica sem alterar dados', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/financeiro');
+    await page.getByRole('link', { name: 'Conciliar financeiro' }).click();
+    await expect(page).toHaveURL(/\/financeiro\/conciliacao/);
+    await expect(page.getByRole('heading', { name: 'Conciliação Financeira' })).toBeVisible();
+    await expect(page.getByText(/A rotina é diagnóstica/)).toBeVisible();
+    await page.getByRole('button', { name: 'Executar agora' }).click();
+    await expect(page).toHaveURL(/mensagem=/);
+    await expect(page.getByText(/Conciliação concluída/)).toBeVisible();
+});
+
 test('manutencao exibe controles independentes para o robo', async ({ page }) => {
     await autenticar(page);
     await page.goto('/manutencao');

@@ -1,5 +1,6 @@
 const criarClientesAcoesRoute = require('./clientesAcoesRoute');
 const criarPendenciasRoute = require('./pendenciasRoute');
+const criarConciliacaoFinanceiraRoute = require('./conciliacaoFinanceiraRoute');
 const express = require('express');
 const criarCatalogosRoute = require('./catalogosRoute');
 const criarPaineisRoute = require('./paineisRoute');
@@ -165,6 +166,7 @@ const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
 const { listarPendenciasOperacionais } = require('../services/pendenciasOperacionaisService');
+const { listarDivergenciasFinanceiras, executarConciliacaoFinanceira } = require('../services/conciliacaoFinanceiraService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
@@ -7910,8 +7912,8 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     </section>
 
     <section class="clients-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Conferência manual</h2><div class="subtitle">Comprovantes PayPal, confirmação auditada e estornos.</div></div>
-        <a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div>
+        <div class="panel-head"><div><h2 class="panel-title">Conferência e conciliação</h2><div class="subtitle">Comprovantes PayPal, divergências, confirmação auditada e estornos.</div></div>
+        <div class="actions"><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
     </section>
 
     <section class="finance-breakdown-grid">
@@ -9356,6 +9358,14 @@ router.use(criarPendenciasRoute({
     paginarItens,
     paginaAtual,
     quantidadePorPagina
+}));
+
+router.use(criarConciliacaoFinanceiraRoute({
+    listarDivergenciasFinanceiras,
+    executarConciliacaoFinanceira,
+    renderizar,
+    escapar,
+    desativarCache
 }));
 
 router.use(criarCatalogosRoute({
