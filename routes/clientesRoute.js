@@ -1,5 +1,6 @@
 const express = require('express');
 const criarCatalogosRoute = require('./catalogosRoute');
+const criarPaineisRoute = require('./paineisRoute');
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
@@ -10165,86 +10166,25 @@ router.use(criarCatalogosRoute({
     removerDispositivo
 }));
 
-router.get('/paineis', async (req, res) => {
-    const paineis = await listarPaineis();
-    const pagina = paginaAtual(req.query.pagina);
-    const paginacaoPaineis = paginarItens(paineis, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
-    const mensagem = req.query.mensagem || '';
-
-    await renderizar(res, {
-        titulo: 'Painéis',
-        conteudo: telaPaineis(paineis, paginacaoPaineis),
-        mensagem,
-        ativo: 'paineis'
-    });
-});
-
-router.get('/paineis/novo', async (req, res) => {
-    await renderizar(res, {
-        titulo: 'Novo painel',
-        conteudo: formularioPainel({ ativo: 1 }),
-        ativo: 'paineis'
-    });
-});
-
-router.get('/paineis/:id/editar', async (req, res) => {
-    const painel = await buscarPainelPorId(req.params.id);
-
-    if (!painel) {
-        return res.redirect('/paineis?mensagem=Painel não encontrado');
-    }
-
-    const historico = await listarHistoricoRenovacoes(painel.id);
-    await renderizar(res, {
-        titulo: 'Editar painel',
-        conteudo: formularioPainel(painel, historico),
-        mensagem: req.query.mensagem || '',
-        ativo: 'paineis'
-    });
-});
-
-router.post('/paineis/:id/testar', confirmarSenhaAcaoCritica, async (req, res) => {
-    try {
-        await salvarPainel({ ...req.body, id: req.params.id });
-        const resultado = await testarIntegracaoPainel(req.params.id);
-        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`API respondeu com HTTP ${resultado.status}.`)}`);
-    } catch (err) {
-        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`Falha no teste da API: ${err.message}`)}`);
-    }
-});
-
-router.post('/paineis/:id/renovacoes/:filaId/tentar', async (req, res) => {
-    try {
-        await reagendarRenovacao(req.params.filaId);
-        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent('Nova tentativa agendada.')}`);
-    } catch (err) {
-        res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(err.message)}`);
-    }
-});
-
-router.post('/paineis/salvar', confirmarSenhaAcaoCritica, async (req, res) => {
-    try {
-        await salvarPainel(req.body);
-        logControleClientes('Configuracao de painel IPTV/P2P atualizada', { painelId: req.body.id || 'novo', nome: req.body.nome, api: req.body.apiUrl ?'configurada':'vazia', token: req.body.apiToken ?'atualizado':'mantido', renovacaoAutomatica: req.body.renovacaoAutomatica });
-        res.redirect('/paineis?mensagem=Painel salvo com sucesso');
-    } catch (err) {
-        res.status(400);
-        await renderizar(res, {
-            titulo: 'Salvar painel',
-            conteudo: `${formularioPainel(req.body)}<div class="notice">${escapar(err.message)}</div>`,
-            ativo: 'paineis'
-        });
-    }
-});
-
-router.post('/paineis/:id/excluir', async (req, res) => {
-    try {
-        await removerPainel(req.params.id);
-        res.redirect('/paineis?mensagem=Painel excluído');
-    } catch (err) {
-        res.redirect(`/paineis?mensagem=${encodeURIComponent(`Erro ao excluir painel: ${err.message}`)}`);
-    }
-});
+router.use(criarPaineisRoute({
+    renderizar,
+    escapar,
+    paginaAtual,
+    quantidadePorPagina,
+    paginarItens,
+    registrosPorPagina: REGISTROS_POR_PAGINA,
+    telaPaineis,
+    formularioPainel,
+    listarPaineis,
+    buscarPainelPorId,
+    salvarPainel,
+    removerPainel,
+    listarHistoricoRenovacoes,
+    testarIntegracaoPainel,
+    reagendarRenovacao,
+    confirmarSenhaAcaoCritica,
+    logControleClientes
+}));
 
 router.get('/manutencao', async (req, res) => {
     const status = await obterStatusSistema(getStatusWhatsApp());

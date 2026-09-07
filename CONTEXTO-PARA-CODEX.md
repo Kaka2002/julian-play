@@ -1365,3 +1365,15 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   histórico `clientesRoute.js` e movidas para `routes/catalogosRoute.js`.
   Renderização, paginação, serviços e proteção global do painel permanecem os
   mesmos nos quatro perfis de instalação.
+
+## Rotas de Painéis separadas na versão 1.3.26
+
+- Listagem, criação, edição, teste de API, reagendamento de renovação, gravação
+  e exclusão de Painéis foram movidos de `clientesRoute.js` para o módulo
+  `routes/paineisRoute.js`.
+- O novo módulo recebe explicitamente suas telas e serviços. Testar a API e
+  salvar credenciais continuam protegidos pelo mesmo middleware de confirmação
+  da senha atual; a proteção global de login e licença continua aplicada antes
+  do roteador principal.
+- A extração é compartilhada pelos quatro perfis e não altera bancos,
+  configurações, tokens cifrados, integrações ou dados existentes.

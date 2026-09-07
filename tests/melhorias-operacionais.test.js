@@ -707,3 +707,13 @@ test('catalogos possuem modulo de rotas proprio sem duplicacao no arquivo de cli
     }
     assert.match(clientes, /router\.use\(criarCatalogosRoute\(/);
 });
+
+test('paineis possuem modulo proprio e preservam senha nas acoes criticas', () => {
+    const paineis = fs.readFileSync(path.join(repoRoot, 'routes', 'paineisRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(paineis, /router\.get\('\/paineis'/);
+    assert.match(paineis, /router\.post\('\/paineis\/:id\/testar', confirmarSenhaAcaoCritica/);
+    assert.match(paineis, /router\.post\('\/paineis\/salvar', confirmarSenhaAcaoCritica/);
+    assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/paineis/);
+    assert.match(clientes, /router\.use\(criarPaineisRoute\(/);
+});
