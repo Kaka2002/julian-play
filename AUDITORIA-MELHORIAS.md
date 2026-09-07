@@ -5,6 +5,20 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.35: detecção segura de possíveis clientes duplicados por WhatsApp
+  normalizado e endereço MAC válido, incluindo os acessos de aplicativo. Grupos
+  relacionados são consolidados, classificados pela situação dos cadastros e
+  exibidos em `/clientes/duplicados`, na lista de clientes e na Central de
+  Pendências. O administrador revisa cada ficha e corrige o identificador na
+  origem; o sistema não une, exclui ou altera cadastros automaticamente.
+- Perfis da 1.3.35: painel administrador, cliente comercial no servidor e
+  instalação local recebem o diagnóstico; o Painel Mestre permanece
+  inalterado. Cadastros anonimizados e identificadores incompletos são
+  ignorados. Não há tabela, migração ou seed, e bancos, configurações,
+  pagamentos, históricos, backups e sessões são preservados. Validada em banco
+  temporário, rota protegida, integração com a central, suíte interna,
+  navegação real, sintaxe, diff e pacote local limpo.
+
 - Versão 1.3.34: conciliação financeira diagnóstica executada diariamente e
   também sob demanda em `/financeiro/conciliacao`. A rotina aponta cobrança
   aprovada sem pagamento vinculado, pagamento removido ou ausente, divergência
@@ -142,8 +156,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Cloudflare Access no Painel Mestre, que depende de configuração na conta
   Cloudflare e de uma política de acesso definida pelo proprietário.
-- Pesquisa global, linha do tempo unificada, detecção de duplicados, exportação
-  de auditoria e política operacional de retenção/exclusão.
+- Pesquisa global, linha do tempo unificada, exportação de auditoria e política
+  operacional de retenção/exclusão.
 - Execução do instalador completo em uma máquina Windows física recém-formatada
   permanece como homologação externa; conteúdo, ausência de dados persistentes
   e atualização com preservação são testados automaticamente.

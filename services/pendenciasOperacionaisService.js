@@ -1,5 +1,6 @@
 const db = require('../database/sqlite');
 const { listarDivergenciasFinanceiras } = require('./conciliacaoFinanceiraService');
+const { listarGruposClientesDuplicados } = require('./clientesDuplicadosService');
 
 const PRIORIDADE_PESO = { critica: 0, alta: 1, media: 2, baixa: 3 };
 
@@ -166,7 +167,7 @@ function aplicarFiltros(itens, filtros = {}) {
 
 async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
     const agora = opcoes.agora instanceof Date ? opcoes.agora : new Date();
-    const [clientes, atendimentos, leads, cobrancas, mensagens, renovacoes, campanhas, divergenciasFinanceiras] = await Promise.all([
+    const [clientes, atendimentos, leads, cobrancas, mensagens, renovacoes, campanhas, divergenciasFinanceiras, duplicados] = await Promise.all([
         buscarTodos(`SELECT id,nome,status,vencimento,dataVencimento FROM clientes WHERE anonimizadoEm IS NULL OR anonimizadoEm = ''`),
         buscarTodos(`SELECT a.*,c.nome clienteNome FROM cliente_atendimentos a JOIN clientes c ON c.id=a.clienteId WHERE a.status IN ('aberto','em_andamento')`),
         buscarTodos(`SELECT * FROM leads WHERE status NOT IN ('ganho','perdido')`),
@@ -174,14 +175,21 @@ async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
         buscarTodos(`SELECT id,status,destino,descricao,erro,atualizadoEm FROM mensagens_saida_fila WHERE status IN ('incerto','falhou') ORDER BY id DESC LIMIT 200`),
         buscarTodos(`SELECT r.*,c.nome clienteNome,p.nome painelNome FROM renovacoes_painel_fila r JOIN clientes c ON c.id=r.clienteId JOIN paineis p ON p.id=r.painelId WHERE r.status='falha' ORDER BY r.id DESC LIMIT 200`),
         buscarTodos(`SELECT id,nome,status,erros,mensagem,atualizadoEm FROM campanhas WHERE status='pausada' OR (erros>0 AND status NOT IN ('cancelada','concluida')) ORDER BY id DESC LIMIT 100`),
-        listarDivergenciasFinanceiras()
+        listarDivergenciasFinanceiras(),
+        listarGruposClientesDuplicados()
     ]);
     const todos = [
         ...pendenciasClientes(clientes, agora), ...pendenciasAtendimentos(atendimentos, agora),
         ...pendenciasLeads(leads, agora), ...pendenciasCobrancas(cobrancas),
         ...pendenciasFilas(mensagens, renovacoes), ...pendenciasCampanhas(campanhas),
         ...divergenciasFinanceiras.map(item => criarItem({ ...item, id: item.chave, area: 'financeiro',
-            prazo: item.atualizadoEm, href: '/financeiro/conciliacao' }))
+            prazo: item.atualizadoEm, href: '/financeiro/conciliacao' })),
+        ...duplicados.map(grupo => criarItem({ id: grupo.chave, tipo: 'cliente_duplicado', area: 'clientes',
+            prioridade: grupo.prioridade, clienteId: grupo.clientes[0]?.id,
+            titulo: `Possíveis cadastros duplicados: ${grupo.clientes.map(item => item.nome).join(' × ')}`,
+            detalhe: grupo.coincidencias.map(item => item.tipo === 'telefone' ? 'Mesmo WhatsApp' : 'Mesmo endereço MAC').join(' e '),
+            prazo: grupo.clientes.reduce((maisRecente, item) => String(item.atualizadoEm || '') > maisRecente ? String(item.atualizadoEm) : maisRecente, ''),
+            href: '/clientes/duplicados' }))
     ];
     adicionarPendenciasOperacionais(todos, opcoes.operacional);
     todos.sort((a, b) => (PRIORIDADE_PESO[a.prioridade] - PRIORIDADE_PESO[b.prioridade])

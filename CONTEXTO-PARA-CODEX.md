@@ -1531,3 +1531,24 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Validação: `node --check` nos arquivos JavaScript, três testes específicos em
   bancos temporários, suíte interna com 139 testes, testes Playwright em Chrome,
   `git diff --check`, geração oficial e teste de instalação limpa do pacote.
+
+## Detecção segura de clientes duplicados na versão 1.3.35
+
+- O serviço `services/clientesDuplicadosService.js` detecta coincidências fortes
+  entre cadastros não anonimizados: WhatsApp normalizado com pelo menos dez
+  dígitos e endereço MAC válido, tanto no campo legado quanto nos acessos de
+  aplicativo. Coincidências relacionadas são reunidas em um único grupo.
+- A rota autenticada `/clientes/duplicados` mostra o motivo e oferece acesso à
+  edição de cada ficha. A lista de clientes ganhou o atalho `Ver duplicados` e
+  cada grupo também aparece na Central de Pendências.
+- Não existe fusão, exclusão ou alteração automática. Ao corrigir o identificador
+  incorreto na ficha, a pendência desaparece na próxima consulta; todo histórico
+  continua associado ao cadastro original.
+- A mudança afeta o painel administrador, clientes comerciais provisionados e
+  instalações locais. O Painel Mestre permanece inalterado. O serviço usa apenas
+  o banco do `DATA_DIR` da própria instalação, sem tabela, migração, seed ou novo
+  valor inicial. Bancos, configurações, pagamentos, históricos, backups e
+  sessões são preservados, sem ação manual posterior à atualização.
+- Validação: três testes específicos em bancos temporários, suíte interna,
+  Playwright em Chrome, `node --check`, `git diff --check`, geração oficial e
+  teste de instalação limpa do pacote.

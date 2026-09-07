@@ -1,6 +1,7 @@
 const criarClientesAcoesRoute = require('./clientesAcoesRoute');
 const criarPendenciasRoute = require('./pendenciasRoute');
 const criarConciliacaoFinanceiraRoute = require('./conciliacaoFinanceiraRoute');
+const criarClientesDuplicadosRoute = require('./clientesDuplicadosRoute');
 const express = require('express');
 const criarCatalogosRoute = require('./catalogosRoute');
 const criarPaineisRoute = require('./paineisRoute');
@@ -167,6 +168,7 @@ const { listarInteracoesCliente } = require('../services/interacoesRoboService')
 const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
 const { listarPendenciasOperacionais } = require('../services/pendenciasOperacionaisService');
 const { listarDivergenciasFinanceiras, executarConciliacaoFinanceira } = require('../services/conciliacaoFinanceiraService');
+const { listarGruposClientesDuplicados } = require('../services/clientesDuplicadosService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
@@ -7690,6 +7692,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, porPag
     <div class="toolbar">
         <span></span>
         <div class="actions">
+            <a class="button secondary" href="/clientes/duplicados">${icon('alert')} Ver duplicados</a>
             <a class="button secondary" href="${escapar(urlExportar)}">${icon('planos')} Exportar CSV</a>
             <form method="post" action="/clientes/verificar-renovacoes">
                 <button class="button green" type="submit">${icon('whats')} Enviar vencimentos</button>
@@ -9363,6 +9366,13 @@ router.use(criarPendenciasRoute({
 router.use(criarConciliacaoFinanceiraRoute({
     listarDivergenciasFinanceiras,
     executarConciliacaoFinanceira,
+    renderizar,
+    escapar,
+    desativarCache
+}));
+
+router.use(criarClientesDuplicadosRoute({
+    listarGruposClientesDuplicados,
     renderizar,
     escapar,
     desativarCache

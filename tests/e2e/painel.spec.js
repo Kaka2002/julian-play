@@ -89,6 +89,14 @@ test('financeiro abre conciliacao diagnostica sem alterar dados', async ({ page 
     await expect(page.getByText(/Conciliação concluída/)).toBeVisible();
 });
 
+test('clientes oferece revisão segura de possíveis duplicados', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/clientes/todos');
+    await page.getByRole('link', { name: 'Ver duplicados' }).click();
+    await expect(page.getByRole('heading', { name: 'Possíveis clientes duplicados' })).toBeVisible();
+    await expect(page.getByText('O sistema não une nem exclui clientes automaticamente.')).toBeVisible();
+});
+
 test('manutencao exibe controles independentes para o robo', async ({ page }) => {
     await autenticar(page);
     await page.goto('/manutencao');
