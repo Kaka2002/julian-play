@@ -55,6 +55,13 @@ código; itens operacionais externos não são marcados como implementados.
 - A página de Manutenção e as operações de diagnóstico, backup, restauração,
   exportação, cópia externa e compactação do banco possuem módulo próprio com
   as mesmas confirmações de senha e restrições por perfil.
+- O monitoramento público executa a cada 15 minutos, confirma três falhas antes
+  de alertar e também pode ser iniciado manualmente.
+- Eventos operacionais possuem prévia e retenção protegida de 180/365 dias com
+  backup, senha, compactação e validação; históricos financeiros, segurança,
+  privacidade, auditoria, exclusões e reclamações são permanentes.
+- CRM/leads possui módulo de rotas próprio, incluindo conversão em cliente e
+  envio comercial pelo WhatsApp.
 - Toda mudança funcional, correção ou refatoração relevante passa a atualizar
   este arquivo e `CONTEXTO-PARA-CODEX.md` na mesma entrega; `AGENTS.md` recebe
   novas regras permanentes quando aplicável.
@@ -68,7 +75,7 @@ código; itens operacionais externos não são marcados como implementados.
   formais; a inicialização compatível permanece temporariamente como rede de
   segurança para instalações antigas.
 - Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos,
-  Painéis e manutenção de banco/backups foram extraídos para módulos próprios.
+  Painéis, CRM/leads e manutenção de banco/backups foram extraídos para módulos próprios.
   Os outros domínios do arquivo histórico
   continuam sendo separados somente quando forem alterados, evitando uma
   reescrita ampla sem benefício funcional.

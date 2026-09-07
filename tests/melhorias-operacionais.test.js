@@ -48,6 +48,7 @@ test('CRM distribui relatório e preserva ações e dados dos leads', () => {
 test('CRM oferece planos cadastrados e envia abordagem identificada ao lead', () => {
     const vm = require('node:vm');
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
+    const rotasCrm = fs.readFileSync(path.join(repoRoot, 'routes/crmRoute.js'), 'utf8');
     const inicio = fonte.indexOf('function mensagemLeadPadrao(');
     const fim = fonte.indexOf('function cardsFunilCrm(', inicio);
     const contexto = vm.createContext({
@@ -72,7 +73,7 @@ test('CRM oferece planos cadastrados e envia abordagem identificada ao lead', ()
     assert.match(mensagem, /número do plano/);
     assert.match(fonte, /label: 'Plano de interesse'/);
     assert.match(fonte, /listarPlanosComerciais\(\)/);
-    assert.match(fonte, /mensagemLeadPadrao\(lead, config, planos\)/);
+    assert.match(rotasCrm, /mensagemLeadPadrao\(lead, config, planos\)/);
 });
 
 test('upload multipart ignora o campo CSRF e extrai o arquivo real', () => {
@@ -727,4 +728,33 @@ test('manutencao de banco e backups possui modulo proprio com protecoes', () => 
     assert.match(manutencao, /\/manutencao\/backups\/exportar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica/);
     assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/manutencao\/(?:backup|banco\/otimizar|restaurar|diagnostico)/);
     assert.match(clientes, /router\.use\(criarManutencaoBackupsRoute\(/);
+});
+
+test('retencao remove somente eventos operacionais antigos com backup', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,function(e){e?no(e):ok(this.changes)}));const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('whatsapp','info','operacional antigo','2020-01-01')");await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('pix','sucesso','financeiro antigo','2020-01-01')");await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('seguranca_login','alerta','seguranca antiga','2020-01-01')");await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('whatsapp','info','operacional recente',datetime('now'))");const m=require('./services/manutencao');const previa=(await m.obterStatusSistema({})).retencaoEventos;const r=await m.limparEventosAntigosComBackup(365,{});const restantes=await all("SELECT mensagem FROM eventos_sistema WHERE mensagem LIKE '%antigo' OR mensagem LIKE '%recente' ORDER BY mensagem");process.stdout.write(JSON.stringify({previa:previa.totalRemovivel,removidos:r.removidos,backup:fs.existsSync(path.join(db.dataDir,'backups',r.backup)),restantes:restantes.map(x=>x.mensagem)}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const dados = JSON.parse(resultado.stdout);
+        assert.equal(dados.previa, 1);
+        assert.equal(dados.removidos, 1);
+        assert.equal(dados.backup, true);
+        assert.deepEqual(dados.restantes, ['financeiro antigo', 'operacional recente']);
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
+test('retencao preserva eventos antigos de seguranca e privacidade', () => {
+    const resultado = executarIsolado(`(async()=>{const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,e=>e?no(e):ok()));const all=(s,p=[])=>new Promise((ok,no)=>db.all(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('seguranca_login','alerta','seguranca preservada','2020-01-01')");await run("INSERT INTO eventos_sistema(tipo,nivel,mensagem,criadoEm) VALUES('privacidade_cliente','info','privacidade preservada','2020-01-01')");const e=require('./services/eventosSistema');await e.aplicarRetencaoEventos(365);const r=await all("SELECT tipo FROM eventos_sistema WHERE mensagem LIKE '%preservada' ORDER BY tipo");process.stdout.write(JSON.stringify(r.map(x=>x.tipo)));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try { assert.deepEqual(JSON.parse(resultado.stdout), ['privacidade_cliente', 'seguranca_login']); }
+    finally { removerAmbiente(resultado.ambiente); }
+});
+
+test('CRM possui modulo proprio sem duplicar endpoints no roteador historico', () => {
+    const crm = fs.readFileSync(path.join(repoRoot, 'routes', 'crmRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(crm, /router\.get\('\/crm'/);
+    assert.match(crm, /router\.post\('\/crm\/:id\/enviar'/);
+    assert.match(crm, /vincularLeadAoCliente/);
+    assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/crm/);
+    assert.match(clientes, /router\.use\(criarCrmRoute\(/);
 });

@@ -1,8 +1,8 @@
 name: Monitoramento publico Julian Play
 
 on:
-  # O painel roda em computador que pode ficar desligado. A verificacao e
-  # manual para nao registrar falhas esperadas no GitHub Actions.
+  schedule:
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:
@@ -29,14 +29,25 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $resposta = Invoke-RestMethod -Uri '${{ matrix.url }}' -TimeoutSec 20
-          if (-not $resposta.ok -or -not $resposta.ready) {
-            throw 'O servico respondeu, mas declarou que nao esta pronto.'
+          $ultimoErro = ''
+          for ($tentativa = 1; $tentativa -le 3; $tentativa++) {
+            try {
+              $resposta = Invoke-RestMethod -Uri '${{ matrix.url }}' -TimeoutSec 20
+              if (-not $resposta.ok -or -not $resposta.ready) {
+                throw 'O servico respondeu, mas declarou que nao esta pronto.'
+              }
+              if ([string]$resposta.service -ne '${{ matrix.esperado }}') {
+                throw "Servico inesperado: $($resposta.service)"
+              }
+              Write-Host "${{ matrix.servico }} disponivel na versao $($resposta.version), tentativa $tentativa."
+              exit 0
+            } catch {
+              $ultimoErro = $_.Exception.Message
+              Write-Warning "Tentativa $tentativa de 3 falhou: $ultimoErro"
+              if ($tentativa -lt 3) { Start-Sleep -Seconds 20 }
+            }
           }
-          if ([string]$resposta.service -ne '${{ matrix.esperado }}') {
-            throw "Servico inesperado: $($resposta.service)"
-          }
-          Write-Host "${{ matrix.servico }} disponivel na versao $($resposta.version)."
+          throw "Tres verificacoes consecutivas falharam. Ultimo erro: $ultimoErro"
 
       - name: Enviar alerta opcional quando falhar
         if: failure()
@@ -50,7 +61,7 @@ jobs:
             exit 0
           }
           $corpo = @{
-            content = "ALERTA: ${{ matrix.servico }} nao passou no monitoramento publico. Consulte o GitHub Actions."
+            content = "ALERTA: ${{ matrix.servico }} falhou em 3 verificacoes consecutivas no monitoramento publico. Consulte o GitHub Actions."
             tipo = 'monitoramento_publico'
             nivel = 'erro'
           } | ConvertTo-Json

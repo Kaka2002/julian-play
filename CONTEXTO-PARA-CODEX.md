@@ -1401,3 +1401,22 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - A mudança é compartilhada pelos quatro perfis. Rotas de importação,
   configurações e controle do WhatsApp permanecem temporariamente no roteador
   histórico para serem separadas em etapas menores e verificáveis.
+
+## Monitoramento, retenção e CRM na versão 1.3.28
+
+- O workflow de monitoramento público roda automaticamente a cada 15 minutos e
+  permanece disponível manualmente. Cada serviço é testado até três vezes com
+  intervalo; a execução e o webhook só falham/alertam depois de três falhas
+  consecutivas, reduzindo alarmes por oscilações momentâneas.
+- Manutenção mostra quantos eventos operacionais com mais de 365 dias podem ser
+  removidos. A limpeza permite retenção de 180 ou 365 dias, exige senha e
+  confirmação, cria backup verificado, compacta e valida o SQLite.
+- Eventos de PIX, PayPal, pagamentos, renovações externas, segurança,
+  privacidade, auditoria, exclusões e reclamações de campanha são preservados
+  permanentemente pela política; somente eventos operacionais antigos entram
+  na prévia e na exclusão.
+- As rotas de CRM e leads foram movidas para `routes/crmRoute.js`, preservando
+  filtros, histórico, conversão/criação de cliente e envio pelo WhatsApp. A
+  refatoração é compartilhada pelos quatro perfis e não altera dados.
+- As vulnerabilidades transitivas do Puppeteer/WhatsApp e Express continuam
+  documentadas e não recebem `npm audit fix --force`.

@@ -6,7 +6,12 @@ const sqlite3 = require('sqlite3').verbose();
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
 const { obterConfiguracoes } = require('./configuracoesPainel');
-const { listarEventosSistema, registrarEventoSistema } = require('./eventosSistema');
+const {
+    listarEventosSistema,
+    registrarEventoSistema,
+    obterPreviaRetencaoEventos,
+    aplicarRetencaoEventos
+} = require('./eventosSistema');
 const { calcularEstadoLicenca } = require('./licencaCalculo');
 const { obterStatusFilaMensagens } = require('./filaMensagensService');
 const { listarAtendimentosHumanos } = require('./conversaService');
@@ -484,6 +489,27 @@ async function otimizarBancoDados(config = {}) {
     return resultado;
 }
 
+async function limparEventosAntigosComBackup(dias = 365, config = {}) {
+    await db.ready;
+    const previa = await obterPreviaRetencaoEventos(dias);
+    const backup = await criarBackupManualComCopiaExterna(config);
+    const retencao = await aplicarRetencaoEventos(previa.dias);
+    await executarSql('VACUUM');
+    const integridade = await obterLinhaSql('PRAGMA quick_check');
+    if (String(integridade.quick_check || '').toLowerCase() !== 'ok') {
+        throw new Error('A limpeza terminou, mas a verificacao de integridade nao retornou OK. Preserve o backup criado.');
+    }
+    const resultado = {
+        ...retencao,
+        backup: backup.backup.nome,
+        copiaExterna: backup.copiaExterna || '',
+        avisoCopiaExterna: backup.erroCopiaExterna || ''
+    };
+    await registrarEventoSistema('retencao_eventos', 'sucesso',
+        `${resultado.removidos} evento(s) operacional(is) antigo(s) removido(s) com backup verificado.`, resultado);
+    return resultado;
+}
+
 async function criarBackupManualComCopiaExterna(config = {}) {
     const backup = await criarBackupManual();
     const copiaExternaSolicitada = String(config.backupExternoAtivo) === '1';
@@ -695,6 +721,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const atendimentosHumanos = listarAtendimentosHumanos({ atendimentoHumanoMs });
     const riscoWhatsApp = calcularRiscoWhatsApp(statusWhatsApp, filaMensagens);
     const armazenamentoBanco = await obterArmazenamentoBanco();
+    const retencaoEventos = await obterPreviaRetencaoEventos(365);
     const ultimoEventoDiagnostico = eventos.find(evento => evento.tipo === 'diagnostico');
     let diagnostico = null;
 
@@ -726,6 +753,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         bancoTamanho: statBanco?.size || 0,
         bancoTamanhoFormatado: formatarBytes(statBanco?.size || 0),
         armazenamentoBanco,
+        retencaoEventos,
         backupDir: BACKUP_DIR,
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
@@ -775,6 +803,7 @@ module.exports = {
     obterStatusSistema,
     obterArmazenamentoBanco,
     otimizarBancoDados,
+    limparEventosAntigosComBackup,
     formatarBytes
     ,listarBackups
     ,verificarArquivoBackup

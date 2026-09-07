@@ -47,7 +47,53 @@ function listarEventosSistema(limite = 30) {
     );
 }
 
+const TIPOS_EVENTOS_PRESERVADOS = [
+    'pix%', 'paypal%', 'pagamento%', 'privacidade%', 'seguranca%',
+    'auditoria%', 'exclusao%', 'renovacao_painel%', 'campanha_reclamacao%'
+];
+
+function filtroEventosDescartaveis() {
+    return TIPOS_EVENTOS_PRESERVADOS.map(() => 'tipo NOT LIKE ?').join(' AND ');
+}
+
+function normalizarDiasRetencao(dias) {
+    const valor = Number.parseInt(dias, 10);
+    return valor === 180 ? 180 : 365;
+}
+
+async function obterPreviaRetencaoEventos(dias = 365) {
+    const retencaoDias = normalizarDiasRetencao(dias);
+    const parametros = [`-${retencaoDias} days`, ...TIPOS_EVENTOS_PRESERVADOS];
+    const linhas = await buscarTodos(
+        `SELECT COUNT(*) AS total, MIN(criadoEm) AS maisAntigo, MAX(criadoEm) AS maisRecente
+         FROM eventos_sistema
+         WHERE datetime(criadoEm) < datetime('now', ?) AND ${filtroEventosDescartaveis()}`,
+        parametros
+    );
+    return {
+        dias: retencaoDias,
+        totalRemovivel: Number(linhas[0]?.total || 0),
+        maisAntigo: linhas[0]?.maisAntigo || '',
+        maisRecente: linhas[0]?.maisRecente || '',
+        tiposPreservados: [...TIPOS_EVENTOS_PRESERVADOS]
+    };
+}
+
+async function aplicarRetencaoEventos(dias = 365) {
+    const previa = await obterPreviaRetencaoEventos(dias);
+    if (!previa.totalRemovivel) return { ...previa, removidos: 0 };
+    const resultado = await executar(
+        `DELETE FROM eventos_sistema
+         WHERE datetime(criadoEm) < datetime('now', ?) AND ${filtroEventosDescartaveis()}`,
+        [`-${previa.dias} days`, ...TIPOS_EVENTOS_PRESERVADOS]
+    );
+    return { ...previa, removidos: Number(resultado.changes || 0) };
+}
+
 module.exports = {
     registrarEventoSistema,
-    listarEventosSistema
+    listarEventosSistema,
+    obterPreviaRetencaoEventos,
+    aplicarRetencaoEventos,
+    TIPOS_EVENTOS_PRESERVADOS
 };

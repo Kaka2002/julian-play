@@ -8,6 +8,7 @@ function criarManutencaoBackupsRoute(deps = {}) {
         bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica,
         obterConfiguracoes, criarBackupManualComCopiaExterna,
         executarExercicioRestauracaoMensal, otimizarBancoDados,
+        limparEventosAntigosComBackup,
         executarDiagnosticoSistema, testarWebhookAlertas, restaurarBackup,
         exportarBackupCriptografado, copiarBackupExterno, logControleClientes
     } = deps;
@@ -70,6 +71,19 @@ function criarManutencaoBackupsRoute(deps = {}) {
         } catch (err) {
             logControleClientes('Erro ao executar diagnóstico do sistema', { erro: err.message });
             return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao executar diagnóstico: ${err.message}`)}`);
+        }
+    });
+
+    router.post('/manutencao/eventos/limpar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
+        try {
+            const resultado = await limparEventosAntigosComBackup(req.body.diasRetencao, await obterConfiguracoes());
+            logControleClientes('Retenção de eventos executada', resultado);
+            let mensagem = `${resultado.removidos} evento(s) operacional(is) antigo(s) removido(s). Backup: ${resultado.backup}.`;
+            if (resultado.avisoCopiaExterna) mensagem += ` A cópia externa falhou, mas o backup local foi preservado: ${resultado.avisoCopiaExterna}`;
+            return res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
+        } catch (err) {
+            logControleClientes('Erro na retenção de eventos', { erro: err.message });
+            return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro na retenção de eventos: ${err.message}`)}`);
         }
     });
 
