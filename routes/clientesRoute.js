@@ -166,7 +166,7 @@ const { registrarEventoSistema } = require('../services/eventosSistema');
 const { mascararSegredos } = require('../services/securityService');
 const { listarInteracoesCliente } = require('../services/interacoesRoboService');
 const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/clienteAuditoriaService');
-const { listarPendenciasOperacionais } = require('../services/pendenciasOperacionaisService');
+const { listarPendenciasOperacionais, atualizarControlePendencia, concluirPendencia, excluirPendencia } = require('../services/pendenciasOperacionaisService');
 const { listarDivergenciasFinanceiras, executarConciliacaoFinanceira } = require('../services/conciliacaoFinanceiraService');
 const { listarGruposClientesDuplicados } = require('../services/clientesDuplicadosService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
@@ -9353,6 +9353,9 @@ router.use(criarClientesAcoesRoute({
 
 router.use(criarPendenciasRoute({
     listarPendenciasOperacionais,
+    atualizarControlePendencia,
+    concluirPendencia,
+    excluirPendencia,
     obterStatusSistema,
     getStatusWhatsApp,
     renderizar,

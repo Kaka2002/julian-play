@@ -1552,3 +1552,21 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Validação: três testes específicos em bancos temporários, suíte interna,
   Playwright em Chrome, `node --check`, `git diff --check`, geração oficial e
   teste de instalação limpa do pacote.
+
+## Ações administrativas na Central de Pendências na versão 1.3.36
+
+- Cada item da Central agora oferece `Editar`, `Concluir` e `Excluir`. A edição
+  permite título, detalhe, observação interna e prioridade; concluir e excluir
+  ocultam a chave até que ela seja reaberta por uma edição.
+- O banco de cada instalação cria, de forma idempotente, a tabela auxiliar
+  `pendencias_controle`, que guarda somente a decisão administrativa e seus
+  metadados. Clientes, pagamentos, campanhas, atendimentos e históricos das
+  tabelas de origem não são copiados nem modificados.
+- As três ações usam as proteções globais de autenticação e CSRF, registram
+  eventos `pendencia_editada`, `pendencia_concluida` ou `pendencia_excluida` e
+  redirecionam com confirmação visível. Ao corrigir a origem, a pendência
+  calculada deixa de aparecer independentemente do controle auxiliar.
+- A mudança afeta o painel administrador, clientes comerciais provisionados e
+  instalações locais; o Painel Mestre permanece inalterado. Não há seed nem
+  ação manual após deploy ou atualização. Foram executados sete testes
+  específicos, `node --check` nos arquivos alterados e `git diff --check`.

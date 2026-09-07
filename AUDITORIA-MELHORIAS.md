@@ -5,6 +5,19 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.36: a Central de Pendências passou a permitir editar título,
+  detalhe, observação e prioridade, além de concluir ou excluir uma pendência.
+  Cada decisão é protegida por sessão e CSRF, registrada em eventos e ligada à
+  chave da origem; nenhum cliente, pagamento, campanha ou histórico é apagado.
+  A edição pode reabrir uma decisão anterior, enquanto a correção da situação
+  na origem continua removendo o item calculado naturalmente.
+- Perfis da 1.3.36: painel administrador, cliente comercial no servidor e
+  instalação local recebem as ações; o Painel Mestre permanece inalterado. A
+  tabela auxiliar guarda somente estado administrativo e metadados da
+  pendência, sem copiar dados de negócio. Validada com testes específicos,
+  incluindo editar, concluir, excluir e preservação da origem, além de sintaxe
+  JavaScript e `git diff --check`.
+
 - Versão 1.3.35: detecção segura de possíveis clientes duplicados por WhatsApp
   normalizado e endereço MAC válido, incluindo os acessos de aplicativo. Grupos
   relacionados são consolidados, classificados pela situação dos cadastros e
@@ -169,3 +182,4 @@ código; itens operacionais externos não são marcados como implementados.
 - Manter mais de 10 GB livres no disco do servidor.
 - Manter `julian-amplaytv` parado enquanto a cliente utilizar a instalação
   local.
+

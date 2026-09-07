@@ -39,6 +39,8 @@ async function obterConfiguracoes() {
         licencaCodigoAtivacao: '',
         licencaServidorUrl: '',
         licencaUltimaConsultaRemota: '',
+        licencaUltimaConsultaValida: '',
+        licencaPoliticaAssinada: '0',
         licencaMachineFingerprint: '',
         nomeEmpresaRobo: '',
         imagemRoboMenu: '',

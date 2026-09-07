@@ -56,7 +56,36 @@ test('rota protegida oferece filtros, paginacao e links para resolver nas areas 
     assert.match(rota, /name="prioridade"/);
     assert.match(rota, /name="area"/);
     assert.match(rota, /href="\$\{escapar\(item\.href\)\}"/);
+    assert.match(rota, /action="\/pendencias\/editar"/);
+    assert.match(rota, /action="\/pendencias\/concluir"/);
+    assert.match(rota, /action="\/pendencias\/excluir"/);
     assert.match(principal, /router\.use\(criarPendenciasRoute\(/);
     assert.match(principal, /href="\/pendencias"/);
     assert.ok(bot.indexOf("app.use('/', protegerPainel)") < bot.indexOf("app.use('/', clientesRoute)"));
+});
+
+test('acoes administrativas editam, concluem e excluem uma pendencia sem apagar a origem', () => {
+    const resultado = executarIsolado(`(async()=>{
+        const db=require('./database/sqlite');await db.ready;
+        const run=(sql,p=[])=>new Promise((ok,no)=>db.run(sql,p,function(e){e?no(e):ok({id:this.lastID,changes:this.changes})}));
+        const get=(sql,p=[])=>new Promise((ok,no)=>db.get(sql,p,(e,x)=>e?no(e):ok(x)));
+        const lead=await run("INSERT INTO leads(nome,status,proximoContato) VALUES('Lead pendente','novo','2026-09-01T10:00')");
+        const svc=require('./services/pendenciasOperacionaisService');
+        const op={agora:new Date('2026-09-07T12:00:00-03:00'),operacional:{whatsapp:{conectado:true},sistema:{backupRecente:true}}};
+        const antes=await svc.listarPendenciasOperacionais({},op);const item=antes.itens.find(x=>x.tipo==='lead');
+        await svc.atualizarControlePendencia(item.chave,{titulo:'Retorno prioritário',observacao:'Ligar pela manhã',prioridade:'critica'});
+        const editada=await svc.listarPendenciasOperacionais({},op);
+        await svc.concluirPendencia(item.chave);const concluida=await svc.listarPendenciasOperacionais({},op);
+        await svc.atualizarControlePendencia(item.chave,{titulo:'Reaberta'});const reaberta=await svc.listarPendenciasOperacionais({},op);
+        await svc.excluirPendencia(item.chave);const excluida=await svc.listarPendenciasOperacionais({},op);
+        const origem=await get('SELECT status,nome FROM leads WHERE id=?',[lead.id]);
+        process.stdout.write(JSON.stringify({editada:editada.itens.find(x=>x.chave===item.chave),concluida:concluida.itens.some(x=>x.chave===item.chave),reaberta:reaberta.itens.some(x=>x.chave===item.chave),excluida:excluida.itens.some(x=>x.chave===item.chave),origem}));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const dados=JSON.parse(resultado.stdout);
+        assert.equal(dados.editada.titulo,'Retorno prioritário');
+        assert.equal(dados.editada.prioridade,'critica');
+        assert.equal(dados.concluida,false);assert.equal(dados.reaberta,true);assert.equal(dados.excluida,false);
+        assert.deepEqual(dados.origem,{status:'novo',nome:'Lead pendente'});
+    } finally { removerAmbiente(resultado.ambiente); }
 });

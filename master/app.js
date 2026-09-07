@@ -1691,6 +1691,35 @@ app.get('/ready', async (req, res) => {
     }
 });
 
+function respostaLicencaRemotaAssinada(licenca, opcoes = {}) {
+    const emitidoEm = new Date();
+    const validoAte = new Date(emitidoEm.getTime() + (7 * 24 * 60 * 60 * 1000));
+    const dados = {
+        encontrada: true,
+        instalacaoId: licenca.instalacaoId,
+        cliente: licenca.cliente,
+        telefone: licenca.telefone || '',
+        machineFingerprint: licenca.machineFingerprint || '',
+        tipo: licenca.tipo,
+        ativacao: licenca.ativacao || '',
+        vencimento: licenca.vencimento || '',
+        vitalicia: licenca.vitalicia === '1',
+        suspensa: opcoes.suspensa ?? licenca.suspensa === '1',
+        observacoes: opcoes.observacoes ?? (licenca.observacoes || ''),
+        atualizadoEm: licenca.atualizadoEm,
+        emitidoEm: emitidoEm.toISOString(),
+        validoAte: validoAte.toISOString()
+    };
+    const autorizacaoAssinada = gerarCodigoLicencaAssinado({
+        v: 1,
+        finalidade: 'autorizacao_remota',
+        ...dados,
+        vitalicia: dados.vitalicia ? '1' : '0',
+        suspensa: dados.suspensa ? '1' : '0'
+    });
+    return { ok: true, ...dados, autorizacaoAssinada };
+}
+
 app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
     try {
         const instalacaoId = String(req.params.instalacaoId || '').trim();
@@ -1707,21 +1736,10 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
                 ['bloqueada_maquina', instalacaoId]
             );
             await registrarEventoLicencaLocal(instalacaoId, 'bloqueio', 'Consulta bloqueada por computador diferente.', `Esperado: ${machineEsperada}; recebido: ${machineFingerprint}`);
-            return res.json({
-                ok: true,
-                encontrada: true,
-                instalacaoId: licenca.instalacaoId,
-                cliente: licenca.cliente,
-                telefone: licenca.telefone || '',
-                machineFingerprint: machineEsperada,
-                tipo: licenca.tipo,
-                ativacao: licenca.ativacao || '',
-                vencimento: licenca.vencimento || '',
-                vitalicia: licenca.vitalicia === '1',
+            return res.json(respostaLicencaRemotaAssinada(licenca, {
                 suspensa: true,
-                observacoes: 'Licenca vinculada a outro computador. Solicite liberacao ao fornecedor.',
-                atualizadoEm: licenca.atualizadoEm
-            });
+                observacoes: 'Licenca vinculada a outro computador. Solicite liberacao ao fornecedor.'
+            }));
         }
 
         await masterDb.executar(
@@ -1730,21 +1748,7 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
         );
         await registrarEventoLicencaLocal(instalacaoId, 'consulta', 'Instalação local consultou a licença.', `Status anterior: ${licenca.ultimoStatus || 'sem consulta'}`);
 
-        res.json({
-            ok: true,
-            encontrada: true,
-            instalacaoId: licenca.instalacaoId,
-            cliente: licenca.cliente,
-            telefone: licenca.telefone || '',
-            machineFingerprint: licenca.machineFingerprint || '',
-            tipo: licenca.tipo,
-            ativacao: licenca.ativacao || '',
-            vencimento: licenca.vencimento || '',
-            vitalicia: licenca.vitalicia === '1',
-            suspensa: licenca.suspensa === '1',
-            observacoes: licenca.observacoes || '',
-            atualizadoEm: licenca.atualizadoEm
-        });
+        res.json(respostaLicencaRemotaAssinada(licenca));
     } catch (err) {
         res.status(500).json({ ok: false, mensagem: err.message });
     }

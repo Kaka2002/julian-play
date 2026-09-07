@@ -1,8 +1,36 @@
 const db = require('../database/sqlite');
 const { listarDivergenciasFinanceiras } = require('./conciliacaoFinanceiraService');
 const { listarGruposClientesDuplicados } = require('./clientesDuplicadosService');
+const { registrarEventoSistema } = require('./eventosSistema');
 
 const PRIORIDADE_PESO = { critica: 0, alta: 1, media: 2, baixa: 3 };
+let tabelaControlesPronta;
+
+function garantirTabelaControles() {
+    if (!tabelaControlesPronta) tabelaControlesPronta = db.ready.then(() => new Promise((resolve, reject) => {
+        db.run(`CREATE TABLE IF NOT EXISTS pendencias_controle (
+            chave TEXT PRIMARY KEY,
+            status TEXT NOT NULL DEFAULT 'aberta',
+            titulo TEXT,
+            detalhe TEXT,
+            prioridade TEXT,
+            observacao TEXT,
+            atualizadoEm DATETIME DEFAULT CURRENT_TIMESTAMP,
+            concluidoEm DATETIME,
+            excluidoEm DATETIME
+        )`, err => err ? reject(err) : resolve());
+    }));
+    return tabelaControlesPronta;
+}
+
+function executar(sql, params = []) {
+    return garantirTabelaControles().then(() => new Promise((resolve, reject) => {
+        db.run(sql, params, function onRun(err) {
+            if (err) return reject(err);
+            resolve({ id: this.lastID, changes: this.changes });
+        });
+    }));
+}
 
 function buscarTodos(sql, params = []) {
     return db.ready.then(() => new Promise((resolve, reject) => {
@@ -178,7 +206,7 @@ async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
         listarDivergenciasFinanceiras(),
         listarGruposClientesDuplicados()
     ]);
-    const todos = [
+    let todos = [
         ...pendenciasClientes(clientes, agora), ...pendenciasAtendimentos(atendimentos, agora),
         ...pendenciasLeads(leads, agora), ...pendenciasCobrancas(cobrancas),
         ...pendenciasFilas(mensagens, renovacoes), ...pendenciasCampanhas(campanhas),
@@ -192,6 +220,8 @@ async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
             href: '/clientes/duplicados' }))
     ];
     adicionarPendenciasOperacionais(todos, opcoes.operacional);
+    const controles = await listarControlesPendencias();
+    todos = aplicarControlesPendencias(todos, controles);
     todos.sort((a, b) => (PRIORIDADE_PESO[a.prioridade] - PRIORIDADE_PESO[b.prioridade])
         || String(a.prazo || '9999').localeCompare(String(b.prazo || '9999'))
         || a.titulo.localeCompare(b.titulo, 'pt-BR'));
@@ -200,4 +230,62 @@ async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
     return { itens: aplicarFiltros(todos, filtros), resumo };
 }
 
-module.exports = { listarPendenciasOperacionais, aplicarFiltros, diasAte };
+function buscarTodosControles() {
+    return garantirTabelaControles().then(() => new Promise((resolve, reject) => {
+        db.all('SELECT * FROM pendencias_controle', (err, rows) => err ? reject(err) : resolve(rows || []));
+    }));
+}
+
+async function listarControlesPendencias() {
+    const rows = await buscarTodosControles();
+    return new Map(rows.map(item => [item.chave, item]));
+}
+
+function aplicarControlesPendencias(itens, controles) {
+    return itens.filter(item => {
+        const controle = controles.get(item.chave);
+        return !controle || !['concluida', 'excluida'].includes(controle.status);
+    }).map(item => {
+        const controle = controles.get(item.chave);
+        if (!controle) return item;
+        return {
+            ...item,
+            titulo: controle.titulo || item.titulo,
+            detalhe: [controle.detalhe || item.detalhe, controle.observacao].filter(Boolean).join(' · '),
+            prioridade: PRIORIDADE_PESO[controle.prioridade] !== undefined ? controle.prioridade : item.prioridade
+        };
+    });
+}
+
+async function atualizarControlePendencia(chave, dados = {}) {
+    const id = String(chave || '').trim();
+    if (!id || id.length > 300) throw new Error('Chave de pendência inválida.');
+    const prioridade = ['critica', 'alta', 'media', 'baixa'].includes(dados.prioridade) ? dados.prioridade : null;
+    const titulo = String(dados.titulo || '').trim().slice(0, 240) || null;
+    const detalhe = String(dados.detalhe || '').trim().slice(0, 1000) || null;
+    const observacao = String(dados.observacao || '').trim().slice(0, 1000) || null;
+    await executar(`INSERT INTO pendencias_controle(chave,status,titulo,detalhe,prioridade,observacao,atualizadoEm)
+        VALUES(?, 'aberta', ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(chave) DO UPDATE SET status='aberta',titulo=excluded.titulo,detalhe=excluded.detalhe,
+        prioridade=excluded.prioridade,observacao=excluded.observacao,atualizadoEm=CURRENT_TIMESTAMP,
+        concluidoEm=NULL,excluidoEm=NULL`, [id, titulo, detalhe, prioridade, observacao]);
+    await registrarEventoSistema('pendencia_editada', 'info', 'Pendência editada na Central.', { chave: id });
+}
+
+async function concluirPendencia(chave) {
+    const id = String(chave || '').trim();
+    if (!id || id.length > 300) throw new Error('Chave de pendência inválida.');
+    await executar(`INSERT INTO pendencias_controle(chave,status,concluidoEm,atualizadoEm) VALUES(?, 'concluida', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(chave) DO UPDATE SET status='concluida',concluidoEm=CURRENT_TIMESTAMP,atualizadoEm=CURRENT_TIMESTAMP`, [id]);
+    await registrarEventoSistema('pendencia_concluida', 'sucesso', 'Pendência concluída na Central.', { chave: id });
+}
+
+async function excluirPendencia(chave) {
+    const id = String(chave || '').trim();
+    if (!id || id.length > 300) throw new Error('Chave de pendência inválida.');
+    await executar(`INSERT INTO pendencias_controle(chave,status,excluidoEm,atualizadoEm) VALUES(?, 'excluida', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(chave) DO UPDATE SET status='excluida',excluidoEm=CURRENT_TIMESTAMP,atualizadoEm=CURRENT_TIMESTAMP`, [id]);
+    await registrarEventoSistema('pendencia_excluida', 'alerta', 'Pendência ocultada na Central.', { chave: id });
+}
+
+module.exports = { listarPendenciasOperacionais, aplicarFiltros, diasAte, atualizarControlePendencia, concluirPendencia, excluirPendencia, listarControlesPendencias, aplicarControlesPendencias };

@@ -160,7 +160,19 @@ async function obterEstadoLicenca() {
     config = await garantirIdentificadorInstalacao(config);
     config = await inicializarAvaliacaoPadrao(config);
     config = await sincronizarLicencaRemota(config);
-    return aplicarBloqueioMaquina(config, calcularEstadoLicenca(config));
+    const estado = aplicarBloqueioMaquina(config, calcularEstadoLicenca(config));
+    if (String(config.licencaPoliticaAssinada || '0') !== '1' || !config.licencaServidorUrl) return estado;
+    const ultimaValida = new Date(config.licencaUltimaConsultaValida || 0).getTime();
+    const toleranciaExpirada = !Number.isFinite(ultimaValida) || ultimaValida <= 0
+        || Date.now() - ultimaValida > (7 * 24 * 60 * 60 * 1000);
+    if (!toleranciaExpirada) return estado;
+    return {
+        ...estado,
+        permitida: false,
+        status: 'validacao_remota_pendente',
+        rotulo: 'Validação de licença necessária',
+        motivo: 'offline_grace_expired'
+    };
 }
 
 function aplicarBloqueioMaquina(config = {}, estado = {}) {
@@ -218,7 +230,23 @@ async function sincronizarLicencaRemota(config = {}) {
             return { ...config, licencaUltimaConsultaRemota: agora };
         }
 
-        const dados = await resposta.json();
+        const respostaJson = await resposta.json();
+        let dados = respostaJson;
+        if (respostaJson?.autorizacaoAssinada) {
+            const autorizacao = lerCodigoLicenca(respostaJson.autorizacaoAssinada);
+            if (autorizacao.alg !== 'ed25519' || autorizacao.finalidade !== 'autorizacao_remota') {
+                throw new Error('Autorização remota sem assinatura Ed25519 válida.');
+            }
+            if (autorizacao.instalacaoId !== instalacaoId || normalizarFingerprintMaquina(autorizacao.machineFingerprint) !== machineFingerprint) {
+                throw new Error('Autorização remota pertence a outra instalação ou máquina.');
+            }
+            if (!autorizacao.validoAte || new Date(autorizacao.validoAte).getTime() < Date.now()) {
+                throw new Error('Autorização remota expirada.');
+            }
+            dados = { ...autorizacao, vitalicia: autorizacao.vitalicia === '1', suspensa: autorizacao.suspensa === '1' };
+        } else if (String(config.licencaPoliticaAssinada || '0') === '1') {
+            throw new Error('O servidor não devolveu uma autorização assinada.');
+        }
         if (!dados || !dados.encontrada) {
             await salvarConfiguracao('licencaUltimaConsultaRemota', agora);
             return { ...config, licencaUltimaConsultaRemota: agora };
@@ -235,7 +263,9 @@ async function sincronizarLicencaRemota(config = {}) {
             licencaBloqueioAtivo: '1',
             licencaObservacoes: dados.observacoes || config.licencaObservacoes || '',
             licencaMachineFingerprint: dados.machineFingerprint || config.licencaMachineFingerprint || machineFingerprint,
-            licencaUltimaConsultaRemota: agora
+            licencaUltimaConsultaRemota: agora,
+            licencaUltimaConsultaValida: respostaJson?.autorizacaoAssinada ? agora : config.licencaUltimaConsultaValida || '',
+            licencaPoliticaAssinada: respostaJson?.autorizacaoAssinada ? '1' : config.licencaPoliticaAssinada || '0'
         };
 
         for (const [chave, valor] of Object.entries(atualizacoes)) {
@@ -322,6 +352,10 @@ async function aplicarCodigoLicenca(codigo) {
     const maquinaCodigo = normalizarFingerprintMaquina(payload.machineFingerprint || payload.maquinaFingerprint || '');
     const maquinaLicenciada = normalizarFingerprintMaquina(config.licencaMachineFingerprint || '');
 
+    if (payload.alg !== 'ed25519' && String(config.licencaPoliticaAssinada || '0') === '1') {
+        throw new Error('Esta instalação exige código de licença Ed25519 emitido pelo Painel Mestre.');
+    }
+
     if (!instalacaoCodigo || instalacaoCodigo !== instalacaoAtual) {
         throw new Error('Este código pertence a outra instalação. Confira o ID informado ao fornecedor.');
     }
@@ -348,6 +382,10 @@ async function aplicarCodigoLicenca(codigo) {
     await salvarConfiguracao('licencaServidorUrl', payload.servidorUrl || '');
     await salvarConfiguracao('licencaMachineFingerprint', maquinaCodigo || maquinaAtual);
     await salvarConfiguracao('licencaUltimaConsultaRemota', '');
+    if (payload.alg === 'ed25519') {
+        await salvarConfiguracao('licencaPoliticaAssinada', '1');
+        await salvarConfiguracao('licencaUltimaConsultaValida', new Date().toISOString());
+    }
 
     return obterEstadoLicenca();
 }

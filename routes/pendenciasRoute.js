@@ -2,7 +2,7 @@ const express = require('express');
 
 function criarPendenciasRoute(deps = {}) {
     const router = express.Router();
-    const { listarPendenciasOperacionais, obterStatusSistema, getStatusWhatsApp,
+    const { listarPendenciasOperacionais, atualizarControlePendencia, concluirPendencia, excluirPendencia, obterStatusSistema, getStatusWhatsApp,
         renderizar, escapar, desativarCache, paginarItens, paginaAtual, quantidadePorPagina } = deps;
 
     function option(valor, atual, texto) {
@@ -48,7 +48,25 @@ function criarPendenciasRoute(deps = {}) {
             ${itens.length ? `<div class="pending-list">${itens.map(item => `<article class="pending-item">
                 <div><span class="badge ${classes[item.prioridade]}">${nomes[item.prioridade]}</span> <span class="badge muted">Área responsável: ${escapar(rotuloArea(item.area))}</span>
                     <h3>${escapar(item.titulo)}</h3><p>${escapar(item.detalhe)}</p>${item.prazo ? `<small>Prazo ou atualização: ${escapar(formatarPrazo(item.prazo))}</small>` : ''}</div>
-                <a class="button secondary" href="${escapar(item.href)}">Resolver</a>
+                <div class="quick-actions">
+                    <a class="button secondary" href="${escapar(item.href)}">Resolver</a>
+                    <details class="pending-edit"><summary class="button secondary">Editar</summary>
+                        <form method="post" action="/pendencias/editar">
+                            <input type="hidden" name="chave" value="${escapar(item.chave)}">
+                            <input name="titulo" value="${escapar(item.titulo)}" maxlength="240" aria-label="Título da pendência">
+                            <textarea name="detalhe" maxlength="1000" aria-label="Detalhe da pendência">${escapar(item.detalhe)}</textarea>
+                            <input name="observacao" maxlength="1000" placeholder="Observação interna" aria-label="Observação interna">
+                            <select name="prioridade" aria-label="Prioridade da pendência">${option('critica', item.prioridade, 'Crítica')}${option('alta', item.prioridade, 'Alta')}${option('media', item.prioridade, 'Média')}${option('baixa', item.prioridade, 'Baixa')}</select>
+                            <button class="button" type="submit">Salvar edição</button>
+                        </form>
+                    </details>
+                    <form method="post" action="/pendencias/concluir" onsubmit="return confirm('Concluir esta pendência?');">
+                        <input type="hidden" name="chave" value="${escapar(item.chave)}"><button class="button green" type="submit">Concluir</button>
+                    </form>
+                    <form method="post" action="/pendencias/excluir" onsubmit="return confirm('Excluir esta pendência da Central?');">
+                        <input type="hidden" name="chave" value="${escapar(item.chave)}"><button class="button danger" type="submit">Excluir</button>
+                    </form>
+                </div>
             </article>`).join('')}</div>` : '<div class="empty">Nenhuma pendência encontrada para estes filtros.</div>'}
             ${paginacao.totalPaginas > 1 ? `<div class="pagination"><span class="pagination-info">${paginacao.total} pendência(s)</span><div>${Array.from({length:paginacao.totalPaginas},(_,i)=>{const p=i+1;const q=new URLSearchParams({...filtros,pagina:String(p),porPagina:String(paginacao.porPagina)});return `<a class="page-link ${p===paginacao.pagina?'active':''}" href="/pendencias?${q}">${p}</a>`;}).join('')}</div></div>` : ''}
         </section>`;
@@ -67,8 +85,21 @@ function criarPendenciasRoute(deps = {}) {
         const paginacao = paginarItens(resultado.itens, paginaAtual(req.query.pagina), quantidadePorPagina(req.query.porPagina, 20));
         return renderizar(res, { titulo: 'Central de Pendências', conteudo: tela({
             itens: paginacao.itens, resumo: resultado.resumo, filtros, paginacao
-        }), ativo: 'pendencias' });
+        }), ativo: 'pendencias', mensagem: String(req.query.mensagem || req.query.erro || '') });
     });
+
+    async function acao(req, res, operacao, mensagem) {
+        try {
+            await operacao(String(req.body?.chave || ''));
+            return res.redirect(`/pendencias?mensagem=${encodeURIComponent(mensagem)}`);
+        } catch (err) {
+            return res.redirect(`/pendencias?erro=${encodeURIComponent(err.message)}`);
+        }
+    }
+
+    router.post('/pendencias/editar', (req, res) => acao(req, res, chave => atualizarControlePendencia(chave, req.body || {}), 'Pendência atualizada.'));
+    router.post('/pendencias/concluir', (req, res) => acao(req, res, concluirPendencia, 'Pendência concluída.'));
+    router.post('/pendencias/excluir', (req, res) => acao(req, res, excluirPendencia, 'Pendência excluída.'));
 
     return router;
 }

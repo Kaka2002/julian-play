@@ -77,6 +77,19 @@ test('central de pendencias consolida riscos e permite filtrar por area', async 
     await expect(page.locator('.pending-item .badge.muted')).toHaveText('Área responsável: WhatsApp');
 });
 
+test('central de pendencias oferece editar concluir e excluir com confirmacao', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/pendencias');
+
+    await expect(page.getByText('Editar', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Concluir' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Excluir' }).first()).toBeVisible();
+
+    await page.getByText('Editar', { exact: true }).first().click();
+    await expect(page.locator('form[action="/pendencias/editar"] input[name="titulo"]').first()).toBeVisible();
+    await expect(page.locator('form[action="/pendencias/editar"] textarea[name="detalhe"]').first()).toBeVisible();
+});
+
 test('financeiro abre conciliacao diagnostica sem alterar dados', async ({ page }) => {
     await autenticar(page);
     await page.goto('/financeiro');
