@@ -1730,6 +1730,24 @@ app.get('/api/licencas/:instalacaoId/status', async (req, res) => {
         }
 
         const machineEsperada = String(licenca.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (!machineEsperada && machineFingerprint) {
+            const vinculo = await masterDb.executar(
+                `UPDATE licencas_locais SET machineFingerprint = ?, ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ? AND (machineFingerprint IS NULL OR TRIM(machineFingerprint) = '')`,
+                [machineFingerprint, 'ativada_maquina', instalacaoId]
+            );
+            if (vinculo.changes === 1) {
+                licenca.machineFingerprint = machineFingerprint;
+                await registrarEventoLicencaLocal(instalacaoId, 'ativacao', 'Licença vinculada atomicamente à primeira máquina.', `Fingerprint: ${machineFingerprint}`);
+            } else {
+                const atualizada = await masterDb.buscarUm('SELECT * FROM licencas_locais WHERE instalacaoId = ? LIMIT 1', [instalacaoId]);
+                const maquinaConcorrente = String(atualizada?.machineFingerprint || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (maquinaConcorrente && maquinaConcorrente !== machineFingerprint) {
+                    await registrarEventoLicencaLocal(instalacaoId, 'bloqueio', 'Ativação recusada por vínculo concorrente.', `Esperado: ${maquinaConcorrente}; recebido: ${machineFingerprint}`);
+                    return res.json(respostaLicencaRemotaAssinada(atualizada, { suspensa: true, observacoes: 'Licenca vinculada a outro computador. Solicite liberacao ao fornecedor.' }));
+                }
+            }
+        }
+
         if (machineEsperada && machineFingerprint && machineEsperada !== machineFingerprint) {
             await masterDb.executar(
                 'UPDATE licencas_locais SET ultimoStatus = ?, ultimoPingEm = CURRENT_TIMESTAMP WHERE instalacaoId = ?',
