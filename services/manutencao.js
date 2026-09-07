@@ -405,6 +405,85 @@ function criarBackupAutomatico() {
     return criarBackup('clientes-auto');
 }
 
+function executarSql(sql, parametros = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, parametros, function concluir(err) {
+            if (err) return reject(err);
+            return resolve({ alteracoes: Number(this?.changes || 0) });
+        });
+    });
+}
+
+function obterLinhaSql(sql, parametros = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, parametros, (err, linha) => err ? reject(err) : resolve(linha || {}));
+    });
+}
+
+async function obterArmazenamentoBanco() {
+    await db.ready;
+    const [pagina, paginas, livres, payloads] = await Promise.all([
+        obterLinhaSql('PRAGMA page_size'),
+        obterLinhaSql('PRAGMA page_count'),
+        obterLinhaSql('PRAGMA freelist_count'),
+        obterLinhaSql(`SELECT COUNT(*) AS registros,
+            COALESCE(SUM(length(payloadProtegido)), 0) AS bytes
+            FROM mensagens_saida_fila
+            WHERE payloadProtegido IS NOT NULL AND payloadProtegido <> ''`)
+    ]);
+    const tamanhoPagina = Number(pagina.page_size || 0);
+    const paginasTotais = Number(paginas.page_count || 0);
+    const paginasLivres = Number(livres.freelist_count || 0);
+    const bytesRecuperaveis = tamanhoPagina * paginasLivres;
+    return {
+        tamanhoPagina,
+        paginasTotais,
+        paginasLivres,
+        bytesRecuperaveis,
+        bytesRecuperaveisFormatado: formatarBytes(bytesRecuperaveis),
+        payloadsProtegidos: Number(payloads.registros || 0),
+        payloadsProtegidosBytes: Number(payloads.bytes || 0),
+        payloadsProtegidosFormatado: formatarBytes(payloads.bytes || 0)
+    };
+}
+
+async function otimizarBancoDados(config = {}) {
+    await db.ready;
+    const antesBytes = fs.existsSync(db.dbPath) ? fs.statSync(db.dbPath).size : 0;
+    const armazenamentoAntes = await obterArmazenamentoBanco();
+    const backup = await criarBackupManualComCopiaExterna(config);
+
+    const payloads = await executarSql(`UPDATE mensagens_saida_fila
+        SET payloadProtegido = ''
+        WHERE status = 'enviado' AND payloadProtegido IS NOT NULL AND payloadProtegido <> ''`);
+    const sessoes = await executarSql(`DELETE FROM sessoes_painel
+        WHERE (revogadaEm IS NOT NULL AND julianday(revogadaEm) < julianday('now', '-90 days'))
+           OR (revogadaEm IS NULL AND expiraEm < ?)`, [Date.now() - (90 * 24 * 60 * 60 * 1000)]);
+
+    await executarSql('VACUUM');
+    const integridade = await obterLinhaSql('PRAGMA quick_check');
+    if (String(integridade.quick_check || '').toLowerCase() !== 'ok') {
+        throw new Error('A compactacao terminou, mas a verificacao de integridade nao retornou OK. Preserve o backup criado.');
+    }
+
+    const depoisBytes = fs.existsSync(db.dbPath) ? fs.statSync(db.dbPath).size : 0;
+    const resultado = {
+        backup: backup.backup.nome,
+        copiaExterna: backup.copiaExterna || '',
+        avisoCopiaExterna: backup.erroCopiaExterna || '',
+        antesBytes,
+        depoisBytes,
+        liberadosBytes: Math.max(0, antesBytes - depoisBytes),
+        liberadosFormatado: formatarBytes(Math.max(0, antesBytes - depoisBytes)),
+        payloadsConcluidosLimpos: payloads.alteracoes,
+        sessoesAntigasRemovidas: sessoes.alteracoes,
+        recuperavelEstimadoAntes: armazenamentoAntes.bytesRecuperaveis
+    };
+    await registrarEventoSistema('banco_otimizado', 'sucesso',
+        `Banco compactado com backup verificado; ${resultado.liberadosFormatado} liberados.`, resultado);
+    return resultado;
+}
+
 async function criarBackupManualComCopiaExterna(config = {}) {
     const backup = await criarBackupManual();
     const copiaExternaSolicitada = String(config.backupExternoAtivo) === '1';
@@ -615,6 +694,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
     const atendimentoHumanoMs = Math.max(1, Number.parseInt(config.roboAtendimentoHumanoMinutos || 30, 10) || 30) * 60 * 1000;
     const atendimentosHumanos = listarAtendimentosHumanos({ atendimentoHumanoMs });
     const riscoWhatsApp = calcularRiscoWhatsApp(statusWhatsApp, filaMensagens);
+    const armazenamentoBanco = await obterArmazenamentoBanco();
     const ultimoEventoDiagnostico = eventos.find(evento => evento.tipo === 'diagnostico');
     let diagnostico = null;
 
@@ -645,6 +725,7 @@ async function obterStatusSistema(statusWhatsApp = {}) {
         bancoExiste,
         bancoTamanho: statBanco?.size || 0,
         bancoTamanhoFormatado: formatarBytes(statBanco?.size || 0),
+        armazenamentoBanco,
         backupDir: BACKUP_DIR,
         totalBackups: backups.length,
         ultimoBackup: backups[0] || null,
@@ -692,6 +773,8 @@ module.exports = {
     restaurarBackup,
     executarDiagnosticoSistema,
     obterStatusSistema,
+    obterArmazenamentoBanco,
+    otimizarBancoDados,
     formatarBytes
     ,listarBackups
     ,verificarArquivoBackup

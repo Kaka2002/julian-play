@@ -1335,3 +1335,18 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - O `deploy.ps1` testa o acesso ao daemon PM2 antes de iniciar a atualização e
   orienta abrir o PowerShell como Administrador quando não houver permissão,
   evitando uma aplicação parcial com resultado final ambíguo.
+
+## Otimização protegida do banco na versão 1.3.24
+
+- A área Manutenção mostra o tamanho físico do SQLite, o espaço já livre que
+  pode ser recuperado e o volume cifrado ainda necessário para mensagens
+  pendentes, incertas ou com falha.
+- A ação `Otimizar banco com backup` exige senha atual e confirmação visual.
+  Antes de qualquer limpeza, cria e valida um backup local e também tenta a
+  cópia externa configurada.
+- A otimização elimina somente o conteúdo de mensagens cujo envio já foi
+  confirmado e sessões administrativas revogadas ou expiradas há mais de 90
+  dias. Clientes, financeiro, campanhas, configurações, backups e conteúdo de
+  mensagens ainda recuperáveis permanecem preservados.
+- Depois da limpeza, o SQLite executa `VACUUM` e `PRAGMA quick_check`. O espaço
+  liberado, o backup e as quantidades removidas ficam registrados na auditoria.

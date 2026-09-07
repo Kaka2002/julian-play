@@ -680,3 +680,20 @@ test('falha em migracao formal executa rollback e gera relatorio', () => {
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('otimizacao do banco cria backup, limpa somente dados descartaveis e valida integridade', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,function(e){e?no(e):ok(this.changes)}));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));await run("INSERT INTO mensagens_saida_fila(protocolo,tipo,destino,descricao,payloadProtegido,status,tentativas,maxTentativas,criadoEm,atualizadoEm,concluidoEm) VALUES(?,?,?,?,?,'enviado',1,3,?,?,?)",['teste-enviado','imagem','5511999999999@c.us','Concluida','x'.repeat(1024*1024),new Date().toISOString(),new Date().toISOString(),new Date().toISOString()]);await run("INSERT INTO mensagens_saida_fila(protocolo,tipo,destino,descricao,payloadProtegido,status,tentativas,maxTentativas,criadoEm,atualizadoEm) VALUES(?,?,?,?,?,'falhou',1,3,?,?)",['teste-falhou','texto','5511888888888@c.us','Falha','preservar',new Date().toISOString(),new Date().toISOString()]);await run('INSERT INTO sessoes_painel(tokenHash,usuario,criadoEm,expiraEm,ultimoAcessoEm,revogadaEm) VALUES(?,?,?,?,?,?)',['antiga','admin','2020-01-01',1,'2020-01-01','2020-01-01']);const m=require('./services/manutencao');const r=await m.otimizarBancoDados({});const enviado=await get("SELECT payloadProtegido FROM mensagens_saida_fila WHERE protocolo='teste-enviado'");const falhou=await get("SELECT payloadProtegido FROM mensagens_saida_fila WHERE protocolo='teste-falhou'");const sessao=await get("SELECT tokenHash FROM sessoes_painel WHERE tokenHash='antiga'");const check=await get('PRAGMA quick_check');process.stdout.write(JSON.stringify({backup:fs.existsSync(path.join(db.dataDir,'backups',r.backup)),enviado:enviado.payloadProtegido,falhou:falhou.payloadProtegido,sessao:!!sessao,check:check.quick_check,limpos:r.payloadsConcluidosLimpos,sessoes:r.sessoesAntigasRemovidas}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            backup: true,
+            enviado: '',
+            falhou: 'preservar',
+            sessao: false,
+            check: 'ok',
+            limpos: 1,
+            sessoes: 1
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});

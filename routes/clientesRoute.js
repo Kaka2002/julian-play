@@ -70,6 +70,7 @@ const { atualizarLicencaComercial, calcularEstadoLicenca, instalacaoAdministrado
 const {
     criarBackupManual,
     criarBackupManualComCopiaExterna,
+    otimizarBancoDados,
     restaurarBackup,
     verificarArquivoBackup,
     exportarBackupCriptografado,
@@ -8857,12 +8858,20 @@ function telaManutencao(status = {}, opcoes = {}) {
             <tbody>
                 <tr><th>Pasta dos dados</th><td>${escapar(status.dataDir || '-')}</td></tr>
                 <tr><th>Banco atual</th><td>${escapar(status.dbPath || '-')}</td></tr>
+                <tr><th>Tamanho do banco</th><td>${escapar(status.bancoTamanhoFormatado || '0 B')}</td></tr>
+                <tr><th>Espaço recuperável agora</th><td>${escapar(status.armazenamentoBanco?.bytesRecuperaveisFormatado || '0 B')} (${escapar(status.armazenamentoBanco?.paginasLivres || 0)} página(s) livres)</td></tr>
+                <tr><th>Conteúdo protegido na fila</th><td>${escapar(status.armazenamentoBanco?.payloadsProtegidosFormatado || '0 B')} em ${escapar(status.armazenamentoBanco?.payloadsProtegidos || 0)} mensagem(ns) pendente(s), incerta(s) ou com falha</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
                 <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
                 <tr><th>Último backup recuperável</th><td>${status.ultimoBackupRecuperavel ? `${escapar(status.ultimoBackupRecuperavel.backup)} · teste aprovado em ${escapar(formatarDataHoraCurta(status.ultimoBackupRecuperavel.concluidoEm))}` : 'Nenhum exercício mensal concluído'}</td></tr>
                 <tr><th>Versão do banco</th><td>${status.migracoes?.ultima ? `${escapar(status.migracoes.ultima.versao)} · ${escapar(status.migracoes.total)} migração(ões)` : 'Migração formal ainda não registrada'}</td></tr>
             </tbody>
         </table>
+        <form method="post" action="/manutencao/banco/otimizar" autocomplete="off" data-form-type="other" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:18px 20px;" onsubmit="return confirm('O sistema criará e validará um backup antes de compactar o banco. Durante alguns instantes, outras gravações podem aguardar. Deseja continuar?');">
+            <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:220px;">
+            <button class="button secondary" type="submit">Otimizar banco com backup</button>
+            <span class="subtitle">Remove somente conteúdo de envios já confirmados e sessões revogadas/expiradas há mais de 90 dias; preserva clientes, financeiro, campanhas e configurações.</span>
+        </form>
     </section>`}
 
     <section class="panel" style="margin-bottom:24px;">
@@ -10448,6 +10457,20 @@ router.post('/manutencao/backups/testar-restauracao', bloquearManutencaoRestrita
     } catch (err) {
         logControleClientes('Erro no exercício de restauração', { erro: err.message });
         return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro no teste de restauração: ${err.message}`)}`);
+    }
+});
+
+router.post('/manutencao/banco/otimizar', bloquearManutencaoRestritaCliente, confirmarSenhaAcaoCritica, async (req, res) => {
+    try {
+        const config = await obterConfiguracoes();
+        const resultado = await otimizarBancoDados(config);
+        logControleClientes('Banco otimizado com backup verificado', resultado);
+        let mensagem = `Banco otimizado. Espaço liberado: ${resultado.liberadosFormatado}. Backup: ${resultado.backup}.`;
+        if (resultado.avisoCopiaExterna) mensagem += ` A cópia externa falhou, mas o backup local foi preservado: ${resultado.avisoCopiaExterna}`;
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
+    } catch (err) {
+        logControleClientes('Erro ao otimizar banco', { erro: err.message });
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao otimizar banco: ${err.message}`)}`);
     }
 });
 
