@@ -1430,3 +1430,17 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   verificação da conexão do WhatsApp permanecem iguais. A refatoração é
   compartilhada pelos quatro perfis e não altera dados, configurações ou
   sessões.
+
+## Financeiro e controles do WhatsApp separados na versão 1.3.30
+
+- A página Financeiro e sua exportação CSV foram movidas para
+  `routes/financeiroRoute.js`, preservando filtros, paginação, clientes e BOM
+  UTF-8 do arquivo exportado.
+- Proteção de envios proativos, novo QR Code, reconexão segura e troca do
+  número do robô foram movidos para `routes/manutencaoWhatsappRoute.js`.
+- A troca de número continua bloqueada na instalação administradora e deve ser
+  feita pelo Painel Mestre. Reconexão continua preservando a sessão atual;
+  novo QR e proteção mantêm os mesmos registros de auditoria.
+- As mudanças são compartilhadas pelos quatro perfis e não alteram bancos,
+  configurações ou sessões. As demais configurações da Manutenção continuam
+  no roteador histórico para extração posterior.

@@ -4,6 +4,8 @@ const criarPaineisRoute = require('./paineisRoute');
 const criarManutencaoBackupsRoute = require('./manutencaoBackupsRoute');
 const criarCrmRoute = require('./crmRoute');
 const criarAtendimentosRoute = require('./atendimentosRoute');
+const criarFinanceiroRoute = require('./financeiroRoute');
+const criarManutencaoWhatsappRoute = require('./manutencaoWhatsappRoute');
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
@@ -9174,43 +9176,18 @@ router.use(criarCrmRoute({
     mensagemLeadPadrao
 }));
 
-router.get('/financeiro', async (req, res) => {
-    desativarCache(res);
-    const filtros = filtrosFinanceiroQuery(req.query);
-    const pagina = paginaAtual(req.query.pagina);
-    const [pagamentos, clientes] = await Promise.all([
-        listarPagamentosFinanceiro(filtros),
-        listarClientes()
-    ]);
-    const paginacaoFinanceiro = paginarItens(pagamentos, pagina, filtros.porPagina || FINANCEIRO_POR_PAGINA);
-
-    await renderizar(res, {
-        titulo: 'Financeiro',
-        conteudo: telaFinanceiro({ pagamentos, filtros, paginacaoFinanceiro, clientes }),
-        mensagem: req.query.mensagem || '',
-        ativo: 'financeiro'
-    });
-});
-
-router.get('/financeiro/exportar.csv', async (req, res) => {
-    desativarCache(res);
-    const filtros = filtrosFinanceiroQuery(req.query);
-    const pagamentos = await listarPagamentosFinanceiro(filtros);
-    const agora = new Date();
-    const carimbo = [
-        agora.getFullYear(),
-        String(agora.getMonth() + 1).padStart(2, '0'),
-        String(agora.getDate()).padStart(2, '0'),
-        '-',
-        String(agora.getHours()).padStart(2, '0'),
-        String(agora.getMinutes()).padStart(2, '0')
-    ].join('');
-    const csv = gerarCsvFinanceiro(pagamentos);
-
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="financeiro-${carimbo}.csv"`);
-    res.send(`\uFEFF${csv}`);
-});
+router.use(criarFinanceiroRoute({
+    desativarCache,
+    filtrosFinanceiroQuery,
+    paginaAtual,
+    listarPagamentosFinanceiro,
+    listarClientes,
+    paginarItens,
+    financeiroPorPagina: FINANCEIRO_POR_PAGINA,
+    renderizar,
+    telaFinanceiro,
+    gerarCsvFinanceiro
+}));
 
 router.get('/preparacao-comercial', async (req, res) => {
     desativarCache(res);
@@ -10293,27 +10270,15 @@ router.post('/manutencao/paypal', confirmarSenhaAcaoCritica, async (req, res) =>
     }
 });
 
-router.post('/manutencao/whatsapp/protecao', async (req, res) => {
-    try {
-        const protecao = await salvarProtecaoWhatsapp({
-            whatsappProtecaoAtiva: String(req.body.whatsappProtecaoAtiva || '') === '1',
-            whatsappBloquearNovoQrAutomatico: String(req.body.whatsappBloquearNovoQrAutomatico || '') === '1',
-            whatsappProtecaoMotivo: req.body.whatsappProtecaoMotivo
-        });
-        logControleClientes('Protecao do WhatsApp atualizada', {
-            ativa: protecao.ativa,
-            bloquearNovoQrAutomatico: protecao.bloquearNovoQrAutomatico,
-            motivo: protecao.motivo
-        });
-        const mensagem = protecao.ativa
-            ? 'Protecao ativada. Envios proativos foram pausados; respostas aos clientes continuam liberadas.'
-            : 'Protecao desativada. Envios proativos voltaram a ser permitidos.';
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
-    } catch (err) {
-        logControleClientes('Erro ao salvar protecao do WhatsApp', { erro: err.message });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao salvar protecao: ${err.message}`)}`);
-    }
-});
+router.use(criarManutencaoWhatsappRoute({
+    salvarProtecaoWhatsapp,
+    logControleClientes,
+    gerarNovoQrCodeWhatsApp,
+    recuperarWhatsAppAutomaticamente,
+    instalacaoAdministrador,
+    validarNumeroWhatsappRobo,
+    salvarNumeroWhatsappRoboConfigurado
+}));
 
 router.post('/manutencao/monitoramento', bloquearMonitoramentoOperacional, confirmarSenhaAcaoCritica, async (req, res) => {
     try {
@@ -10901,71 +10866,6 @@ router.post('/clientes/disparar-amizade-presente-cliente', async (req, res) => {
             erro: err.message
         });
         return res.redirect(`${retorno}?mensagem=${encodeURIComponent(`Erro ao testar campanha: ${err.message}`)}`);
-    }
-});
-
-router.post('/manutencao/whatsapp/novo-qr', async (req, res) => {
-    try {
-        const resultado = await gerarNovoQrCodeWhatsApp({ motivo: 'Solicitado pelo painel de manutencao' });
-        logControleClientes('Sessao do WhatsApp reiniciada para gerar novo QR Code', {
-            status: resultado.status,
-            authDataPath: resultado.authDataPath
-        });
-        res.redirect('/qr');
-    } catch (err) {
-        logControleClientes('Erro ao reiniciar sessao do WhatsApp para novo QR Code', {
-            erro: err.message
-        });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao gerar novo QR Code: ${err.message}`)}`);
-    }
-});
-
-router.post('/manutencao/whatsapp/reconectar', async (req, res) => {
-    try {
-        const resultado = await recuperarWhatsAppAutomaticamente({
-            limparSessao: false,
-            motivo: 'Recuperacao segura solicitada pelo painel de manutencao'
-        });
-
-        logControleClientes('Recuperacao segura do WhatsApp solicitada pelo painel de manutencao', {
-            status: resultado.status,
-            motivo: resultado.motivo || ''
-        });
-
-        const mensagem = resultado.status === 'ignorado'
-            ? 'A recuperacao do WhatsApp ja esta em andamento. Aguarde alguns segundos e atualize esta pagina.'
-            : 'Reconexao segura iniciada. A sessao atual foi preservada; aguarde alguns segundos e confira o status do WhatsApp.';
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
-    } catch (err) {
-        logControleClientes('Erro na recuperacao segura do WhatsApp pelo painel de manutencao', {
-            erro: err.message
-        });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao tentar reconectar o WhatsApp: ${err.message}`)}`);
-    }
-});
-
-router.post('/manutencao/whatsapp/numero', async (req, res) => {
-    if (instalacaoAdministrador()) {
-        return res.redirect(`/manutencao?mensagem=${encodeURIComponent('A troca do WhatsApp desta instalacao deve ser feita pelo Painel Mestre.')}`);
-    }
-
-    try {
-        const numero = validarNumeroWhatsappRobo(req.body.numeroWhatsappRobo);
-        salvarNumeroWhatsappRoboConfigurado(numero);
-        const resultado = await gerarNovoQrCodeWhatsApp({ motivo: `Numero do WhatsApp do robo alterado para ${numero} pelo painel de manutencao` });
-
-        logControleClientes('Numero do WhatsApp do robo alterado', {
-            numero,
-            status: resultado.status,
-            authDataPath: resultado.authDataPath
-        });
-
-        res.redirect('/qr');
-    } catch (err) {
-        logControleClientes('Erro ao alterar numero do WhatsApp do robo', {
-            erro: err.message
-        });
-        res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao alterar WhatsApp do robo: ${err.message}`)}`);
     }
 });
 

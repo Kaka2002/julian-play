@@ -144,10 +144,11 @@ test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
 
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
     const fs = require('fs');
-    const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
-    assert.match(rota, /action="\/manutencao\/whatsapp\/reconectar"/);
-    assert.match(rota, /router\.post\('\/manutencao\/whatsapp\/reconectar'/);
-    assert.match(rota, /recuperarWhatsAppAutomaticamente\(\{\s*limparSessao: false,/);
+    const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'routes', 'manutencaoWhatsappRoute.js'), 'utf8');
+    assert.match(clientes, /action="\/manutencao\/whatsapp\/reconectar"/);
+    assert.match(whatsapp, /router\.post\('\/manutencao\/whatsapp\/reconectar'/);
+    assert.match(whatsapp, /recuperarWhatsAppAutomaticamente\(\{\s*limparSessao: false,/);
 });
 
 test('saude do robo usa textos em portugues acentuados', () => {
@@ -768,4 +769,26 @@ test('Atendimentos possui modulo proprio e preserva notas e envio WhatsApp', () 
     assert.match(atendimentos, /adicionarNotaCliente/);
     assert.doesNotMatch(clientes, /router\.(?:get|post)\('\/atendimentos/);
     assert.match(clientes, /router\.use\(criarAtendimentosRoute\(/);
+});
+
+test('Financeiro possui modulo proprio e preserva exportacao CSV UTF-8', () => {
+    const financeiro = fs.readFileSync(path.join(repoRoot, 'routes', 'financeiroRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(financeiro, /router\.get\('\/financeiro'/);
+    assert.match(financeiro, /router\.get\('\/financeiro\/exportar\.csv'/);
+    assert.match(financeiro, /\\uFEFF/);
+    assert.doesNotMatch(clientes, /router\.get\('\/financeiro/);
+    assert.match(clientes, /router\.use\(criarFinanceiroRoute\(/);
+});
+
+test('controles do WhatsApp em Manutencao possuem modulo proprio e restricao por perfil', () => {
+    const whatsapp = fs.readFileSync(path.join(repoRoot, 'routes', 'manutencaoWhatsappRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(whatsapp, /\/manutencao\/whatsapp\/protecao/);
+    assert.match(whatsapp, /\/manutencao\/whatsapp\/novo-qr/);
+    assert.match(whatsapp, /\/manutencao\/whatsapp\/reconectar/);
+    assert.match(whatsapp, /\/manutencao\/whatsapp\/numero/);
+    assert.match(whatsapp, /if \(instalacaoAdministrador\(\)\)/);
+    assert.doesNotMatch(clientes, /router\.post\('\/manutencao\/whatsapp/);
+    assert.match(clientes, /router\.use\(criarManutencaoWhatsappRoute\(/);
 });
