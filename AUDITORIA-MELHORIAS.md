@@ -5,6 +5,18 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.32: 22 rotas de cadastro e ações individuais extraídas para
+  `routes/clientesAcoesRoute.js`, com dependências injetadas e proteção de
+  renovação duplicada por instância. Status, consentimento, ficha, notas,
+  pagamentos, bônus e mensagens preservam os serviços existentes; privacidade
+  continua no módulo dedicado, com exclusão direta bloqueada.
+- Perfis da 1.3.32: administrador de clientes, comercial no servidor e cliente
+  local usam a extração; Painel Mestre mantém suas próprias rotas. Nenhum
+  banco, configuração, histórico, backup ou sessão é alterado pela refatoração.
+  Sem migração ou ação adicional após deploy/atualização. Validação: sintaxe
+  JavaScript, comparação dos 22 handlers, sete testes novos, suíte interna,
+  diff, geração oficial e teste de pacote limpo. Navegador não executado.
+
 - Credenciais de clientes e integrações cifradas com AES-256-GCM, migração
   idempotente, rotação de chave e kit de recuperação cifrado.
 - Backup diário verificado, cópia externa opcional, alerta de falha,
@@ -83,7 +95,11 @@ código; itens operacionais externos não são marcados como implementados.
   segurança para instalações antigas.
 - Rotas: pagamentos manuais, entrada/governança de campanhas, catálogos,
   Painéis, CRM/leads, Atendimentos, Financeiro, configurações e controles do
-  WhatsApp e manutenção de banco/backups foram extraídos para módulos próprios.
+  WhatsApp, manutenção de banco/backups e ações individuais de clientes foram
+  extraídos para módulos próprios. Renderização e auxiliares ainda permanecem
+  no arquivo histórico. A sequência restante é: controles operacionais da
+  Manutenção; dashboard/listagens; modelos; preparação comercial/renovação;
+  revisão final do agregador.
   Os outros domínios do arquivo histórico
   continuam sendo separados somente quando forem alterados, evitando uma
   reescrita ampla sem benefício funcional.

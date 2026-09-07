@@ -1456,3 +1456,32 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
 - Uploads continuam restritos ao `DATA_DIR` da instalação, preservando imagens
   e configurações já gravadas. Nenhum banco, sessão ou configuração inicial foi
   alterado.
+
+## Cadastro e ações de clientes separados na versão 1.3.32
+
+- `routes/clientesAcoesRoute.js` reúne 22 rotas de cadastro, ficha individual,
+  edição de pagamentos, renovação, bônus, notas e mensagens individuais,
+  incluindo PIX, PayPal, modelos e teste individual de campanha. Os handlers
+  foram extraídos sem alterar textos, validações ou redirecionamentos.
+- Status e consentimento de campanhas continuam passando por `salvarCliente`,
+  com autoria e motivo de alteração. A ficha consulta os mesmos históricos e
+  a elegibilidade de exclusão. Exportação, anonimização e exclusão definitiva
+  permanecem em `privacidadeRoute.js`, com senha e confirmações existentes;
+  a exclusão direta continua desativada.
+- O módulo recebe telas e serviços explicitamente e mantém o bloqueio de
+  renovação duplicada por instância do roteador. Login, licença e contexto de
+  auditoria continuam aplicados antes das ações.
+- Impacto: compartilhado pelo painel administrador de clientes, cliente
+  comercial no servidor e instalação local. O Painel Mestre mantém suas
+  próprias rotas sem alteração. Bancos, configurações, consentimentos já
+  gravados, históricos, backups e sessões do WhatsApp são preservados;
+  não há migração, seed nem ação manual adicional após deploy/atualização.
+- Validação: `node --check` nos JavaScripts alterados, comparação dos 22
+  handlers com a versão anterior, sete testes novos de comportamento e
+  montagem em banco temporário, suíte `npm.cmd test`, `git diff --check`,
+  geração oficial e teste do pacote limpo. Navegação em navegador não foi
+  executada nesta entrega.
+- Limitação: renderização e auxiliares compartilhados permanecem no arquivo
+  histórico. Próximas etapas: controles operacionais restantes da Manutenção;
+  dashboard e listagens; modelos de mensagens; preparação comercial e
+  renovação; revisão final do agregador.

@@ -60,9 +60,10 @@ test('otimizacao de memoria reinicia somente processos online no PM2',()=>{
 
 test('acao PayPal individual aparece somente quando a integracao esta ativa',()=>{
     const rota=fs.readFileSync(path.join(repoRoot,'routes','clientesRoute.js'),'utf8');
+    const acoes=fs.readFileSync(path.join(repoRoot,'routes','clientesAcoesRoute.js'),'utf8');
     assert.match(rota,/String\(config\.paypalAtivo\) === '1'[\s\S]{0,300}enviar-paypal-plano/);
-    assert.match(rota,/router\.post\('\/clientes\/:id\/enviar-paypal-plano'/);
-    assert.match(rota,/criarCobrancaPayPal\(plano/);
+    assert.match(acoes,/router\.post\('\/clientes\/:id\/enviar-paypal-plano'/);
+    assert.match(acoes,/criarCobrancaPayPal\(plano/);
 });
 
 test('PayPal aprovado avisa o webhook e alertas de saude possuem intervalo',()=>{
