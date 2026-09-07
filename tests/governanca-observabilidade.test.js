@@ -64,6 +64,9 @@ test('rota principal de campanhas fica registrada no módulo dedicado', () => {
     assert.doesNotMatch(clientes, /ID do cliente que reclamou/);
     assert.match(clientes, /paginaClientes/);
     assert.match(clientes, /Execução #/);
+    assert.match(clientes, /Prévia deste disparo:/);
+    assert.match(clientes, /protegidos pelo limite semanal/);
+    assert.match(clientes, /totalElegiveis: previsaoCampanha\.enviar/);
     assert.match(clientes, /paginarItens\(todosItens, paginaAtual\(req\.query\.paginaClientes\), porPaginaClientes\)/);
     assert.match(clientes, /const porPaginaClientes = quantidadePorPagina\(req\.query\.porPaginaClientes\)/);
 });
@@ -95,15 +98,14 @@ test('fila persistente retoma envio interrompido e nao repete falha conhecida', 
         const interrompido = executarIsolado(`(async()=>{const q=require('./services/filaMensagensService');const db=require('./database/sqlite');await db.ready;q.enfileirarEnvio(()=>new Promise(()=>{}),'Bloqueio anterior',{proativo:false});q.enfileirarEnvio(async()=>({id:{_serialized:'nao-executado'}}),'Envio interrompido',{proativo:false,persistencia:{tipo:'texto',destino:'5511999999999@c.us',texto:'mensagem protegida'}});setTimeout(()=>db.get('SELECT status,payloadProtegido FROM mensagens_saida_fila ORDER BY id DESC LIMIT 1',(e,r)=>{if(e)throw e;process.stdout.write(JSON.stringify({status:r.status,protegido:String(r.payloadProtegido).startsWith('jplay:v1:')}));process.exit(0)}),200)})().catch(e=>{console.error(e);process.exit(1)})`, { ambiente, env });
         assert.deepEqual(JSON.parse(interrompido.stdout.split(/\r?\n/).at(-1)), { status: 'pendente', protegido: true });
 
-        const retomado = executarIsolado(`(async()=>{const q=require('./services/filaMensagensService');const db=require('./database/sqlite');await db.ready;let enviados=0;q.configurarExecutorFilaPersistente(async p=>{enviados++;return{id:{_serialized:'retomado-1'},destino:p.destino}});await q.prepararFilaPersistente();await q.processarFilaPersistente();let falhou=false;try{await q.enfileirarEnvio(async()=>{throw new Error('falha definitiva simulada')},'Falha conhecida',{persistencia:{tipo:'texto',destino:'5511888888888@c.us',texto:'nao repetir'}})}catch(_){falhou=true}const linhas=await new Promise((ok,no)=>db.all('SELECT status,tentativas FROM mensagens_saida_fila ORDER BY id',(e,r)=>e?no(e):ok(r)));process.stdout.write(JSON.stringify({enviados,falhou,linhas}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`, { ambiente, env });
-        assert.deepEqual(JSON.parse(retomado.stdout.split(/\r?\n/).at(-1)), {
-            enviados: 1,
-            falhou: true,
-            linhas: [
-                { status: 'enviado', tentativas: 0 },
-                { status: 'falhou', tentativas: 1 }
-            ]
-        });
+        const retomado = executarIsolado(`(async()=>{const q=require('./services/filaMensagensService');const db=require('./database/sqlite');await db.ready;let enviados=0;q.configurarExecutorFilaPersistente(async p=>{enviados++;return{id:{_serialized:'retomado-1'},destino:p.destino}});await q.prepararFilaPersistente();await q.processarFilaPersistente();let falhou=false;try{await q.enfileirarEnvio(async()=>{throw new Error('falha definitiva simulada')},'Falha conhecida',{persistencia:{tipo:'texto',destino:'5511888888888@c.us',texto:'nao repetir'}})}catch(_){falhou=true}const linhas=await new Promise((ok,no)=>db.all('SELECT status,tentativas,length(payloadProtegido) payloadBytes FROM mensagens_saida_fila ORDER BY id',(e,r)=>e?no(e):ok(r)));process.stdout.write(JSON.stringify({enviados,falhou,linhas}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`, { ambiente, env });
+        const retomada = JSON.parse(retomado.stdout.split(/\r?\n/).at(-1));
+        assert.equal(retomada.enviados, 1);
+        assert.equal(retomada.falhou, true);
+        assert.deepEqual(retomada.linhas[0], { status: 'enviado', tentativas: 0, payloadBytes: 0 });
+        assert.equal(retomada.linhas[1].status, 'falhou');
+        assert.equal(retomada.linhas[1].tentativas, 1);
+        assert.ok(retomada.linhas[1].payloadBytes > 0);
     } finally {
         removerAmbiente(ambiente);
     }

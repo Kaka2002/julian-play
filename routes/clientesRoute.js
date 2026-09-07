@@ -7064,7 +7064,7 @@ function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
     </div>`;
 }
 
-function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensReclamacao = [], paginacaoItens = null, campanhaRetomavel = null, clientes = [], totalElegiveis = 0, config = {} }) {
+function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensReclamacao = [], paginacaoItens = null, campanhaRetomavel = null, clientes = [], totalElegiveis = 0, previsaoCampanha = {}, config = {} }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
     const retomavel = !ativa && campanhaRetomavel ? campanhaRetomavel : null;
     const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
@@ -7100,11 +7100,19 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
                 <h2 class="panel-title">Campanhas disponíveis</h2>
                 <div class="subtitle">Inicie um novo envio aqui. O histórico das execuções aparece separadamente abaixo.</div>
             </div>
-            <span class="badge ${totalElegiveis ? 'green' : 'orange'}">${escapar(totalElegiveis)} cliente(s) elegível(is)</span>
+            <span class="badge ${totalElegiveis ? 'green' : 'orange'}">${escapar(totalElegiveis)} receberão agora</span>
         </div>
         <div class="mini-card" style="margin-top:14px;">
             <strong>Amizade que vale presente</strong>
             <div class="helper">Envia para clientes ativos com consentimento. Testes, repetições e contatos sem telefone são ignorados automaticamente.</div>
+            <div class="notice" style="margin-top:12px;">
+                <strong>Prévia deste disparo:</strong>
+                ${escapar(previsaoCampanha.enviar || 0)} receberão agora;
+                ${escapar(previsaoCampanha.limiteSemanal || 0)} protegidos pelo limite semanal;
+                ${escapar(previsaoCampanha.testes || 0)} testes;
+                ${escapar(previsaoCampanha.semTelefone || 0)} sem telefone;
+                ${escapar(previsaoCampanha.limiteDiario || 0)} acima do limite diário.
+            </div>
             ${envioGeralLiberado
                 ? `<div class="notice success" style="margin-top:12px;">Envio geral liberado agora (${escapar(textoJanelaCampanha(config))}).</div>`
                 : `<div class="notice warn" style="margin-top:12px;">${escapar(mensagemCampanhaForaHorario(config))}</div>`}
@@ -7117,7 +7125,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
                     </select>
                     <button class="button secondary" type="submit">${icon('whats')} Testar envio</button>
                 </form>
-                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes elegiveis?');">
+                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Confirmar campanha para ${escapar(totalElegiveis)} cliente(s)? Os demais serão ignorados conforme a prévia exibida.');">
                     <input type="hidden" name="retorno" value="/campanhas">
                     <button class="button green" type="submit" ${ativa || retomavel || !totalElegiveis || !envioGeralLiberado ? 'disabled' : ''}>${icon('whats')} ${ativa ? 'Campanha em andamento' : retomavel ? 'Retome a campanha pendente' : !envioGeralLiberado ? 'Fora do horário permitido' : 'Disparar campanha'}</button>
                 </form>
@@ -9031,6 +9039,23 @@ async function renderizarPaginaCampanhas(req, res) {
         listarClientesAtivosComerciais(),
         obterConfiguracoes()
     ]);
+    const limiteDiario = Math.max(1, Number.parseInt(config.campanhaLimiteDiario || 100, 10) || 100);
+    const limiteSemanalCliente = Math.max(1, Number.parseInt(config.campanhaLimiteSemanalCliente || 1, 10) || 1);
+    const inicioSemana = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
+    const previsaoCampanha = { enviar: 0, limiteSemanal: 0, testes: 0, semTelefone: 0, limiteDiario: 0 };
+    for (const cliente of clientesElegiveis) {
+        if (!normalizarTelefone(cliente.telefone)) {
+            previsaoCampanha.semTelefone += 1;
+        } else if (clienteEhTeste(cliente)) {
+            previsaoCampanha.testes += 1;
+        } else if (await contarEnviosClienteDesde(cliente.id, inicioSemana) >= limiteSemanalCliente) {
+            previsaoCampanha.limiteSemanal += 1;
+        } else if (previsaoCampanha.enviar >= limiteDiario) {
+            previsaoCampanha.limiteDiario += 1;
+        } else {
+            previsaoCampanha.enviar += 1;
+        }
+    }
 
     await renderizar(res, {
         titulo: 'Campanhas',
@@ -9042,7 +9067,8 @@ async function renderizarPaginaCampanhas(req, res) {
             paginacaoItens: paginacaoItensCampanha,
             campanhaRetomavel,
             clientes,
-            totalElegiveis: clientesElegiveis.filter(cliente => !clienteEhTeste(cliente) && normalizarTelefone(cliente.telefone)).length,
+            totalElegiveis: previsaoCampanha.enviar,
+            previsaoCampanha,
             config
         }),
         mensagem: req.query.mensagem || '',

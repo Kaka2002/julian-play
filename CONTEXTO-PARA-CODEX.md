@@ -1318,3 +1318,20 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   telefone, limite diário e pausa por erros permanecem protegidos.
 - Os registros históricos `ja_enviado` existentes são preservados apenas como
   auditoria; não impedem novas campanhas após o período de proteção.
+
+## Retenção segura da fila do WhatsApp na versão 1.3.23
+
+- Mensagens persistentes continuam guardando o conteúdo cifrado enquanto estão
+  pendentes, processando, incertas ou com falha, permitindo retomada segura.
+- Depois que o WhatsApp confirma o envio, texto e mídia são eliminados do banco;
+  protocolo, tipo, destino, descrição, datas, status e ID da mensagem permanecem
+  disponíveis para auditoria.
+- Na inicialização, conteúdos de envios antigos já concluídos também são
+  descartados. Isso evita que imagens de campanhas façam o banco crescer vários
+  megabytes por destinatário sem reduzir a confiabilidade da fila.
+- A página de Campanhas calcula antes do disparo quantos clientes receberão e
+  quantos serão excluídos por limite semanal, teste, telefone ausente ou limite
+  diário; a confirmação usa o total realmente previsto para envio.
+- O `deploy.ps1` testa o acesso ao daemon PM2 antes de iniciar a atualização e
+  orienta abrir o PowerShell como Administrador quando não houver permissão,
+  evitando uma aplicação parcial com resultado final ambíguo.

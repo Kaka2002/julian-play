@@ -145,6 +145,9 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.match(iniciar,/nome -notin \$ProcessosParaManterParados/);
  assert.doesNotMatch(iniciar,/stop \$processo/);
  assert.match(deploy,/update-windows\.ps1/);
+ assert.match(deploy,/pm2\.cmd/);
+ assert.match(deploy,/jlist --silent/);
+ assert.match(deploy,/PowerShell como Administrador/);
  assert.doesNotMatch(deploy,/git\.Source pull|npm\s+ci/);
 });
 

@@ -124,10 +124,10 @@ async function registrarPersistente(persistencia, descricao, opcoes) {
 async function marcarPersistenteEnviado(protocolo, resultado) {
     if (!protocolo) return;
     await run(`UPDATE mensagens_saida_fila SET status = 'enviado', concluidoEm = CURRENT_TIMESTAMP,
-        mensagemId = ?, erro = NULL, atualizadoEm = CURRENT_TIMESTAMP WHERE protocolo = ?`, [
+        mensagemId = ?, erro = NULL, payloadProtegido = '', atualizadoEm = CURRENT_TIMESTAMP WHERE protocolo = ?`, [
         String(resultado?.id?._serialized || ''), protocolo
     ]);
-    await atualizarResumoPersistente();
+    await atualizarResumoPersistente().catch(() => {});
 }
 
 async function marcarPersistenteFalhou(protocolo, erro, reagendar = false) {
@@ -230,6 +230,10 @@ async function prepararFilaPersistente() {
     await run(`UPDATE mensagens_saida_fila SET status = 'incerto',
         erro = CASE WHEN erro IS NULL OR erro = '' THEN 'Processo interrompido durante o envio; revisao manual necessaria para evitar duplicidade.' ELSE erro END,
         atualizadoEm = CURRENT_TIMESTAMP WHERE status = 'processando'`);
+    // Depois da confirmação, o conteúdo não é mais necessário para retomada.
+    // Preservamos apenas os metadados de auditoria e eliminamos imagens/textos
+    // cifrados que fariam o banco crescer vários megabytes por envio.
+    await run("UPDATE mensagens_saida_fila SET payloadProtegido = '' WHERE status = 'enviado' AND payloadProtegido <> ''");
     await run("DELETE FROM mensagens_saida_fila WHERE status = 'enviado' AND datetime(concluidoEm) < datetime('now', '-30 days')");
     await run("DELETE FROM mensagens_saida_fila WHERE status = 'falhou' AND datetime(atualizadoEm) < datetime('now', '-90 days')");
     await run("DELETE FROM mensagens_saida_fila WHERE status = 'incerto' AND datetime(atualizadoEm) < datetime('now', '-180 days')");
