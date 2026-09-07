@@ -1,4 +1,5 @@
 const express = require('express');
+const criarCatalogosRoute = require('./catalogosRoute');
 const fs = require('fs');
 const path = require('path');
 const { AsyncLocalStorage } = require('async_hooks');
@@ -10137,180 +10138,32 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
     }
 });
 
-router.get('/planos', async (req, res) => {
-    const planos = await listarTiposPlanos();
-    const mensagem = req.query.mensagem || '';
-
-    await renderizar(res, {
-        titulo: 'Planos',
-        conteudo: telaPlanos(planos),
-        mensagem,
-        ativo: 'planos'
-    });
-});
-
-router.get('/planos/novo', async (req, res) => {
-    await renderizar(res, {
-        titulo: 'Novo plano',
-        conteudo: formularioPlano({ nome: 'Mensal', dias: 30, ativo: 1 }),
-        ativo: 'planos'
-    });
-});
-
-router.get('/planos/:id/editar', async (req, res) => {
-    const plano = await buscarTipoPlanoPorId(req.params.id);
-
-    if (!plano) {
-        return res.redirect('/planos?mensagem=Plano não encontrado');
-    }
-
-    await renderizar(res, {
-        titulo: 'Editar plano',
-        conteudo: formularioPlano(plano),
-        ativo: 'planos'
-    });
-});
-
-router.post('/planos/salvar', async (req, res) => {
-    try {
-        await salvarTipoPlano(req.body);
-        res.redirect('/planos?mensagem=Plano salvo com sucesso');
-    } catch (err) {
-        res.status(400);
-        await renderizar(res, {
-            titulo: 'Salvar plano',
-            conteudo: `${formularioPlano(req.body)}<div class="notice">${escapar(err.message)}</div>`,
-            ativo: 'planos'
-        });
-    }
-});
-
-router.post('/planos/:id/excluir', async (req, res) => {
-    try {
-        await removerTipoPlano(req.params.id);
-        res.redirect('/planos?mensagem=Plano excluído');
-    } catch (err) {
-        res.redirect(`/planos?mensagem=${encodeURIComponent(`Erro ao excluir plano: ${err.message}`)}`);
-    }
-});
-
-router.get('/apps', async (req, res) => {
-    const apps = await listarApps();
-    const pagina = paginaAtual(req.query.pagina);
-    const paginacaoApps = paginarItens(apps, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
-    const mensagem = req.query.mensagem || '';
-
-    await renderizar(res, {
-        titulo: 'Apps',
-        conteudo: telaApps(apps, paginacaoApps),
-        mensagem,
-        ativo: 'apps'
-    });
-});
-
-router.get('/apps/novo', async (req, res) => {
-    await renderizar(res, {
-        titulo: 'Novo app',
-        conteudo: formularioApp({ ativo: 1 }),
-        ativo: 'apps'
-    });
-});
-
-router.get('/apps/:id/editar', async (req, res) => {
-    const app = await buscarAppPorId(req.params.id);
-
-    if (!app) {
-        return res.redirect('/apps?mensagem=App não encontrado');
-    }
-
-    await renderizar(res, {
-        titulo: 'Editar app',
-        conteudo: formularioApp(app),
-        ativo: 'apps'
-    });
-});
-
-router.post('/apps/salvar', async (req, res) => {
-    try {
-        await salvarApp(req.body);
-        res.redirect('/apps?mensagem=App salvo com sucesso');
-    } catch (err) {
-        res.status(400);
-        await renderizar(res, {
-            titulo: 'Salvar app',
-            conteudo: `${formularioApp(req.body)}<div class="notice">${escapar(err.message)}</div>`,
-            ativo: 'apps'
-        });
-    }
-});
-
-router.post('/apps/:id/excluir', async (req, res) => {
-    try {
-        await removerApp(req.params.id);
-        res.redirect('/apps?mensagem=App excluído');
-    } catch (err) {
-        res.redirect(`/apps?mensagem=${encodeURIComponent(`Erro ao excluir app: ${err.message}`)}`);
-    }
-});
-
-router.get('/dispositivos', async (req, res) => {
-    const dispositivos = await listarDispositivos();
-    const pagina = paginaAtual(req.query.pagina);
-    const paginacaoDispositivos = paginarItens(dispositivos, pagina, quantidadePorPagina(req.query.porPagina, REGISTROS_POR_PAGINA));
-    const mensagem = req.query.mensagem || '';
-
-    await renderizar(res, {
-        titulo: 'Dispositivos',
-        conteudo: telaDispositivos(dispositivos, paginacaoDispositivos),
-        mensagem,
-        ativo: 'dispositivos'
-    });
-});
-
-router.get('/dispositivos/novo', async (req, res) => {
-    await renderizar(res, {
-        titulo: 'Novo dispositivo',
-        conteudo: formularioDispositivo({ ativo: 1 }),
-        ativo: 'dispositivos'
-    });
-});
-
-router.get('/dispositivos/:id/editar', async (req, res) => {
-    const dispositivo = await buscarDispositivoPorId(req.params.id);
-
-    if (!dispositivo) {
-        return res.redirect('/dispositivos?mensagem=Dispositivo não encontrado');
-    }
-
-    await renderizar(res, {
-        titulo: 'Editar dispositivo',
-        conteudo: formularioDispositivo(dispositivo),
-        ativo: 'dispositivos'
-    });
-});
-
-router.post('/dispositivos/salvar', async (req, res) => {
-    try {
-        await salvarDispositivo(req.body);
-        res.redirect('/dispositivos?mensagem=Dispositivo salvo com sucesso');
-    } catch (err) {
-        res.status(400);
-        await renderizar(res, {
-            titulo: 'Salvar dispositivo',
-            conteudo: `${formularioDispositivo(req.body)}<div class="notice">${escapar(err.message)}</div>`,
-            ativo: 'dispositivos'
-        });
-    }
-});
-
-router.post('/dispositivos/:id/excluir', async (req, res) => {
-    try {
-        await removerDispositivo(req.params.id);
-        res.redirect('/dispositivos?mensagem=Dispositivo excluído');
-    } catch (err) {
-        res.redirect(`/dispositivos?mensagem=${encodeURIComponent(`Erro ao excluir dispositivo: ${err.message}`)}`);
-    }
-});
+router.use(criarCatalogosRoute({
+    renderizar,
+    escapar,
+    paginaAtual,
+    quantidadePorPagina,
+    paginarItens,
+    registrosPorPagina: REGISTROS_POR_PAGINA,
+    telaPlanos,
+    formularioPlano,
+    telaApps,
+    formularioApp,
+    telaDispositivos,
+    formularioDispositivo,
+    listarTiposPlanos,
+    buscarTipoPlanoPorId,
+    salvarTipoPlano,
+    removerTipoPlano,
+    listarApps,
+    buscarAppPorId,
+    salvarApp,
+    removerApp,
+    listarDispositivos,
+    buscarDispositivoPorId,
+    salvarDispositivo,
+    removerDispositivo
+}));
 
 router.get('/paineis', async (req, res) => {
     const paineis = await listarPaineis();

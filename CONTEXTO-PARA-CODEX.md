@@ -1350,3 +1350,18 @@ em uso; os dois enderecos HTTPS respondendo com redirecionamento para login.
   mensagens ainda recuperáveis permanecem preservados.
 - Depois da limpeza, o SQLite executa `VACUUM` e `PRAGMA quick_check`. O espaço
   liberado, o backup e as quantidades removidas ficam registrados na auditoria.
+
+## Dependências e catálogos separados na versão 1.3.25
+
+- As dependências compatíveis receberam as correções disponíveis pelo
+  `npm audit fix`, sem `--force` e sem trocar versões principais do Express ou
+  do navegador usado pelo WhatsApp.
+- A auditoria ainda aponta vulnerabilidades transitivas em `extract-zip` e
+  `qs`. A primeira só é corrigida pelo Puppeteer 25, ainda não declarado pelo
+  `whatsapp-web.js` 1.34.7; a segunda ainda afeta a versão mais recente do
+  Express 4. Essas atualizações ficam bloqueadas até existir caminho compatível
+  ou até uma migração testada para Express 5 e Puppeteer 25.
+- As rotas CRUD de Planos, Apps e Dispositivos foram retiradas do arquivo
+  histórico `clientesRoute.js` e movidas para `routes/catalogosRoute.js`.
+  Renderização, paginação, serviços e proteção global do painel permanecem os
+  mesmos nos quatro perfis de instalação.

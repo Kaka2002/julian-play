@@ -697,3 +697,13 @@ test('otimizacao do banco cria backup, limpa somente dados descartaveis e valida
         removerAmbiente(resultado.ambiente);
     }
 });
+
+test('catalogos possuem modulo de rotas proprio sem duplicacao no arquivo de clientes', () => {
+    const catalogos = fs.readFileSync(path.join(repoRoot, 'routes', 'catalogosRoute.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    for (const rota of ['/planos', '/apps', '/dispositivos']) {
+        assert.match(catalogos, new RegExp(`router\\.get\\('${rota.replace('/', '\\/')}'`));
+        assert.doesNotMatch(clientes, new RegExp(`router\\.get\\('${rota.replace('/', '\\/')}'`));
+    }
+    assert.match(clientes, /router\.use\(criarCatalogosRoute\(/);
+});
