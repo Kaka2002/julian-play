@@ -30,7 +30,7 @@ function criarCrmRoute(deps = {}) {
     });
 
     router.post('/crm/salvar', async (req, res) => {
-        try { const lead = await salvarLead(req.body); return res.redirect(`/crm/${lead.id}/editar?mensagem=${encodeURIComponent('Lead salvo com sucesso.')}`); }
+        try { await salvarLead(req.body); return res.redirect(`/crm?mensagem=${encodeURIComponent('Lead salvo com sucesso.')}`); }
         catch (err) { return res.redirect(`/crm?mensagem=${encodeURIComponent(err.message)}`); }
     });
     router.post('/crm/:id/historico', async (req, res) => {
