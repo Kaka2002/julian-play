@@ -197,3 +197,5 @@ código; itens operacionais externos não são marcados como implementados.
 - Identificação comercial: o painel exibe Licenciado para e o ID da instalação em todas as páginas autenticadas, sem expor segredos.
 
 - Política Ed25519 para novas licenças: emissão no Painel Mestre bloqueia quando a chave privada não está configurada e assina novos códigos exclusivamente com Ed25519. Códigos HMAC antigos continuam legíveis para migração; instalações existentes não são alteradas.
+
+- Aceite de contrato: rota autenticada `/contrato` apresenta regras de uso e registra versão, data, usuário e evento de auditoria após o aceite.

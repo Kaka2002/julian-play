@@ -1599,3 +1599,5 @@ Todas as páginas autenticadas exibem o cliente licenciado e o ID da instalaçã
 
 Na versão 1.3.39, a emissão de novas licenças no Painel Mestre exige chave privada Ed25519 configurada. O fallback HMAC permanece disponível apenas para leitura e migração de códigos antigos; nenhuma nova licença é emitida sem assinatura Ed25519. Dados e licenças existentes são preservados.
 
+O contrato de licença possui a rota autenticada `/contrato`; o aceite da versão 1.0 é gravado com data, usuário e evento de auditoria.
+
