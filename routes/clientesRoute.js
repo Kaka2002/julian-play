@@ -2908,6 +2908,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     <main>
         ${avisoLicenca ?`<div class="notice">${escapar(avisoLicenca)} <a href="/licenca"><strong>Ver licença</strong></a></div>` : ''}
         ${mensagem ?`<div class="notice">${escapar(mensagem)}</div>` : ''}
+        ${licenca.cliente ?`<div style="margin:10px 0;padding:8px 14px;border:1px solid #cfe0f5;border-radius:8px;background:#f7fbff;color:#365477;font-size:12px">Licenciado para: <strong>${escapar(licenca.cliente)}</strong> · ID: ${escapar(config.instalacaoId || 'não informado')}</div>` : ''}
         ${conteudo}
     </main>
     <button class="back-to-top" type="button" aria-label="Voltar ao topo da página" title="Voltar ao topo">↑</button>

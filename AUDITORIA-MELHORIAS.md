@@ -193,3 +193,5 @@ código; itens operacionais externos não são marcados como implementados.
 - Versão 1.3.38: menu Pendências reposicionado para depois de Manutenção, preservando rota, destaque ativo e permissões.
 
 - Manifesto do pacote: instalador e atualizador conferem nome, tamanho, SHA-256, algoritmo e presença da assinatura antes de extrair ou atualizar. Pacotes sem manifesto continuam compatíveis por enquanto.
+
+- Identificação comercial: o painel exibe Licenciado para e o ID da instalação em todas as páginas autenticadas, sem expor segredos.
