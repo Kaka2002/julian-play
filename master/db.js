@@ -7,6 +7,12 @@ const dbPath = path.join(dataDir, 'master.db');
 fs.mkdirSync(dataDir, { recursive: true });
 
 const db = new sqlite3.Database(dbPath);
+db.run(`CREATE TABLE IF NOT EXISTS downloads_licenca (
+    token TEXT PRIMARY KEY, instalacaoId INTEGER, arquivo TEXT NOT NULL,
+    expiraEm DATETIME NOT NULL, limite INTEGER NOT NULL DEFAULT 1,
+    downloads INTEGER NOT NULL DEFAULT 0, revogado INTEGER NOT NULL DEFAULT 0,
+    criadoEm DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
 const ready = new Promise((resolve, reject) => {
     db.serialize(() => {
         function finalizarMigracao() {

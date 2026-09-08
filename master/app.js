@@ -1829,6 +1829,29 @@ app.post('/logout', finalizarSessaoMestre);
 
 app.use(autenticarSessao);
 
+app.post('/downloads/licenca', async (req, res) => {
+    const token = crypto.randomBytes(24).toString('hex');
+    const instalacaoId = Number(req.body.instalacaoId || 0) || null;
+    const arquivo = 'julian-play-app.zip';
+    const dias = Math.max(1, Math.min(30, Number(req.body.dias || 7)));
+    await masterDb.executar('INSERT INTO downloads_licenca(token,instalacaoId,arquivo,expiraEm,limite) VALUES(?,?,?,?,?)', [token, instalacaoId, arquivo, new Date(Date.now()+dias*86400000).toISOString(), Math.max(1, Number(req.body.limite || 3))]);
+    return res.json({ token, url: `/downloads/licenca/${token}`, expiraEm: new Date(Date.now()+dias*86400000).toISOString() });
+});
+
+app.get('/downloads/licenca/:token', async (req, res) => {
+    const item = await masterDb.buscarUm('SELECT * FROM downloads_licenca WHERE token = ?', [req.params.token]);
+    if (!item || item.revogado || item.downloads >= item.limite || new Date(item.expiraEm) < new Date()) return res.status(403).send('Link expirado, revogado ou limite de downloads atingido.');
+    const caminho = path.join(__dirname, '..', 'entrega-cliente-local', 'ENVIAR_AO_CLIENTE', item.arquivo);
+    if (!fs.existsSync(caminho)) return res.status(404).send('Pacote indisponível.');
+    await masterDb.executar('UPDATE downloads_licenca SET downloads = downloads + 1 WHERE token = ?', [req.params.token]);
+    return res.download(caminho, item.arquivo);
+});
+
+app.post('/downloads/licenca/:token/revogar', async (req, res) => {
+    await masterDb.executar('UPDATE downloads_licenca SET revogado = 1 WHERE token = ?', [req.params.token]);
+    return res.json({ ok: true });
+});
+
 async function renderizarPainel(opcoes = {}) {
     const [instalacoes, recursos] = await Promise.all([
         listarInstalacoes(),
