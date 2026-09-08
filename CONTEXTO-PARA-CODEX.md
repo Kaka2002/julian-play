@@ -1582,3 +1582,7 @@ O endpoint de consulta remota vincula a primeira máquina com fingerprint por UP
 ## Manifesto assinado de pacote
 
 O gerador scripts/gerar-manifesto-pacote.js cria manifesto externo com SHA-256 e assinatura Ed25519 usando somente a chave privada do Painel Mestre. O script de empacotamento tenta gerar o manifesto e alerta quando a chave não está configurada; não grava segredo no pacote.
+
+## Ordem do menu na versão 1.3.38
+
+Pendências aparece depois de Manutenção no menu principal do painel de clientes. A rota /pendencias, destaque ativo e permissões permanecem inalterados.

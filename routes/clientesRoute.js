@@ -2886,7 +2886,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             </div>
             <nav>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
-                <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
                 <a class="navlink ${ativo === 'clientes' ?'active' : ''}" href="/clientes/todos">${icon('clientes')} Clientes</a>
                 <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
                 <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
@@ -2901,6 +2900,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink" href="/qr">${icon('whats')} WhatsApp</a>
                 <a class="navlink" href="/licenca">${icon('licenca')} Licença</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
+                <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
         </div>
