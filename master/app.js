@@ -1015,7 +1015,7 @@ function pagina(instalacoes, opcoes = {}) {
     ${centralSaudeOperacional(instalacoes, recursos)}
     ${secaoPrioridades(instalacoes)}
     ${painelChecklistComercial(instalacoes)}
-    <section class="panel" id="manutencao"><h2>Manutenção do servidor</h2><div class="sub">Libere disco e memória com rotinas controladas. Bancos, sessões ativas, configurações e backups mantidos nunca são apagados.</div>
+    <section class="panel" id="manutencao"><h2>Manutenção do servidor</h2><div class="sub">Libere disco e memória com rotinas controladas. Bancos, sessões ativas, configurações e backups mantidos nunca são apagados.</div><p><a class="button secondary" href="/auditoria/exportar.csv">Exportar auditoria CSV</a></p>
       <div class="fields" style="margin-top:18px">
         <form method="post" action="/manutencao/limpar" onsubmit="return confirm('Executar a limpeza segura de disco? Bancos e sessões dos robôs ativos serão preservados.');" style="border:1px solid #e8ebf0;border-radius:10px;padding:16px">
           <h3 style="margin-top:0">Limpar disco</h3>
@@ -1828,6 +1828,15 @@ app.get('/logout', finalizarSessaoMestre);
 app.post('/logout', finalizarSessaoMestre);
 
 app.use(autenticarSessao);
+
+app.get('/auditoria/exportar.csv', async (req, res) => {
+    const eventos = await masterDb.buscarTodos('SELECT id, instalacaoId, tipo, mensagem, detalhes, criadoEm FROM eventos_instalacao ORDER BY criadoEm DESC');
+    const csv = [['id','instalacaoId','tipo','mensagem','detalhes','criadoEm'], ...eventos.map(e => [e.id,e.instalacaoId || '',e.tipo,e.mensagem,e.detalhes || '',e.criadoEm])]
+        .map(linha => linha.map(v => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="auditoria-julian-play.csv"');
+    return res.send(`\ufeff${csv}`);
+});
 
 app.post('/downloads/licenca', async (req, res) => {
     const token = crypto.randomBytes(24).toString('hex');
