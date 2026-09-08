@@ -5,6 +5,11 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.37: a identificação "Licenciado para" fica restrita às telas
+  Painel e Manutenção do painel administrador; as demais telas continuam sem
+  essa faixa. Nenhum dado ou configuração é alterado. Validada por inspeção
+  da renderização e checagem de sintaxe JavaScript.
+
 - Versão 1.3.36: a Central de Pendências passou a permitir editar título,
   detalhe, observação e prioridade, além de concluir ou excluir uma pendência.
   Cada decisão é protegida por sessão e CSRF, registrada em eventos e ligada à

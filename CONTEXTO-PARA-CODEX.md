@@ -19,6 +19,11 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ## Objetivo do sistema
 
+Na versão 1.3.37, a faixa de identificação da licença no painel de clientes
+é exibida somente nas telas Painel e Manutenção, mantendo as demais telas
+livres desse aviso. A alteração é apenas visual e preserva dados, sessões,
+configurações e bancos.
+
 O Julian Play é um sistema de administração de clientes, automação de
 WhatsApp, cobranças PIX e instalações comerciais isoladas. O mesmo código
 suporta:
