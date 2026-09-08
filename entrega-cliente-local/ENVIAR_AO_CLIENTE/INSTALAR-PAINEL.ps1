@@ -142,6 +142,10 @@ $manifestoPath = "$pacote.manifest.json"
 if (Test-Path -LiteralPath $manifestoPath) {
     $manifesto = Get-Content -LiteralPath $manifestoPath -Raw | ConvertFrom-Json
     if ([string]$manifesto.arquivo -ne [IO.Path]::GetFileName($pacote) -or [long]$manifesto.tamanho -ne (Get-Item $pacote).Length -or [string]$manifesto.sha256 -ne $hashAtual -or [string]$manifesto.algoritmo -ne 'ed25519' -or -not [string]$manifesto.assinatura) { throw 'Manifesto do pacote inválido. Instalação cancelada.' }
+    $chavePublica = Join-Path $PSScriptRoot 'license-public-key.pem'
+    if (-not (Test-Path -LiteralPath $chavePublica)) { throw 'Chave pública ausente para validar o manifesto.' }
+    & node (Join-Path $PSScriptRoot 'verificar-manifesto-pacote.js') $pacote $manifestoPath $chavePublica
+    if ($LASTEXITCODE -ne 0) { throw 'Assinatura Ed25519 do pacote inválida. Instalação cancelada.' }
 }
 
 Etapa 'Verificando programas obrigatorios'

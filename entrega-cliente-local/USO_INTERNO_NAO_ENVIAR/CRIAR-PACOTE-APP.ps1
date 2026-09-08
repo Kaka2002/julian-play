@@ -76,6 +76,10 @@ if (Test-Path -LiteralPath $configMestre) {
         Write-Warning 'Nao foi possivel incluir a chave publica de licenca no pacote.'
     }
 }
+$chavePublica = Join-Path $raizProjeto 'config\license-public-key.pem'
+if (Test-Path -LiteralPath $chavePublica) { Copy-Item -LiteralPath $chavePublica -Destination (Join-Path (Split-Path -Parent $Destino) 'license-public-key.pem') -Force }
+$verificador = Join-Path $raizProjeto 'scripts\verificar-manifesto-pacote.js'
+if (Test-Path -LiteralPath $verificador) { Copy-Item -LiteralPath $verificador -Destination (Join-Path (Split-Path -Parent $Destino) 'verificar-manifesto-pacote.js') -Force }
 
 if (Test-Path -LiteralPath $Destino) {
     Remove-Item -LiteralPath $Destino -Force

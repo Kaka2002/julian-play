@@ -276,6 +276,10 @@ if (Test-Path -LiteralPath $manifestoPath) {
         throw 'Manifesto do pacote diverge do ZIP. A atualização foi cancelada.'
     }
     if ([string]$manifesto.algoritmo -ne 'ed25519' -or -not [string]$manifesto.assinatura) { throw 'Manifesto sem assinatura Ed25519 válida. A atualização foi cancelada.' }
+    $chavePublica = Join-Path $PSScriptRoot 'license-public-key.pem'
+    if (-not (Test-Path -LiteralPath $chavePublica)) { throw 'Chave pública ausente para validar o manifesto.' }
+    & node (Join-Path $PSScriptRoot 'verificar-manifesto-pacote.js') $pacote $manifestoPath $chavePublica
+    if ($LASTEXITCODE -ne 0) { throw 'Assinatura Ed25519 do pacote inválida. Atualização cancelada.' }
     Write-Host 'Manifesto do pacote conferido.' -ForegroundColor Green
 }
 
