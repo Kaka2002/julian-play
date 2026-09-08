@@ -1591,6 +1591,7 @@ Pendências aparece depois de Manutenção no menu principal do painel de client
 
 Instalador e atualizador conferem o manifesto externo quando presente, validando arquivo, tamanho, SHA-256 e assinatura Ed25519 declarada antes de prosseguir. Pacotes antigos sem manifesto mantêm compatibilidade pelo SHA-256.
 
-## Identificação comercial na versão 1.3.39
+## Identificação comercial na entrega atual
 
 Todas as páginas autenticadas exibem o cliente licenciado e o ID da instalação. A informação vem da configuração local da licença e não altera dados de negócio.
+
