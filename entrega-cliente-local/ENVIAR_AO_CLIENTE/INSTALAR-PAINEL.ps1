@@ -132,6 +132,17 @@ $pacote = Join-Path $PSScriptRoot 'julian-play-app.zip'
 if (-not (Test-Path -LiteralPath $pacote)) {
     throw 'Arquivo julian-play-app.zip nao encontrado nesta pasta. Solicite o pacote oficial ao fornecedor.'
 }
+$arquivoHash = "$pacote.sha256"
+$hashAtual = (Get-FileHash -LiteralPath $pacote -Algorithm SHA256).Hash.ToLowerInvariant()
+if (Test-Path -LiteralPath $arquivoHash) {
+    $hashEsperado = ((Get-Content -LiteralPath $arquivoHash -Raw).Trim() -split '\s+')[0].ToLowerInvariant()
+    if ($hashEsperado -ne $hashAtual) { throw 'O pacote de instalação foi alterado. Instalação cancelada.' }
+}
+$manifestoPath = "$pacote.manifest.json"
+if (Test-Path -LiteralPath $manifestoPath) {
+    $manifesto = Get-Content -LiteralPath $manifestoPath -Raw | ConvertFrom-Json
+    if ([string]$manifesto.arquivo -ne [IO.Path]::GetFileName($pacote) -or [long]$manifesto.tamanho -ne (Get-Item $pacote).Length -or [string]$manifesto.sha256 -ne $hashAtual -or [string]$manifesto.algoritmo -ne 'ed25519' -or -not [string]$manifesto.assinatura) { throw 'Manifesto do pacote inválido. Instalação cancelada.' }
+}
 
 Etapa 'Verificando programas obrigatorios'
 ExigirComando 'node' 'Node.js nao encontrado. Instale em https://nodejs.org/ e execute novamente.' | Out-Null

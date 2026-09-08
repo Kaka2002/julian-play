@@ -269,6 +269,15 @@ if (-not $hashEsperado -or $hashAtual -ne $hashEsperado) {
     throw 'O ZIP da atualizacao esta incompleto ou foi alterado. A atualizacao foi cancelada antes de tocar na instalacao.'
 }
 Write-Host "Pacote validado por SHA-256: $hashAtual" -ForegroundColor Green
+$manifestoPath = "$pacote.manifest.json"
+if (Test-Path -LiteralPath $manifestoPath) {
+    $manifesto = Get-Content -LiteralPath $manifestoPath -Raw | ConvertFrom-Json
+    if ([string]$manifesto.arquivo -ne [IO.Path]::GetFileName($pacote) -or [long]$manifesto.tamanho -ne (Get-Item $pacote).Length -or [string]$manifesto.sha256 -ne $hashAtual) {
+        throw 'Manifesto do pacote diverge do ZIP. A atualização foi cancelada.'
+    }
+    if ([string]$manifesto.algoritmo -ne 'ed25519' -or -not [string]$manifesto.assinatura) { throw 'Manifesto sem assinatura Ed25519 válida. A atualização foi cancelada.' }
+    Write-Host 'Manifesto do pacote conferido.' -ForegroundColor Green
+}
 
 Etapa 'Verificando instalacao atual'
 $PastaInstalacao = [IO.Path]::GetFullPath($PastaInstalacao)

@@ -1586,3 +1586,7 @@ O gerador scripts/gerar-manifesto-pacote.js cria manifesto externo com SHA-256 e
 ## Ordem do menu na versão 1.3.38
 
 Pendências aparece depois de Manutenção no menu principal do painel de clientes. A rota /pendencias, destaque ativo e permissões permanecem inalterados.
+
+## Validação de manifesto no pacote
+
+Instalador e atualizador conferem o manifesto externo quando presente, validando arquivo, tamanho, SHA-256 e assinatura Ed25519 declarada antes de prosseguir. Pacotes antigos sem manifesto mantêm compatibilidade pelo SHA-256.
