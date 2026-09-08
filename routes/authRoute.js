@@ -363,6 +363,25 @@ router.post('/login', async (req, res) => {
     return res.redirect(next);
 });
 
+router.get('/contrato', async (req, res) => {
+    const sessao = await obterSessao(req);
+    if (!sessao) return res.redirect('/login?next=%2Fcontrato');
+    const config = await obterConfiguracoes();
+    const aceito = config.contratoVersaoAceita === '1.0';
+    res.send(`<!doctype html><meta charset="utf-8"><title>Contrato de licença</title><style>body{font-family:Arial;background:#f5f6f8;padding:40px;color:#17223b;max-width:760px;margin:auto}.card{background:#fff;padding:28px;border-radius:12px;box-shadow:0 8px 30px #0001}button{background:#2563eb;color:#fff;border:0;border-radius:8px;padding:12px 18px;font-weight:bold}</style><div class="card"><h1>Contrato de licença</h1><p>O sistema é licenciado para uso individual. É proibida a cópia, redistribuição, engenharia reversa ou compartilhamento do instalador e das credenciais.</p><p>Transferências dependem de autorização do vendedor. O suporte acompanha somente instalações licenciadas.</p><p>Status: <strong>${aceito ? 'Aceito' : 'Pendente'}</strong></p>${aceito ? '<a href="/clientes">Voltar ao painel</a>' : '<form method="post" action="/contrato/aceitar"><button type="submit">Aceitar contrato e continuar</button></form>'}</div>`);
+});
+
+router.post('/contrato/aceitar', async (req, res) => {
+    const sessao = await obterSessao(req);
+    if (!sessao) return res.redirect('/login?next=%2Fcontrato');
+    const agora = new Date().toISOString();
+    await require('../services/configuracoesPainel').salvarConfiguracao('contratoVersaoAceita', '1.0');
+    await require('../services/configuracoesPainel').salvarConfiguracao('contratoAceitoEm', agora);
+    await require('../services/configuracoesPainel').salvarConfiguracao('contratoAceitoPor', sessao.usuario || 'administrador');
+    await registrarEventoSistema('contrato_aceito', 'info', 'Contrato de licença aceito.', { usuario: sessao.usuario || 'administrador', versao: '1.0' });
+    return res.redirect('/clientes');
+});
+
 router.get('/configuracao-inicial', async (req, res) => {
     desativarCache(res);
     if (await acessoConfigurado()) return res.redirect('/login');
