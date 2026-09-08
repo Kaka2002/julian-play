@@ -113,6 +113,13 @@ function gerarCodigoAssinado(payload = {}) {
     return `${LICENCA_CODIGO_PREFIXO}${payloadBase64}.${assinatura}`;
 }
 
+function gerarCodigoEd25519Obrigatorio(payload = {}) {
+    if (!obterChavePrivada()) {
+        throw new Error('Chave privada Ed25519 ausente no Painel Mestre. Novas licenças exigem assinatura Ed25519.');
+    }
+    return gerarCodigoAssinado({ ...payload, alg: 'ed25519' });
+}
+
 function validarAssinatura(payload, payloadBase64, assinatura) {
     if (payload.alg === 'ed25519') {
         const chavePublica = obterChavePublica();
@@ -159,5 +166,6 @@ function lerCodigoAssinado(codigo) {
 
 module.exports = {
     gerarCodigoAssinado,
+    gerarCodigoEd25519Obrigatorio,
     lerCodigoAssinado
 };

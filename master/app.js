@@ -6,7 +6,7 @@ const packageInfo = require('../package.json');
 const masterDb = require('./db');
 const { verificarSenha } = require('../services/passwordService');
 const { csrfMiddleware, cabecalhosSeguranca, criarCaptcha, validarCaptcha, validarTotp, recaptchaConfigurado, validarRecaptcha } = require('../services/securityService');
-const { gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
+const { gerarCodigoLicencaEd25519Obrigatorio: gerarCodigoLicencaAssinado } = require('../services/licencaCodigo');
 const { dataHojeSaoPaulo, adicionarDias } = require('../services/licencaCalculo');
 const { formatarDataHoraBrasil } = require('../utils/dataHora');
 const {

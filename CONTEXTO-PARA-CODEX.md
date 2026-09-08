@@ -1595,3 +1595,7 @@ Instalador e atualizador conferem o manifesto externo quando presente, validando
 
 Todas as páginas autenticadas exibem o cliente licenciado e o ID da instalação. A informação vem da configuração local da licença e não altera dados de negócio.
 
+## Política de assinatura de novas licenças
+
+Na versão 1.3.39, a emissão de novas licenças no Painel Mestre exige chave privada Ed25519 configurada. O fallback HMAC permanece disponível apenas para leitura e migração de códigos antigos; nenhuma nova licença é emitida sem assinatura Ed25519. Dados e licenças existentes são preservados.
+
