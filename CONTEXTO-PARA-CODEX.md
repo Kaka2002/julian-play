@@ -1603,3 +1603,5 @@ O contrato de licença possui a rota autenticada `/contrato`; o aceite da versã
 
 Links revogáveis de distribuição são gerados no Painel Mestre por `/downloads/licenca`, com expiração, limite de usos e revogação; o pacote é servido somente enquanto válido.
 
+O Painel Mestre agora oferece `/auditoria/exportar.csv` na seção Manutenção para baixar eventos administrativos em CSV, sem alterar os registros.
+
