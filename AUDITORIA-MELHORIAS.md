@@ -237,3 +237,7 @@ pm run test:e2e executado com 11 testes aprovados.
 - Mensagens informativas: corrigida validação persistente após tentativa sem cliente; alteração de seleção libera o envio. 11 testes E2E aprovados.
 
 - Mensagens informativas: clientes transferidos para selecionados agora são marcados para envio, evitando validação incorreta. 11 testes E2E aprovados.
+
+- Mensagens informativas: histórico visual dos envios implementado, registrando data, destinatários, texto e imagens no DATA_DIR da instalação.
+
+- Histórico de informativos limitado a 7 dias, com limpeza lógica automática na leitura.

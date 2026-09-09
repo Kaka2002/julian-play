@@ -1644,3 +1644,7 @@ pm ci normalmente.
 - Correção 09/09/2026: a validação do cliente selecionado é limpa ao alterar a lista, permitindo novo envio após corrigir uma tentativa vazia. Testes E2E: 11 aprovados.
 
 - Correção 09/09/2026: clientes movidos para a lista selecionada permanecem selecionados no formulário; todos os clientes exibidos nessa lista são enviados. Testes E2E: 11 aprovados.
+
+- Mensagens informativas: a tela agora exibe os últimos envios, com data, destinatários, texto e nomes dos arquivos de imagem; o histórico fica isolado no DATA_DIR e não altera dados de clientes.
+
+- Ajuste do histórico de informativos: registros exibidos e mantidos somente por 7 dias; entradas antigas deixam de aparecer automaticamente.
