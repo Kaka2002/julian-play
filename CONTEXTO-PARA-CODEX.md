@@ -1642,3 +1642,5 @@ pm ci normalmente.
 - Correção 09/09/2026: envio sem arquivo agora exibe aviso específico solicitando a escolha de pelo menos uma imagem; outros erros permanecem identificados separadamente. Testes E2E: 11 aprovados.
 
 - Correção 09/09/2026: a validação do cliente selecionado é limpa ao alterar a lista, permitindo novo envio após corrigir uma tentativa vazia. Testes E2E: 11 aprovados.
+
+- Correção 09/09/2026: clientes movidos para a lista selecionada permanecem selecionados no formulário; todos os clientes exibidos nessa lista são enviados. Testes E2E: 11 aprovados.

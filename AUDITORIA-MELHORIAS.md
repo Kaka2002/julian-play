@@ -235,3 +235,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Mensagens informativas: adicionada mensagem específica quando nenhuma imagem é selecionada antes do envio. 11 testes E2E aprovados.
 
 - Mensagens informativas: corrigida validação persistente após tentativa sem cliente; alteração de seleção libera o envio. 11 testes E2E aprovados.
+
+- Mensagens informativas: clientes transferidos para selecionados agora são marcados para envio, evitando validação incorreta. 11 testes E2E aprovados.
