@@ -1634,3 +1634,5 @@ pm ci normalmente.
 - A entrega continua exigindo revisão, commit e push na branch `main`, execução de `deploy.ps1` (administração e Painel Mestre), recriação do pacote local e geração do ZIP externo. Nenhum segredo ou dado de cliente foi registrado neste contexto.
 
 - Correção 09/09/2026: envio de informativo agora aceita clientes já movidos para a lista selecionada; o aviso de seleção aparece somente quando a lista está vazia. Validado com 11 testes E2E aprovados.
+
+- Correção operacional 09/09/2026: monitoramento público do Painel Mestre atualizado para https://mestre.julianplay.com.br/ready, domínio que corresponde ao serviço julian-master; evita falso erro por consultar o domínio de gestão antigo.

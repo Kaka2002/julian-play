@@ -21,7 +21,7 @@ jobs:
             url: https://painel.julianplay.com.br/ready
             esperado: julian-play
           - servico: Gestao
-            url: https://gestao.julianplay.com.br/ready
+            url: https://mestre.julianplay.com.br/ready
             esperado: julian-master
 
     steps:
