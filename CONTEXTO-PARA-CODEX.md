@@ -19,6 +19,12 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ## Objetivo do sistema
 
+Na versão 1.3.38, foi adicionada a tela separada Mensagens informativas, que
+permite selecionar clientes e enviar texto com uma ou mais imagens fora das
+campanhas. O envio ignora clientes sem telefone, inativos ou com opt-out de
+WhatsApp e usa os arquivos persistidos no DATA_DIR; não altera campanhas,
+sessões ou bancos de outras instalações.
+
 Na versão 1.3.37, a faixa de identificação da licença no painel de clientes
 é exibida somente nas telas Painel e Manutenção, mantendo as demais telas
 livres desse aviso. A alteração é apenas visual e preserva dados, sessões,

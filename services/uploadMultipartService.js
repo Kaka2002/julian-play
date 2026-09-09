@@ -37,6 +37,7 @@ function extrairArquivoMultipart(buffer, boundary, campo = '') {
     const quebra = Buffer.from('\r\n');
     const campos = {};
     let arquivo = null;
+    const arquivos = [];
     let inicioParte = buffer.indexOf(marcador);
 
     while (inicioParte >= 0) {
@@ -62,21 +63,28 @@ function extrairArquivoMultipart(buffer, boundary, campo = '') {
         if (buffer.subarray(fimConteudo - 2, fimConteudo).equals(quebra)) fimConteudo -= 2;
         const conteudo = buffer.subarray(inicioConteudo, fimConteudo);
 
-        if (!arquivo && filename && (!campo || nomeCampo === campo)) {
-            arquivo = {
+        if (filename && (!campo || nomeCampo === campo)) {
+            const item = {
                 filename,
                 campo: nomeCampo,
                 buffer: conteudo
             };
+            arquivos.push(item);
+            if (!arquivo) arquivo = item;
         } else if (!filename && nomeCampo) {
-            campos[nomeCampo] = conteudo.toString('utf8');
+            const valor = conteudo.toString('utf8');
+            if (Object.prototype.hasOwnProperty.call(campos, nomeCampo)) {
+                campos[nomeCampo] = Array.isArray(campos[nomeCampo]) ? [...campos[nomeCampo], valor] : [campos[nomeCampo], valor];
+            } else {
+                campos[nomeCampo] = valor;
+            }
         }
 
         inicioParte = proximaParte;
     }
 
     if (!arquivo) throw new Error('Selecione um arquivo para enviar.');
-    return { ...arquivo, campos };
+    return { ...arquivo, arquivos, campos };
 }
 
 function tokenCsrfDoCookie(req) {

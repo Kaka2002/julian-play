@@ -5,6 +5,14 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Versão 1.3.38: criada rota protegida `/mensagens-informativas` para envio
+  manual de orientação com texto e múltiplas imagens a todos os clientes
+  selecionados. A funcionalidade é independente de campanhas e respeita
+  clientes ativos com telefone válido e opt-out de WhatsApp. Imagens ficam no
+  DATA_DIR da instalação; não há compartilhamento entre instalações. Validada
+  com `node --check` e `git diff --check`. Requer abrir a nova rota no painel
+  após o deploy.
+
 - Versão 1.3.37: a identificação "Licenciado para" fica restrita às telas
   Painel e Manutenção do painel administrador; as demais telas continuam sem
   essa faixa. Nenhum dado ou configuração é alterado. Validada por inspeção

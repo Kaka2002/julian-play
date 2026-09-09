@@ -10137,4 +10137,6 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
 });
 
 router.renderizarPaginaCampanhas = renderizarPaginaCampanhas;
+router.listarClientes = listarClientes;
+router.normalizarTelefone = normalizarTelefone;
 module.exports = router;

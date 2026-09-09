@@ -19,6 +19,7 @@ const clientesRoute = require('./routes/clientesRoute');
 const privacidadeRoute = require('./routes/privacidadeRoute');
 const pagamentosRoute = require('./routes/pagamentosRoute');
 const criarCampanhasRoute = require('./routes/campanhasRoute');
+const criarMensagensInformativasRoute = require('./routes/mensagensInformativasRoute');
 const licencaRoute = require('./routes/licencaRoute');
 const adminInternoRoute = require('./routes/adminInternoRoute');
 const webhookRoute = require('./routes/webhookRoute');
@@ -258,6 +259,7 @@ app.use('/pagamentos-manuais', pagamentosRoute);
 app.use('/campanhas', criarCampanhasRoute({
     renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
 }));
+app.use('/mensagens-informativas', criarMensagensInformativasRoute({ getClient, listarClientes: clientesRoute.listarClientes, normalizarTelefone: clientesRoute.normalizarTelefone, dataDir: DATA_DIR }));
 app.use('/licenca', licencaRoute);
 app.use('/', privacidadeRoute);
 app.use('/', clientesRoute);
