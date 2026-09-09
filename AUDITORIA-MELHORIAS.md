@@ -233,3 +233,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Mensagens informativas: corrigido ReferenceError no carregamento da rota e confirmada abertura normal após deploy. 11 testes E2E aprovados.
 
 - Mensagens informativas: adicionada mensagem específica quando nenhuma imagem é selecionada antes do envio. 11 testes E2E aprovados.
+
+- Mensagens informativas: corrigida validação persistente após tentativa sem cliente; alteração de seleção libera o envio. 11 testes E2E aprovados.

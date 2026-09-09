@@ -1640,3 +1640,5 @@ pm ci normalmente.
 - Correção 09/09/2026: declarada a variável de aviso da rota de mensagens informativas; elimina ReferenceError que impedia a abertura da tela após o deploy. Testes E2E: 11 aprovados.
 
 - Correção 09/09/2026: envio sem arquivo agora exibe aviso específico solicitando a escolha de pelo menos uma imagem; outros erros permanecem identificados separadamente. Testes E2E: 11 aprovados.
+
+- Correção 09/09/2026: a validação do cliente selecionado é limpa ao alterar a lista, permitindo novo envio após corrigir uma tentativa vazia. Testes E2E: 11 aprovados.
