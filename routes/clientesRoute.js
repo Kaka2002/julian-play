@@ -1060,6 +1060,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             pointer-events: none;
         }
 
+        @media (max-width: 1800px) {
+            .topbar { gap: 8px; }
+            .brand { flex-basis: 190px; }
+            nav { gap: 1px; }
+            .navlink { gap: 3px; padding: 0 4px; font-size: 12px; }
+        }
+
         main {
             padding: 38px 0 54px;
         }
