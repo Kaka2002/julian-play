@@ -241,3 +241,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Mensagens informativas: histórico visual dos envios implementado, registrando data, destinatários, texto e imagens no DATA_DIR da instalação.
 
 - Histórico de informativos limitado a 7 dias, com limpeza lógica automática na leitura.
+
+- Histórico de informativos ajustado para retenção de 2 dias, substituindo automaticamente registros mais antigos.

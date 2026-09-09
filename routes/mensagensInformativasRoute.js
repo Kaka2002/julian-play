@@ -9,7 +9,7 @@ function criarMensagensInformativasRoute({ getClient, listarClientes, normalizar
     const pasta = path.join(dataDir || path.join(__dirname, '..'), 'mensagens-informativas');
     const historicoArquivo = path.join(pasta, 'historico.json');
     fs.mkdirSync(pasta, { recursive: true });
-    const lerHistorico = () => { try { const limite = Date.now() - 7 * 24 * 60 * 60 * 1000; return JSON.parse(fs.readFileSync(historicoArquivo, 'utf8')).filter(item => !item.timestamp || Date.parse(item.timestamp) >= limite); } catch (_) { return []; } };
+    const lerHistorico = () => { try { const limite = Date.now() - 2 * 24 * 60 * 60 * 1000; return JSON.parse(fs.readFileSync(historicoArquivo, 'utf8')).filter(item => !item.timestamp || Date.parse(item.timestamp) >= limite); } catch (_) { return []; } };
     const escapar = valor => String(valor || '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[c]));
     router.get('/', async (req, res) => {
         const clientes = await listarClientes({ status: 'ativo' });

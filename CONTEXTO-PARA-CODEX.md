@@ -1648,3 +1648,5 @@ pm ci normalmente.
 - Mensagens informativas: a tela agora exibe os últimos envios, com data, destinatários, texto e nomes dos arquivos de imagem; o histórico fica isolado no DATA_DIR e não altera dados de clientes.
 
 - Ajuste do histórico de informativos: registros exibidos e mantidos somente por 7 dias; entradas antigas deixam de aparecer automaticamente.
+
+- Ajuste solicitado: o histórico de informativos mantém os envios dos últimos 2 dias; registros anteriores são descartados logicamente na leitura.
