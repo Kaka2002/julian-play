@@ -1638,3 +1638,5 @@ pm ci normalmente.
 - Correção operacional 09/09/2026: monitoramento público do Painel Mestre atualizado para https://mestre.julianplay.com.br/ready, domínio que corresponde ao serviço julian-master; evita falso erro por consultar o domínio de gestão antigo.
 
 - Correção 09/09/2026: declarada a variável de aviso da rota de mensagens informativas; elimina ReferenceError que impedia a abertura da tela após o deploy. Testes E2E: 11 aprovados.
+
+- Correção 09/09/2026: envio sem arquivo agora exibe aviso específico solicitando a escolha de pelo menos uma imagem; outros erros permanecem identificados separadamente. Testes E2E: 11 aprovados.

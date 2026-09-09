@@ -231,3 +231,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Monitoramento público: endpoint do Painel Mestre corrigido para mestre.julianplay.com.br/ready, alinhado ao serviço julian-master.
 
 - Mensagens informativas: corrigido ReferenceError no carregamento da rota e confirmada abertura normal após deploy. 11 testes E2E aprovados.
+
+- Mensagens informativas: adicionada mensagem específica quando nenhuma imagem é selecionada antes do envio. 11 testes E2E aprovados.
