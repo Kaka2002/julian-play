@@ -220,3 +220,10 @@ código; itens operacionais externos não são marcados como implementados.
 - Operação: Playwright mantido como dependência de desenvolvimento e protegido por .npmrc com include=dev; instalação do Chromium validada e 
 pm run test:e2e executado com 11 testes aprovados.
 
+
+## Atualização de 09/09/2026
+
+- Mensagens informativas: layout final corrigido com listas de clientes, transferência, upload e botão no rodapé esquerdo sem sobreposição. A funcionalidade permanece independente de campanhas.
+- Playwright: dependência de desenvolvimento preservada por `.npmrc` (`include=dev`), Chromium instalado e teste E2E final aprovado com 11 de 11 testes.
+
+- Mensagens informativas: corrigida validação do formulário para permitir envio quando há clientes selecionados e avisar apenas quando a lista está vazia. 11 testes E2E aprovados.

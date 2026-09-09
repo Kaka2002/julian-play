@@ -1624,3 +1624,13 @@ px playwright install chromium; instalações futuras devem usar
 pm install ou 
 pm ci normalmente.
 
+
+## Registro das alterações de 09/09/2026
+
+- A tela protegida `/mensagens-informativas` foi consolidada no painel de clientes para envio manual de orientações com texto e uma ou várias imagens, fora do fluxo de campanhas. Permite escolher clientes, mover clientes entre listas, selecionar arquivos e visualizar as imagens antes do envio.
+- O layout da tela foi ajustado para manter clientes disponíveis, controles de transferência, clientes selecionados e upload distribuídos horizontalmente. O botão de transferência foi reduzido e o botão `Enviar informativo` foi fixado no rodapé esquerdo do formulário, sem sobrepor o upload.
+- A dependência `@playwright/test` permanece em `devDependencies`; o arquivo `.npmrc` define `include=dev` para impedir que instalações npm removam o Playwright. O Chromium deve ser instalado com `npx playwright install chromium` quando necessário.
+- A validação E2E foi executada após as alterações: 11 testes aprovados. Foram executados também `node --check` na rota e `git diff --check`.
+- A entrega continua exigindo revisão, commit e push na branch `main`, execução de `deploy.ps1` (administração e Painel Mestre), recriação do pacote local e geração do ZIP externo. Nenhum segredo ou dado de cliente foi registrado neste contexto.
+
+- Correção 09/09/2026: envio de informativo agora aceita clientes já movidos para a lista selecionada; o aviso de seleção aparece somente quando a lista está vazia. Validado com 11 testes E2E aprovados.
