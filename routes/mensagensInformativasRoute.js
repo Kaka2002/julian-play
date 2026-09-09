@@ -4,7 +4,7 @@ const path = require('path');
 const { MessageMedia } = require('whatsapp-web.js');
 const { lerUploadMultipart, validarImagemUpload } = require('../services/uploadMultipartService');
 
-function criarMensagensInformativasRoute({ getClient, listarClientes, normalizarTelefone, dataDir } = {}) {
+function criarMensagensInformativasRoute({ getClient, listarClientes, normalizarTelefone, dataDir, layout } = {}) {
     const router = express.Router();
     const pasta = path.join(dataDir || path.join(__dirname, '..'), 'mensagens-informativas');
     fs.mkdirSync(pasta, { recursive: true });
@@ -12,11 +12,9 @@ function criarMensagensInformativasRoute({ getClient, listarClientes, normalizar
         const clientes = await listarClientes({ status: 'ativo' });
         const imagens = fs.readdirSync(pasta).filter(nome => /\.(png|jpe?g|webp|gif)$/i.test(nome));
         const csrf = String(req.headers.cookie || '').split(';').map(item => item.trim()).find(item => item.startsWith('julian_csrf='))?.slice(12) || '';
-        res.send(`<h1>Mensagens informativas</h1><p>Envie orientações com uma ou mais imagens, fora do fluxo de campanhas.</p>
-        <form method="post" enctype="multipart/form-data"><input type="hidden" name="_csrf" value="${csrf}"><label>Texto (opcional)<textarea name="texto"></textarea></label>
-        <label>Clientes (Ctrl+clique para vários)<select name="clientes" multiple required>${clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></label>
-        <label>Imagens<input type="file" name="imagens" multiple accept="image/*"></label><button>Enviar</button></form>
-        <p>Imagens salvas: ${imagens.join(', ') || 'nenhuma'}</p>`);
+        const conteudo = `<section class="page-title"><h1>Mensagens informativas</h1><div class="subtitle">Envie orientações com imagens diretamente aos clientes, fora das campanhas.</div></section><section class="panel"><form method="post" enctype="multipart/form-data" class="fields"><input type="hidden" name="_csrf" value="${csrf}"><label>Orientação (opcional)<textarea name="texto" rows="4"></textarea></label>
+        <label>Clientes (Ctrl+clique para vários)<select name="clientes" multiple required>${clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></label><label>Imagens informativas<input type="file" name="imagens" multiple accept="image/*"></label><button class="button primary" type="submit">Enviar informativo</button></form><p class="muted">Imagens salvas: ${imagens.join(', ') || 'nenhuma'}</p></section>`;
+        res.send(layout ? layout({ titulo: 'Mensagens informativas', conteudo, ativo: 'mensagens-informativas' }) : conteudo);
     });
     router.post('/', async (req, res) => {
         try {

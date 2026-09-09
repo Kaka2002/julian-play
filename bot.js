@@ -259,7 +259,7 @@ app.use('/pagamentos-manuais', pagamentosRoute);
 app.use('/campanhas', criarCampanhasRoute({
     renderizarPaginaCampanhas: clientesRoute.renderizarPaginaCampanhas
 }));
-app.use('/mensagens-informativas', criarMensagensInformativasRoute({ getClient, listarClientes: clientesRoute.listarClientes, normalizarTelefone: clientesRoute.normalizarTelefone, dataDir: DATA_DIR }));
+app.use('/mensagens-informativas', criarMensagensInformativasRoute({ getClient, listarClientes: clientesRoute.listarClientes, normalizarTelefone: clientesRoute.normalizarTelefone, dataDir: DATA_DIR, layout: clientesRoute.layout }));
 app.use('/licenca', licencaRoute);
 app.use('/', privacidadeRoute);
 app.use('/', clientesRoute);

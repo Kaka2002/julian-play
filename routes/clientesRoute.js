@@ -2890,6 +2890,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'crm' ?'active' : ''}" href="/crm">${icon('crm')} CRM</a>
                 <a class="navlink ${ativo === 'atendimentos' ?'active' : ''}" href="/atendimentos">${icon('atendimento')} Atendimentos</a>
                 <a class="navlink ${ativo === 'campanhas' ?'active' : ''}" href="/campanhas">${icon('whats')} Campanhas</a>
+                <a class="navlink ${ativo === 'mensagens-informativas' ?'active' : ''}" href="/mensagens-informativas">${icon('whats')} Informativos</a>
                 <a class="navlink ${ativo === 'planos' ?'active' : ''}" href="/planos">${icon('planos')} Planos</a>
                 <a class="navlink ${ativo === 'modelos' ?'active' : ''}" href="/modelos">${icon('modelos')} Modelos</a>
                 <a class="navlink ${ativo === 'apps' ?'active' : ''}" href="/apps">${icon('apps')} Apps</a>
@@ -10139,4 +10140,5 @@ router.post('/clientes/cobrar-vencidos', async (req, res) => {
 router.renderizarPaginaCampanhas = renderizarPaginaCampanhas;
 router.listarClientes = listarClientes;
 router.normalizarTelefone = normalizarTelefone;
+router.layout = layout;
 module.exports = router;
