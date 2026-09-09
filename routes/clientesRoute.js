@@ -890,6 +890,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             --brand-gradient: linear-gradient(120deg, #071b4f 0%, #123c97 42%, #11c8d6 100%);
         }
 
+        html, body { max-width: 100%; overflow-x: hidden; }
+
         * { box-sizing: border-box; }
 
         body {
@@ -1023,7 +1025,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             gap: 3px;
             color: rgba(255, 255, 255, .78);
             font-weight: 700;
-            overflow-x: auto;
+            overflow: hidden;
+            flex-wrap: wrap;
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
@@ -1041,7 +1044,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             border-radius: 10px;
             font-size: 13px;
             white-space: nowrap;
-            flex: 0 0 auto;
+            flex: 0 1 auto;
             transition: background .18s ease, color .18s ease, transform .18s ease;
         }
 
