@@ -11,7 +11,6 @@ function criarMensagensInformativasRoute({ getClient, listarClientes, normalizar
     router.get('/', async (req, res) => {
         const clientes = await listarClientes({ status: 'ativo' });
         const imagens = fs.readdirSync(pasta).filter(nome => /\.(png|jpe?g|webp|gif)$/i.test(nome));
-        const csrf = String(req.headers.cookie || '').split(';').map(item => item.trim()).find(item => item.startsWith('julian_csrf='))?.slice(12) || '';
         const conteudo = `<section class="page-title"><h1>Mensagens informativas</h1><div class="subtitle">Envie orientações com imagens diretamente aos clientes, fora das campanhas.</div></section><section class="panel"><form method="post" enctype="multipart/form-data" class="fields"><input type="hidden" name="_csrf" value="${csrf}"><label>Orientação (opcional)<textarea name="texto" rows="4"></textarea></label>
         <label>Clientes (Ctrl+clique para vários)<select name="clientes" multiple required>${clientes.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')}</select></label><label>Imagens informativas<input type="file" name="imagens" multiple accept="image/*"></label><button class="button primary" type="submit">Enviar informativo</button></form><p class="muted">Imagens salvas: ${imagens.join(', ') || 'nenhuma'}</p></section>`;
         res.send(layout ? layout({ titulo: 'Mensagens informativas', conteudo, ativo: 'mensagens-informativas' }) : conteudo);
