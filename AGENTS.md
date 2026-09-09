@@ -88,6 +88,15 @@ Quando a alteracao afetar perfil ou permissao, validar ao menos os cenarios:
 
 ## Entrega obrigatoria ao concluir uma alteracao
 
+### Sequencia operacional
+
+Quando o deploy for acionado pelo servidor de produção, a sequência é: validar
+localmente, fazer commit e push, executar o deploy assim que o código estiver
+disponível, validar os dois painéis, gerar o pacote e o ZIP e acompanhar o
+workflow do GitHub em paralelo. O workflow não precisa terminar antes do
+deploy; se falhar, a atualização deve ser interrompida ou revertida conforme o
+erro.
+
 Sempre informar comandos prontos para:
 
 1. revisar, adicionar somente os arquivos da mudanca, criar commit e fazer push para `origin main`;

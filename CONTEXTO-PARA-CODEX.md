@@ -1650,3 +1650,5 @@ pm ci normalmente.
 - Ajuste do histórico de informativos: registros exibidos e mantidos somente por 7 dias; entradas antigas deixam de aparecer automaticamente.
 
 - Ajuste solicitado: o histórico de informativos mantém os envios dos últimos 2 dias; registros anteriores são descartados logicamente na leitura.
+
+- Regra operacional definida: após validação local e push, o deploy pode ocorrer imediatamente; a validação dos painéis e a geração de pacote/ZIP precedem o acompanhamento paralelo do workflow.

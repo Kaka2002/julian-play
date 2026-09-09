@@ -243,3 +243,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Histórico de informativos limitado a 7 dias, com limpeza lógica automática na leitura.
 
 - Histórico de informativos ajustado para retenção de 2 dias, substituindo automaticamente registros mais antigos.
+
+- Processo de entrega atualizado para permitir deploy após push e validação local, acompanhando o workflow em paralelo.
