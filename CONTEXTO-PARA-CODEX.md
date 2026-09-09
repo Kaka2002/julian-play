@@ -1616,3 +1616,11 @@ Links revogáveis de distribuição são gerados no Painel Mestre por `/download
 
 O Painel Mestre agora oferece `/auditoria/exportar.csv` na seção Manutenção para baixar eventos administrativos em CSV, sem alterar os registros.
 
+
+## Persistência do Playwright
+
+O repositório mantém @playwright/test em devDependencies e o .npmrc define include=dev, evitando que instalações npm removam o Playwright. Os testes usam Chromium instalado por 
+px playwright install chromium; instalações futuras devem usar 
+pm install ou 
+pm ci normalmente.
+

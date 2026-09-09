@@ -216,3 +216,7 @@ código; itens operacionais externos não são marcados como implementados.
 - Download individual revogável: tokens do Painel Mestre têm expiração, limite de downloads e endpoint de revogação, sem expor o pacote quando inválidos.
 
 - Exportação de auditoria: botão na Manutenção gera CSV dos eventos administrativos registrados.
+
+- Operação: Playwright mantido como dependência de desenvolvimento e protegido por .npmrc com include=dev; instalação do Chromium validada e 
+pm run test:e2e executado com 11 testes aprovados.
+
