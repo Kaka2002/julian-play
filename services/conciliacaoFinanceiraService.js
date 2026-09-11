@@ -46,13 +46,16 @@ async function listarDivergenciasFinanceiras() {
         ORDER BY c.id DESC LIMIT 1000`);
     const itens = [];
     for (const linha of linhas) {
+        // Pagamentos removidos permanecem no banco apenas para auditoria e
+        // não devem continuar gerando divergências financeiras.
+        if (linha.excluidoEm) continue;
         if (!linha.pagamentoId) {
             itens.push(divergencia(linha, 'cobranca_sem_pagamento', 'critica',
                 `Cobrança aprovada sem pagamento: ${linha.clienteNome}`,
                 `Referência ${linha.referencia} foi aprovada, mas não possui lançamento financeiro.`));
             continue;
         }
-        if (!linha.pagamentoEncontrado || linha.excluidoEm) {
+        if (!linha.pagamentoEncontrado) {
             itens.push(divergencia(linha, 'pagamento_ausente', 'critica',
                 `Pagamento vinculado ausente: ${linha.clienteNome}`,
                 `A cobrança ${linha.referencia} aponta para um pagamento inexistente ou removido.`));

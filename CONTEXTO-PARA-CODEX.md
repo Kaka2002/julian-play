@@ -1652,3 +1652,8 @@ pm ci normalmente.
 - Ajuste solicitado: o histórico de informativos mantém os envios dos últimos 2 dias; registros anteriores são descartados logicamente na leitura.
 
 - Regra operacional definida: após validação local e push, o deploy pode ocorrer imediatamente; a validação dos painéis e a geração de pacote/ZIP precedem o acompanhamento paralelo do workflow.
+
+
+## Atualização de 11/09/2026
+
+- Conciliação financeira ignora pagamentos com xcluidoEm, preservando-os no histórico/auditoria e evitando que remoções legítimas continuem aparecendo como divergências. Cobranças ativas sem pagamento seguem sinalizadas. Dados existentes são preservados.

@@ -245,3 +245,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Histórico de informativos ajustado para retenção de 2 dias, substituindo automaticamente registros mais antigos.
 
 - Processo de entrega atualizado para permitir deploy após push e validação local, acompanhando o workflow em paralelo.
+
+- Conciliação financeira: pagamentos removidos permanecem apenas para auditoria e deixam de gerar divergências órfãs. Registros ativos sem pagamento continuam sinalizados. Alteração compartilhada pelos perfis; dados preservados; validação pendente de execução da conciliação em produção.
