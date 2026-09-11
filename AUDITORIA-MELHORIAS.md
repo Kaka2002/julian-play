@@ -264,3 +264,6 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 
 - Correção operacional 11/09/2026: bot.js envia o sinal ready ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsApp. A rota /ready mantém a validação efetiva do banco; isso evita reinícios causados por wait_ready sem alterar bancos, configurações ou sessões.
+
+- Correção operacional 11/09/2026: o atualizador aguarda o encerramento real de processos residuais e recria processos PM2 ausentes durante a recuperação, evitando falhas secundárias no rollback por PID obsoleto. Validar com testes internos e exercício de atualização.
+- Validação da correção de deploy em 11/09/2026: 143 testes internos, 11 testes de navegador e geração do pacote local aprovados.

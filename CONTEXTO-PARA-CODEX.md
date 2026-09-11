@@ -1673,3 +1673,6 @@ pm ci normalmente.
 
 - O processo Node do painel administrador sinaliza o PM2 imediatamente após abrir a porta HTTP. A rota /ready continua aguardando e validando o banco, evitando que o wait_ready encerre o processo enquanto o WhatsApp inicializa. Dados, configurações e sessões do WhatsApp são preservados.
 
+
+- Atualização operacional de 11/09/2026: o deploy aguarda processos residuais do Node e Chrome até 60 segundos antes do backup e recria automaticamente os processos administrador ou mestre quando o PM2 perdeu o registro. A checagem de saúde trata processos ausentes sem erro secundário; bancos, configurações e sessões são preservados.
+- A correção operacional do atualizador foi validada em 11/09/2026 com 143 testes internos, 11 testes de navegador e recriação do pacote local.

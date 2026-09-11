@@ -159,30 +159,36 @@ function ObterEstadoProcessos($pm2, $node, [string[]]$nomes) {
     return $porNome
 }
 
-function EncerrarProcessosResiduaisJulian([string[]]$raizes) {
+function EncerrarProcessosResiduaisJulian([string[]]$raizes, [int]$TempoMaximoSegundos = 60) {
     $raizesValidas = @($raizes |
         Where-Object { $_ -and (Test-Path -LiteralPath $_) } |
         ForEach-Object { [IO.Path]::GetFullPath($_).TrimEnd('\') } |
         Select-Object -Unique)
     if ($raizesValidas.Count -eq 0) { return }
 
-    $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
-        Where-Object {
-            $linhaComando = $_.CommandLine
-            $_.ProcessId -ne $PID -and
-            $_.Name -in @('node.exe', 'chrome.exe') -and
-            $linhaComando -and
-            ($raizesValidas | Where-Object { $linhaComando -like "*$_*" })
-        })
-    foreach ($processo in $processos) {
-        try {
-            Write-Host "Encerrando processo residual $($processo.Name) PID $($processo.ProcessId)." -ForegroundColor Yellow
-            Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
-        } catch {
-            Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
+    $limite = (Get-Date).AddSeconds([Math]::Max(10, $TempoMaximoSegundos))
+    do {
+        $processos = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+            Where-Object {
+                $linhaComando = $_.CommandLine
+                $_.ProcessId -ne $PID -and
+                $_.Name -in @('node.exe', 'chrome.exe') -and
+                $linhaComando -and
+                ($raizesValidas | Where-Object { $linhaComando -like "*$_*" })
+            })
+        if ($processos.Count -eq 0) { return }
+        foreach ($processo in $processos) {
+            try {
+                Write-Host "Encerrando processo residual $($processo.Name) PID $($processo.ProcessId)." -ForegroundColor Yellow
+                Stop-Process -Id $processo.ProcessId -Force -ErrorAction Stop
+            } catch {
+                Write-Warning "Nao foi possivel encerrar o PID $($processo.ProcessId): $($_.Exception.Message)"
+            }
         }
-    }
-    if ($processos.Count -gt 0) { Start-Sleep -Seconds 3 }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $limite)
+    $nomes = ($processos | ForEach-Object { "$($_.Name) PID $($_.ProcessId)" }) -join ', '
+    throw "Processos residuais continuam ativos apos aguardar o encerramento: $nomes."
 }
 
 function EncerrarNodeOrfaoNaPortaDaInstalacao($pm2, [string]$nomeProcesso, [int]$porta) {
@@ -390,15 +396,27 @@ function PararProcessosOnline($pm2, $estados) {
     Start-Sleep -Seconds 3
 }
 
-function IniciarProcessosAnteriores($pm2, $estados) {
+function IniciarProcessosAnteriores($pm2, $node, $estados) {
     $ecosistemaPrincipal = Join-Path $diretorioProjeto 'ecosystem.config.js'
     $ecosistemaMaster = Join-Path $diretorioProjeto 'master\ecosystem.config.js'
     foreach ($estado in $estados.Values | Where-Object { $_.estavaOnline -and $_.nome -notin $ProcessosParaManterParados }) {
         Write-Host "Iniciando $($estado.nome)..." -ForegroundColor Cyan
         if ($estado.nome -eq $NomeProcesso) {
-            & $pm2.Source startOrReload $ecosistemaPrincipal --only $estado.nome --update-env | Out-Null
+            $existe = @(ObterListaPm2 $pm2 $node) | Where-Object { $_.name -eq $estado.nome }
+            if ($existe) {
+                & $pm2.Source startOrReload $ecosistemaPrincipal --only $estado.nome --update-env | Out-Null
+            } else {
+                Write-Warning "Processo $($estado.nome) nao existe no PM2; recriando pela configuracao do projeto."
+                & $pm2.Source start $ecosistemaPrincipal --only $estado.nome --update-env | Out-Null
+            }
         } elseif ($estado.nome -eq 'julian-master') {
-            & $pm2.Source startOrReload $ecosistemaMaster --only $estado.nome --update-env | Out-Null
+            $existe = @(ObterListaPm2 $pm2 $node) | Where-Object { $_.name -eq $estado.nome }
+            if ($existe) {
+                & $pm2.Source startOrReload $ecosistemaMaster --only $estado.nome --update-env | Out-Null
+            } else {
+                Write-Warning "Processo $($estado.nome) nao existe no PM2; recriando pela configuracao do projeto."
+                & $pm2.Source start $ecosistemaMaster --only $estado.nome --update-env | Out-Null
+            }
         } else {
             # Instalacoes comerciais ja possuem DATA_DIR, porta, licenca e
             # sessao proprios no PM2. Nao importe o ambiente do deploy nelas.
@@ -421,8 +439,9 @@ function AguardarSaude($pm2, $node, $estados, [string]$versaoEsperada) {
         $falhas = [System.Collections.Generic.List[string]]::new()
         foreach ($estado in $pendentes) {
             $pm2Atual = $listaAtual | Where-Object { $_.name -eq $estado.nome } | Select-Object -First 1
-            if (-not $pm2Atual -or $pm2Atual.pm2_env.status -ne 'online') {
-                $falhas.Add("$($estado.nome): PM2 $($pm2Atual.pm2_env.status)")
+            $statusAtual = if ($pm2Atual) { [string]$pm2Atual.pm2_env.status } else { 'ausente' }
+            if (-not $pm2Atual -or $statusAtual -ne 'online') {
+                $falhas.Add("$($estado.nome): PM2 $statusAtual")
                 continue
             }
             if ($estado.porta -le 0) {
@@ -579,7 +598,7 @@ try {
     }
 
     Etapa 'Iniciando a versao validada'
-    IniciarProcessosAnteriores $pm2 $estadosAntes
+    IniciarProcessosAnteriores $pm2 $node $estadosAntes
     $versaoEsperada = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
     AguardarSaude $pm2 $node $estadosAntes $versaoEsperada
     & $pm2.Source save --force
@@ -619,7 +638,7 @@ try {
                 }
                 Move-Item -LiteralPath $pastaNodeAnterior -Destination $nodeAtivo
             }
-            IniciarProcessosAnteriores $pm2 $estadosAntes
+            IniciarProcessosAnteriores $pm2 $node $estadosAntes
             $versaoAnterior = (Get-Content -LiteralPath (Join-Path $diretorioProjeto 'package.json') -Raw | ConvertFrom-Json).version
             AguardarSaude $pm2 $node $estadosAntes $versaoAnterior
             & $pm2.Source save --force

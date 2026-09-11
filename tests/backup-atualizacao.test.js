@@ -128,6 +128,8 @@ test('deploy prepara e testa a versao antes da parada e possui rollback automati
  assert.doesNotMatch(atualizar,/\$estadoPrincipal\.port = \$portaInstalacao/);
  assert.match(atualizar,/ObterListaPm2 \$pm2 \$node/);
  assert.match(atualizar,/Porta nao identificada antes de parar producao/);
+ assert.match(atualizar,/recriando pela configuracao do projeto/);
+ assert.match(atualizar,/Processos residuais continuam ativos apos aguardar o encerramento/);
  assert.match(atualizar,/Ainda aguardando \(\$restantes s\)/);
  assert.match(atualizar,/\| Out-Null/);
  assert.ok(fs.existsSync(normalizador));
