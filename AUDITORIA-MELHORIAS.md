@@ -260,6 +260,8 @@ pm run test:e2e executado com 11 testes aprovados.
 
 - Mensagens informativas: histórico alinhado ao formulário, com tipografia e espaçamento consistentes; prévias de imagens movidas para a coluna de upload, miniaturizadas e limitadas ao espaço vertical disponível.
 
+- Proteção efetiva do backup externo: a interface só sinaliza proteção fora do computador após confirmação explícita e cópia SQLite/SHA-256 validada nas últimas 36 horas. Cópias manuais também atualizam o último horário validado; ausência ou atraso permanece visível como pendência. Afeta os quatro perfis, preserva dados e exige configurar um destino externo real e gerar a primeira cópia após o deploy.
+
 eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsApp. A rota /ready mantém a validação efetiva do banco; isso evita reinícios causados por wait_ready sem alterar bancos, configurações ou sessões.
 
 

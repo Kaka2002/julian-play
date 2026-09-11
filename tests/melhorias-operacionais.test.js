@@ -458,10 +458,10 @@ test('backup verificado pode ser copiado para armazenamento externo', () => {
     }
 });
 
-test('painel diferencia copia local de copia confirmada fora do computador', () => {
-    const resultado = executarIsolado(`(()=>{const m=require('./services/manutencao');const local=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups'});const fora=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups',backupExternoForaComputador:'1'});process.stdout.write(JSON.stringify({local:local.protegidaContraPerdaDoComputador,fora:fora.protegidaContraPerdaDoComputador,nivel:fora.nivel}))})()`);
+test('painel só confirma cópia fora do computador após cópia externa recente', () => {
+    const resultado = executarIsolado(`(()=>{const m=require('./services/manutencao');const local=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups'});const pendente=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups',backupExternoForaComputador:'1'});const fora=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups',backupExternoForaComputador:'1',ultimoBackupExterno:new Date().toISOString()});const outroDestino=m.avaliarDestinoBackupExterno({backupExternoAtivo:'1',backupExternoPasta:'C:\\Backups',backupExternoForaComputador:'1',ultimoBackupExterno:new Date().toISOString(),ultimoBackupExternoPasta:'C:\\OutraPasta'});process.stdout.write(JSON.stringify({local:local.protegidaContraPerdaDoComputador,pendente:pendente.protegidaContraPerdaDoComputador,nivelPendente:pendente.nivel,fora:fora.protegidaContraPerdaDoComputador,nivelFora:fora.nivel,outroDestino:outroDestino.protegidaContraPerdaDoComputador}))})()`);
     try {
-        assert.deepEqual(JSON.parse(resultado.stdout), { local: false, fora: true, nivel: 'fora_computador' });
+        assert.deepEqual(JSON.parse(resultado.stdout), { local: false, pendente: false, nivelPendente: 'fora_computador_pendente', fora: true, nivelFora: 'fora_computador', outroDestino: false });
     } finally {
         removerAmbiente(resultado.ambiente);
     }
@@ -489,7 +489,7 @@ test('copia externa mantem somente os cinco backups mais recentes', () => {
 });
 
 test('backup manual atualiza automaticamente o armazenamento externo configurado', () => {
-    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const externa=path.join(os.tmpdir(),'julian-play-backup-manual-externo-'+Date.now());const criado=await m.criarBackupManualComCopiaExterna({backupExternoAtivo:'1',backupExternoPasta:externa});const retorno={nome:criado.backup.nome,copia:criado.copiaExterna,erro:criado.erroCopiaExterna,db:fs.existsSync(criado.copiaExterna),manifesto:fs.existsSync(criado.copiaExterna+'.json')};fs.rmSync(externa,{recursive:true,force:true});process.stdout.write(JSON.stringify(retorno));})().catch(e=>{console.error(e);process.exit(1)})`);
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const os=require('os');const m=require('./services/manutencao');const c=require('./services/configuracoesPainel');const externa=path.join(os.tmpdir(),'julian-play-backup-manual-externo-'+Date.now());const criado=await m.criarBackupManualComCopiaExterna({backupExternoAtivo:'1',backupExternoPasta:externa});const config=await c.obterConfiguracoes();const retorno={nome:criado.backup.nome,copia:criado.copiaExterna,erro:criado.erroCopiaExterna,db:fs.existsSync(criado.copiaExterna),manifesto:fs.existsSync(criado.copiaExterna+'.json'),ultimoBackupExterno:config.ultimoBackupExterno,ultimoBackupExternoPasta:config.ultimoBackupExternoPasta};fs.rmSync(externa,{recursive:true,force:true});process.stdout.write(JSON.stringify(retorno));})().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         const retorno = JSON.parse(resultado.stdout);
         assert.match(retorno.nome, /^clientes-\d{8}-\d{6}\.db$/);
@@ -497,6 +497,8 @@ test('backup manual atualiza automaticamente o armazenamento externo configurado
         assert.equal(retorno.db, true);
         assert.equal(retorno.manifesto, true);
         assert.ok(retorno.copia.endsWith(retorno.nome));
+        assert.match(retorno.ultimoBackupExterno, /^20\d{2}-\d{2}-\d{2}T/);
+        assert.equal(retorno.ultimoBackupExternoPasta, retorno.copia.replace(/\\[^\\]+$/, ''));
     } finally {
         removerAmbiente(resultado.ambiente);
     }

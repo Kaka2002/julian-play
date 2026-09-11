@@ -35,7 +35,7 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 
 ## Pendências que dependem de decisão ou recurso externo
 
-1. Confirmar no painel que a pasta de backup é realmente sincronizada para fora deste computador. Uma segunda pasta em outro disco local não protege contra roubo, incêndio ou perda completa da máquina.
+1. Confirmar no painel que a pasta de backup é realmente sincronizada para fora deste computador e gerar uma cópia validada. A tela só mostra proteção efetiva após uma cópia externa recente; uma segunda pasta em outro disco local não protege contra roubo, incêndio ou perda completa da máquina.
 2. Criar uma aplicação Cloudflare Access para `gestao.julianplay.com.br` e definir o e-mail/IdP autorizado. Não ativar sem essa identidade, pois uma política errada pode bloquear o proprietário.
 3. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa.
 4. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.

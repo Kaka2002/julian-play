@@ -87,6 +87,7 @@ async function obterConfiguracoes() {
         backupExternoMaximo: '5',
         backupExternoForaComputador: '0',
         ultimoBackupExterno: '',
+        ultimoBackupExternoPasta: '',
         alertaWhatsAppMinutos: '5',
         alertaWebhookUrl: '',
         alertaWhatsappControle: '',

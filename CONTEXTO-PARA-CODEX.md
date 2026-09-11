@@ -1676,3 +1676,9 @@ pm ci normalmente.
 
 - Atualização operacional de 11/09/2026: o deploy aguarda processos residuais do Node e Chrome até 60 segundos antes do backup e recria automaticamente os processos administrador ou mestre quando o PM2 perdeu o registro. A checagem de saúde trata processos ausentes sem erro secundário; bancos, configurações e sessões são preservados.
 - A correção operacional do atualizador foi validada em 11/09/2026 com 143 testes internos, 11 testes de navegador e recriação do pacote local.
+
+## Proteção efetiva da cópia externa em 11/09/2026
+
+- A tela de Manutenção agora só apresenta a cópia como proteção contra perda do computador quando a pasta foi explicitamente confirmada como externa e existe uma cópia validada nas últimas 36 horas. Cópias ausentes ou atrasadas aparecem como pendência operacional, mesmo que a confirmação esteja marcada.
+- Cópias externas manuais e automáticas registram `ultimoBackupExterno` e o destino usado somente depois de reabrir o SQLite, validar `quick_check` e conferir o SHA-256. O último horário validado também fica visível na tabela de backups; se a pasta configurada mudar, uma nova cópia precisa ser gerada.
+- A mudança atende os quatro perfis de instalação, preserva bancos, configurações, backups locais e sessões do WhatsApp e exige uma ação manual apenas para configurar um destino realmente fora do computador e gerar a primeira cópia validada.

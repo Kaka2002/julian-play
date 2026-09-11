@@ -8589,6 +8589,14 @@ function telaManutencao(status = {}, opcoes = {}) {
     const ultimoBackup = status.ultimoBackup
         ?`${status.ultimoBackup.nome} (${status.ultimoBackup.tamanhoFormatado})`
         : 'Nenhum backup gerado';
+    const backupExterno = status.backupExterno || {};
+    const situacaoBackupExterno = backupExterno.protegidaContraPerdaDoComputador
+        ? 'cópia fora do computador confirmada e validada nas últimas 36 horas'
+        : backupExterno.confirmadaForaComputador
+            ? 'pasta marcada fora do computador, mas ainda sem cópia externa validada recente'
+            : backupExterno.volumeDiferente
+                ? 'cópia em outro volume local; ainda falta confirmar sincronização externa'
+                : 'sem proteção confirmada fora do computador';
     const notaLicenca = licenca.vitalicia && licenca.status === 'ativa'
         ?'Licença vitalícia, sem data de vencimento'
         : licenca.status === 'ativa'
@@ -8888,7 +8896,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             ${campo({ nome: 'alertaDiscoCriticoGb', label: 'Disco crítico abaixo de (GB)', valor: status.config?.alertaDiscoCriticoGb || '5', tipo: 'number', attrs: 'min="1" max="100" step="0.5" required' })}
             ${campo({ nome: 'alertaMemoriaAtencaoMb', label: 'Memória em atenção abaixo de (MB)', valor: status.config?.alertaMemoriaAtencaoMb || '1024', tipo: 'number', attrs: 'min="256" max="32768" required' })}
             ${campo({ nome: 'alertaMemoriaCriticaMb', label: 'Memória crítica abaixo de (MB)', valor: status.config?.alertaMemoriaCriticaMb || '512', tipo: 'number', attrs: 'min="128" max="32768" required' })}
-            <div class="notice full"><strong>Situação:</strong> ${status.backupExterno?.protegidaContraPerdaDoComputador ? 'cópia fora do computador confirmada' : status.backupExterno?.volumeDiferente ? 'cópia em outro volume local; ainda falta confirmar sincronização externa' : 'sem proteção confirmada fora do computador'}. A cópia é validada novamente por SHA-256 e por abertura real do SQLite. Somente os backups mais recentes definidos acima são mantidos nesse destino; a retenção longa do disco de dados continua independente.</div>
+            <div class="notice full"><strong>Situação:</strong> ${situacaoBackupExterno}. A cópia é validada novamente por SHA-256 e por abertura real do SQLite. Somente os backups mais recentes definidos acima são mantidos nesse destino; a retenção longa do disco de dados continua independente.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar monitoramento</button>
                 <button class="button secondary" type="submit" formaction="/manutencao/monitoramento/testar" formmethod="post">${icon('alert')} Enviar alerta de teste</button>
@@ -8919,6 +8927,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <tr><th>Conteúdo protegido na fila</th><td>${escapar(status.armazenamentoBanco?.payloadsProtegidosFormatado || '0 B')} em ${escapar(status.armazenamentoBanco?.payloadsProtegidos || 0)} mensagem(ns) pendente(s), incerta(s) ou com falha</td></tr>
                 <tr><th>Pasta de backups</th><td>${escapar(status.backupDir || '-')}</td></tr>
                 <tr><th>Último backup</th><td>${escapar(ultimoBackup)}</td></tr>
+                <tr><th>Última cópia externa validada</th><td>${backupExterno.ultimoBackupExterno ? escapar(formatarDataHoraCurta(backupExterno.ultimoBackupExterno)) : 'Nenhuma cópia externa validada'}</td></tr>
                 <tr><th>Último backup recuperável</th><td>${status.ultimoBackupRecuperavel ? `${escapar(status.ultimoBackupRecuperavel.backup)} · teste aprovado em ${escapar(formatarDataHoraCurta(status.ultimoBackupRecuperavel.concluidoEm))}` : 'Nenhum exercício mensal concluído'}</td></tr>
                 <tr><th>Versão do banco</th><td>${status.migracoes?.ultima ? `${escapar(status.migracoes.ultima.versao)} · ${escapar(status.migracoes.total)} migração(ões)` : 'Migração formal ainda não registrada'}</td></tr>
             </tbody>

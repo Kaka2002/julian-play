@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const sqlite3 = require('sqlite3').verbose();
 const db = require('../database/sqlite');
 const packageInfo = require('../package.json');
-const { obterConfiguracoes } = require('./configuracoesPainel');
+const { obterConfiguracoes, salvarConfiguracao } = require('./configuracoesPainel');
 const {
     listarEventosSistema,
     registrarEventoSistema,
@@ -377,6 +377,8 @@ async function copiarBackupExterno(nomeBackup, pastaExterna, maximoBackups = 5) 
         integridade: 'ok',
         restauracaoTeste: 'aprovada'
     });
+    await salvarConfiguracao('ultimoBackupExternoPasta', destinoBase);
+    await salvarConfiguracao('ultimoBackupExterno', new Date().toISOString());
     return destino;
 }
 
@@ -384,6 +386,20 @@ function avaliarDestinoBackupExterno(config = {}) {
     const ativo = String(config.backupExternoAtivo) === '1';
     const pastaInformada = String(config.backupExternoPasta || '').trim();
     const confirmadaForaComputador = String(config.backupExternoForaComputador || '') === '1';
+    const ultimoBackupExterno = String(config.ultimoBackupExterno || '').trim();
+    const ultimoBackupExternoPasta = String(config.ultimoBackupExternoPasta || '').trim();
+    const timestampUltimoBackupExterno = Date.parse(ultimoBackupExterno);
+    const idadeUltimoBackupExterno = Number.isFinite(timestampUltimoBackupExterno)
+        ? Date.now() - timestampUltimoBackupExterno
+        : null;
+    const copiaExternaRecente = idadeUltimoBackupExterno !== null
+        && idadeUltimoBackupExterno >= 0
+        && idadeUltimoBackupExterno <= 36 * 60 * 60 * 1000
+        && (!ultimoBackupExternoPasta || (
+            path.isAbsolute(pastaInformada)
+            && path.isAbsolute(ultimoBackupExternoPasta)
+            && path.resolve(pastaInformada).toLowerCase() === path.resolve(ultimoBackupExternoPasta).toLowerCase()
+        ));
     const compartilhamentoRede = /^\\\\/.test(pastaInformada);
     let volumeDiferente = false;
     if (pastaInformada && path.isAbsolute(pastaInformada)) {
@@ -397,8 +413,19 @@ function avaliarDestinoBackupExterno(config = {}) {
         compartilhamentoRede,
         volumeDiferente,
         confirmadaForaComputador,
-        protegidaContraPerdaDoComputador: ativo && confirmadaForaComputador,
-        nivel: !ativo ? 'desativado' : confirmadaForaComputador ? 'fora_computador' : volumeDiferente ? 'outro_volume_local' : 'mesmo_volume'
+        ultimoBackupExterno,
+        ultimoBackupExternoPasta,
+        copiaExternaRecente,
+        protegidaContraPerdaDoComputador: ativo && confirmadaForaComputador && copiaExternaRecente,
+        nivel: !ativo
+            ? 'desativado'
+            : confirmadaForaComputador && copiaExternaRecente
+                ? 'fora_computador'
+                : confirmadaForaComputador
+                    ? 'fora_computador_pendente'
+                    : volumeDiferente
+                        ? 'outro_volume_local'
+                        : 'mesmo_volume'
     };
 }
 
