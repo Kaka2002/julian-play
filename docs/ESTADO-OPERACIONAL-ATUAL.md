@@ -36,10 +36,9 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 ## Pendências que dependem de decisão ou recurso externo
 
 1. Confirmar no painel que a pasta de backup é realmente sincronizada para fora deste computador e gerar uma cópia validada. A tela só mostra proteção efetiva após uma cópia externa recente; uma segunda pasta em outro disco local não protege contra roubo, incêndio ou perda completa da máquina.
-2. Criar uma aplicação Cloudflare Access para `gestao.julianplay.com.br` e definir o e-mail/IdP autorizado. Não ativar sem essa identidade, pois uma política errada pode bloquear o proprietário.
-3. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa.
-4. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.
-5. Executar trimestralmente a recuperação completa documentada em `docs/RECUPERACAO-E-CONTINGENCIA.md`.
+2. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa.
+3. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.
+4. Executar trimestralmente a recuperação completa documentada em `docs/RECUPERACAO-E-CONTINGENCIA.md`.
 
 ## Critérios de operação saudável
 
@@ -50,3 +49,8 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 - O Painel Mestre não mostra instalação ativa com versão diferente da versão do repositório publicado.
 
 Referências: [Cloudflare Access para aplicação self-hosted](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/self-hosted-public-app/), [NIST SP 800-34 — planejamento de contingência](https://csrc.nist.gov/pubs/sp/800/34/r1/upd1/final) e [guia de segurança da ANPD](https://www.gov.br/anpd/pt-br/centrais-de-conteudo/materiais-educativos-e-publicacoes/guia-vf.pdf).
+
+## Atualização operacional de 11/09/2026
+
+- O proprietário informou que o Cloudflare Access do Painel Mestre já foi configurado. A configuração deve continuar sendo validada externamente, mas seus e-mails, tokens e políticas não devem ser registrados neste repositório.
+- A revisão dos arquivos rastreados não encontrou padrões de tokens, chaves privadas ou autorizações literais. Ainda é necessário rotacionar qualquer credencial que tenha sido exposta fora dos arquivos, especialmente webhooks, tokens de pagamento, senhas e chaves de sessão.

@@ -177,11 +177,14 @@ código; itens operacionais externos não são marcados como implementados.
 - Observabilidade: o Painel Mestre compara automaticamente a versão devolvida
   por cada `/health` com a versão do próprio código publicado, sem variável
   manual.
+- Cloudflare Access no Painel Mestre: configuração informada pelo proprietário
+  como concluída; nenhum segredo, e-mail ou política é armazenado no projeto.
+- Revisão de credenciais: nenhum padrão de segredo literal foi encontrado nos
+  arquivos rastreados; a rotação de credenciais já exibidas em imagens,
+  terminal ou conversas continua uma ação externa obrigatória.
 
 ## Pendente
 
-- Cloudflare Access no Painel Mestre, que depende de configuração na conta
-  Cloudflare e de uma política de acesso definida pelo proprietário.
 - Pesquisa global, linha do tempo unificada, exportação de auditoria e política
   operacional de retenção/exclusão.
 - Execução do instalador completo em uma máquina Windows física recém-formatada
