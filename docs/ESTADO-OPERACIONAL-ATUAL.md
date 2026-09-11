@@ -35,10 +35,9 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 
 ## Pendências que dependem de decisão ou recurso externo
 
-1. Confirmar no painel que a pasta de backup é realmente sincronizada para fora deste computador e gerar uma cópia validada. A tela só mostra proteção efetiva após uma cópia externa recente; uma segunda pasta em outro disco local não protege contra roubo, incêndio ou perda completa da máquina.
-2. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa, seguindo `docs/ROTACAO-DE-CREDENCIAIS.md`.
-3. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.
-4. Executar trimestralmente a recuperação completa documentada em `docs/RECUPERACAO-E-CONTINGENCIA.md`.
+1. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa, seguindo `docs/ROTACAO-DE-CREDENCIAIS.md`.
+2. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.
+3. Executar trimestralmente a recuperação completa documentada em `docs/RECUPERACAO-E-CONTINGENCIA.md`.
 
 ## Critérios de operação saudável
 
@@ -54,4 +53,9 @@ Referências: [Cloudflare Access para aplicação self-hosted](https://developer
 
 - O proprietário informou que o Cloudflare Access do Painel Mestre já foi configurado. A configuração deve continuar sendo validada externamente, mas seus e-mails, tokens e políticas não devem ser registrados neste repositório.
 - A topologia pública foi confirmada: `mestre.julianplay.com.br` atende o Painel Mestre; `painel.julianplay.com.br` e `gestao.julianplay.com.br` atendem o mesmo painel de clientes. O instalador do Mestre passa a usar `mestre.julianplay.com.br` como domínio padrão para novas instalações.
+- O proprietário confirmou que `G:\Meu Drive\BackupsJulianPlay` está acessível e contém cópias diárias recentes (`clientes-auto-20260911-110049.db` e manifesto). A cópia externa está configurada e validada.
+- Exercício de restauração em 11/09/2026: a cópia externa foi aberta em pasta
+  isolada, passou no `quick_check`, respondeu em `/ready` e `/login` na porta
+  temporária e teve o painel validado visualmente com o WhatsApp desativado.
+  Encerrar o processo e remover a pasta temporária após a conferência.
 - A revisão dos arquivos rastreados não encontrou padrões de tokens, chaves privadas ou autorizações literais. Ainda é necessário rotacionar qualquer credencial que tenha sido exposta fora dos arquivos, especialmente webhooks, tokens de pagamento, senhas e chaves de sessão.

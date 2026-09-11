@@ -53,6 +53,14 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - A rotação de credenciais segue `docs/ROTACAO-DE-CREDENCIAIS.md`: integrações
   externas são trocadas e testadas antes da revogação, enquanto chaves de
   licença e do cofre permanecem inalteradas até uma migração coordenada.
+- O proprietário confirmou em 11/09/2026 que `G:\\Meu Drive\\BackupsJulianPlay`
+  está acessível e recebe cópias diárias do banco administrativo, incluindo o
+  arquivo `clientes-auto-20260911-110049.db` e seu manifesto. O próximo passo
+  é exercitar uma restauração isolada sem iniciar o WhatsApp.
+- O exercício foi concluído em 11/09/2026: a cópia passou no `quick_check`, o
+  processo isolado respondeu em `/ready` e `/login` e o painel foi conferido
+  visualmente com `DISABLE_WHATSAPP=1`. A pasta temporária deve ser removida
+  depois de encerrar o processo.
 
 ## Estrutura principal
 
