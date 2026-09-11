@@ -187,6 +187,9 @@ código; itens operacionais externos não são marcados como implementados.
 - Revisão de credenciais: nenhum padrão de segredo literal foi encontrado nos
   arquivos rastreados; a rotação de credenciais já exibidas em imagens,
   terminal ou conversas continua uma ação externa obrigatória.
+- Procedimento de rotação segura documentado em
+  `docs/ROTACAO-DE-CREDENCIAIS.md`, separando integrações que podem ser
+  trocadas gradualmente das chaves de licença/cofre que exigem migração.
 
 ## Pendente
 

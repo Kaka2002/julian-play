@@ -50,6 +50,9 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - O instalador do Painel Mestre usa `mestre.julianplay.com.br` como domínio
   padrão para novas instalações. Referências antigas a `gestao` como domínio
   do Mestre pertencem ao histórico e não devem orientar novos provisionamentos.
+- A rotação de credenciais segue `docs/ROTACAO-DE-CREDENCIAIS.md`: integrações
+  externas são trocadas e testadas antes da revogação, enquanto chaves de
+  licença e do cofre permanecem inalteradas até uma migração coordenada.
 
 ## Estrutura principal
 

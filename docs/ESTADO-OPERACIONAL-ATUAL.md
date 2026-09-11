@@ -36,7 +36,7 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 ## Pendências que dependem de decisão ou recurso externo
 
 1. Confirmar no painel que a pasta de backup é realmente sincronizada para fora deste computador e gerar uma cópia validada. A tela só mostra proteção efetiva após uma cópia externa recente; uma segunda pasta em outro disco local não protege contra roubo, incêndio ou perda completa da máquina.
-2. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa.
+2. Rotacionar qualquer webhook, token ou senha que já tenha aparecido em imagem, histórico, terminal ou conversa, seguindo `docs/ROTACAO-DE-CREDENCIAIS.md`.
 3. Preparar uma segunda máquina física somente depois de definir o procedimento de sincronização. Ela deve permanecer fria, sem iniciar a sessão do WhatsApp automaticamente.
 4. Executar trimestralmente a recuperação completa documentada em `docs/RECUPERACAO-E-CONTINGENCIA.md`.
 
