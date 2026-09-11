@@ -1664,3 +1664,7 @@ pm ci normalmente.
 - Tela de conciliação financeira agora oferece botão Voltar ao financeiro, sem alteração de dados ou rotinas.
 
 - Tela de mensagens informativas ajustada visualmente para acompanhar a tabulação/tipografia da tela de clientes e exibir 5 envios por página no histórico.
+
+- Painel Mestre agora inclui botão flutuante de retorno ao topo em todas as páginas geradas pelo layout visual, com exibição condicional à rolagem.
+
+- Mensagens informativas: bloco Últimos envios usa o mesmo alinhamento e fonte da tela; prévias ficam abaixo do campo Imagens informativas, com miniaturas reduzidas e rolagem interna.

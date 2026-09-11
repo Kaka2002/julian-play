@@ -922,7 +922,8 @@ function temaVisualMestre() {
     .badge{border:1px solid rgba(255,255,255,.55)}
     @media(max-width:1100px){body::before{left:-48px;width:240px;opacity:.13}}
     @media(max-width:700px){main > .topbar:first-child{display:block;padding:18px}body::before{display:none}}
-    </style>`;
+    .master-back-to-top{position:fixed;right:26px;bottom:24px;width:48px;height:48px;border:0;border-radius:50%;background:linear-gradient(135deg,var(--blue),#13b5ea);color:#fff;font-size:24px;font-weight:900;box-shadow:0 10px 24px rgba(37,99,235,.3);cursor:pointer;display:none;z-index:20}.master-back-to-top.visible{display:inline-flex;align-items:center;justify-content:center}
+    </style><script>(()=>{const iniciar=()=>{if(document.querySelector('.master-back-to-top'))return;const b=document.createElement('button');b.type='button';b.className='master-back-to-top';b.textContent='↑';b.title='Voltar ao topo';b.setAttribute('aria-label','Voltar ao topo da página');document.body.appendChild(b);const atualizar=()=>b.classList.toggle('visible',document.documentElement.scrollHeight>window.innerHeight+160&&window.scrollY>360);window.addEventListener('scroll',atualizar,{passive:true});window.addEventListener('resize',atualizar);b.addEventListener('click',()=>window.scrollTo({top:0,behavior:'smooth'}));atualizar();};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',iniciar):iniciar();})();</script>`;
 }
 
 function resumirOcorrenciasLog(logs = '') {

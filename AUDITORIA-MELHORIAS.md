@@ -255,3 +255,7 @@ pm run test:e2e executado com 11 testes aprovados.
 - Conciliação financeira: adicionada navegação direta Voltar ao financeiro na tela de conciliação.
 
 - Mensagens informativas: texto e histórico receberam espaçamento e tipografia alinhados à tela de clientes; últimos envios agora são paginados em 5 registros por página.
+
+- Painel Mestre: botão flutuante de voltar ao topo adicionado a todas as telas, exibido apenas quando há rolagem vertical suficiente.
+
+- Mensagens informativas: histórico alinhado ao formulário, com tipografia e espaçamento consistentes; prévias de imagens movidas para a coluna de upload, miniaturizadas e limitadas ao espaço vertical disponível.
