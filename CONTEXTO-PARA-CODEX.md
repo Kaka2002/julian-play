@@ -41,6 +41,16 @@ suporta:
 
 As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 
+### Topologia pública confirmada em 11/09/2026
+
+- `mestre.julianplay.com.br` é o endereço público do Painel Mestre (porta
+  9000) e está protegido pelo Cloudflare Access configurado pelo proprietário.
+- `painel.julianplay.com.br` e `gestao.julianplay.com.br` são endereços do
+  mesmo painel de clientes (porta 10001); `gestao` é um alias desse painel.
+- O instalador do Painel Mestre usa `mestre.julianplay.com.br` como domínio
+  padrão para novas instalações. Referências antigas a `gestao` como domínio
+  do Mestre pertencem ao histórico e não devem orientar novos provisionamentos.
+
 ## Estrutura principal
 
 ### Repositório de desenvolvimento

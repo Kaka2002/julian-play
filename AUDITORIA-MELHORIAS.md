@@ -178,7 +178,12 @@ código; itens operacionais externos não são marcados como implementados.
   por cada `/health` com a versão do próprio código publicado, sem variável
   manual.
 - Cloudflare Access no Painel Mestre: configuração informada pelo proprietário
-  como concluída; nenhum segredo, e-mail ou política é armazenado no projeto.
+  como concluída para `mestre.julianplay.com.br`; nenhum segredo, e-mail ou
+  política é armazenado no projeto. `gestao.julianplay.com.br` é alias do
+  painel de clientes e não deve ser usado como endereço do Mestre.
+- Topologia pública: documentação e instalador alinhados ao domínio do Mestre
+  (`mestre.julianplay.com.br`) e aos aliases do painel de clientes
+  (`painel.julianplay.com.br` e `gestao.julianplay.com.br`).
 - Revisão de credenciais: nenhum padrão de segredo literal foi encontrado nos
   arquivos rastreados; a rotação de credenciais já exibidas em imagens,
   terminal ou conversas continua uma ação externa obrigatória.

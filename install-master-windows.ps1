@@ -1,5 +1,5 @@
 param(
-    [string]$Dominio = 'gestao.julianplay.com.br',
+    [string]$Dominio = 'mestre.julianplay.com.br',
     [string]$DominioBase = 'julianplay.com.br',
     [ValidateRange(1, 65535)][int]$Porta = 9000,
     [ValidateRange(1024, 65535)][int]$PrimeiraPortaCliente = 11001,

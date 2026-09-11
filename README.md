@@ -95,7 +95,7 @@ O Painel Mestre cria instalacoes isoladas com URL, porta, banco, sessao do Whats
 powershell -ExecutionPolicy Bypass -File .\install-master-windows.ps1
 ```
 
-O acesso padrao sera `https://gestao.julianplay.com.br`. Cada nova instalacao recebe um subdominio, banco em `C:\JulianPlayClientes`, avaliacao de 15/30 dias ou licenca definitiva. O cadastro tambem guarda o WhatsApp esperado e o horario individual dos avisos. O numero precisa ser conectado pelo QR Code dentro do painel do cliente; apenas informa-lo no Painel Mestre nao conecta o WhatsApp.
+O acesso padrao do Painel Mestre sera `https://mestre.julianplay.com.br`. O painel de clientes continua acessivel por `https://painel.julianplay.com.br` e pelo alias `https://gestao.julianplay.com.br`. Cada nova instalacao recebe um subdominio, banco em `C:\JulianPlayClientes`, avaliacao de 15/30 dias ou licenca definitiva. O cadastro tambem guarda o WhatsApp esperado e o horario individual dos avisos. O numero precisa ser conectado pelo QR Code dentro do painel do cliente; apenas informa-lo no Painel Mestre nao conecta o WhatsApp.
 
 Cada cliente comercial possui um robo independente. Ao converter uma avaliacao em definitiva, o mesmo banco e a mesma sessao sao preservados. Instalacoes abandonadas devem ser arquivadas antes da exclusao definitiva. O atualizador para todas as instalacoes `julian-*`, cria backups dos bancos e reinicia os processos para evitar arquivos em uso durante o `npm ci`.
 
