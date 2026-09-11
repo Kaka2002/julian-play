@@ -85,12 +85,9 @@ test('GitHub Actions valida o projeto sem acessar o VPS encerrado',()=>{
  assert.doesNotMatch(workflow,/VPS_HOST|VPS_USER|VPS_SSH_KEY|ssh\s|deploy\.ps1/i);
 });
 
-test('monitoramento publico roda a cada quinze minutos e confirma tres falhas',()=>{
- const workflow=fs.readFileSync(path.join(repoRoot,'.github','workflows','monitoramento-publico.yml'),'utf8');
- assert.match(workflow,/workflow_dispatch:/);
- assert.match(workflow,/schedule:[\s\S]*cron: '\*\/15 \* \* \* \*'/);
- assert.match(workflow,/tentativa -le 3/);
- assert.match(workflow,/Tres verificacoes consecutivas falharam/);
+test('monitoramento publico permanece desativado',()=>{
+ const workflow=path.join(repoRoot,'.github','workflows','monitoramento-publico.yml');
+ assert.equal(fs.existsSync(workflow),false);
 });
 
 test('deploy prepara e testa a versao antes da parada e possui rollback automatico',()=>{

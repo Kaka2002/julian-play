@@ -246,6 +246,7 @@ pm run test:e2e executado com 11 testes aprovados.
 
 - Processo de entrega atualizado para permitir deploy após push e validação local, acompanhando o workflow em paralelo.
 - Monitoramento público: workflow agendado removido a pedido; a validação do projeto permanece ativa.
+- Teste de governança atualizado para confirmar que o monitoramento público permanece desativado.
 
 - Conciliação financeira: pagamentos removidos permanecem apenas para auditoria e deixam de gerar divergências órfãs. Registros ativos sem pagamento continuam sinalizados. Alteração compartilhada pelos perfis; dados preservados; validação pendente de execução da conciliação em produção.
 
