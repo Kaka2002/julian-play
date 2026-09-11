@@ -1668,3 +1668,8 @@ pm ci normalmente.
 - Painel Mestre agora inclui botão flutuante de retorno ao topo em todas as páginas geradas pelo layout visual, com exibição condicional à rolagem.
 
 - Mensagens informativas: bloco Últimos envios usa o mesmo alinhamento e fonte da tela; prévias ficam abaixo do campo Imagens informativas, com miniaturas reduzidas e rolagem interna.
+
+## Atualização operacional de 11/09/2026
+
+- O processo Node do painel administrador sinaliza o PM2 imediatamente após abrir a porta HTTP. A rota /ready continua aguardando e validando o banco, evitando que o wait_ready encerre o processo enquanto o WhatsApp inicializa. Dados, configurações e sessões do WhatsApp são preservados.
+

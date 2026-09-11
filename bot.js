@@ -270,8 +270,10 @@ const whatsappDesativado = process.env.DISABLE_WHATSAPP === '1';
 
 const server = app.listen(PORT, async () => {
     console.log(`Monitor na porta ${PORT}`);
-    await bancoAplicacao.ready;
+    // O PM2 usa este sinal apenas para saber que o processo HTTP foi iniciado.
+    // A prontidao do banco continua sendo verificada pela rota /ready.
     if (typeof process.send === 'function') process.send('ready');
+    await bancoAplicacao.ready;
     if (whatsappDesativado) {
         console.log('WhatsApp e agendadores desativados neste processo.');
     } else {
