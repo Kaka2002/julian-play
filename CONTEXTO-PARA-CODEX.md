@@ -1659,3 +1659,5 @@ pm ci normalmente.
 - Conciliação financeira ignora pagamentos com xcluidoEm, preservando-os no histórico/auditoria e evitando que remoções legítimas continuem aparecendo como divergências. Cobranças ativas sem pagamento seguem sinalizadas. Dados existentes são preservados.
 
 - Teste automatizado de conciliação alinhado à regra de ignorar pagamentos removidos, sem alterar dados preservados.
+
+- Tela de conciliação financeira agora oferece botão Voltar ao financeiro, sem alteração de dados ou rotinas.

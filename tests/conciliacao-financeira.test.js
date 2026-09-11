@@ -43,6 +43,7 @@ test('rota de conciliacao e agendador diario ficam protegidos e integrados', () 
     const bot=fs.readFileSync(path.join(repoRoot,'bot.js'),'utf8');
     assert.match(rota,/router\.get\('\/financeiro\/conciliacao'/);
     assert.match(rota,/router\.post\('\/financeiro\/conciliacao\/executar'/);
+    assert.match(rota,/href="\/financeiro"[^>]*>Voltar ao financeiro/);
     assert.match(principal,/router\.use\(criarConciliacaoFinanceiraRoute\(/);
     assert.match(principal,/href="\/financeiro\/conciliacao"/);
     assert.match(bot,/iniciarConciliacaoFinanceira\(\)/);

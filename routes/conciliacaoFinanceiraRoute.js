@@ -6,7 +6,7 @@ function criarConciliacaoFinanceiraRoute(deps = {}) {
 
     function tela(itens = []) {
         return `<section class="page-title"><div><h1>Conciliação Financeira</h1><div class="subtitle">Confere cobranças aprovadas, pagamentos, valores e vencimentos</div></div>
-            <form method="post" action="/financeiro/conciliacao/executar"><button class="button" type="submit">Executar agora</button></form></section>
+            <div class="actions"><a class="button secondary" href="/financeiro">Voltar ao financeiro</a><form method="post" action="/financeiro/conciliacao/executar"><button class="button" type="submit">Executar agora</button></form></div></section>
         <section class="panel"><div class="panel-head"><div><h2 class="panel-title">${itens.length} divergência(s)</h2><div class="subtitle">A rotina é diagnóstica e não altera receita ou acesso automaticamente.</div></div></div>
         ${itens.length ? `<div class="pending-list">${itens.map(item => `<article class="pending-item"><div><span class="badge ${item.prioridade === 'critica' ? 'error' : 'warn'}">${item.prioridade === 'critica' ? 'Crítica' : 'Alta'}</span><span class="badge muted">Financeiro</span><h3>${escapar(item.titulo)}</h3><p>${escapar(item.detalhe)}</p><small>Referência: ${escapar(item.referencia)}</small></div><a class="button secondary" href="${escapar(item.href)}">Revisar cliente</a></article>`).join('')}</div>` : '<div class="empty">Nenhuma divergência financeira encontrada.</div>'}</section>`;
     }
