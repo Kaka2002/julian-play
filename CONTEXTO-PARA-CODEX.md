@@ -1652,6 +1652,7 @@ pm ci normalmente.
 - Ajuste solicitado: o histórico de informativos mantém os envios dos últimos 2 dias; registros anteriores são descartados logicamente na leitura.
 
 - Regra operacional definida: após validação local e push, o deploy pode ocorrer imediatamente; a validação dos painéis e a geração de pacote/ZIP precedem o acompanhamento paralelo do workflow.
+- Monitoramento público do GitHub Actions desativado; o workflow `Validacao do Julian Play` continua sendo executado em pushes para `main`.
 
 
 ## Atualização de 11/09/2026
