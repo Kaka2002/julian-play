@@ -1661,3 +1661,5 @@ pm ci normalmente.
 - Teste automatizado de conciliação alinhado à regra de ignorar pagamentos removidos, sem alterar dados preservados.
 
 - Tela de conciliação financeira agora oferece botão Voltar ao financeiro, sem alteração de dados ou rotinas.
+
+- Tela de mensagens informativas ajustada visualmente para acompanhar a tabulação/tipografia da tela de clientes e exibir 5 envios por página no histórico.

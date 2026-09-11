@@ -251,3 +251,5 @@ pm run test:e2e executado com 11 testes aprovados.
 - Teste de conciliação atualizado para confirmar que pagamentos removidos não geram divergência; cobranças sem pagamento, valores divergentes e acesso desatualizado continuam detectados.
 
 - Conciliação financeira: adicionada navegação direta Voltar ao financeiro na tela de conciliação.
+
+- Mensagens informativas: texto e histórico receberam espaçamento e tipografia alinhados à tela de clientes; últimos envios agora são paginados em 5 registros por página.
