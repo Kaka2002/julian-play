@@ -61,6 +61,18 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   processo isolado respondeu em `/ready` e `/login` e o painel foi conferido
   visualmente com `DISABLE_WHATSAPP=1`. A pasta temporária deve ser removida
   depois de encerrar o processo.
+- A checagem de hardware em 11/09/2026 encontrou 15,73 GB de RAM total e
+  865,59 GB livres em `D:` (3,41 GB de RAM livre no instante da medição),
+  atendendo os mínimos definidos. Não houve alteração de código; manter a
+  limpeza de logs/temporários e repetir a medição sob carga.
+- A auditoria de produção executada com o registro npm disponível reduziu as
+  ocorrências de 9 para 5 após atualizações seguras de `js-yaml`,
+  `body-parser` e override de `qs` para `6.16.0`. As 5 restantes são altas e
+  pertencem ao `extract-zip` transitivo de Puppeteer/`whatsapp-web.js`; a
+  atualização exigiria mudança incompatível e não foi aplicada à força.
+- A alteração de dependências passou nos 143 testes internos, 11 testes E2E e
+  na geração do pacote local. O pacote gerado sem chave privada Ed25519 fica
+  sem assinatura até `LICENSE_PRIVATE_KEY` ser configurada no Painel Mestre.
 
 ## Estrutura principal
 

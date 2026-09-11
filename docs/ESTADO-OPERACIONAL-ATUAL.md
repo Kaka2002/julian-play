@@ -31,7 +31,11 @@ Nunca execute a mesma sessão do WhatsApp em duas máquinas ou dois processos. O
 - O exercício mensal restaura preferencialmente a cópia externa, quando disponível.
 - Mensagens proativas possuem fila persistente criptografada e retomada controlada após reinício. Itens que ainda aguardavam são retomados; um envio interrompido no meio fica como `incerto` para revisão manual, evitando repetição automática.
 - Exclusão direta de clientes foi substituída por exportação do titular e anonimização auditável.
-- A dependência `sqlite3` está na versão 6.0.1; a auditoria das dependências de produção não encontrou vulnerabilidades conhecidas em 04/08/2026.
+- A dependência `sqlite3` está na versão 6.0.1. A auditoria de produção de
+  11/09/2026 reduziu as ocorrências de 9 para 5 após atualizações seguras de
+  `js-yaml`, `body-parser` e `qs`; permanecem 5 vulnerabilidades altas no
+  `extract-zip` transitivo da cadeia Puppeteer/`whatsapp-web.js`, cuja correção
+  exigiria mudança incompatível.
 
 ## Pendências que dependem de decisão ou recurso externo
 
@@ -59,3 +63,12 @@ Referências: [Cloudflare Access para aplicação self-hosted](https://developer
   temporária e teve o painel validado visualmente com o WhatsApp desativado.
   Encerrar o processo e remover a pasta temporária após a conferência.
 - A revisão dos arquivos rastreados não encontrou padrões de tokens, chaves privadas ou autorizações literais. Ainda é necessário rotacionar qualquer credencial que tenha sido exposta fora dos arquivos, especialmente webhooks, tokens de pagamento, senhas e chaves de sessão.
+- A medição do servidor encontrou 15,73 GB de RAM total e 865,59 GB livres em
+  `D:`, atendendo os mínimos de hardware. A memória livre foi de 3,41 GB no
+  instante da coleta; manter limpeza de logs/temporários e repetir a medição
+  sob carga.
+- A validação final da atualização de dependências passou nos 143 testes
+  internos, 11 testes de navegador e geração do pacote local. O resultado do
+  `npm audit --omit=dev` ficou em 5 vulnerabilidades altas, todas na cadeia
+  transitiva `extract-zip`/Puppeteer/`whatsapp-web.js`; não foi usado
+  `npm audit fix --force`.

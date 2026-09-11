@@ -1,6 +1,6 @@
 # Auditoria das melhorias recomendadas
 
-Atualizada em 07/09/2026. Este documento registra o estado comprovado no
+Atualizada em 11/09/2026. Este documento registra o estado comprovado no
 código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
@@ -201,11 +201,24 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Ação externa obrigatória
 
-- Aumentar a RAM física/virtual do servidor para no mínimo 8 GB, preferivelmente
-  16 GB. Código não substitui capacidade de memória.
-- Manter mais de 10 GB livres no disco do servidor.
+- A medição operacional de 11/09/2026 encontrou 15,73 GB de RAM total e
+  865,59 GB livres no disco D:, atendendo os mínimos de hardware. Manter a
+  limpeza periódica de logs/temporários e repetir a medição quando houver
+  aumento de carga; a memória livre observada foi de 3,41 GB naquele momento.
 - Manter `julian-amplaytv` parado enquanto a cliente utilizar a instalação
   local.
+
+## Validações operacionais de 11/09/2026
+
+- Dependências de produção: `npm audit --omit=dev` foi executado com acesso ao
+  registro. As correções seguras atualizaram `js-yaml` e `body-parser` e
+  fixaram `qs` em `6.16.0` por override. O resultado caiu de 9 para 5
+  vulnerabilidades; permanecem 5 vulnerabilidades altas no `extract-zip`
+  transitivo da cadeia Puppeteer/`whatsapp-web.js`. A correção disponível
+  exigiria uma mudança incompatível de Puppeteer e não foi forçada.
+- A alteração de dependências foi validada com 143 testes internos, 11 testes
+  de navegador e geração do pacote local limpo. O manifesto continua sem
+  assinatura quando `LICENSE_PRIVATE_KEY` não está configurada no ambiente.
 
 
 - Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.
