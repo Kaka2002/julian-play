@@ -1657,3 +1657,5 @@ pm ci normalmente.
 ## Atualização de 11/09/2026
 
 - Conciliação financeira ignora pagamentos com xcluidoEm, preservando-os no histórico/auditoria e evitando que remoções legítimas continuem aparecendo como divergências. Cobranças ativas sem pagamento seguem sinalizadas. Dados existentes são preservados.
+
+- Teste automatizado de conciliação alinhado à regra de ignorar pagamentos removidos, sem alterar dados preservados.

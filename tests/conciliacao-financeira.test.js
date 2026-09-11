@@ -24,8 +24,8 @@ test('conciliacao detecta vinculo, valor e vencimento sem alterar dados', () => 
     })().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         const dados=JSON.parse(resultado.stdout);
-        assert.deepEqual(dados.tipos.sort(), ['acesso_nao_atualizado','cobranca_sem_pagamento','pagamento_ausente','valor_divergente'].sort());
-        assert.deepEqual(dados.resumo,{total:4,criticas:3,altas:1});
+        assert.deepEqual(dados.tipos.sort(), ['acesso_nao_atualizado','cobranca_sem_pagamento','valor_divergente'].sort());
+        assert.deepEqual(dados.resumo,{total:3,criticas:2,altas:1});
         assert.equal(dados.antes,dados.depois);
         assert.equal(dados.evento.nivel,'alerta');
     } finally { removerAmbiente(resultado.ambiente); }
