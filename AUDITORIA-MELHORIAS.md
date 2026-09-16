@@ -222,6 +222,14 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Atualização de 16/09/2026
 
+- Privacidade de valores monetários: todas as páginas do painel de clientes
+  agora oferecem um botão de olho no cabeçalho. O estado fechado mascara os
+  valores exibidos como `R$ •••`; ao abrir, os valores voltam a aparecer. A
+  preferência fica somente no navegador, não altera dados, cálculos, campos
+  de edição ou mensagens enviadas. Afeta o painel administrador, clientes
+  comerciais no servidor e instalações locais; o Painel Mestre não usa este
+  layout. Validar visualmente o botão e a troca de estado após o deploy.
+
 - Privacidade e dados do cliente: o aviso, os campos de confirmação e as ações
   de exportação, anonimização e exclusão agora usam o mesmo alinhamento interno
   do título do painel. A separação entre as ações ficou visível sem alterar

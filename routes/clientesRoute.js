@@ -824,6 +824,8 @@ function icon(nome) {
         arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>',
         user: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
         search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
+        eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
+        'eye-off': '<svg viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-3.2 4.5"/><path d="M6.6 6.6C3.8 8.5 2 12 2 12s3.5 8 10 8a10.7 10.7 0 0 0 4.1-.8"/></svg>',
         plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
         edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
         trash: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
@@ -1061,6 +1063,58 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .navlink.disabled {
             pointer-events: none;
+        }
+
+        .money-visibility-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: 40px;
+            height: 38px;
+            padding: 0;
+            border: 1px solid rgba(255, 255, 255, .28);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, .12);
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(7, 27, 79, .16);
+        }
+
+        .money-visibility-toggle:hover {
+            background: rgba(255, 255, 255, .22);
+        }
+
+        .money-visibility-toggle:focus-visible {
+            outline: 3px solid rgba(255, 255, 255, .5);
+            outline-offset: 2px;
+        }
+
+        .money-visibility-toggle .money-icon-visible {
+            display: none;
+        }
+
+        body.money-values-visible .money-visibility-toggle .money-icon-hidden {
+            display: none;
+        }
+
+        body.money-values-visible .money-visibility-toggle .money-icon-visible {
+            display: inline-flex;
+        }
+
+        .money-value {
+            white-space: nowrap;
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         @media (max-width: 1800px) {
@@ -2929,6 +2983,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
+            <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
+                <span class="money-icon-hidden">${icon('eye-off')}</span>
+                <span class="money-icon-visible">${icon('eye')}</span>
+                <span class="sr-only">Valores monetários</span>
+            </button>
         </div>
     </div>
     <main>
@@ -2941,17 +3000,84 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     <script>
         (() => {
             const botaoTopo = document.querySelector('.back-to-top');
-            if (!botaoTopo) return;
+            if (botaoTopo) {
+                const atualizarBotaoTopo = () => {
+                    const paginaLonga = document.documentElement.scrollHeight > window.innerHeight + 160;
+                    botaoTopo.classList.toggle('visible', paginaLonga && window.scrollY > 360);
+                };
 
-            const atualizarBotaoTopo = () => {
-                const paginaLonga = document.documentElement.scrollHeight > window.innerHeight + 160;
-                botaoTopo.classList.toggle('visible', paginaLonga && window.scrollY > 360);
+                window.addEventListener('scroll', atualizarBotaoTopo, { passive: true });
+                window.addEventListener('resize', atualizarBotaoTopo);
+                botaoTopo.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+                atualizarBotaoTopo();
+            }
+
+            const botaoValores = document.querySelector('.money-visibility-toggle');
+            if (!botaoValores) return;
+
+            const moeda = /(?:R\$|BRL)\s*(?:[\d.,]+|\*{3,}|•{3,})/g;
+            const ignorar = 'script,style,textarea,input,select,option,button,[data-money-ignore],.money-visibility-toggle';
+            const marcarValores = () => {
+                const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+                    acceptNode: (node) => {
+                        const elemento = node.parentElement;
+                        if (!elemento || elemento.closest(ignorar) || !moeda.test(node.nodeValue || '')) {
+                            moeda.lastIndex = 0;
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        moeda.lastIndex = 0;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+                const nos = [];
+                while (walker.nextNode()) nos.push(walker.currentNode);
+
+                nos.forEach((node) => {
+                    const texto = node.nodeValue || '';
+                    const correspondencias = Array.from(texto.matchAll(moeda));
+                    if (!correspondencias.length) return;
+
+                    const fragmento = document.createDocumentFragment();
+                    let fimAnterior = 0;
+                    correspondencias.forEach((correspondencia) => {
+                        const inicio = correspondencia.index || 0;
+                        if (inicio > fimAnterior) fragmento.appendChild(document.createTextNode(texto.slice(fimAnterior, inicio)));
+                        const valor = document.createElement('span');
+                        valor.className = 'money-value';
+                        valor.dataset.moneyOriginal = correspondencia[0];
+                        valor.textContent = correspondencia[0];
+                        fragmento.appendChild(valor);
+                        fimAnterior = inicio + correspondencia[0].length;
+                    });
+                    if (fimAnterior < texto.length) fragmento.appendChild(document.createTextNode(texto.slice(fimAnterior)));
+                    node.parentNode.replaceChild(fragmento, node);
+                });
             };
 
-            window.addEventListener('scroll', atualizarBotaoTopo, { passive: true });
-            window.addEventListener('resize', atualizarBotaoTopo);
-            botaoTopo.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
-            atualizarBotaoTopo();
+            marcarValores();
+            let valoresVisiveis = false;
+            try {
+                valoresVisiveis = window.localStorage.getItem('julianPlayMostrarValores') === '1';
+            } catch (_) {}
+
+            const atualizarValores = (visiveis) => {
+                valoresVisiveis = Boolean(visiveis);
+                document.body.classList.toggle('money-values-visible', valoresVisiveis);
+                document.querySelectorAll('.money-value').forEach((elemento) => {
+                    const moedaOriginal = elemento.dataset.moneyOriginal || 'R$ 0,00';
+                    elemento.textContent = valoresVisiveis ? moedaOriginal : (moedaOriginal.startsWith('BRL') ? 'BRL •••' : 'R$ •••');
+                });
+                botaoValores.setAttribute('aria-pressed', String(valoresVisiveis));
+                const texto = valoresVisiveis ? 'Ocultar valores monetários' : 'Mostrar valores monetários';
+                botaoValores.setAttribute('aria-label', texto);
+                botaoValores.setAttribute('title', texto);
+                try {
+                    window.localStorage.setItem('julianPlayMostrarValores', valoresVisiveis ? '1' : '0');
+                } catch (_) {}
+            };
+
+            botaoValores.addEventListener('click', () => atualizarValores(!valoresVisiveis));
+            atualizarValores(valoresVisiveis);
         })();
     </script>
 </body>

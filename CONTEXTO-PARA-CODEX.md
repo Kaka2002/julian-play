@@ -76,6 +76,14 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 
 ### Atualização funcional de 16/09/2026
 
+- Todas as páginas do painel de clientes que exibem valores monetários têm um
+  botão de olho no cabeçalho. Por padrão, os valores visíveis são mascarados
+  como `R$ •••`; o clique alterna entre ocultar e mostrar e a preferência é
+  salva apenas no `localStorage` do navegador. A máscara atua somente no texto
+  renderizado: não altera cálculos, bancos, valores de formulários, rotas ou
+  mensagens de cobrança. Afeta o painel administrador, clientes comerciais no
+  servidor e instalações locais; o Painel Mestre permanece fora deste layout.
+
 - A seção “Privacidade e dados do cliente” passou a recuar o aviso, os campos
   e as ações pelo mesmo espaçamento horizontal do cabeçalho do painel. A
   alteração é somente visual, afeta os três perfis de painel de clientes e
