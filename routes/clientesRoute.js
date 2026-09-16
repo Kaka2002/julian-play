@@ -1415,6 +1415,21 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             overflow: hidden;
         }
 
+        .privacy-notice {
+            margin-left: 28px;
+            margin-right: 28px;
+        }
+
+        .privacy-content {
+            padding: 16px 28px 28px;
+        }
+
+        .privacy-content form.full + form.full {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--line);
+        }
+
         .pending-list { display: grid; }
         .pending-item {
             display: flex;
@@ -5284,12 +5299,12 @@ function secaoPrivacidadeCliente(cliente = {}, exclusaoDefinitiva = {}) {
             </div>
             ${anonimizado ? '<span class="badge warn">Anonimizado</span>' : '<span class="badge info">Ação protegida</span>'}
         </div>
-        <div class="notice ${anonimizado ? 'warn' : ''}">
+        <div class="notice privacy-notice ${anonimizado ? 'warn' : ''}">
             ${anonimizado
         ? `Este cadastro foi anonimizado em ${escapar(formatarDataHoraBrasil(cliente.anonimizadoEm))}. Os registros financeiros mínimos continuam preservados.`
         : 'Antes de exportar, confirme a identidade do titular. A anonimização é irreversível e substitui a exclusão direta para não quebrar pagamentos e auditorias.'}
         </div>
-        <div class="fields" style="margin-top:16px;">
+        <div class="privacy-content">
             <form class="full" method="post" action="/privacidade/clientes/${escapar(cliente.id)}/exportar">
                 <div class="fields">
                     <label class="full" style="display:flex;gap:10px;align-items:center;">

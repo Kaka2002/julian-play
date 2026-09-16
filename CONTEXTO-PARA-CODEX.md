@@ -74,6 +74,16 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   na geração do pacote local. O pacote gerado sem chave privada Ed25519 fica
   sem assinatura até `LICENSE_PRIVATE_KEY` ser configurada no Painel Mestre.
 
+### Atualização funcional de 16/09/2026
+
+- A seção “Privacidade e dados do cliente” passou a recuar o aviso, os campos
+  e as ações pelo mesmo espaçamento horizontal do cabeçalho do painel. A
+  alteração é somente visual, afeta os três perfis de painel de clientes e
+  preserva rotas, validações, permissões, bancos, históricos e dados pessoais.
+- A separação visual entre exportação, anonimização e exclusão definitiva
+  continua usando os mesmos formulários protegidos; não há migração nem ação
+  manual de dados após o deploy.
+
 ## Estrutura principal
 
 ### Repositório de desenvolvimento

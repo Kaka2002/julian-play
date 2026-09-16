@@ -220,6 +220,18 @@ código; itens operacionais externos não são marcados como implementados.
   de navegador e geração do pacote local limpo. O manifesto continua sem
   assinatura quando `LICENSE_PRIVATE_KEY` não está configurada no ambiente.
 
+## Atualização de 16/09/2026
+
+- Privacidade e dados do cliente: o aviso, os campos de confirmação e as ações
+  de exportação, anonimização e exclusão agora usam o mesmo alinhamento interno
+  do título do painel. A separação entre as ações ficou visível sem alterar
+  rotas, validações, permissões, bancos, históricos ou dados do cliente.
+- A mudança visual afeta o painel administrador, clientes comerciais no
+  servidor e instalações locais; o Painel Mestre não usa essa seção. Foi
+  validada com a suíte interna (143 testes), os testes de navegador (11) e o
+  pacote local limpo; a conferência visual da ficha deve ser feita após o
+  deploy.
+
 
 - Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.
 
