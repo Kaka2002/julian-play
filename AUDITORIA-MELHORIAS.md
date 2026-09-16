@@ -222,9 +222,10 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Atualização de 16/09/2026
 
-- Privacidade de valores monetários: todas as páginas do painel de clientes
-  agora oferecem um botão de olho no cabeçalho. O estado fechado mascara os
-  valores exibidos como `R$ •••`; ao abrir, os valores voltam a aparecer. A
+- Privacidade de valores monetários: o botão de olho foi retirado do menu e
+  colocado ao lado de “Receita Mensal Recorrente”; na página de pagamentos
+  manuais ele fica junto ao cabeçalho da própria tela. O estado fechado mascara
+  os valores exibidos como `R$ •••`; ao abrir, os valores voltam a aparecer. A
   preferência fica somente no navegador, não altera dados, cálculos, campos
   de edição ou mensagens enviadas. Afeta o painel administrador, clientes
   comerciais no servidor e instalações locais; o Painel Mestre não usa este

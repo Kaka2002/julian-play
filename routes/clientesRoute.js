@@ -1073,19 +1073,19 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             width: 40px;
             height: 38px;
             padding: 0;
-            border: 1px solid rgba(255, 255, 255, .28);
+            border: 1px solid #cdd8ff;
             border-radius: 10px;
-            background: rgba(255, 255, 255, .12);
-            color: #fff;
-            box-shadow: 0 6px 16px rgba(7, 27, 79, .16);
+            background: var(--blue-soft);
+            color: var(--blue);
+            box-shadow: 0 6px 16px rgba(67, 104, 232, .16);
         }
 
         .money-visibility-toggle:hover {
-            background: rgba(255, 255, 255, .22);
+            background: #e1e8ff;
         }
 
         .money-visibility-toggle:focus-visible {
-            outline: 3px solid rgba(255, 255, 255, .5);
+            outline: 3px solid rgba(67, 104, 232, .28);
             outline-offset: 2px;
         }
 
@@ -1374,6 +1374,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             gap: 18px;
             align-items: flex-start;
             margin-bottom: 26px;
+        }
+
+        .revenue-title-line {
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .revenue-title {
@@ -2983,11 +2989,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
-            <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
-                <span class="money-icon-hidden">${icon('eye-off')}</span>
-                <span class="money-icon-visible">${icon('eye')}</span>
-                <span class="sr-only">Valores monetários</span>
-            </button>
         </div>
     </div>
     <main>
@@ -7448,7 +7449,14 @@ function receitaMensalCard(receita) {
     return `<section class="panel revenue-card">
         <div class="revenue-head">
             <div>
-                <div class="revenue-title">Receita Mensal Recorrente</div>
+                <div class="revenue-title-line">
+                    <div class="revenue-title">Receita Mensal Recorrente</div>
+                    <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
+                        <span class="money-icon-hidden">${icon('eye-off')}</span>
+                        <span class="money-icon-visible">${icon('eye')}</span>
+                        <span class="sr-only">Valores monetários</span>
+                    </button>
+                </div>
                 <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
                 <span class="revenue-note">Baseada nos pagamentos válidos e nos clientes ativos sem histórico financeiro</span>
             </div>
