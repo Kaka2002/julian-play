@@ -433,34 +433,62 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destinoResolvido);
         registrarEnvioDoRobo(destinoResolvido, caption);
 
-        const enviada = await comTimeout(
-            enfileirarEnvio(
-                () => client.sendMessage(destinoResolvido, media, {
-                    caption,
-                    // A legenda do PIX nao precisa de pre-visualizacao de links.
-                    // O WhatsApp Web pode tentar consultar metadados inexistentes
-                    // nesse caminho e falhar com "Data passed to getter...".
-                    linkPreview: false,
-                    // O pipeline de imagens do WhatsApp Web falha mesmo com a
-                    // sessao conectada (erro de getter sem id). Como documento,
-                    // o PNG continua escaneavel e nao passa pela compressao
-                    // instavel de imagens.
-                    sendMediaAsDocument: true
-                }),
-                `Envio do QR Code PIX ${planoPix.nome}`,
-                {
-                    proativo: Boolean(options.proativo),
-                    persistencia: options.proativo ? {
-                        tipo: 'midia',
-                        destino: destinoResolvido,
-                        midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
-                        opcoesMensagem: { caption }
-                    } : undefined
-                }
-            ),
-            ENVIO_TIMEOUT_MS,
-            'Envio do QR Code PIX'
-        );
+        let enviada;
+        try {
+            enviada = await comTimeout(
+                enfileirarEnvio(
+                    () => client.sendMessage(destinoResolvido, media, {
+                        caption,
+                        // A legenda do PIX nao precisa de pre-visualizacao de links.
+                        // O WhatsApp Web pode tentar consultar metadados inexistentes
+                        // nesse caminho e falhar com "Data passed to getter...".
+                        linkPreview: false,
+                        // O pipeline de imagens do WhatsApp Web falha mesmo com a
+                        // sessao conectada (erro de getter sem id). Como documento,
+                        // o PNG continua escaneavel e nao passa pela compressao
+                        // instavel de imagens.
+                        sendMediaAsDocument: true
+                    }),
+                    `Envio do QR Code PIX ${planoPix.nome}`,
+                    {
+                        proativo: Boolean(options.proativo),
+                        persistencia: options.proativo ? {
+                            tipo: 'midia',
+                            destino: destinoResolvido,
+                            midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
+                            opcoesMensagem: { caption }
+                        } : undefined
+                    }
+                ),
+                ENVIO_TIMEOUT_MS,
+                'Envio do QR Code PIX'
+            );
+        } catch (erroMidia) {
+            // Se o WhatsApp rejeitar o anexo, ainda entregamos o pagamento por
+            // texto. O código copia e cola funciona em qualquer banco e evita
+            // que a cobrança seja perdida por uma falha exclusiva de mídia.
+            const copiaECola = cobrancaAutomatica?.qrCode || gerarPixCopiaECola(planoPix, configPix);
+            const mensagemCopiaECola = `${caption}\n\n📋 *PIX copia e cola:*\n${copiaECola}`;
+            console.warn(`[pix] Mídia do QR recusada (${erroMidia.message}); enviando PIX copia e cola como texto.`);
+            enviada = await comTimeout(
+                enfileirarEnvio(
+                    () => client.sendMessage(destinoResolvido, mensagemCopiaECola, { linkPreview: false }),
+                    `Envio do PIX copia e cola ${planoPix.nome}`,
+                    {
+                        proativo: Boolean(options.proativo),
+                        persistencia: options.proativo ? {
+                            tipo: 'texto',
+                            destino: destinoResolvido,
+                            texto: mensagemCopiaECola,
+                            opcoesMensagem: { linkPreview: false }
+                        } : undefined
+                    }
+                ),
+                ENVIO_TIMEOUT_MS,
+                'Envio do PIX copia e cola'
+            );
+            console.log(`PIX copia e cola ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+        }
 
         console.log(`QR Code PIX ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);

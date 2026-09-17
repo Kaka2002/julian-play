@@ -266,6 +266,8 @@ código; itens operacionais externos não são marcados como implementados.
   de envio de imagens da 1.34.7. Como o erro de getter sem id também ocorreu
   com a sessão conectada, o QR passa a ser enviado como documento PNG
   escaneável; não há alteração de cobrança, banco ou sessão.
+- Quando o anexo também falha, o código copia e cola é enviado como texto para
+  manter a cobrança operacional sem depender de mídia.
 - A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
   evento `ready`, evitando reinícios após autenticação e permitindo os envios
   somente quando o WhatsApp Web confirmou a conexão.

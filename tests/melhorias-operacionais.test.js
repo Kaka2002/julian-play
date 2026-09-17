@@ -170,6 +170,8 @@ test('QR PIX usa documento PNG quando o pipeline de imagens falha', () => {
     const trecho = pix.slice(inicio, pix.indexOf('module.exports', inicio));
     assert.match(trecho, /sendMediaAsDocument:\s*true/);
     assert.match(trecho, /linkPreview:\s*false/);
+    assert.match(trecho, /PIX copia e cola/);
+    assert.match(trecho, /gerarPixCopiaECola/);
 });
 
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
