@@ -105,6 +105,9 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   usado como fallback. Isso evita a falha “Data passed to getter must include
   an id property” observada em envios de renovação; textos, clientes,
   cobranças, bancos e sessões permanecem inalterados.
+- O envio da mídia e da mensagem de fallback desativa a prévia de links do
+  WhatsApp Web. Essa prévia podia consultar metadados inexistentes e provocar
+  novamente o erro do getter mesmo depois da resolução para LID.
 
 ## Estrutura principal
 

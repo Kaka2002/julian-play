@@ -258,6 +258,10 @@ código; itens operacionais externos não são marcados como implementados.
   preservando cobranças, clientes, bancos, sessões e mensagens de texto. A
   validação inclui resolução simulada de LID, 143 testes internos, 11 testes
   E2E, geração do pacote e teste de pacote local limpo.
+- O envio do QR e da mensagem de erro agora usa `linkPreview: false`, evitando
+  a consulta instável de prévia de links do WhatsApp Web. A alteração afeta os
+  quatro perfis e preserva dados, sessões e textos; requer novo deploy e um
+  teste manual de renovação para confirmar o envio da mídia.
 
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
 
