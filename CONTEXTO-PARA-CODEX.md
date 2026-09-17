@@ -150,6 +150,10 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   Bancos, clientes, cobranças, configurações e sessões são preservados. Afeta
   os painéis de clientes no servidor e instalações locais; requer novo deploy e
   um teste com um telefone de cliente diferente do telefone do administrador.
+- O `deploy.ps1` preserva `PM2_HOME` quando já estiver definido no terminal e
+  usa `C:\\Users\\<usuario>\\.pm2` somente como padrão. Isso evita atualizar um
+  daemon PM2 diferente daquele que mantém os processos de produção; bancos,
+  sessões e backups continuam preservados.
 
 ## Estrutura principal
 

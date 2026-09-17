@@ -5,6 +5,12 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- O deploy do Windows passou a respeitar `PM2_HOME` já definido no terminal e
+  usa o caminho padrão `.pm2` apenas quando não há configuração. Isso impede
+  que o código atualizado seja aplicado a um daemon PM2 diferente do processo
+  em produção. Nenhum banco, sessão ou backup é alterado. Validado com parse do
+  PowerShell e `git diff --check`; requer novo deploy da rotina de atualização.
+
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
   confirma o mesmo telefone. Identificadores divergentes ou da própria conta

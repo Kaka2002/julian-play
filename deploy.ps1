@@ -4,7 +4,14 @@ Set-Location $PSScriptRoot
 # Falha antes de qualquer preparação ou troca de versão quando o terminal não
 # consegue controlar o mesmo daemon PM2 usado pela produção. Isso evita um
 # deploy aplicado parcialmente com mensagem final ambígua.
-$env:PM2_HOME = Join-Path $env:USERPROFILE '.pm2'
+# O daemon pode ter sido configurado em um caminho dedicado. Preserve a
+# configuração já exportada no terminal; em instalações padrão use .pm2.
+$pm2HomeConfigurado = [Environment]::GetEnvironmentVariable('PM2_HOME', 'Process')
+$env:PM2_HOME = if ([string]::IsNullOrWhiteSpace($pm2HomeConfigurado)) {
+    Join-Path $env:USERPROFILE '.pm2'
+} else {
+    $pm2HomeConfigurado
+}
 $pm2 = Get-Command 'pm2.cmd' -ErrorAction SilentlyContinue
 if (-not $pm2) {
     throw 'pm2.cmd não foi encontrado. Instale/configure o PM2 antes do deploy.'
