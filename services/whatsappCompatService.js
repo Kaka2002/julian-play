@@ -81,6 +81,38 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             );
         }
 
+        // A mesma Store parcial pode deixar User fora quando algum módulo
+        // posterior falha durante a exposição oficial. O LoadUtils consulta
+        // os dois métodos abaixo para montar a origem da mensagem.
+        if ((!window.Store.User ||
+            typeof window.Store.User.getMaybeMeLidUser !== 'function' ||
+            typeof window.Store.User.getMaybeMePnUser !== 'function') &&
+            typeof window.require === 'function') {
+            try {
+                const moduloUser = window.require('WAWebUserPrefsMeUser');
+                const user = moduloUser?.default || moduloUser;
+                if (user) window.Store.User = { ...(window.Store.User || {}), ...user };
+            } catch (_) {
+                // Use o identificador da conexão como fallback abaixo.
+            }
+        }
+        window.Store.User = window.Store.User || {};
+        const obterWidDaConexao = () => {
+            const conexao = window.Store.Conn;
+            const wid = conexao?.wid || conexao?.user?.wid || conexao?.getWid?.();
+            if (!wid) return null;
+            if (typeof wid === 'string' && typeof window.Store.WidFactory?.createWid === 'function') {
+                try { return window.Store.WidFactory.createWid(wid); } catch (_) { return null; }
+            }
+            return wid;
+        };
+        if (typeof window.Store.User.getMaybeMeLidUser !== 'function') {
+            window.Store.User.getMaybeMeLidUser = obterWidDaConexao;
+        }
+        if (typeof window.Store.User.getMaybeMePnUser !== 'function') {
+            window.Store.User.getMaybeMePnUser = obterWidDaConexao;
+        }
+
         // A versão atual do WhatsApp Web pode deixar o módulo oficial fora da
         // Store exposta. O whatsapp-web.js chama este helper em getNumberId e
         // FindOrCreateChat; sem ele a sessão fica CONNECTED, mas nenhum

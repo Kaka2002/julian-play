@@ -22,6 +22,12 @@ código; itens operacionais externos não são marcados como implementados.
   transmissão como fallback. Bancos, configurações, históricos, backups e
   sessão permanecem preservados; validado na suíte interna completa.
 
+- A exposição parcial da Store também podia omitir `Store.User`, interrompendo
+  o envio ao montar a origem da mensagem com `getMaybeMeLidUser`. O serviço
+  agora recupera o módulo oficial ou usa o identificador da conexão autenticada
+  como fallback seguro. A alteração preserva os dados da instalação e foi
+  validada na suíte interna completa.
+
 - Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
   envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente
   em uma sessão conectada. A compatibilidade instala um wrapper seguro que

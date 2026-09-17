@@ -313,6 +313,8 @@ test('WhatsApp recarrega a injecao oficial de WWebJS antes da compatibilidade', 
         assert.equal(typeof global.window.WWebJS.sendMessage, 'function');
         assert.equal(typeof global.window.Store.ChatGetters.getIsNewsletter, 'function');
         assert.equal(typeof global.window.Store.ChatGetters.getIsBroadcast, 'function');
+        assert.equal(typeof global.window.Store.User.getMaybeMeLidUser, 'function');
+        assert.equal(typeof global.window.Store.User.getMaybeMePnUser, 'function');
     } finally {
         global.window = anterior;
     }

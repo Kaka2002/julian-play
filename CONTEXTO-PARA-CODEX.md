@@ -42,7 +42,9 @@ quando o `LoadUtils` oficial carregou o helper real de envio.
 O carregamento também garante `Store.ChatGetters`, usado pelo envio de mídia
 para classificar canais e transmissões; sessões restauradas que não expõem
 esse módulo recebem apenas os dois getters seguros necessários para conversas
-de clientes.
+de clientes. Ele também recupera `Store.User`, usado para montar a origem da
+mensagem; se a sessão não expuser esse módulo, os métodos de identidade usam o
+identificador da conexão já autenticada.
 O fluxo de cobrança PIX também envia explicitamente com `sendSeen: false`,
 incluindo o fallback copia e cola e a mensagem de erro, para que nenhuma
 cobrança dependa da marcação de leitura.
