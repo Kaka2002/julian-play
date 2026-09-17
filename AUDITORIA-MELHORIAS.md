@@ -1,9 +1,19 @@
 # Auditoria das melhorias recomendadas
 
-Atualizada em 11/09/2026. Este documento registra o estado comprovado no
+Atualizada em 17/09/2026. Este documento registra o estado comprovado no
 código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
+
+- Corrigido o caso em que o deploy deixava o WhatsApp conectado, porém os
+  indicadores de compatibilidade permaneciam `false`. A sessão restaurada
+  podia conter `window.WWebJS` parcial, fazendo o whatsapp-web.js pular o
+  `LoadUtils` oficial. A compatibilidade agora recarrega esse loader uma vez
+  antes de aplicar o resolvedor e só libera o envio quando `sendMessage` e
+  `sendSeen` estão disponíveis. Afeta o painel administrador, clientes
+  comerciais no servidor e instalações locais; preserva banco, configurações,
+  históricos, backups e sessão. Validado com 151 testes internos, testes de
+  navegação, geração do pacote e teste específico de recuperação do loader.
 
 - Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
   envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente

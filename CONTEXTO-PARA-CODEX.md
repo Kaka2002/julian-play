@@ -21,6 +21,14 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ## Correção operacional do envio WhatsApp em 17/09/2026
 
+Após o primeiro deploy dessa correção, o health confirmou a sessão como
+conectada, mas manteve os indicadores de compatibilidade como `false`. Isso
+ocorre quando a página restaurada conserva um `window.WWebJS` parcial e o
+whatsapp-web.js pula o carregamento de `LoadUtils`. A camada agora recarrega o
+`LoadUtils` oficial uma única vez quando `sendMessage` ainda não existe e só
+depois instala o resolvedor de conversas. O fluxo de PIX permanece bloqueado
+até as funções reais de envio estarem disponíveis.
+
 O whatsapp-web.js 1.34.6 pode iniciar uma sessão em que `window.WWebJS` não
 expõe `sendSeen`. Como `Client.sendMessage` chama esse helper antes de enviar
 texto ou mídia, a ausência interrompia o PIX com `window.WWebJS.sendSeen is not a
@@ -156,8 +164,8 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   `services/whatsappCompatService.js`. Ela substitui em tempo de execução o
   `window.WWebJS.getChat` do `whatsapp-web.js`, tentando primeiro
   `Store.Chat.get` e `Store.Chat.find` antes do helper antigo
-  `FindOrCreateChat`. Quando a Store está pronta antes do namespace WWebJS,
-  o helper cria somente esse namespace mínimo para o envio. Isso contorna a falha `getChat` introduzida pelo
+  `FindOrCreateChat`. O helper não cria um namespace parcial: aguarda ou
+  recarrega o `LoadUtils` oficial antes de instalar o resolvedor. Isso contorna a falha `getChat` introduzida pelo
   WhatsApp Web atual sem alterar banco, clientes, cobranças, configurações ou
   a sessão persistida. A camada aguarda por até 30 segundos a exposição de
   `WWebJS`/`Store`, compartilha tentativas concorrentes e é reinstalada após

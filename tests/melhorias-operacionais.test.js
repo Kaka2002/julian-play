@@ -291,7 +291,7 @@ test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade
     }
 });
 
-test('WhatsApp aguarda a injecao oficial de WWebJS antes da compatibilidade', async () => {
+test('WhatsApp recarrega a injecao oficial de WWebJS antes da compatibilidade', async () => {
     const anterior = global.window;
     const chat = { id: { _serialized: '5511777777777@c.us' } };
     global.window = {
@@ -307,9 +307,10 @@ test('WhatsApp aguarda a injecao oficial de WWebJS antes da compatibilidade', as
             pupPage: { evaluate: async fn => fn() }
         }, { intervaloMs: 50, tempoMaximoMs: 100 });
 
-        assert.equal(resultado.ok, false);
-        assert.match(resultado.motivo, /WWebJS\.sendMessage/);
-        assert.equal(global.window.WWebJS, undefined);
+        assert.equal(resultado.ok, true);
+        assert.equal(resultado.sendMessage, true);
+        assert.equal(resultado.sendSeen, true);
+        assert.equal(typeof global.window.WWebJS.sendMessage, 'function');
     } finally {
         global.window = anterior;
     }

@@ -7,6 +7,17 @@
  */
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// O Client do whatsapp-web.js normalmente chama LoadUtils depois de expor a
+// Store. Em algumas sessoes restauradas, porem, ele detecta um WWebJS parcial
+// e pula essa etapa. Reutilizar o loader oficial evita manter uma copia
+// incompleta das funcoes de envio no projeto.
+let carregarUtilsOficial = null;
+try {
+    ({ LoadUtils: carregarUtilsOficial } = require('whatsapp-web.js/src/util/Injected/Utils'));
+} catch (_) {
+    // O pacote pode ser simulado em testes ou ainda estar sendo instalado.
+}
+
 async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
     if (typeof client?.pupPage?.evaluate !== 'function') {
         return { ok: false, motivo: 'pupPage indisponivel' };
@@ -16,6 +27,7 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
     const tempoMaximoMs = Math.max(intervaloMs, Number(opcoes.tempoMaximoMs || 30000));
     const inicio = Date.now();
     let ultimoResultado = { ok: false, motivo: 'Store do WhatsApp ainda indisponivel' };
+    let utilsOficiaisRecarregados = false;
 
     // A página do WhatsApp pode estar autenticada e responder CONNECTED antes
     // de terminar de expor WWebJS/Store. Aguarde por uma janela limitada para
@@ -205,6 +217,29 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             sendSeen: typeof window.WWebJS.sendSeen === 'function'
         };
             });
+
+            if (
+                !ultimoResultado?.ok &&
+                ultimoResultado?.ausentes?.includes('WWebJS.sendMessage') &&
+                typeof carregarUtilsOficial === 'function' &&
+                !utilsOficiaisRecarregados
+            ) {
+                try {
+                    await client.pupPage.evaluate(carregarUtilsOficial);
+                    utilsOficiaisRecarregados = true;
+                    ultimoResultado = {
+                        ok: false,
+                        motivo: 'WWebJS oficial recarregado; validando funcoes de envio'
+                    };
+                } catch (err) {
+                    ultimoResultado = {
+                        ok: false,
+                        motivo: `Nao foi possivel recarregar WWebJS oficial: ${err.message}`,
+                        ausentes: ['WWebJS.sendMessage']
+                    };
+                }
+                continue;
+            }
 
             if (ultimoResultado?.ok || ultimoResultado?.motivo !== 'Store do WhatsApp ainda indisponivel') {
                 return ultimoResultado;
