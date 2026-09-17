@@ -24,6 +24,12 @@ código; itens operacionais externos não são marcados como implementados.
   WhatsApp. Validada com teste específico de Store sem `QueryExist`, sintaxe e
   suíte operacional; requer deploy e confirmação de entrega em cliente real.
 
+- O envio passou a tentar a API direta do cliente quando `getChatById` não
+  retorna uma conversa, mantendo a exigência de ID e destinatário confirmado.
+  Assim, uma Store sem conversa carregada não interrompe prematuramente o
+  envio, e respostas vazias continuam sendo tratadas como falha. Validado na
+  suíte interna completa (150 testes).
+
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
   confirma o mesmo telefone. Identificadores divergentes ou da própria conta

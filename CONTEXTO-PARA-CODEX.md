@@ -166,6 +166,11 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   elevada para 2 e o estado retornado inclui `queryExist`; bancos,
   configurações e sessões persistidas são preservados. Requer novo deploy e
   teste real de texto e QR para um cliente diferente do administrador.
+- Quando a conversa não puder ser obtida mesmo após essa compatibilidade, o
+  envio tenta `client.sendMessage` como último caminho. Esse fallback também
+  exige um ID de mensagem e a validação do destinatário antes de registrar o
+  contato; nenhum retorno vazio é tratado como entrega. Bancos, configurações
+  e sessões persistidas continuam preservados.
 
 ## Estrutura principal
 

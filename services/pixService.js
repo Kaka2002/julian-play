@@ -432,7 +432,7 @@ async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
             // client.sendMessage pode concluir sem devolver ID nesta versao.
             return await chat.sendMessage(conteudo, opcoes);
         } catch (err) {
-            if (/sem ID|confirmou envio|retornou a conversa/.test(String(err?.message || ''))) {
+            if (/sem ID|confirmou envio/.test(String(err?.message || ''))) {
                 throw err;
             }
             console.warn(`[pix] Envio pela conversa falhou para ${destino}; tentando API direta: ${err.message}`);
