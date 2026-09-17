@@ -1743,7 +1743,8 @@ pm ci normalmente.
 
 - Por solicitação operacional, o código funcional foi retornado ao commit-base `1395d8a` de 16/09/2026 às 21:57, última revisão anterior às alterações recentes de compatibilidade do WhatsApp. O rollback preserva banco, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos PM2; exige atualizar a produção e confirmar um envio real de PIX após a reinicialização.
 
-## Correção da dependência WhatsApp em 17/09/2026
+## Correção da inicialização WhatsApp em 17/09/2026
 
-- Os logs após a reinicialização da sessão mostraram `getEphemeralFields` ausente no `whatsapp-web.js` 1.34.7. A dependência foi fixada em `1.34.6`, versão presente no ambiente que funcionava antes da reinicialização, para impedir atualização automática por `^1.26.0`.
-- O banco, as configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos de cada instalação permanecem preservados. O deploy deve instalar o lockfile com o processo PM2 parado e depois confirmar o envio real do QR PIX.
+- O diagnóstico em produção confirmou que a sessão autentica, mas não chega ao evento `ready`; por isso os envios de texto e mídia falham mesmo com o estado HTTP inicialmente marcado como operacional. A dependência oficial foi atualizada e fixada em `whatsapp-web.js` `1.34.7`, que usa a injeção atualizada do WhatsApp Web, em vez de deixar o `npm ci` escolher versões diferentes.
+- A atualização remove somente a dependência incompatível do código executado. Banco, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos de cada instalação continuam preservados.
+- Depois do deploy, a ação manual é aguardar o processo alcançar `ready`/`conectado` e fazer um envio real de teste para um cliente. Se a sessão estiver em `autenticado` sem `conectado`, não enviar cobranças: conferir o log e usar a reconexão segura; gerar novo QR somente se o processo não recuperar a sessão.

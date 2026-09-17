@@ -329,4 +329,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Rollback operacional de 17/09/2026: reversão preparada para o commit-base `1395d8a` de 16/09/2026 às 21:57, última revisão anterior às alterações recentes de compatibilidade do WhatsApp. Bancos, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e PM2 são preservados; falta aplicar o deploy e validar um envio real de PIX.
 
-- Correção de dependência WhatsApp em 17/09/2026: `whatsapp-web.js` fixado em `1.34.6` para evitar que `npm ci` instale `1.34.7`, que gerou `getEphemeralFields` ausente após a reinicialização da sessão. Dados e sessões preservados; validação remota depende do deploy e de um envio real do QR PIX.
+- Correção de inicialização WhatsApp em 17/09/2026: diagnóstico confirmou sessão presa em `autenticado` sem evento `ready`, causando falha de texto e mídia. `whatsapp-web.js` foi atualizado e fixado em `1.34.7`, com a injeção oficial atualizada. Dados, configurações, backups, sessões e `DATA_DIR` preservados; 143 testes internos passaram. A validação remota exige o processo alcançar `conectado` e um envio real de PIX após o deploy.
