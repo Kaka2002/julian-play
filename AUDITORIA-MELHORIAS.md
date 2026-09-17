@@ -30,6 +30,12 @@ código; itens operacionais externos não são marcados como implementados.
   envio, e respostas vazias continuam sendo tratadas como falha. Validado na
   suíte interna completa (150 testes).
 
+- A compatibilidade agora recupera também `WAWebFindChatAction` e usa o
+  `FindOrCreateChat.findOrCreateLatestChat` oficial quando o telefone não está
+  na coleção local. O chat real passa a ser carregado antes do envio de texto
+  ou QR. Validado com teste de conversa ausente e preservação da confirmação
+  por ID; requer novo deploy e teste real de entrega.
+
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
   confirma o mesmo telefone. Identificadores divergentes ou da própria conta

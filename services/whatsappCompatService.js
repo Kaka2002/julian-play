@@ -27,15 +27,17 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         // Se a injeção oficial não terminou, a própria página ainda pode
         // fornecer os módulos necessários pelo require exposto pelo WhatsApp.
         // Reconstitua somente Chat e WidFactory, sem substituir a Store inteira.
-        if ((!window.Store?.Chat || !window.Store?.WidFactory || !window.Store?.AppState) && typeof window.require === 'function') {
+        if ((!window.Store?.Chat || !window.Store?.WidFactory || !window.Store?.AppState || !window.Store?.FindOrCreateChat) && typeof window.require === 'function') {
             try {
                 const colecoes = window.require('WAWebCollections');
                 const fabricaWid = window.require('WAWebWidFactory');
                 const socketModelo = window.require('WAWebSocketModel');
+                const criadorChat = window.require('WAWebFindChatAction');
                 window.Store = window.Store || {};
                 if (!window.Store.Chat && colecoes?.Chat) window.Store.Chat = colecoes.Chat;
                 if (!window.Store.WidFactory && fabricaWid) window.Store.WidFactory = fabricaWid;
                 if (!window.Store.AppState && socketModelo?.Socket) window.Store.AppState = socketModelo.Socket;
+                if (!window.Store.FindOrCreateChat && criadorChat) window.Store.FindOrCreateChat = criadorChat;
             } catch (_) {
                 // O bundle pode ainda estar carregando; a próxima tentativa
                 // repete a descoberta dentro da mesma janela.
@@ -142,10 +144,12 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
                 }
             }
 
-            // Mantém compatibilidade com versões antigas em que Chat.find não
-            // existe. Não usa esse caminho quando a API nova existe, pois ele
-            // é justamente a origem do erro observado no WhatsApp atual.
-            if (!chat && typeof window.Store.Chat.find !== 'function' && typeof window.Store.FindOrCreateChat?.findOrCreateLatestChat === 'function') {
+            // Depois de QueryExist ser restaurado, o criador oficial volta a
+            // ser o caminho correto para uma conversa que ainda não está na
+            // coleção local. Ele carrega/cria o chat real e permite que
+            // client.getChatById e chat.sendMessage retornem uma mensagem com
+            // ID confirmado.
+            if (!chat && typeof window.Store.FindOrCreateChat?.findOrCreateLatestChat === 'function') {
                 try {
                     chat = (await window.Store.FindOrCreateChat.findOrCreateLatestChat(chatWid))?.chat || null;
                 } catch (_) {

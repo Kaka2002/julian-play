@@ -171,6 +171,11 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   exige um ID de mensagem e a validação do destinatário antes de registrar o
   contato; nenhum retorno vazio é tratado como entrega. Bancos, configurações
   e sessões persistidas continuam preservados.
+- Após a restauração de `QueryExist`, a compatibilidade também recupera
+  `WAWebFindChatAction` e chama `FindOrCreateChat.findOrCreateLatestChat`
+  quando o telefone ainda não possui conversa na coleção local. Isso permite
+  abrir a conversa real antes de `chat.sendMessage`, sem marcar envio para a
+  própria conta; a sessão, o banco e os dados do cliente permanecem intactos.
 
 ## Estrutura principal
 

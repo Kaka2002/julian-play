@@ -212,6 +212,39 @@ test('WhatsApp recria QueryExist quando a Store atual nao o expoe', async () => 
     }
 });
 
+test('WhatsApp cria conversa ausente usando FindOrCreateChat apos QueryExist', async () => {
+    const anterior = global.window;
+    const wid = { _serialized: '5511888888888@c.us' };
+    const chat = { id: wid, sendMessage: async () => ({ id: { _serialized: 'msg-1' } }) };
+    let criou = 0;
+    global.window = {
+        Store: {
+            Chat: { get: () => null, find: async () => null },
+            WidFactory: { createWid: valor => ({ _serialized: valor }) },
+            FindOrCreateChat: {
+                findOrCreateLatestChat: async valor => {
+                    criou += 1;
+                    assert.equal(valor._serialized, wid._serialized);
+                    return { chat };
+                }
+            }
+        }
+    };
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: { evaluate: async fn => fn() }
+        }, { intervaloMs: 50, tempoMaximoMs: 100 });
+        const recuperada = await global.window.WWebJS.getChat(wid._serialized, { getAsModel: false });
+        assert.equal(resultado.ok, true);
+        assert.equal(recuperada, chat);
+        assert.equal(criou, 1);
+    } finally {
+        global.window = anterior;
+    }
+});
+
 test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade', async () => {
     const anterior = global.window;
     let avaliacoes = 0;
