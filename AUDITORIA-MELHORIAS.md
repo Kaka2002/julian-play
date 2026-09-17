@@ -271,6 +271,14 @@ código; itens operacionais externos não são marcados como implementados.
 - Para destinatários `@lid`, o QR tenta também o telefone real em `@c.us`,
   recuperado pelo WhatsApp Web. Isso permite contornar falha de `getChat` no
   LID sem apagar sessão, clientes, cobranças ou históricos.
+- Como a falha continuou para `@c.us` e `@lid`, o cliente passou a instalar
+  `services/whatsappCompatService.js` no processo do WhatsApp. O helper
+  `window.WWebJS.getChat` agora consulta `Store.Chat.get`/`Store.Chat.find`
+  antes do caminho antigo que lança `getChat`; a sessão e os dados das quatro
+  formas de execução são preservados. Foram executados os testes internos,
+  E2E, verificação de sintaxe e geração do pacote; ainda é necessária uma
+  renovação manual após o deploy para confirmar o comportamento no WhatsApp
+  Web conectado.
 - A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
   evento `ready`, evitando reinícios após autenticação e permitindo os envios
   somente quando o WhatsApp Web confirmou a conexão.

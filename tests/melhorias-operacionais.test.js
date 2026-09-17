@@ -144,6 +144,48 @@ test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
     assert.match(whatsapp, /WhatsApp conectado \(confirmado pela verificacao de saude\)/);
 });
 
+test('WhatsApp instala compatibilidade de getChat antes dos envios', async () => {
+    const fs = require('fs');
+    const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
+    const compat = fs.readFileSync(path.join(__dirname, '..', 'services', 'whatsappCompatService.js'), 'utf8');
+    assert.match(whatsapp, /instalarCompatibilidadeGetChat/);
+    assert.match(whatsapp, /await instalarCompatibilidadeGetChat\(client\)/);
+    assert.match(whatsapp, /compatibilidadeGetChatAplicada/);
+    assert.match(compat, /Store\.Chat\.find/);
+    assert.match(compat, /__julianGetChatCompatVersion/);
+    assert.match(compat, /FindOrCreateChat/);
+
+    const anterior = global.window;
+    let encontrou = 0;
+    const chat = { id: { _serialized: '5511999999999@c.us' } };
+    global.window = {
+        Store: {
+            Chat: {
+                get: () => null,
+                find: async () => {
+                    encontrou += 1;
+                    return chat;
+                }
+            },
+            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+        },
+        WWebJS: { getChatModel: async valor => ({ modelo: valor }) }
+    };
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: { evaluate: async fn => fn() }
+        });
+        const recuperada = await global.window.WWebJS.getChat('5511999999999@c.us', { getAsModel: false });
+        assert.equal(resultado.ok, true);
+        assert.equal(recuperada, chat);
+        assert.equal(encontrou, 1);
+    } finally {
+        global.window = anterior;
+    }
+});
+
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
     const fs = require('fs');
     const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');

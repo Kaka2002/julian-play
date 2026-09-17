@@ -125,6 +125,16 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   emita o evento `ready`. Isso evita reinícios contínuos após escanear o QR e
   libera mensagens, QR Codes e automações somente quando o estado foi
   confirmado pelo cliente.
+- Em 17/09/2026, foi adicionada uma camada de compatibilidade em
+  `services/whatsappCompatService.js`. Ela substitui em tempo de execução o
+  `window.WWebJS.getChat` do `whatsapp-web.js`, tentando primeiro
+  `Store.Chat.get` e `Store.Chat.find` antes do helper antigo
+  `FindOrCreateChat`. Isso contorna a falha `getChat` introduzida pelo
+  WhatsApp Web atual sem alterar banco, clientes, cobranças, configurações ou
+  a sessão persistida. A camada é reinstalada após autenticação, inicialização
+  e em cada confirmação de saúde, para sobreviver a uma navegação do WhatsApp
+  Web, e não libera o estado conectado quando a página ainda não oferece a
+  Store necessária.
 
 ## Estrutura principal
 

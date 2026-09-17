@@ -14,6 +14,7 @@ const {
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
+const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -47,6 +48,7 @@ let ultimoEventoIgnoradoEm = null;
 let ultimaVerificacaoSaude = null;
 let ultimaRecuperacaoWhatsApp = null;
 let recuperacaoEmAndamento = false;
+let compatibilidadeGetChatAplicada = false;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
@@ -572,6 +574,15 @@ async function iniciarWhatsApp() {
             statusWhatsApp = 'autenticado';
             qrAtual = '';
             console.log('Autenticado');
+            instalarCompatibilidadeGetChat(client)
+                .then((resultado) => {
+                    compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
+                    console.log('Compatibilidade de envio WhatsApp:', resultado);
+                })
+                .catch((err) => {
+                    compatibilidadeGetChatAplicada = false;
+                    console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
+                });
         });
 
         client.on('change_state', (state) => {
@@ -646,6 +657,18 @@ async function iniciarWhatsApp() {
 
         await client.initialize();
 
+        // O evento `ready` pode não ser emitido em algumas versões. Aplicar
+        // também após initialize garante que o patch esteja ativo antes do
+        // primeiro envio liberado pelo monitor de saúde.
+        try {
+            const resultadoCompatibilidade = await instalarCompatibilidadeGetChat(client);
+            compatibilidadeGetChatAplicada = Boolean(resultadoCompatibilidade?.ok);
+            console.log('Compatibilidade de envio WhatsApp:', resultadoCompatibilidade);
+        } catch (err) {
+            compatibilidadeGetChatAplicada = false;
+            console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
+        }
+
         console.log('Initialize executado');
     } catch (err) {
         inicializando = false;
@@ -703,6 +726,7 @@ async function encerrarWhatsApp() {
 
     conectado = false;
     inicializando = false;
+    compatibilidadeGetChatAplicada = false;
     statusWhatsApp = 'encerrando';
 
     if (!client) return;
@@ -778,6 +802,16 @@ async function verificarSaudeWhatsApp() {
     try {
         const estado = await client.getState();
         const ok = estado === 'CONNECTED';
+
+        if (ok) {
+            try {
+                const resultadoCompatibilidade = await instalarCompatibilidadeGetChat(client);
+                compatibilidadeGetChatAplicada = Boolean(resultadoCompatibilidade?.ok);
+                console.log('Compatibilidade de envio WhatsApp:', resultadoCompatibilidade);
+            } catch (err) {
+                console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
+            }
+        }
 
         if (ok && !conectado) {
             // Algumas versões do WhatsApp Web podem emitir `authenticated` e
@@ -878,6 +912,7 @@ function getStatusWhatsApp() {
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
+        compatibilidadeGetChatAplicada,
         numeroConectado: client?.info?.wid?.user || '',
         mensagensRecebidasTotal,
         ultimaMensagemRecebidaEm,
