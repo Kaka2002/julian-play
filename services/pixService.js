@@ -440,11 +440,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     // A legenda do PIX nao precisa de pre-visualizacao de links.
                     // O WhatsApp Web pode tentar consultar metadados inexistentes
                     // nesse caminho e falhar com "Data passed to getter...".
-                    linkPreview: false,
-                    // O whatsapp-web.js 1.34.7 possui regressao no pipeline de
-                    // imagens. Como documento, o QR continua abrindo e sendo
-                    // escaneavel, sem passar pela compressao instavel.
-                    sendMediaAsDocument: true
+                    linkPreview: false
                 }),
                 `Envio do QR Code PIX ${planoPix.nome}`,
                 {
