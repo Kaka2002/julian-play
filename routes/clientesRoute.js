@@ -1132,6 +1132,18 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             margin: 0 0 34px;
         }
 
+        .page-title-with-action {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .page-title-with-action .money-visibility-toggle {
+            flex: 0 0 auto;
+            margin-top: 2px;
+        }
+
         h1 {
             margin: 0 0 6px;
             font-size: 34px;
@@ -8066,9 +8078,13 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
         </tr>`).join('')
         : '<tr><td colspan="8" class="empty">Nenhum pagamento encontrado.</td></tr>';
 
-    return `<section class="page-title">
-        <h1>Financeiro</h1>
-        <div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div>
+    return `<section class="page-title page-title-with-action">
+        <div><h1>Financeiro</h1><div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div></div>
+        <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
+            <span class="money-icon-hidden">${icon('eye-off')}</span>
+            <span class="money-icon-visible">${icon('eye')}</span>
+            <span class="sr-only">Valores monetários</span>
+        </button>
     </section>
 
     <section class="metrics">

@@ -77,8 +77,8 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 ### Atualização funcional de 16/09/2026
 
 - A privacidade de valores monetários usa um botão de olho ao lado de “Receita
-  Mensal Recorrente”; na página de pagamentos manuais, o botão fica no
-  cabeçalho da própria tela. Por padrão, os valores visíveis são mascarados
+  Mensal Recorrente” e no cabeçalho da tela Financeiro; na página de pagamentos
+  manuais, o botão fica no cabeçalho da própria tela. Por padrão, os valores visíveis são mascarados
   como `R$ •••`; o clique alterna entre ocultar e mostrar e a preferência é
   salva apenas no `localStorage` do navegador. A máscara atua somente no texto
   renderizado: não altera cálculos, bancos, valores de formulários, rotas ou
