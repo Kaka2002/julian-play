@@ -154,6 +154,7 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
     assert.match(compat, /Store\.Chat\.find/);
     assert.match(compat, /__julianGetChatCompatVersion/);
     assert.match(compat, /FindOrCreateChat/);
+    assert.match(compat, /Store\.QueryExist/);
 
     const anterior = global.window;
     let encontrou = 0;
@@ -181,6 +182,31 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
         assert.equal(resultado.ok, true);
         assert.equal(recuperada, chat);
         assert.equal(encontrou, 1);
+    } finally {
+        global.window = anterior;
+    }
+});
+
+test('WhatsApp recria QueryExist quando a Store atual nao o expoe', async () => {
+    const anterior = global.window;
+    const wid = { _serialized: '5511999999999@c.us' };
+    const chat = { id: wid };
+    global.window = {
+        Store: {
+            Chat: { get: valor => valor?._serialized === wid._serialized ? chat : null },
+            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+        }
+    };
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: { evaluate: async fn => fn() }
+        }, { intervaloMs: 50, tempoMaximoMs: 100 });
+        const resolvido = await global.window.Store.QueryExist(wid);
+        assert.equal(resultado.ok, true);
+        assert.equal(resultado.queryExist, true);
+        assert.equal(resolvido.wid, chat.id);
     } finally {
         global.window = anterior;
     }

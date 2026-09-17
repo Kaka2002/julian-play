@@ -16,6 +16,14 @@ código; itens operacionais externos não são marcados como implementados.
   a validação contra autoenvio. Validada na suíte interna completa (149 testes)
   e no pacote local limpo.
 
+- Correção da falha `window.Store.QueryExist is not a function` observada em
+  produção: a compatibilidade recupera o módulo `WAWebQueryExistsJob` quando
+  disponível, aceita as variantes legadas e usa fallback somente para chats
+  presentes na Store. A camada passou para a versão 2 e informa `queryExist`
+  no resultado de instalação. Preserva banco, configurações e sessão do
+  WhatsApp. Validada com teste específico de Store sem `QueryExist`, sintaxe e
+  suíte operacional; requer deploy e confirmação de entrega em cliente real.
+
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
   confirma o mesmo telefone. Identificadores divergentes ou da própria conta

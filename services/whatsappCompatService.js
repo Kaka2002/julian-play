@@ -49,12 +49,52 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel', ausentes };
         }
 
+        // A versão atual do WhatsApp Web pode deixar o módulo oficial fora da
+        // Store exposta. O whatsapp-web.js chama este helper em getNumberId e
+        // FindOrCreateChat; sem ele a sessão fica CONNECTED, mas nenhum
+        // destinatário é resolvido. Tente os nomes usados pelas cargas nova e
+        // legada antes de instalar um fallback local para chats já carregados.
+        if (typeof window.Store.QueryExist !== 'function' && typeof window.require === 'function') {
+            try {
+                const modulo = window.require('WAWebQueryExistsJob') || {};
+                const queryExist = modulo.queryWidExists || modulo.queryExists ||
+                    modulo.default?.queryWidExists || modulo.default?.queryExists;
+                if (typeof queryExist === 'function') window.Store.QueryExist = queryExist;
+            } catch (_) {
+                try {
+                    const moduloLegado = window.require('queryExists') || {};
+                    const queryExistLegado = moduloLegado.queryExists || moduloLegado.queryWidExists;
+                    if (typeof queryExistLegado === 'function') window.Store.QueryExist = queryExistLegado;
+                } catch (_) {
+                    // O módulo pode não estar disponível nesta carga; use o
+                    // fallback abaixo para conversas presentes na Store.
+                }
+            }
+        }
+
+        if (typeof window.Store.QueryExist !== 'function') {
+            window.Store.QueryExist = async wid => {
+                const serializado = wid?._serialized || String(wid || '');
+                let chat = null;
+                try { chat = window.Store.Chat.get(wid) || null; } catch (_) { chat = null; }
+                if (!chat && typeof window.Store.Chat.find === 'function') {
+                    try { chat = await window.Store.Chat.find(wid); } catch (_) { chat = null; }
+                }
+                if (!chat && typeof window.Store.Chat.getModelsArray === 'function') {
+                    try {
+                        chat = window.Store.Chat.getModelsArray().find(item => item?.id?._serialized === serializado) || null;
+                    } catch (_) { chat = null; }
+                }
+                return chat ? { wid: chat.id || wid, biz: false } : null;
+            };
+        }
+
         // Em algumas cargas a Store fica pronta antes do namespace WWebJS.
         // Criar o objeto aqui permite instalar somente o helper necessário
         // para o envio, sem substituir os demais utilitários da biblioteca.
         window.WWebJS = window.WWebJS || {};
-        if (window.WWebJS.__julianGetChatCompatVersion === 1) {
-            return { ok: true, reutilizada: true };
+        if (window.WWebJS.__julianGetChatCompatVersion === 2 && typeof window.Store.QueryExist === 'function') {
+            return { ok: true, reutilizada: true, queryExist: true };
         }
 
         const getChatModel = window.WWebJS.getChatModel;
@@ -124,8 +164,8 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             }
         };
 
-        window.WWebJS.__julianGetChatCompatVersion = 1;
-        return { ok: true, reutilizada: false };
+        window.WWebJS.__julianGetChatCompatVersion = 2;
+        return { ok: true, reutilizada: false, queryExist: typeof window.Store.QueryExist === 'function' };
             });
 
             if (ultimoResultado?.ok || ultimoResultado?.motivo !== 'Store do WhatsApp ainda indisponivel') {

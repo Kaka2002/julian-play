@@ -158,6 +158,14 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   conversa, pois `client.sendMessage` podia concluir sem retornar o ID nesta
   sessão. A API direta permanece somente como fallback quando a conversa não
   puder ser obtida; a confirmação de destinatário e ID continua obrigatória.
+- O log de produção revelou que a Store atual do WhatsApp Web não expunha
+  `window.Store.QueryExist`, causando a falha de resolução mesmo com a sessão
+  em `CONNECTED`. A compatibilidade agora recupera o módulo oficial
+  `WAWebQueryExistsJob` (incluindo nomes legados) ou instala um fallback que
+  consulta somente conversas reais já carregadas. A versão da camada foi
+  elevada para 2 e o estado retornado inclui `queryExist`; bancos,
+  configurações e sessões persistidas são preservados. Requer novo deploy e
+  teste real de texto e QR para um cliente diferente do administrador.
 
 ## Estrutura principal
 

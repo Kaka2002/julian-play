@@ -49,6 +49,7 @@ let ultimaVerificacaoSaude = null;
 let ultimaRecuperacaoWhatsApp = null;
 let recuperacaoEmAndamento = false;
 let compatibilidadeGetChatAplicada = false;
+let compatibilidadeQueryExistAplicada = false;
 let compatibilidadeGetChatEmAplicacao = null;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
@@ -70,11 +71,15 @@ async function garantirCompatibilidadeGetChat(clienteAtual = client) {
                 const resultado = await instalarCompatibilidadeGetChat(clienteAtual);
                 if (clienteAtual === client) {
                     compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
+                    compatibilidadeQueryExistAplicada = Boolean(resultado?.queryExist);
                 }
                 console.log('Compatibilidade de envio WhatsApp:', resultado);
                 return Boolean(resultado?.ok);
             } catch (err) {
-                if (clienteAtual === client) compatibilidadeGetChatAplicada = false;
+                if (clienteAtual === client) {
+                    compatibilidadeGetChatAplicada = false;
+                    compatibilidadeQueryExistAplicada = false;
+                }
                 console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
                 return false;
             } finally {
@@ -777,6 +782,7 @@ async function encerrarWhatsApp() {
     conectado = false;
     inicializando = false;
     compatibilidadeGetChatAplicada = false;
+    compatibilidadeQueryExistAplicada = false;
     compatibilidadeGetChatEmAplicacao = null;
     statusWhatsApp = 'encerrando';
 
@@ -958,6 +964,7 @@ function getStatusWhatsApp() {
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
         compatibilidadeGetChatAplicada,
+        compatibilidadeQueryExistAplicada,
         numeroConectado: client?.info?.wid?.user || '',
         mensagensRecebidasTotal,
         ultimaMensagemRecebidaEm,
