@@ -5,6 +5,17 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
+  envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente
+  em uma sessão conectada. A compatibilidade instala um wrapper seguro que
+  preserva o helper original quando possível e não bloqueia o envio quando a
+  marcação de leitura falha. O health local expõe
+  `compatibilidadeSendSeenAplicada` para conferência operacional. Afeta o
+  painel administrador, clientes comerciais no servidor e instalações locais;
+  preserva banco, configurações, cobranças, históricos, backups e sessão do
+  WhatsApp. Validado com `node --check`, suíte interna completa (151 testes),
+  `git diff --check` e geração do pacote; exige deploy e teste real de entrega.
+
 - O deploy do Windows passou a respeitar `PM2_HOME` já definido no terminal e
   usa o caminho padrão `.pm2` apenas quando não há configuração. Isso impede
   que o código atualizado seja aplicado a um daemon PM2 diferente do processo

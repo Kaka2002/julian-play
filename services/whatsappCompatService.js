@@ -95,8 +95,29 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         // Criar o objeto aqui permite instalar somente o helper necessário
         // para o envio, sem substituir os demais utilitários da biblioteca.
         window.WWebJS = window.WWebJS || {};
-        if (window.WWebJS.__julianGetChatCompatVersion === 2 && typeof window.Store.QueryExist === 'function') {
-            return { ok: true, reutilizada: true, queryExist: true };
+
+        // O Client.sendMessage da versao atual chama este helper antes de
+        // enviar qualquer texto ou midia. Algumas cargas recentes do
+        // WhatsApp Web deixam o helper fora do namespace WWebJS, fazendo o
+        // envio abortar com "sendSeen is not a function". Marcar como visto
+        // e opcional para o envio; mantenha o helper original quando ele
+        // existir e transforme falhas nessa etapa em um retorno seguro.
+        const sendSeenOriginal = window.WWebJS.sendSeen;
+        if (typeof sendSeenOriginal !== 'function' || !sendSeenOriginal.__julianSafeSendSeen) {
+            const sendSeenSeguro = async chatId => {
+                if (typeof sendSeenOriginal !== 'function') return false;
+                try {
+                    return await sendSeenOriginal(chatId);
+                } catch (_) {
+                    return false;
+                }
+            };
+            sendSeenSeguro.__julianSafeSendSeen = true;
+            window.WWebJS.sendSeen = sendSeenSeguro;
+        }
+
+        if (window.WWebJS.__julianGetChatCompatVersion === 3 && typeof window.Store.QueryExist === 'function') {
+            return { ok: true, reutilizada: true, queryExist: true, sendSeen: true };
         }
 
         const getChatModel = window.WWebJS.getChatModel;
@@ -168,8 +189,13 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             }
         };
 
-        window.WWebJS.__julianGetChatCompatVersion = 2;
-        return { ok: true, reutilizada: false, queryExist: typeof window.Store.QueryExist === 'function' };
+        window.WWebJS.__julianGetChatCompatVersion = 3;
+        return {
+            ok: true,
+            reutilizada: false,
+            queryExist: typeof window.Store.QueryExist === 'function',
+            sendSeen: typeof window.WWebJS.sendSeen === 'function'
+        };
             });
 
             if (ultimoResultado?.ok || ultimoResultado?.motivo !== 'Store do WhatsApp ainda indisponivel') {

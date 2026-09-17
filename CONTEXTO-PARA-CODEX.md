@@ -19,6 +19,24 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ## Objetivo do sistema
 
+## Correção operacional do envio WhatsApp em 17/09/2026
+
+O whatsapp-web.js 1.34.6 pode iniciar uma sessão em que `window.WWebJS` não
+expõe `sendSeen`. Como `Client.sendMessage` chama esse helper antes de enviar
+texto ou mídia, a ausência interrompia o PIX com `window.WWebJS.sendSeen is not a
+function`, mesmo com o health indicando WhatsApp conectado. A compatibilidade
+instalada no processo agora fornece um wrapper seguro: usa o helper original
+quando disponível e transforma falhas de marcar a conversa como vista em
+retorno opcional, permitindo que o envio continue. O `/health` local informa
+`compatibilidadeSendSeenAplicada` para confirmar a camada antes do teste.
+
+A correção afeta o painel administrador, clientes comerciais no servidor e
+instalações locais; o Painel Mestre não usa a sessão do WhatsApp. Banco,
+configurações, cobranças, históricos, backups e sessão existente são
+preservados. Foram executados `node --check` nos arquivos alterados e a suíte
+interna completa (151 testes); ainda é necessária a validação de um envio real
+para um telefone de cliente após o deploy.
+
 Na versão 1.3.38, foi adicionada a tela separada Mensagens informativas, que
 permite selecionar clientes e enviar texto com uma ou mais imagens fora das
 campanhas. O envio ignora clientes sem telefone, inativos ou com opt-out de

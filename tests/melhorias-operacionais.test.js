@@ -155,6 +155,7 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
     assert.match(compat, /__julianGetChatCompatVersion/);
     assert.match(compat, /FindOrCreateChat/);
     assert.match(compat, /Store\.QueryExist/);
+    assert.match(compat, /sendSeenSeguro/);
 
     const anterior = global.window;
     let encontrou = 0;
@@ -180,6 +181,9 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
         });
         const recuperada = await global.window.WWebJS.getChat('5511999999999@c.us', { getAsModel: false });
         assert.equal(resultado.ok, true);
+        assert.equal(resultado.sendSeen, true);
+        assert.equal(typeof global.window.WWebJS.sendSeen, 'function');
+        assert.equal(await global.window.WWebJS.sendSeen('5511999999999@c.us'), false);
         assert.equal(recuperada, chat);
         assert.equal(encontrou, 1);
     } finally {

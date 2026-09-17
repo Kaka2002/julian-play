@@ -219,6 +219,7 @@ app.get('/health', (req, res) => {
             status: whatsapp.status,
             compatibilidadeGetChatAplicada: Boolean(whatsapp.compatibilidadeGetChatAplicada),
             compatibilidadeQueryExistAplicada: Boolean(whatsapp.compatibilidadeQueryExistAplicada),
+            compatibilidadeSendSeenAplicada: Boolean(whatsapp.compatibilidadeSendSeenAplicada),
             numero: whatsapp.numeroConectado || '',
             mensagensRecebidasTotal: whatsapp.mensagensRecebidasTotal || 0,
             ultimaMensagemRecebidaEm: whatsapp.ultimaMensagemRecebidaEm || null,
