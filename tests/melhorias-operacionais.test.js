@@ -149,7 +149,7 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
     const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
     const compat = fs.readFileSync(path.join(__dirname, '..', 'services', 'whatsappCompatService.js'), 'utf8');
     assert.match(whatsapp, /instalarCompatibilidadeGetChat/);
-    assert.match(whatsapp, /await instalarCompatibilidadeGetChat\(client\)/);
+    assert.match(whatsapp, /garantirCompatibilidadeGetChat/);
     assert.match(whatsapp, /compatibilidadeGetChatAplicada/);
     assert.match(compat, /Store\.Chat\.find/);
     assert.match(compat, /__julianGetChatCompatVersion/);
@@ -181,6 +181,39 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
         assert.equal(resultado.ok, true);
         assert.equal(recuperada, chat);
         assert.equal(encontrou, 1);
+    } finally {
+        global.window = anterior;
+    }
+});
+
+test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade', async () => {
+    const anterior = global.window;
+    let avaliacoes = 0;
+    const chat = { id: { _serialized: '5511888888888@c.us' } };
+    global.window = {};
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: {
+                evaluate: async fn => {
+                    avaliacoes += 1;
+                    if (avaliacoes === 2) {
+                        global.window = {
+                            Store: {
+                                Chat: { get: () => chat, find: async () => chat },
+                                WidFactory: { createWid: valor => ({ _serialized: valor }) }
+                            },
+                            WWebJS: { getChatModel: async valor => ({ modelo: valor }) }
+                        };
+                    }
+                    return fn();
+                }
+            }
+        }, { intervaloMs: 50, tempoMaximoMs: 150 });
+
+        assert.equal(resultado.ok, true);
+        assert.equal(avaliacoes, 2);
     } finally {
         global.window = anterior;
     }

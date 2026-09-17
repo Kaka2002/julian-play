@@ -131,10 +131,12 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   `Store.Chat.get` e `Store.Chat.find` antes do helper antigo
   `FindOrCreateChat`. Isso contorna a falha `getChat` introduzida pelo
   WhatsApp Web atual sem alterar banco, clientes, cobranças, configurações ou
-  a sessão persistida. A camada é reinstalada após autenticação, inicialização
-  e em cada confirmação de saúde, para sobreviver a uma navegação do WhatsApp
-  Web, e não libera o estado conectado quando a página ainda não oferece a
-  Store necessária.
+  a sessão persistida. A camada aguarda por até 30 segundos a exposição de
+  `WWebJS`/`Store`, compartilha tentativas concorrentes e é reinstalada após
+  autenticação, inicialização e em cada confirmação de saúde, para sobreviver
+  a uma navegação do WhatsApp Web. O estado de compatibilidade só fica
+  verdadeiro quando a instalação retorna sucesso; a sessão pode continuar
+  conectada enquanto o WhatsApp termina de preparar a Store.
 
 ## Estrutura principal
 

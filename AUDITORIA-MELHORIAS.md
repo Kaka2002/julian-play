@@ -5,6 +5,17 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Correção operacional do envio de QR Code PIX: a compatibilidade de
+  `window.WWebJS.getChat` agora aguarda por até 30 segundos a inicialização da
+  Store do WhatsApp Web e evita avaliações concorrentes durante navegações da
+  página. O indicador de saúde só registra a camada como aplicada depois de
+  sucesso real, permitindo confirmar no `/health` antes de testar um envio.
+  Nenhum banco, cliente, cobrança, configuração ou sessão é alterado. Afeta
+  o painel administrador, clientes comerciais no servidor e instalações
+  locais; o Painel Mestre não usa essa sessão. Validada com testes de
+  compatibilidade imediata e de espera pela Store, sintaxe, suíte interna,
+  E2E e pacote local; requer novo deploy e um envio real de teste.
+
 - Versão 1.3.38: criada rota protegida `/mensagens-informativas` para envio
   manual de orientação com texto e múltiplas imagens a todos os clientes
   selecionados. A funcionalidade é independente de campanhas e respeita

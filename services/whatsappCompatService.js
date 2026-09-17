@@ -5,12 +5,25 @@
  * Store.Chat. O envio padrão da biblioteca passa por esse helper e, por isso,
  * qualquer tipo de mensagem acaba falhando antes de ser enviado.
  */
-async function instalarCompatibilidadeGetChat(client) {
+const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
     if (typeof client?.pupPage?.evaluate !== 'function') {
         return { ok: false, motivo: 'pupPage indisponivel' };
     }
 
-    return client.pupPage.evaluate(() => {
+    const intervaloMs = Math.max(50, Number(opcoes.intervaloMs || 1000));
+    const tempoMaximoMs = Math.max(intervaloMs, Number(opcoes.tempoMaximoMs || 30000));
+    const inicio = Date.now();
+    let ultimoResultado = { ok: false, motivo: 'Store do WhatsApp ainda indisponivel' };
+
+    // A página do WhatsApp pode estar autenticada e responder CONNECTED antes
+    // de terminar de expor WWebJS/Store. Aguarde por uma janela limitada para
+    // não marcar a compatibilidade como aplicada cedo demais nem bloquear o
+    // encerramento da sessão indefinidamente.
+    while (Date.now() - inicio <= tempoMaximoMs) {
+        try {
+            ultimoResultado = await client.pupPage.evaluate(() => {
         if (!window.WWebJS || !window.Store?.Chat || !window.Store?.WidFactory) {
             return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel' };
         }
@@ -86,7 +99,22 @@ async function instalarCompatibilidadeGetChat(client) {
 
         window.WWebJS.__julianGetChatCompatVersion = 1;
         return { ok: true, reutilizada: false };
-    });
+            });
+
+            if (ultimoResultado?.ok || ultimoResultado?.motivo !== 'Store do WhatsApp ainda indisponivel') {
+                return ultimoResultado;
+            }
+        } catch (err) {
+            // Navegações do WhatsApp podem destruir o contexto de execução por
+            // alguns instantes. Tente novamente dentro da mesma janela.
+            ultimoResultado = { ok: false, motivo: err.message };
+        }
+
+        if (Date.now() - inicio >= tempoMaximoMs) break;
+        await esperar(intervaloMs);
+    }
+
+    return ultimoResultado;
 }
 
 module.exports = { instalarCompatibilidadeGetChat };

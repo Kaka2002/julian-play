@@ -49,12 +49,45 @@ let ultimaVerificacaoSaude = null;
 let ultimaRecuperacaoWhatsApp = null;
 let recuperacaoEmAndamento = false;
 let compatibilidadeGetChatAplicada = false;
+let compatibilidadeGetChatEmAplicacao = null;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
 const avisosForaHorario = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function garantirCompatibilidadeGetChat(clienteAtual = client) {
+    if (!clienteAtual) return false;
+
+    // authenticated, initialize e o monitor de saúde podem disparar juntos.
+    // Compartilhe a mesma tentativa para evitar avaliações concorrentes no
+    // contexto do Chrome, que podem se invalidar durante a navegação.
+    if (!compatibilidadeGetChatEmAplicacao) {
+        let tentativa;
+        tentativa = (async () => {
+            try {
+                const resultado = await instalarCompatibilidadeGetChat(clienteAtual);
+                if (clienteAtual === client) {
+                    compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
+                }
+                console.log('Compatibilidade de envio WhatsApp:', resultado);
+                return Boolean(resultado?.ok);
+            } catch (err) {
+                if (clienteAtual === client) compatibilidadeGetChatAplicada = false;
+                console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
+                return false;
+            } finally {
+                if (compatibilidadeGetChatEmAplicacao === tentativa) {
+                    compatibilidadeGetChatEmAplicacao = null;
+                }
+            }
+        })();
+        compatibilidadeGetChatEmAplicacao = tentativa;
+    }
+
+    return compatibilidadeGetChatEmAplicacao;
+}
 
 function obterHoraSaoPaulo(data = new Date()) {
     const partes = new Intl.DateTimeFormat('pt-BR', {
@@ -574,15 +607,7 @@ async function iniciarWhatsApp() {
             statusWhatsApp = 'autenticado';
             qrAtual = '';
             console.log('Autenticado');
-            instalarCompatibilidadeGetChat(client)
-                .then((resultado) => {
-                    compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
-                    console.log('Compatibilidade de envio WhatsApp:', resultado);
-                })
-                .catch((err) => {
-                    compatibilidadeGetChatAplicada = false;
-                    console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
-                });
+            garantirCompatibilidadeGetChat(client).catch(() => {});
         });
 
         client.on('change_state', (state) => {
@@ -660,14 +685,7 @@ async function iniciarWhatsApp() {
         // O evento `ready` pode não ser emitido em algumas versões. Aplicar
         // também após initialize garante que o patch esteja ativo antes do
         // primeiro envio liberado pelo monitor de saúde.
-        try {
-            const resultadoCompatibilidade = await instalarCompatibilidadeGetChat(client);
-            compatibilidadeGetChatAplicada = Boolean(resultadoCompatibilidade?.ok);
-            console.log('Compatibilidade de envio WhatsApp:', resultadoCompatibilidade);
-        } catch (err) {
-            compatibilidadeGetChatAplicada = false;
-            console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
-        }
+        await garantirCompatibilidadeGetChat(client);
 
         console.log('Initialize executado');
     } catch (err) {
@@ -727,6 +745,7 @@ async function encerrarWhatsApp() {
     conectado = false;
     inicializando = false;
     compatibilidadeGetChatAplicada = false;
+    compatibilidadeGetChatEmAplicacao = null;
     statusWhatsApp = 'encerrando';
 
     if (!client) return;
@@ -804,13 +823,7 @@ async function verificarSaudeWhatsApp() {
         const ok = estado === 'CONNECTED';
 
         if (ok) {
-            try {
-                const resultadoCompatibilidade = await instalarCompatibilidadeGetChat(client);
-                compatibilidadeGetChatAplicada = Boolean(resultadoCompatibilidade?.ok);
-                console.log('Compatibilidade de envio WhatsApp:', resultadoCompatibilidade);
-            } catch (err) {
-                console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
-            }
+            await garantirCompatibilidadeGetChat(client);
         }
 
         if (ok && !conectado) {
