@@ -330,6 +330,7 @@ test('QR PIX usa documento PNG quando o pipeline de imagens falha', () => {
     const inicio = pix.indexOf('enviarQRCodePIXParaDestino');
     const trecho = pix.slice(inicio, pix.indexOf('module.exports', inicio));
     assert.match(trecho, /sendMediaAsDocument:\s*true/);
+    assert.match(trecho, /sendSeen:\s*false/);
     assert.match(trecho, /linkPreview:\s*false/);
     assert.match(trecho, /PIX copia e cola/);
     assert.match(trecho, /gerarPixCopiaECola/);

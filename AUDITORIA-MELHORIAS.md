@@ -14,7 +14,9 @@ código; itens operacionais externos não são marcados como implementados.
   painel administrador, clientes comerciais no servidor e instalações locais;
   preserva banco, configurações, cobranças, históricos, backups e sessão do
   WhatsApp. Validado com `node --check`, suíte interna completa (151 testes),
-  `git diff --check` e geração do pacote; exige deploy e teste real de entrega.
+  `git diff --check` e geração do pacote; o fluxo PIX usa ainda
+  `sendSeen: false` como proteção independente. Exige deploy e teste real de
+  entrega.
 
 - O deploy do Windows passou a respeitar `PM2_HOME` já definido no terminal e
   usa o caminho padrão `.pm2` apenas quando não há configuração. Isso impede

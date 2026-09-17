@@ -422,6 +422,11 @@ function confirmarMensagemWhatsApp(enviada, destino, client) {
 }
 
 async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
+    // Marcar a conversa como lida e opcional no envio do PIX. Algumas cargas
+    // do WhatsApp Web nao expoem WWebJS.sendSeen; deixar essa etapa fora evita
+    // que a cobranca seja interrompida antes de enviar texto ou QR.
+    const opcoesEnvio = { ...opcoes, sendSeen: false };
+
     if (typeof client?.getChatById === 'function') {
         try {
             const chat = await client.getChatById(destino);
@@ -430,7 +435,7 @@ async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
             }
             // O envio pela conversa retorna o objeto Message completo. O
             // client.sendMessage pode concluir sem devolver ID nesta versao.
-            return await chat.sendMessage(conteudo, opcoes);
+            return await chat.sendMessage(conteudo, opcoesEnvio);
         } catch (err) {
             if (/sem ID|confirmou envio/.test(String(err?.message || ''))) {
                 throw err;
@@ -439,7 +444,7 @@ async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
         }
     }
 
-    return client.sendMessage(destino, conteudo, opcoes);
+    return client.sendMessage(destino, conteudo, opcoesEnvio);
 }
 
 async function telefoneDoLid(client, lid) {
@@ -651,7 +656,7 @@ Não foi possível gerar o QR Code neste momento.
 Tente novamente ou escolha outro plano.
 
 *0* - Voltar ao menu principal
-${RODAPE_ATENDIMENTO}`, { linkPreview: false }),
+${RODAPE_ATENDIMENTO}`, { linkPreview: false, sendSeen: false }),
                 ENVIO_TIMEOUT_MS,
                 'Envio de erro do PIX'
             );

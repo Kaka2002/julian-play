@@ -29,6 +29,9 @@ instalada no processo agora fornece um wrapper seguro: usa o helper original
 quando disponível e transforma falhas de marcar a conversa como vista em
 retorno opcional, permitindo que o envio continue. O `/health` local informa
 `compatibilidadeSendSeenAplicada` para confirmar a camada antes do teste.
+O fluxo de cobrança PIX também envia explicitamente com `sendSeen: false`,
+incluindo o fallback copia e cola e a mensagem de erro, para que nenhuma
+cobrança dependa da marcação de leitura.
 
 A correção afeta o painel administrador, clientes comerciais no servidor e
 instalações locais; o Painel Mestre não usa a sessão do WhatsApp. Banco,
