@@ -4396,7 +4396,11 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
-                    () => client.sendMessage(destino, mensagem, { linkPreview: false, sendSeen: false }),
+                    () => client.sendMessage(destino, mensagem, {
+                        linkPreview: false,
+                        sendSeen: false,
+                        waitUntilMsgSent: true
+                    }),
                     descricao,
                     {
                         proativo: true,
@@ -4404,7 +4408,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
                             tipo: 'texto',
                             destino,
                             texto: mensagem,
-                            opcoesMensagem: { linkPreview: false, sendSeen: false }
+                            opcoesMensagem: { linkPreview: false, sendSeen: false, waitUntilMsgSent: true }
                         }
                     }
                 ),
@@ -4413,7 +4417,20 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             );
 
             if (!envio) {
-                throw new Error('WhatsApp nao confirmou o envio (resposta vazia).');
+                // Algumas cargas do WhatsApp Web entregam a mensagem e não
+                // devolvem o objeto Message. Não repetir em outro destino:
+                // isso causa duplicidade no mesmo cliente. A reserva local
+                // impede uma nova tentativa imediata e a tela segue como
+                // envio concluído, sem inventar um ID.
+                console.warn(`[clientes] ${descricao} sem confirmacao do WhatsApp para ${destino}; nao repetindo para evitar duplicidade.`);
+                confirmarEnvioWhatsApp(chaveEnvio, null);
+
+                return {
+                    destino,
+                    mensagemId: '',
+                    ack: undefined,
+                    semConfirmacao: true
+                };
             }
 
             registrarMensagemDoRobo(envio);

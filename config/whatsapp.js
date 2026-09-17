@@ -18,6 +18,24 @@ const { roboPodeResponderMensagens } = require('../services/controleOperacaoRobo
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
 const CACHE_DATA_PATH = process.env.WWEBJS_CACHE_PATH || path.join(DATA_DIR, '.wwebjs_cache');
+const PROJECT_CACHE_DATA_PATH = process.env.WWEBJS_PROJECT_CACHE_PATH || path.join(__dirname, '..', '.wwebjs_cache');
+// The WhatsApp Web bundle changed its internal modules recently. Keep a
+// known-good cached bundle available for existing server installs, while
+// allowing a new install without that file to use the current bundle.
+const WEB_VERSION_PIN = process.env.WWEBJS_WEB_VERSION || '2.3000.1047557390';
+const WEB_VERSION_CACHE_PATHS = [...new Set([CACHE_DATA_PATH, PROJECT_CACHE_DATA_PATH])];
+
+function localizarCacheWebFixado() {
+    for (const cachePath of WEB_VERSION_CACHE_PATHS) {
+        const arquivo = path.join(cachePath, `${WEB_VERSION_PIN}.html`);
+        if (fs.existsSync(arquivo)) return cachePath;
+    }
+
+    return '';
+}
+
+const WEB_VERSION_CACHE_PATH = localizarCacheWebFixado();
+const WEB_VERSION_CACHE_ATIVO = Boolean(WEB_VERSION_CACHE_PATH);
 const TAKEOVER_ATIVO = process.env.WWEBJS_TAKEOVER === 'true';
 const AUTH_TIMEOUT_MS = Number(process.env.WWEBJS_AUTH_TIMEOUT_MS || 300000);
 const PROTOCOL_TIMEOUT_MS = Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT_MS || 300000);
@@ -538,6 +556,11 @@ async function iniciarWhatsApp() {
         const executablePath = await obterExecutablePath();
 
         console.log('Chrome encontrado:', executablePath);
+        if (WEB_VERSION_CACHE_ATIVO) {
+            console.log(`WhatsApp Web fixado em ${WEB_VERSION_PIN} usando cache ${WEB_VERSION_CACHE_PATH}`);
+        } else {
+            console.log(`Cache fixado ${WEB_VERSION_PIN} nao encontrado; usando a versao Web atual.`);
+        }
 
         client = new Client({
             authStrategy: new LocalAuthControlado({
@@ -552,7 +575,17 @@ async function iniciarWhatsApp() {
                 headless: true,
                 protocolTimeout: PROTOCOL_TIMEOUT_MS,
                 args: obterPuppeteerArgs()
-            }
+            },
+            ...(WEB_VERSION_CACHE_ATIVO
+                ? {
+                    webVersion: WEB_VERSION_PIN,
+                    webVersionCache: {
+                        type: 'local',
+                        path: WEB_VERSION_CACHE_PATH,
+                        strict: true
+                    }
+                }
+                : {})
         });
 
         console.log('Iniciando cliente WhatsApp...');
@@ -864,6 +897,9 @@ function getStatusWhatsApp() {
         ultimoQrEm,
         authDataPath: AUTH_DATA_PATH,
         cacheDataPath: CACHE_DATA_PATH,
+        webVersion: WEB_VERSION_PIN,
+        webVersionCacheAtivo: WEB_VERSION_CACHE_ATIVO,
+        webVersionCachePath: WEB_VERSION_CACHE_PATH || '',
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,

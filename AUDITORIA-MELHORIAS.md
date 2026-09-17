@@ -6,16 +6,20 @@ código; itens operacionais externos não são marcados como implementados.
 ## Implementado
 
 - Correção de entrega WhatsApp/PIX em 17/09/2026: destinos resolvidos como
-  `@lid` agora são tentados antes do telefone `@c.us`, respostas vazias não
-  são tratadas como envio confirmado e a mídia do QR tenta imagem, documento
-  PNG e código copia e cola em sequência. Imagens do robô também usam o
-  fallback de documento e desativam `sendSeen`. Afeta o painel administrador,
+  `@lid` agora são tentados antes do telefone `@c.us`, o envio textual aguarda
+  a confirmação disponível e resposta vazia não dispara uma segunda tentativa,
+  evitando a duplicidade vista no aviso de vencimento próximo. A mídia do QR
+  tenta imagem, documento PNG e código copia e cola em sequência. O cliente
+  também reutiliza o cache Web `2.3000.1047557390` quando esse arquivo existe,
+  mantendo a sessão e os dados persistentes. Afeta o painel administrador,
   clientes comerciais no servidor e instalações locais; o Painel Mestre fica
   fora do fluxo. Bancos, configurações, sessões, backups e dados do cliente
-  são preservados. Validação: `node --check` dos três arquivos alterados,
-  teste de rota para destino LID, suíte interna, testes de navegação, geração
-  do pacote e workflow remoto concluído. Após o deploy, a chegada no telefone
-  do cliente ainda precisa ser conferida em uma tentativa real.
+  são preservados. Limitação: o cache fixado só é ativado onde o arquivo
+  anterior está disponível; sem ele, a biblioteca usa a versão Web atual.
+  Validação: `node --check`, teste de envio sem ID e de prevenção de
+  duplicidade, suíte interna, testes de navegação, geração do pacote e
+  workflow remoto. Após o deploy, a chegada no telefone do cliente ainda
+  precisa ser conferida em uma tentativa real.
 
 - Versão 1.3.38: criada rota protegida `/mensagens-informativas` para envio
   manual de orientação com texto e múltiplas imagens a todos os clientes

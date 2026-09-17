@@ -142,6 +142,17 @@ test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
     assert.match(bot, /limparSessao: false/);
 });
 
+test('WhatsApp reutiliza cache Web estavel e nao repete texto sem resposta', () => {
+    const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
+    const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(whatsapp, /WWEBJS_WEB_VERSION/);
+    assert.match(whatsapp, /2\.3000\.1047557390/);
+    assert.match(whatsapp, /webVersionCache:\s*\{/);
+    assert.match(whatsapp, /strict:\s*true/);
+    assert.match(clientes, /waitUntilMsgSent:\s*true/);
+    assert.match(clientes, /nao repetindo para evitar duplicidade/);
+});
+
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
     const fs = require('fs');
     const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');

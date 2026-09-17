@@ -103,10 +103,18 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   próprio WhatsApp para o telefone do cliente. O endereço `@c.us` permanece
   somente como fallback, pois a tentativa direta nesse formato estava
   provocando `Data passed to getter ... undefined` e impedindo a entrega.
-- Mensagens sem objeto de confirmação ou ID não são mais registradas como
-  enviadas. O QR PIX tenta imagem, depois o mesmo PNG como documento e, por
-  fim, envia o código PIX copia e cola com `linkPreview` e `sendSeen`
-  desativados. Imagens do robô usam a mesma segunda tentativa como documento.
+- O envio textual usa `waitUntilMsgSent` e, quando uma carga do WhatsApp Web
+  entrega a mensagem mas devolve resposta vazia, a reserva local encerra a
+  tentativa sem repetir para outro destino. Isso evita a duplicidade observada
+  no aviso de vencimento próximo. Um ID real continua sendo registrado quando
+  o WhatsApp o devolve. O QR PIX tenta imagem, depois o mesmo PNG como
+  documento e, por fim, envia o código PIX copia e cola; todas as tentativas
+  usam `linkPreview` e `sendSeen` desativados.
+- Para instalações que ainda possuem o cache local anterior à mudança do
+  WhatsApp Web, a inicialização fixa automaticamente a versão
+  `2.3000.1047557390` em `WWEBJS_WEB_VERSION` (ou no arquivo de cache do
+  projeto). Se esse arquivo não existir, a instalação usa a versão Web atual;
+  nenhum banco, sessão ou diretório persistente é removido por essa escolha.
 - A correção afeta o painel administrador, clientes comerciais no servidor e
   instalações locais; o Painel Mestre não envia cobranças. Bancos,
   configurações PIX, históricos, backups, DATA_DIR e sessões do WhatsApp são
@@ -114,7 +122,8 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - Foram executados `node --check` nos arquivos alterados, suíte interna,
   testes de navegação, `git diff --check`, geração do pacote local e workflow
   `Validacao do Julian Play`. Depois do deploy é necessária uma única tentativa
-  real e a confirmação de chegada no telefone do cliente.
+  real e a confirmação de chegada no telefone do cliente; não é necessário
+  encerrar a sessão do WhatsApp no celular.
 
 ## Estrutura principal
 

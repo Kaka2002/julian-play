@@ -407,11 +407,19 @@ function confirmarMensagemWhatsApp(enviada, destino, client) {
 async function enviarComConfirmacao(client, destino, conteudo, opcoes, descricao, options = {}) {
     return comTimeout(
         enfileirarEnvio(
-            async () => confirmarMensagemWhatsApp(
-                await client.sendMessage(destino, conteudo, opcoes),
-                destino,
-                client
-            ),
+            async () => {
+                const enviada = await client.sendMessage(destino, conteudo, opcoes);
+
+                // O envio de texto pode ser aceito pelo WhatsApp e retornar
+                // undefined. Não repetir o PIX copia e cola: a repetição pode
+                // entregar duas cobranças iguais ao cliente.
+                if (!enviada && !(conteudo instanceof MessageMedia)) {
+                    console.warn(`[pix] ${descricao} sem confirmacao do WhatsApp para ${destino}; nao repetindo para evitar duplicidade.`);
+                    return null;
+                }
+
+                return confirmarMensagemWhatsApp(enviada, destino, client);
+            },
             descricao,
             {
                 proativo: Boolean(options.proativo),
@@ -461,7 +469,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                 client,
                 destino,
                 media,
-                { caption, linkPreview: false, sendSeen: false },
+                { caption, linkPreview: false, sendSeen: false, waitUntilMsgSent: true },
                 `Envio do QR Code PIX ${planoPix.nome}`,
                 options
             );
@@ -475,7 +483,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     client,
                     destino,
                     media,
-                    { caption, linkPreview: false, sendSeen: false, sendMediaAsDocument: true },
+                    { caption, linkPreview: false, sendSeen: false, waitUntilMsgSent: true, sendMediaAsDocument: true },
                     `Envio do QR Code PIX ${planoPix.nome} como documento`,
                     options
                 );
@@ -487,7 +495,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     client,
                     destino,
                     mensagemCopiaECola,
-                    { linkPreview: false, sendSeen: false },
+                    { linkPreview: false, sendSeen: false, waitUntilMsgSent: true },
                     `Envio do PIX copia e cola ${planoPix.nome}`,
                     options
                 );
