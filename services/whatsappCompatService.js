@@ -27,13 +27,15 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         // Se a injeção oficial não terminou, a própria página ainda pode
         // fornecer os módulos necessários pelo require exposto pelo WhatsApp.
         // Reconstitua somente Chat e WidFactory, sem substituir a Store inteira.
-        if ((!window.Store?.Chat || !window.Store?.WidFactory) && typeof window.require === 'function') {
+        if ((!window.Store?.Chat || !window.Store?.WidFactory || !window.Store?.AppState) && typeof window.require === 'function') {
             try {
                 const colecoes = window.require('WAWebCollections');
                 const fabricaWid = window.require('WAWebWidFactory');
+                const socketModelo = window.require('WAWebSocketModel');
                 window.Store = window.Store || {};
                 if (!window.Store.Chat && colecoes?.Chat) window.Store.Chat = colecoes.Chat;
                 if (!window.Store.WidFactory && fabricaWid) window.Store.WidFactory = fabricaWid;
+                if (!window.Store.AppState && socketModelo?.Socket) window.Store.AppState = socketModelo.Socket;
             } catch (_) {
                 // O bundle pode ainda estar carregando; a próxima tentativa
                 // repete a descoberta dentro da mesma janela.

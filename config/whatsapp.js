@@ -89,6 +89,38 @@ async function garantirCompatibilidadeGetChat(clienteAtual = client) {
     return compatibilidadeGetChatEmAplicacao;
 }
 
+async function obterEstadoWhatsAppRobusto(clienteAtual = client) {
+    let erroOriginal = null;
+
+    try {
+        const estado = await clienteAtual.getState();
+        if (estado) return estado;
+    } catch (err) {
+        erroOriginal = err;
+    }
+
+    // O WhatsApp Web pode manter a sessão autenticada enquanto a injeção de
+    // Store.AppState é refeita. Consulte o AuthStore antes de considerar a
+    // sessão presa; o fallback não altera dados nem inicia outro navegador.
+    if (typeof clienteAtual?.pupPage?.evaluate === 'function') {
+        try {
+            const estado = await clienteAtual.pupPage.evaluate(() =>
+                window.Store?.AppState?.state || window.AuthStore?.AppState?.state || ''
+            );
+            if (estado) return estado;
+        } catch (err) {
+            erroOriginal = erroOriginal || err;
+        }
+    }
+
+    // client.info.wid só é preenchido depois da autenticação concluída. Ele é
+    // uma confirmação segura para manter os envios durante a reconstrução
+    // transitória do AppState.
+    if (clienteAtual?.info?.wid) return 'CONNECTED';
+    if (erroOriginal) throw erroOriginal;
+    return null;
+}
+
 function obterHoraSaoPaulo(data = new Date()) {
     const partes = new Intl.DateTimeFormat('pt-BR', {
         timeZone: 'America/Sao_Paulo',
@@ -819,7 +851,7 @@ async function verificarSaudeWhatsApp() {
     }
 
     try {
-        const estado = await client.getState();
+        const estado = await obterEstadoWhatsAppRobusto(client);
         const ok = estado === 'CONNECTED';
 
         if (ok) {

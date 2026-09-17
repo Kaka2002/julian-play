@@ -138,6 +138,9 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   a uma navegação do WhatsApp Web. O estado de compatibilidade só fica
   verdadeiro quando a instalação retorna sucesso; a sessão pode continuar
   conectada enquanto o WhatsApp termina de preparar a Store.
+- A verificação de saúde consulta também `AuthStore.AppState` e o `client.info`
+  durante a reconstrução transitória de `Store.AppState`, evitando marcar a
+  sessão como presa quando o WhatsApp já está autenticado.
 
 ## Estrutura principal
 

@@ -10,7 +10,9 @@ código; itens operacionais externos não são marcados como implementados.
   Store do WhatsApp Web, cria o namespace mínimo quando a Store chega primeiro
   e evita avaliações concorrentes durante navegações da página. O indicador de
   saúde só registra a camada como aplicada depois de sucesso real, permitindo
-  confirmar no `/health` antes de testar um envio.
+  confirmar no `/health` antes de testar um envio. A saúde consulta também o
+  `AuthStore.AppState` e o identificador autenticado quando `Store.AppState`
+  está sendo reconstruído, evitando falso estado de sessão presa.
   Nenhum banco, cliente, cobrança, configuração ou sessão é alterado. Afeta
   o painel administrador, clientes comerciais no servidor e instalações
   locais; o Painel Mestre não usa essa sessão. Validada com testes de
