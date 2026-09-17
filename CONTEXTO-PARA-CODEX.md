@@ -141,6 +141,15 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - A verificação de saúde consulta também `AuthStore.AppState` e o `client.info`
   durante a reconstrução transitória de `Store.AppState`, evitando marcar a
   sessão como presa quando o WhatsApp já está autenticado.
+- O envio de QR PIX agora mantém o telefone `@c.us` cadastrado como primeiro
+  destino e só aceita um LID quando a conversão confirma o mesmo telefone.
+  LIDs divergentes ou da própria conta conectada são rejeitados. A confirmação
+  de sucesso exige um ID de mensagem e o destinatário confirmado; retorno sem
+  ID não é mais apresentado ao painel como envio concluído. Isso evita registrar
+  sucesso quando a mensagem foi parar no próprio WhatsApp do administrador.
+  Bancos, clientes, cobranças, configurações e sessões são preservados. Afeta
+  os painéis de clientes no servidor e instalações locais; requer novo deploy e
+  um teste com um telefone de cliente diferente do telefone do administrador.
 
 ## Estrutura principal
 

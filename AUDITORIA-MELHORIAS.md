@@ -5,6 +5,17 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
+  priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
+  confirma o mesmo telefone. Identificadores divergentes ou da própria conta
+  conectada são rejeitados. A confirmação agora exige ID de mensagem e valida o
+  destinatário; retornos sem ID não são registrados como sucesso. O fallback
+  PIX copia e cola segue disponível quando a mídia falhar. Afeta painéis de
+  clientes no servidor e instalações locais, preservando bancos, clientes,
+  cobranças, configurações e sessões. Validada com `node --check`, testes de
+  resolução de LID e confirmação de envio; requer deploy e teste real para um
+  telefone de cliente distinto do administrador.
+
 - Correção operacional do envio de QR Code PIX: a compatibilidade de
   `window.WWebJS.getChat` agora aguarda por até 30 segundos a inicialização da
   Store do WhatsApp Web, cria o namespace mínimo quando a Store chega primeiro

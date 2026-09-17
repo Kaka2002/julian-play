@@ -274,6 +274,43 @@ test('QR PIX usa documento PNG quando o pipeline de imagens falha', () => {
     assert.match(pix, /enforceLidAndPnRetrieval/);
 });
 
+test('QR PIX rejeita LID que nao corresponde ao telefone cadastrado', async () => {
+    const { resolverDestinosQRCode } = require('../services/pixService');
+    const anterior = global.window;
+    const mapeamentos = new Map([
+        ['119580630503531@lid', '5511999990000@c.us'],
+        ['5512996066569@lid', '5512996066569@c.us']
+    ]);
+    global.window = {
+        WWebJS: {
+            enforceLidAndPnRetrieval: async id => ({ phone: { _serialized: mapeamentos.get(id) || '' } })
+        }
+    };
+    const client = {
+        info: { wid: { _serialized: '119580630503531@lid' } },
+        pupPage: { evaluate: async (fn, id) => fn(id) },
+        getNumberId: async () => ({ _serialized: '119580630503531@lid' })
+    };
+
+    try {
+        const destinos = await resolverDestinosQRCode(client, '5512996066569@c.us');
+        assert.deepEqual(destinos, ['5512996066569@c.us']);
+    } finally {
+        global.window = anterior;
+    }
+});
+
+test('envios WhatsApp nao sao marcados como enviados sem ID confirmado', () => {
+    const rota = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    const pix = fs.readFileSync(path.join(repoRoot, 'services', 'pixService.js'), 'utf8');
+    const envioTexto = rota.slice(rota.indexOf('async function enviarMensagemWhatsAppComFallback'), rota.indexOf('async function enviarImagemWhatsAppComFallback'));
+    assert.match(rota, /confirmarMensagemWhatsApp\(enviada, destino, client\)/);
+    assert.match(rota, /mensagem sem ID/);
+    assert.doesNotMatch(envioTexto, /tratando como enviado para evitar duplicidade/);
+    assert.match(pix, /WhatsApp nao confirmou o envio \(mensagem sem ID\)/);
+    assert.match(pix, /propria conta, nao para o cliente/);
+});
+
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
