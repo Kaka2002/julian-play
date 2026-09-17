@@ -24,10 +24,33 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
     while (Date.now() - inicio <= tempoMaximoMs) {
         try {
             ultimoResultado = await client.pupPage.evaluate(() => {
-        if (!window.WWebJS || !window.Store?.Chat || !window.Store?.WidFactory) {
-            return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel' };
+        // Se a injeção oficial não terminou, a própria página ainda pode
+        // fornecer os módulos necessários pelo require exposto pelo WhatsApp.
+        // Reconstitua somente Chat e WidFactory, sem substituir a Store inteira.
+        if ((!window.Store?.Chat || !window.Store?.WidFactory) && typeof window.require === 'function') {
+            try {
+                const colecoes = window.require('WAWebCollections');
+                const fabricaWid = window.require('WAWebWidFactory');
+                window.Store = window.Store || {};
+                if (!window.Store.Chat && colecoes?.Chat) window.Store.Chat = colecoes.Chat;
+                if (!window.Store.WidFactory && fabricaWid) window.Store.WidFactory = fabricaWid;
+            } catch (_) {
+                // O bundle pode ainda estar carregando; a próxima tentativa
+                // repete a descoberta dentro da mesma janela.
+            }
         }
 
+        const ausentes = [];
+        if (!window.Store?.Chat) ausentes.push('Store.Chat');
+        if (!window.Store?.WidFactory) ausentes.push('Store.WidFactory');
+        if (ausentes.length) {
+            return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel', ausentes };
+        }
+
+        // Em algumas cargas a Store fica pronta antes do namespace WWebJS.
+        // Criar o objeto aqui permite instalar somente o helper necessário
+        // para o envio, sem substituir os demais utilitários da biblioteca.
+        window.WWebJS = window.WWebJS || {};
         if (window.WWebJS.__julianGetChatCompatVersion === 1) {
             return { ok: true, reutilizada: true };
         }
@@ -89,6 +112,8 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             }
 
             if (!chat || !getAsModel) return chat;
+
+            if (typeof getChatModel !== 'function') return chat;
 
             try {
                 return await getChatModel(chat, { isChannel: isChannel(chatId) });

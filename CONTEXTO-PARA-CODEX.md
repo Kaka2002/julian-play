@@ -129,7 +129,8 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   `services/whatsappCompatService.js`. Ela substitui em tempo de execução o
   `window.WWebJS.getChat` do `whatsapp-web.js`, tentando primeiro
   `Store.Chat.get` e `Store.Chat.find` antes do helper antigo
-  `FindOrCreateChat`. Isso contorna a falha `getChat` introduzida pelo
+  `FindOrCreateChat`. Quando a Store está pronta antes do namespace WWebJS,
+  o helper cria somente esse namespace mínimo para o envio. Isso contorna a falha `getChat` introduzida pelo
   WhatsApp Web atual sem alterar banco, clientes, cobranças, configurações ou
   a sessão persistida. A camada aguarda por até 30 segundos a exposição de
   `WWebJS`/`Store`, compartilha tentativas concorrentes e é reinstalada após

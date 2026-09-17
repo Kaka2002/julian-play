@@ -7,9 +7,10 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Correção operacional do envio de QR Code PIX: a compatibilidade de
   `window.WWebJS.getChat` agora aguarda por até 30 segundos a inicialização da
-  Store do WhatsApp Web e evita avaliações concorrentes durante navegações da
-  página. O indicador de saúde só registra a camada como aplicada depois de
-  sucesso real, permitindo confirmar no `/health` antes de testar um envio.
+  Store do WhatsApp Web, cria o namespace mínimo quando a Store chega primeiro
+  e evita avaliações concorrentes durante navegações da página. O indicador de
+  saúde só registra a camada como aplicada depois de sucesso real, permitindo
+  confirmar no `/health` antes de testar um envio.
   Nenhum banco, cliente, cobrança, configuração ou sessão é alterado. Afeta
   o painel administrador, clientes comerciais no servidor e instalações
   locais; o Painel Mestre não usa essa sessão. Validada com testes de

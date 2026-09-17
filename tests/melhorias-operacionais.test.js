@@ -219,6 +219,29 @@ test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade
     }
 });
 
+test('WhatsApp cria WWebJS quando a Store ja esta pronta', async () => {
+    const anterior = global.window;
+    const chat = { id: { _serialized: '5511777777777@c.us' } };
+    global.window = {
+        Store: {
+            Chat: { get: () => chat, find: async () => chat },
+            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+        }
+    };
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: { evaluate: async fn => fn() }
+        }, { intervaloMs: 50, tempoMaximoMs: 100 });
+
+        assert.equal(resultado.ok, true);
+        assert.equal(await global.window.WWebJS.getChat('5511777777777@c.us', { getAsModel: false }), chat);
+    } finally {
+        global.window = anterior;
+    }
+});
+
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {
     const fs = require('fs');
     const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
