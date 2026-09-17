@@ -309,6 +309,9 @@ test('envios WhatsApp nao sao marcados como enviados sem ID confirmado', () => {
     assert.doesNotMatch(envioTexto, /tratando como enviado para evitar duplicidade/);
     assert.match(pix, /WhatsApp nao confirmou o envio \(mensagem sem ID\)/);
     assert.match(pix, /propria conta, nao para o cliente/);
+    assert.match(pix, /getChatById/);
+    assert.match(pix, /chat\.sendMessage/);
+    assert.match(rota, /getChatById/);
 });
 
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {

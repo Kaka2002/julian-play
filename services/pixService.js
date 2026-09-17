@@ -421,6 +421,27 @@ function confirmarMensagemWhatsApp(enviada, destino, client) {
     return enviada;
 }
 
+async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
+    if (typeof client?.getChatById === 'function') {
+        try {
+            const chat = await client.getChatById(destino);
+            if (!chat || typeof chat.sendMessage !== 'function') {
+                throw new Error('WhatsApp nao retornou a conversa do destinatario.');
+            }
+            // O envio pela conversa retorna o objeto Message completo. O
+            // client.sendMessage pode concluir sem devolver ID nesta versao.
+            return await chat.sendMessage(conteudo, opcoes);
+        } catch (err) {
+            if (/sem ID|confirmou envio|retornou a conversa/.test(String(err?.message || ''))) {
+                throw err;
+            }
+            console.warn(`[pix] Envio pela conversa falhou para ${destino}; tentando API direta: ${err.message}`);
+        }
+    }
+
+    return client.sendMessage(destino, conteudo, opcoes);
+}
+
 async function telefoneDoLid(client, lid) {
     if (!lid || typeof client?.pupPage?.evaluate !== 'function') return '';
 
@@ -551,7 +572,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     enviada = await comTimeout(
                         enfileirarEnvio(
                             async () => confirmarMensagemWhatsApp(
-                                await client.sendMessage(destinoResolvido, media, {
+                                await enviarMensagemWhatsApp(client, destinoResolvido, media, {
                                     caption,
                                     // A legenda do PIX nao precisa de pre-visualizacao de links.
                                     // O WhatsApp Web pode tentar consultar metadados inexistentes
@@ -586,7 +607,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     enviada = await comTimeout(
                         enfileirarEnvio(
                             async () => confirmarMensagemWhatsApp(
-                                await client.sendMessage(destinoResolvido, mensagemCopiaECola, { linkPreview: false }),
+                                await enviarMensagemWhatsApp(client, destinoResolvido, mensagemCopiaECola, { linkPreview: false }),
                                 destinoResolvido,
                                 client
                             ),
