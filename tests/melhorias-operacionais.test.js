@@ -140,6 +140,8 @@ test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
     assert.match(bot, /agendarSupervisaoInicialWhatsApp/);
     assert.match(bot, /\[45000, 120000\]/);
     assert.match(bot, /limparSessao: false/);
+    assert.match(whatsapp, /estado === 'CONNECTED'/);
+    assert.match(whatsapp, /WhatsApp conectado \(confirmado pela verificacao de saude\)/);
 });
 
 test('manutencao oferece recuperacao segura do WhatsApp sem apagar a sessao', () => {

@@ -111,6 +111,11 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - A dependência `whatsapp-web.js` foi fixada na versão 1.34.6, anterior à
   regressão de envio de imagens observada na 1.34.7. O QR volta a ser enviado
   como imagem PNG; a prévia de links continua desativada na legenda.
+- A verificação de saúde também promove a sessão para `conectado` quando o
+  próprio WhatsApp Web retorna `CONNECTED`, mesmo que a versão em uso não
+  emita o evento `ready`. Isso evita reinícios contínuos após escanear o QR e
+  libera mensagens, QR Codes e automações somente quando o estado foi
+  confirmado pelo cliente.
 
 ## Estrutura principal
 

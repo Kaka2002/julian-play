@@ -265,6 +265,9 @@ código; itens operacionais externos não são marcados como implementados.
 - A dependência `whatsapp-web.js` foi fixada na 1.34.6 para evitar a regressão
   de envio de imagens da 1.34.7. O QR permanece como imagem PNG; não há
   alteração de cobrança, banco ou sessão.
+- A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
+  evento `ready`, evitando reinícios após autenticação e permitindo os envios
+  somente quando o WhatsApp Web confirmou a conexão.
 
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
 

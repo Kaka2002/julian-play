@@ -779,7 +779,18 @@ async function verificarSaudeWhatsApp() {
         const estado = await client.getState();
         const ok = estado === 'CONNECTED';
 
-        if (conectado && !ok) {
+        if (ok && !conectado) {
+            // Algumas versões do WhatsApp Web podem emitir `authenticated` e
+            // atualizar o estado para CONNECTED sem disparar o evento `ready`.
+            // O estado confirmado pelo próprio cliente é suficiente para
+            // liberar os envios e evita que o monitor reinicie a sessão.
+            conectado = true;
+            inicializando = false;
+            statusWhatsApp = 'conectado';
+            qrAtual = '';
+            tentativasReconexao = 0;
+            console.log('WhatsApp conectado (confirmado pela verificacao de saude)');
+        } else if (conectado && !ok) {
             conectado = false;
             statusWhatsApp = estado ? `sessao_${String(estado).toLowerCase()}` : 'sessao_presa';
         }
