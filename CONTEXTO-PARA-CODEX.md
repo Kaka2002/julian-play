@@ -97,6 +97,25 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   continua usando os mesmos formulários protegidos; não há migração nem ação
   manual de dados após o deploy.
 
+### Correção de entrega WhatsApp e PIX em 17/09/2026
+
+- A sessão passou a resolver primeiro o identificador LID devolvido pelo
+  próprio WhatsApp para o telefone do cliente. O endereço `@c.us` permanece
+  somente como fallback, pois a tentativa direta nesse formato estava
+  provocando `Data passed to getter ... undefined` e impedindo a entrega.
+- Mensagens sem objeto de confirmação ou ID não são mais registradas como
+  enviadas. O QR PIX tenta imagem, depois o mesmo PNG como documento e, por
+  fim, envia o código PIX copia e cola com `linkPreview` e `sendSeen`
+  desativados. Imagens do robô usam a mesma segunda tentativa como documento.
+- A correção afeta o painel administrador, clientes comerciais no servidor e
+  instalações locais; o Painel Mestre não envia cobranças. Bancos,
+  configurações PIX, históricos, backups, DATA_DIR e sessões do WhatsApp são
+  preservados. Nenhuma sessão do celular precisa ser encerrada.
+- Foram executados `node --check` nos arquivos alterados, suíte interna,
+  testes de navegação, `git diff --check`, geração do pacote local e workflow
+  `Validacao do Julian Play`. Depois do deploy é necessária uma única tentativa
+  real e a confirmação de chegada no telefone do cliente.
+
 ## Estrutura principal
 
 ### Repositório de desenvolvimento

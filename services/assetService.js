@@ -41,32 +41,62 @@ function assetExiste(nomeArquivo) {
     return Boolean(arquivo && fs.existsSync(arquivo));
 }
 
-async function enviarMedia(message, media, opcoes = {}, descricao = 'Envio de imagem') {
+function confirmarEnvioMedia(enviada) {
+    const id = enviada?.id?._serialized || enviada?.id?.id || enviada?.id;
+    if (!id || typeof id !== 'string' || !id.trim()) {
+        throw new Error('WhatsApp nao confirmou o envio da imagem (mensagem sem ID).');
+    }
+    return enviada;
+}
+
+async function enviarMediaUmaTentativa(message, media, opcoes, descricao) {
     const destino = message?.fromMe && message?.to ? message.to : message?.from;
+    const opcoesEnvio = { ...opcoes, sendSeen: false };
 
     try {
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para imagem');
-        return await comTimeout(
+        const enviada = await comTimeout(
             enfileirarEnvio(
-                () => chat.sendMessage(media, opcoes),
+                () => chat.sendMessage(media, opcoesEnvio),
                 descricao
             ),
             ENVIO_TIMEOUT_MS,
             'Envio de imagem'
         );
+        return confirmarEnvioMedia(enviada);
     } catch (erroChat) {
         if (erroChat.isTimeout) throw erroChat;
 
         if (!message?.client || !destino) throw erroChat;
 
         console.log(`Falha ao enviar imagem pelo chat. Tentando envio direto para ${destino}: ${erroChat.message}`);
-        return comTimeout(
+        const enviada = await comTimeout(
             enfileirarEnvio(
-                () => message.client.sendMessage(destino, media, opcoes),
+                () => message.client.sendMessage(destino, media, opcoesEnvio),
                 `${descricao} direto`
             ),
             ENVIO_TIMEOUT_MS,
             'Envio direto de imagem'
+        );
+        return confirmarEnvioMedia(enviada);
+    }
+}
+
+async function enviarMedia(message, media, opcoes = {}, descricao = 'Envio de imagem') {
+    try {
+        return await enviarMediaUmaTentativa(message, media, opcoes, descricao);
+    } catch (erroImagem) {
+        if (erroImagem.isTimeout || opcoes.sendMediaAsDocument) throw erroImagem;
+
+        // O WhatsApp Web pode quebrar o pipeline de imagens quando a conversa
+        // usa LID. Repetir como documento preserva o arquivo PNG e evita o
+        // conversor que depende de módulos internos instáveis.
+        console.log(`Falha no envio da imagem; tentando como documento: ${erroImagem.message}`);
+        return enviarMediaUmaTentativa(
+            message,
+            media,
+            { ...opcoes, sendMediaAsDocument: true },
+            `${descricao} como documento`
         );
     }
 }

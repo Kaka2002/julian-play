@@ -87,6 +87,37 @@ test('bonus nao altera saldo quando o WhatsApp esta desconectado', async () => {
     assert.match(res.url, /Bônus não aplicado/);
 });
 
+test('envio manual de PIX prioriza o LID retornado pelo WhatsApp', async () => {
+    let destinoRecebido = '';
+    const executar = preparar({
+        buscarClientePorId: async () => ({
+            id: 7,
+            nome: 'Cliente LID',
+            telefone: '5512991322058',
+            plano: 'Mensal',
+            valorPlano: '35,00',
+            dataVencimento: '2099-10-01T23:59'
+        }),
+        getStatusWhatsApp: () => ({ conectado: true }),
+        getClient: () => ({
+            info: { wid: { _serialized: '5511999999999@c.us' } },
+            getNumberId: async () => ({ _serialized: '251251358990367@lid' })
+        }),
+        buscarPlanoPorNome: () => ({ nome: 'Mensal', valor: '35,00' }),
+        prepararPlanoPixDoPlanoCliente: () => ({ nome: 'Mensal', valor: '35,00', valorNumero: 35 }),
+        resolverDestinoWhatsApp: async () => '251251358990367@lid',
+        enviarQRCodePIXParaDestino: async (_client, destino) => {
+            destinoRecebido = destino;
+            return true;
+        },
+        adicionarNotaCliente: async () => {}
+    });
+
+    const res = await executar('post', '/clientes/:id/enviar-pix-plano');
+    assert.equal(destinoRecebido, '251251358990367@lid', res.url);
+    assert.match(res.url, /PIX do plano enviado ao cliente/);
+});
+
 test('exclusao direta continua encaminhando para privacidade sem remover dados', async () => {
     const res = await preparar()('post', '/clientes/:id/excluir');
     assert.match(res.url, /exclusao direta foi desativada/);

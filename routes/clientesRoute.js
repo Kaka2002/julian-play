@@ -4288,8 +4288,6 @@ async function resolverDestinosWhatsApp(client, telefone) {
         }
     };
 
-    adicionarDestino(destinoNumero);
-
     if (typeof client.getNumberId === 'function') {
         try {
             const contato = await aguardarComTimeout(
@@ -4302,15 +4300,37 @@ async function resolverDestinosWhatsApp(client, telefone) {
                 throw new Error(`O numero ${numero} nao foi localizado no WhatsApp.`);
             }
 
-            adicionarDestino(contato._serialized);
+            const destinoResolvido = String(contato._serialized || '').trim();
+            const proprio = String(client?.info?.wid?._serialized || '').trim();
+            const proprioNumero = String(
+                client?.info?.wid?.user || client?.info?.me?.user || ''
+            ).replace(/\D/g, '');
+            const destinoEhProprio = destinoResolvido === proprio ||
+                (proprioNumero && proprioNumero === numero);
 
-            if (String(contato._serialized).endsWith('@lid')) {
-                console.log(`[clientes] WhatsApp retornou LID ${contato._serialized}; telefone cadastrado tambem sera tentado ${destinoNumero}.`);
+            // Desde as mudanças recentes do WhatsApp Web, números válidos
+            // podem ser resolvidos para um identificador LID. Esse destino
+            // precisa ser tentado antes do telefone @c.us, que pode disparar
+            // getters internos com dados indefinidos.
+            if (destinoResolvido && !destinoEhProprio) {
+                adicionarDestino(destinoResolvido);
+            }
+
+            if (destinoEhProprio) {
+                console.warn(`[clientes] Destino ${numero} corresponde ao proprio WhatsApp conectado; usando apenas o telefone cadastrado como fallback.`);
+            }
+
+            if (destinoResolvido.endsWith('@lid')) {
+                console.log(`[clientes] WhatsApp retornou LID ${destinoResolvido}; LID sera tentado antes de ${destinoNumero}.`);
             }
         } catch (err) {
             console.warn(`[clientes] Nao foi possivel validar ${numero} no WhatsApp: ${err.message}. Tentando telefone cadastrado.`);
         }
     }
+
+    // Mantém o telefone cadastrado como fallback quando a resolução LID não
+    // estiver disponível ou quando o envio pelo LID falhar.
+    adicionarDestino(destinoNumero);
 
     return destinos;
 }
@@ -4376,11 +4396,16 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
-                    () => client.sendMessage(destino, mensagem),
+                    () => client.sendMessage(destino, mensagem, { linkPreview: false, sendSeen: false }),
                     descricao,
                     {
                         proativo: true,
-                        persistencia: { tipo: 'texto', destino, texto: mensagem }
+                        persistencia: {
+                            tipo: 'texto',
+                            destino,
+                            texto: mensagem,
+                            opcoesMensagem: { linkPreview: false, sendSeen: false }
+                        }
                     }
                 ),
                 90000,
@@ -4388,15 +4413,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             );
 
             if (!envio) {
-                console.warn(`[clientes] ${descricao} sem confirmacao do WhatsApp para ${destino}; tratando como enviado para evitar duplicidade.`);
-                confirmarEnvioWhatsApp(chaveEnvio, null);
-
-                return {
-                    destino,
-                    mensagemId: '',
-                    ack: undefined,
-                    semConfirmacao: true
-                };
+                throw new Error('WhatsApp nao confirmou o envio (resposta vazia).');
             }
 
             registrarMensagemDoRobo(envio);
@@ -4450,7 +4467,11 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                             );
                         }
 
-                        return client.sendMessage(destino, media, { caption: legenda });
+                        return client.sendMessage(destino, media, {
+                            caption: legenda,
+                            linkPreview: false,
+                            sendSeen: false
+                        });
                     },
                     descricao,
                     {
@@ -4460,7 +4481,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                             tipo: 'midia',
                             destino,
                             midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
-                            opcoesMensagem: { caption: legenda }
+                            opcoesMensagem: { caption: legenda, linkPreview: false, sendSeen: false }
                         }
                     }
                 ),

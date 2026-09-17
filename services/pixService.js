@@ -381,6 +381,55 @@ function descreverConfiguracaoPix(configPix) {
     ].join(' ');
 }
 
+function idMensagem(enviada) {
+    const id = enviada?.id?._serialized || enviada?.id?.id || enviada?.id;
+    return typeof id === 'string' ? id.trim() : '';
+}
+
+function confirmarMensagemWhatsApp(enviada, destino, client) {
+    const id = idMensagem(enviada);
+    if (!id) throw new Error('WhatsApp nao confirmou o envio (mensagem sem ID).');
+
+    const remoto = String(
+        enviada?.to
+        || enviada?.id?.remote?._serialized
+        || enviada?.id?.remote
+        || ''
+    ).trim();
+    const proprio = String(client?.info?.wid?._serialized || '').trim();
+    if (remoto && proprio && remoto === proprio) {
+        throw new Error('WhatsApp confirmou envio para a propria conta, nao para o cliente.');
+    }
+
+    return enviada;
+}
+
+async function enviarComConfirmacao(client, destino, conteudo, opcoes, descricao, options = {}) {
+    return comTimeout(
+        enfileirarEnvio(
+            async () => confirmarMensagemWhatsApp(
+                await client.sendMessage(destino, conteudo, opcoes),
+                destino,
+                client
+            ),
+            descricao,
+            {
+                proativo: Boolean(options.proativo),
+                persistencia: options.proativo ? {
+                    tipo: conteudo instanceof MessageMedia ? 'midia' : 'texto',
+                    destino,
+                    ...(conteudo instanceof MessageMedia
+                        ? { midia: { mimetype: conteudo.mimetype, data: conteudo.data, filename: conteudo.filename } }
+                        : { texto: conteudo }),
+                    opcoesMensagem: opcoes
+                } : undefined
+            }
+        ),
+        ENVIO_TIMEOUT_MS,
+        descricao
+    );
+}
+
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     let planoPix = null;
     let configPix = null;
@@ -403,28 +452,50 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destino);
         registrarEnvioDoRobo(destino, caption);
 
-        const enviada = await comTimeout(
-            enfileirarEnvio(
-                // Marcar a conversa como lida e opcional e falha em algumas
-                // cargas do WhatsApp Web. O envio da cobranca nao depende
-                // desse passo secundario.
-                () => client.sendMessage(destino, media, { caption, sendSeen: false }),
+        let enviada;
+        try {
+            // O PNG continua sendo enviado como imagem quando o WhatsApp Web
+            // suporta o pipeline de mídia. linkPreview e sendSeen evitam dois
+            // caminhos opcionais que já falharam em cargas recentes.
+            enviada = await enviarComConfirmacao(
+                client,
+                destino,
+                media,
+                { caption, linkPreview: false, sendSeen: false },
                 `Envio do QR Code PIX ${planoPix.nome}`,
-                {
-                    proativo: Boolean(options.proativo),
-                    persistencia: options.proativo ? {
-                        tipo: 'midia',
-                        destino,
-                        midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
-                        opcoesMensagem: { caption }
-                    } : undefined
-                }
-            ),
-            ENVIO_TIMEOUT_MS,
-            'Envio do QR Code PIX'
-        );
+                options
+            );
+        } catch (erroImagem) {
+            console.warn(`[pix] Midia do QR recusada para ${destino} (${erroImagem.message}); tentando como documento.`);
 
-        console.log(`QR Code PIX ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+            try {
+                // Documento usa o mesmo PNG, mas evita o conversor de imagem
+                // que pode depender de módulos removidos pelo WhatsApp Web.
+                enviada = await enviarComConfirmacao(
+                    client,
+                    destino,
+                    media,
+                    { caption, linkPreview: false, sendSeen: false, sendMediaAsDocument: true },
+                    `Envio do QR Code PIX ${planoPix.nome} como documento`,
+                    options
+                );
+            } catch (erroDocumento) {
+                const copiaECola = cobrancaAutomatica?.qrCode || gerarPixCopiaECola(planoPix, configPix);
+                const mensagemCopiaECola = `${caption}\n\n📋 *PIX copia e cola:*\n${copiaECola}`;
+                console.warn(`[pix] Documento do QR recusado para ${destino} (${erroDocumento.message}); tentando PIX copia e cola.`);
+                enviada = await enviarComConfirmacao(
+                    client,
+                    destino,
+                    mensagemCopiaECola,
+                    { linkPreview: false, sendSeen: false },
+                    `Envio do PIX copia e cola ${planoPix.nome}`,
+                    options
+                );
+                console.log(`PIX copia e cola ${planoPix.nome} confirmado`, idMensagem(enviada));
+            }
+        }
+
+        console.log(`QR Code PIX ${planoPix.nome} confirmado`, idMensagem(enviada));
         registrarMensagemDoRobo(enviada);
         return true;
     } catch (error) {
