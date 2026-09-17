@@ -1,120 +1,9 @@
 # Auditoria das melhorias recomendadas
 
-Atualizada em 17/09/2026. Este documento registra o estado comprovado no
+Atualizada em 11/09/2026. Este documento registra o estado comprovado no
 código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
-
-- Corrigido o caso em que o deploy deixava o WhatsApp conectado, porém os
-  indicadores de compatibilidade permaneciam `false`. A sessão restaurada
-  podia conter `window.WWebJS` parcial, fazendo o whatsapp-web.js pular o
-  `LoadUtils` oficial. A compatibilidade agora recarrega esse loader uma vez
-  antes de aplicar o resolvedor e só libera o envio quando `sendMessage` e
-  `sendSeen` estão disponíveis. Afeta o painel administrador, clientes
-  comerciais no servidor e instalações locais; preserva banco, configurações,
-  históricos, backups e sessão. Validado com 151 testes internos, testes de
-  navegação, geração do pacote e teste específico de recuperação do loader.
-
-- Corrigida a falha seguinte do envio de QR em sessões restauradas:
-  `window.Store.ChatGetters` podia estar ausente, causando erro em
-  `getIsNewsletter` antes do envio da mídia. A compatibilidade recupera o
-  módulo oficial quando disponível e instala somente os getters de canal e
-  transmissão como fallback. Bancos, configurações, históricos, backups e
-  sessão permanecem preservados; validado na suíte interna completa.
-
-- A exposição parcial da Store também podia omitir `Store.User`, interrompendo
-  o envio ao montar a origem da mensagem com `getMaybeMeLidUser`. O serviço
-  agora recupera o módulo oficial ou usa o identificador da conexão autenticada
-  como fallback seguro. A alteração preserva os dados da instalação e foi
-  validada na suíte interna completa.
-
-- A mesma exposição parcial podia omitir `Store.MsgKey` e
-  `Store.SendMessage`, fazendo o envio parar em `newId` depois que a identidade
-  já havia sido restaurada. A compatibilidade agora recupera individualmente
-  os módulos posteriores e os componentes de preparação/upload de mídia; o
-  envio só é considerado pronto com `MsgKey.newId` e
-  `SendMessage.addAndSendMsgToChat`. Afeta o painel administrador, clientes
-  comerciais no servidor e instalações locais; preserva banco, configurações,
-  históricos, backups e sessão do WhatsApp. Validado com teste específico de
-  recuperação dos módulos, `node --check` e a suíte interna; requer novo deploy
-  e confirmação de um ID de mensagem em cliente real.
-
-- Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
-  envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente
-  em uma sessão conectada. A compatibilidade instala um wrapper seguro que
-  preserva o helper original quando possível e não bloqueia o envio quando a
-  marcação de leitura falha. O health local expõe
-  `compatibilidadeSendSeenAplicada` e `compatibilidadeSendMessageAplicada`
-  para conferência operacional. Afeta o
-  painel administrador, clientes comerciais no servidor e instalações locais;
-  preserva banco, configurações, cobranças, históricos, backups e sessão do
-  WhatsApp. Validado com `node --check`, suíte interna completa (151 testes),
-  `git diff --check` e geração do pacote; o fluxo PIX usa ainda
-  `sendSeen: false` como proteção independente. Exige deploy e teste real de
-  entrega. A compatibilidade também não cria mais `window.WWebJS` durante a
-  autenticação: ela aguarda a injeção oficial do `LoadUtils`, evitando que
-  `sendMessage` fique ausente na sessão.
-
-- O deploy do Windows passou a respeitar `PM2_HOME` já definido no terminal e
-  usa o caminho padrão `.pm2` apenas quando não há configuração. Isso impede
-  que o código atualizado seja aplicado a um daemon PM2 diferente do processo
-  em produção. Nenhum banco, sessão ou backup é alterado. Validado com parse do
-  PowerShell e `git diff --check`; requer novo deploy da rotina de atualização.
-- O envio de QR PIX e textos usa `chat.sendMessage` como caminho principal e
-  `client.sendMessage` apenas como fallback quando a conversa não puder ser
-  carregada. A mudança evita conclusões sem ID observadas em produção e mantém
-  a validação contra autoenvio. Validada na suíte interna completa (149 testes)
-  e no pacote local limpo.
-
-- Correção da falha `window.Store.QueryExist is not a function` observada em
-  produção: a compatibilidade recupera o módulo `WAWebQueryExistsJob` quando
-  disponível, aceita as variantes legadas e usa fallback somente para chats
-  presentes na Store. A camada passou para a versão 2 e informa `queryExist`
-  no resultado de instalação. Preserva banco, configurações e sessão do
-  WhatsApp. Validada com teste específico de Store sem `QueryExist`, sintaxe e
-  suíte operacional; requer deploy e confirmação de entrega em cliente real.
-
-- O envio passou a tentar a API direta do cliente quando `getChatById` não
-  retorna uma conversa, mantendo a exigência de ID e destinatário confirmado.
-  Assim, uma Store sem conversa carregada não interrompe prematuramente o
-  envio, e respostas vazias continuam sendo tratadas como falha. Validado na
-  suíte interna completa (150 testes).
-
-- A compatibilidade agora recupera também `WAWebFindChatAction` e usa o
-  `FindOrCreateChat.findOrCreateLatestChat` oficial quando o telefone não está
-  na coleção local. O chat real passa a ser carregado antes do envio de texto
-  ou QR. Validado com teste de conversa ausente e preservação da confirmação
-  por ID; requer novo deploy e teste real de entrega.
-
-- O health local passou a informar `compatibilidadeQueryExistAplicada`, sem
-  expor esse detalhe no endpoint público. Isso permite validar a camada antes
-  do teste de envio. Validado na suíte interna e preserva todos os dados da
-  instalação.
-
-- Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
-  priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
-  confirma o mesmo telefone. Identificadores divergentes ou da própria conta
-  conectada são rejeitados. A confirmação agora exige ID de mensagem e valida o
-  destinatário; retornos sem ID não são registrados como sucesso. O fallback
-  PIX copia e cola segue disponível quando a mídia falhar. Afeta painéis de
-  clientes no servidor e instalações locais, preservando bancos, clientes,
-  cobranças, configurações e sessões. Validada com `node --check`, testes de
-  resolução de LID e confirmação de envio; requer deploy e teste real para um
-  telefone de cliente distinto do administrador.
-
-- Correção operacional do envio de QR Code PIX: a compatibilidade de
-  `window.WWebJS.getChat` agora aguarda por até 30 segundos a inicialização da
-  Store do WhatsApp Web, cria o namespace mínimo quando a Store chega primeiro
-  e evita avaliações concorrentes durante navegações da página. O indicador de
-  saúde só registra a camada como aplicada depois de sucesso real, permitindo
-  confirmar no `/health` antes de testar um envio. A saúde consulta também o
-  `AuthStore.AppState` e o identificador autenticado quando `Store.AppState`
-  está sendo reconstruído, evitando falso estado de sessão presa.
-  Nenhum banco, cliente, cobrança, configuração ou sessão é alterado. Afeta
-  o painel administrador, clientes comerciais no servidor e instalações
-  locais; o Painel Mestre não usa essa sessão. Validada com testes de
-  compatibilidade imediata e de espera pela Store, sintaxe, suíte interna,
-  E2E e pacote local; requer novo deploy e um envio real de teste.
 
 - Versão 1.3.38: criada rota protegida `/mensagens-informativas` para envio
   manual de orientação com texto e múltiplas imagens a todos os clientes
@@ -361,39 +250,6 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.
 
-## Correção de 17/09/2026
-
-- O envio automático de QR Code PIX passou a resolver o destinatário pelo ID
-  atual do WhatsApp Web antes de anexar a mídia, com fallback para o número
-  cadastrado. Corrige o erro de getter sem `id` registrado em uma renovação,
-  preservando cobranças, clientes, bancos, sessões e mensagens de texto. A
-  validação inclui resolução simulada de LID, 143 testes internos, 11 testes
-  E2E, geração do pacote e teste de pacote local limpo.
-- O envio do QR e da mensagem de erro agora usa `linkPreview: false`, evitando
-  a consulta instável de prévia de links do WhatsApp Web. A alteração afeta os
-  quatro perfis e preserva dados, sessões e textos; requer novo deploy e um
-  teste manual de renovação para confirmar o envio da mídia.
-- A dependência `whatsapp-web.js` foi fixada na 1.34.6 para evitar a regressão
-  de envio de imagens da 1.34.7. Como o erro de getter sem id também ocorreu
-  com a sessão conectada, o QR passa a ser enviado como documento PNG
-  escaneável; não há alteração de cobrança, banco ou sessão.
-- Quando o anexo também falha, o código copia e cola é enviado como texto para
-  manter a cobrança operacional sem depender de mídia.
-- Para destinatários `@lid`, o QR tenta também o telefone real em `@c.us`,
-  recuperado pelo WhatsApp Web. Isso permite contornar falha de `getChat` no
-  LID sem apagar sessão, clientes, cobranças ou históricos.
-- Como a falha continuou para `@c.us` e `@lid`, o cliente passou a instalar
-  `services/whatsappCompatService.js` no processo do WhatsApp. O helper
-  `window.WWebJS.getChat` agora consulta `Store.Chat.get`/`Store.Chat.find`
-  antes do caminho antigo que lança `getChat`; a sessão e os dados das quatro
-  formas de execução são preservados. Foram executados os testes internos,
-  E2E, verificação de sintaxe e geração do pacote; ainda é necessária uma
-  renovação manual após o deploy para confirmar o comportamento no WhatsApp
-  Web conectado.
-- A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
-  evento `ready`, evitando reinícios após autenticação e permitindo os envios
-  somente quando o WhatsApp Web confirmou a conexão.
-
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
 
 - Manifesto de pacote: gerador Ed25519 criado para registrar versão, arquivo, tamanho e SHA-256; a distribuição só deve ser feita após configurar a chave privada do Painel Mestre.
@@ -470,3 +326,5 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Correção operacional 11/09/2026: o atualizador aguarda o encerramento real de processos residuais e recria processos PM2 ausentes durante a recuperação, evitando falhas secundárias no rollback por PID obsoleto. Validar com testes internos e exercício de atualização.
 - Validação da correção de deploy em 11/09/2026: 143 testes internos, 11 testes de navegador e geração do pacote local aprovados.
+
+- Rollback operacional de 17/09/2026: reversão preparada para o commit-base `1395d8a` de 16/09/2026 às 21:57, última revisão anterior às alterações recentes de compatibilidade do WhatsApp. Bancos, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e PM2 são preservados; falta aplicar o deploy e validar um envio real de PIX.

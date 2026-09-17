@@ -14,7 +14,6 @@ const {
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
-const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -48,89 +47,12 @@ let ultimoEventoIgnoradoEm = null;
 let ultimaVerificacaoSaude = null;
 let ultimaRecuperacaoWhatsApp = null;
 let recuperacaoEmAndamento = false;
-let compatibilidadeGetChatAplicada = false;
-let compatibilidadeQueryExistAplicada = false;
-let compatibilidadeSendMessageAplicada = false;
-let compatibilidadeSendSeenAplicada = false;
-let compatibilidadeGetChatEmAplicacao = null;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
 const avisosForaHorario = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-async function garantirCompatibilidadeGetChat(clienteAtual = client) {
-    if (!clienteAtual) return false;
-
-    // authenticated, initialize e o monitor de saúde podem disparar juntos.
-    // Compartilhe a mesma tentativa para evitar avaliações concorrentes no
-    // contexto do Chrome, que podem se invalidar durante a navegação.
-    if (!compatibilidadeGetChatEmAplicacao) {
-        let tentativa;
-        tentativa = (async () => {
-            try {
-                const resultado = await instalarCompatibilidadeGetChat(clienteAtual);
-                if (clienteAtual === client) {
-                    compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
-                    compatibilidadeQueryExistAplicada = Boolean(resultado?.queryExist);
-                    compatibilidadeSendMessageAplicada = Boolean(resultado?.sendMessage);
-                    compatibilidadeSendSeenAplicada = Boolean(resultado?.sendSeen);
-                }
-                console.log('Compatibilidade de envio WhatsApp:', resultado);
-                return Boolean(resultado?.ok);
-            } catch (err) {
-                if (clienteAtual === client) {
-                    compatibilidadeGetChatAplicada = false;
-                    compatibilidadeQueryExistAplicada = false;
-                    compatibilidadeSendMessageAplicada = false;
-                    compatibilidadeSendSeenAplicada = false;
-                }
-                console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
-                return false;
-            } finally {
-                if (compatibilidadeGetChatEmAplicacao === tentativa) {
-                    compatibilidadeGetChatEmAplicacao = null;
-                }
-            }
-        })();
-        compatibilidadeGetChatEmAplicacao = tentativa;
-    }
-
-    return compatibilidadeGetChatEmAplicacao;
-}
-
-async function obterEstadoWhatsAppRobusto(clienteAtual = client) {
-    let erroOriginal = null;
-
-    try {
-        const estado = await clienteAtual.getState();
-        if (estado) return estado;
-    } catch (err) {
-        erroOriginal = err;
-    }
-
-    // O WhatsApp Web pode manter a sessão autenticada enquanto a injeção de
-    // Store.AppState é refeita. Consulte o AuthStore antes de considerar a
-    // sessão presa; o fallback não altera dados nem inicia outro navegador.
-    if (typeof clienteAtual?.pupPage?.evaluate === 'function') {
-        try {
-            const estado = await clienteAtual.pupPage.evaluate(() =>
-                window.Store?.AppState?.state || window.AuthStore?.AppState?.state || ''
-            );
-            if (estado) return estado;
-        } catch (err) {
-            erroOriginal = erroOriginal || err;
-        }
-    }
-
-    // client.info.wid só é preenchido depois da autenticação concluída. Ele é
-    // uma confirmação segura para manter os envios durante a reconstrução
-    // transitória do AppState.
-    if (clienteAtual?.info?.wid) return 'CONNECTED';
-    if (erroOriginal) throw erroOriginal;
-    return null;
-}
 
 function obterHoraSaoPaulo(data = new Date()) {
     const partes = new Intl.DateTimeFormat('pt-BR', {
@@ -724,11 +646,6 @@ async function iniciarWhatsApp() {
 
         await client.initialize();
 
-        // O evento `ready` pode não ser emitido em algumas versões. Aplicar
-        // também após initialize garante que o patch esteja ativo antes do
-        // primeiro envio liberado pelo monitor de saúde.
-        await garantirCompatibilidadeGetChat(client);
-
         console.log('Initialize executado');
     } catch (err) {
         inicializando = false;
@@ -786,11 +703,6 @@ async function encerrarWhatsApp() {
 
     conectado = false;
     inicializando = false;
-    compatibilidadeGetChatAplicada = false;
-    compatibilidadeQueryExistAplicada = false;
-    compatibilidadeSendMessageAplicada = false;
-    compatibilidadeSendSeenAplicada = false;
-    compatibilidadeGetChatEmAplicacao = null;
     statusWhatsApp = 'encerrando';
 
     if (!client) return;
@@ -864,25 +776,10 @@ async function verificarSaudeWhatsApp() {
     }
 
     try {
-        const estado = await obterEstadoWhatsAppRobusto(client);
+        const estado = await client.getState();
         const ok = estado === 'CONNECTED';
 
-        if (ok) {
-            await garantirCompatibilidadeGetChat(client);
-        }
-
-        if (ok && !conectado) {
-            // Algumas versões do WhatsApp Web podem emitir `authenticated` e
-            // atualizar o estado para CONNECTED sem disparar o evento `ready`.
-            // O estado confirmado pelo próprio cliente é suficiente para
-            // liberar os envios e evita que o monitor reinicie a sessão.
-            conectado = true;
-            inicializando = false;
-            statusWhatsApp = 'conectado';
-            qrAtual = '';
-            tentativasReconexao = 0;
-            console.log('WhatsApp conectado (confirmado pela verificacao de saude)');
-        } else if (conectado && !ok) {
+        if (conectado && !ok) {
             conectado = false;
             statusWhatsApp = estado ? `sessao_${String(estado).toLowerCase()}` : 'sessao_presa';
         }
@@ -970,10 +867,6 @@ function getStatusWhatsApp() {
         takeoverAtivo: TAKEOVER_ATIVO,
         authTimeoutMs: AUTH_TIMEOUT_MS,
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
-        compatibilidadeGetChatAplicada,
-        compatibilidadeQueryExistAplicada,
-        compatibilidadeSendMessageAplicada,
-        compatibilidadeSendSeenAplicada,
         numeroConectado: client?.info?.wid?.user || '',
         mensagensRecebidasTotal,
         ultimaMensagemRecebidaEm,

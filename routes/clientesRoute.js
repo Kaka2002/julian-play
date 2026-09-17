@@ -4353,44 +4353,6 @@ function confirmarEnvioWhatsApp(chaveEnvio, envio) {
     });
 }
 
-function confirmarMensagemWhatsApp(enviada, destino, client) {
-    const id = enviada?.id?._serialized || enviada?.id?.id || enviada?.id;
-    if (!id || typeof id !== 'string' || !id.trim()) {
-        throw new Error('WhatsApp nao confirmou o envio (mensagem sem ID).');
-    }
-
-    const remoto = String(
-        enviada?.to
-        || enviada?.id?.remote?._serialized
-        || enviada?.id?.remote
-        || ''
-    ).trim();
-    const proprio = String(client?.info?.wid?._serialized || '').trim();
-    if (remoto && proprio && remoto === proprio) {
-        throw new Error('WhatsApp confirmou envio para a propria conta, nao para o cliente.');
-    }
-    return enviada;
-}
-
-async function enviarMensagemWhatsApp(client, destino, conteudo, opcoes = {}) {
-    if (typeof client?.getChatById === 'function') {
-        try {
-            const chat = await client.getChatById(destino);
-            if (!chat || typeof chat.sendMessage !== 'function') {
-                throw new Error('WhatsApp nao retornou a conversa do destinatario.');
-            }
-            return await chat.sendMessage(conteudo, opcoes);
-        } catch (err) {
-            if (/sem ID|confirmou envio/.test(String(err?.message || ''))) {
-                throw err;
-            }
-            console.warn(`[clientes] Envio pela conversa falhou para ${destino}; tentando API direta: ${err.message}`);
-        }
-    }
-
-    return client.sendMessage(destino, conteudo, opcoes);
-}
-
 async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, descricao = 'Envio pelo WhatsApp') {
     const destinos = await resolverDestinosWhatsApp(client, telefone);
     let ultimoErro = null;
@@ -4411,13 +4373,10 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
             }
 
             reservarEnvioWhatsApp(chaveEnvio);
+            registrarEnvioDoRobo(destino, mensagem);
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
-                    async () => confirmarMensagemWhatsApp(
-                        await enviarMensagemWhatsApp(client, destino, mensagem),
-                        destino,
-                        client
-                    ),
+                    () => client.sendMessage(destino, mensagem),
                     descricao,
                     {
                         proativo: true,
@@ -4428,8 +4387,19 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
                 descricao
             );
 
+            if (!envio) {
+                console.warn(`[clientes] ${descricao} sem confirmacao do WhatsApp para ${destino}; tratando como enviado para evitar duplicidade.`);
+                confirmarEnvioWhatsApp(chaveEnvio, null);
+
+                return {
+                    destino,
+                    mensagemId: '',
+                    ack: undefined,
+                    semConfirmacao: true
+                };
+            }
+
             registrarMensagemDoRobo(envio);
-            registrarEnvioDoRobo(destino, mensagem);
             confirmarEnvioWhatsApp(chaveEnvio, envio);
 
             return {
