@@ -499,11 +499,19 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                     `Envio do PIX copia e cola ${planoPix.nome}`,
                     options
                 );
-                console.log(`PIX copia e cola ${planoPix.nome} confirmado`, idMensagem(enviada));
+                if (enviada) {
+                    console.log(`PIX copia e cola ${planoPix.nome} confirmado`, idMensagem(enviada));
+                } else {
+                    console.log(`PIX copia e cola ${planoPix.nome} aceito sem ID; nao repetindo`);
+                }
             }
         }
 
-        console.log(`QR Code PIX ${planoPix.nome} confirmado`, idMensagem(enviada));
+        if (enviada) {
+            console.log(`QR Code PIX ${planoPix.nome} confirmado`, idMensagem(enviada));
+        } else {
+            console.log(`QR Code PIX ${planoPix.nome} aceito sem ID; nao repetindo`);
+        }
         registrarMensagemDoRobo(enviada);
         return true;
     } catch (error) {
