@@ -405,7 +405,10 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
 
         const enviada = await comTimeout(
             enfileirarEnvio(
-                () => client.sendMessage(destino, media, { caption }),
+                // Marcar a conversa como lida e opcional e falha em algumas
+                // cargas do WhatsApp Web. O envio da cobranca nao depende
+                // desse passo secundario.
+                () => client.sendMessage(destino, media, { caption, sendSeen: false }),
                 `Envio do QR Code PIX ${planoPix.nome}`,
                 {
                     proativo: Boolean(options.proativo),
@@ -436,7 +439,7 @@ Não foi possível gerar o QR Code neste momento.
 Tente novamente ou escolha outro plano.
 
 *0* - Voltar ao menu principal
-${RODAPE_ATENDIMENTO}`),
+${RODAPE_ATENDIMENTO}`, { sendSeen: false }),
                 ENVIO_TIMEOUT_MS,
                 'Envio de erro do PIX'
             );
