@@ -50,6 +50,7 @@ let ultimaRecuperacaoWhatsApp = null;
 let recuperacaoEmAndamento = false;
 let compatibilidadeGetChatAplicada = false;
 let compatibilidadeQueryExistAplicada = false;
+let compatibilidadeSendMessageAplicada = false;
 let compatibilidadeSendSeenAplicada = false;
 let compatibilidadeGetChatEmAplicacao = null;
 const mensagensRecebidasContabilizadas = new Set();
@@ -73,6 +74,7 @@ async function garantirCompatibilidadeGetChat(clienteAtual = client) {
                 if (clienteAtual === client) {
                     compatibilidadeGetChatAplicada = Boolean(resultado?.ok);
                     compatibilidadeQueryExistAplicada = Boolean(resultado?.queryExist);
+                    compatibilidadeSendMessageAplicada = Boolean(resultado?.sendMessage);
                     compatibilidadeSendSeenAplicada = Boolean(resultado?.sendSeen);
                 }
                 console.log('Compatibilidade de envio WhatsApp:', resultado);
@@ -81,6 +83,7 @@ async function garantirCompatibilidadeGetChat(clienteAtual = client) {
                 if (clienteAtual === client) {
                     compatibilidadeGetChatAplicada = false;
                     compatibilidadeQueryExistAplicada = false;
+                    compatibilidadeSendMessageAplicada = false;
                     compatibilidadeSendSeenAplicada = false;
                 }
                 console.log('Compatibilidade de envio WhatsApp indisponivel:', err.message);
@@ -647,7 +650,6 @@ async function iniciarWhatsApp() {
             statusWhatsApp = 'autenticado';
             qrAtual = '';
             console.log('Autenticado');
-            garantirCompatibilidadeGetChat(client).catch(() => {});
         });
 
         client.on('change_state', (state) => {
@@ -786,6 +788,7 @@ async function encerrarWhatsApp() {
     inicializando = false;
     compatibilidadeGetChatAplicada = false;
     compatibilidadeQueryExistAplicada = false;
+    compatibilidadeSendMessageAplicada = false;
     compatibilidadeSendSeenAplicada = false;
     compatibilidadeGetChatEmAplicacao = null;
     statusWhatsApp = 'encerrando';
@@ -969,6 +972,7 @@ function getStatusWhatsApp() {
         protocolTimeoutMs: PROTOCOL_TIMEOUT_MS,
         compatibilidadeGetChatAplicada,
         compatibilidadeQueryExistAplicada,
+        compatibilidadeSendMessageAplicada,
         compatibilidadeSendSeenAplicada,
         numeroConectado: client?.info?.wid?.user || '',
         mensagensRecebidasTotal,

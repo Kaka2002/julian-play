@@ -10,13 +10,16 @@ código; itens operacionais externos não são marcados como implementados.
   em uma sessão conectada. A compatibilidade instala um wrapper seguro que
   preserva o helper original quando possível e não bloqueia o envio quando a
   marcação de leitura falha. O health local expõe
-  `compatibilidadeSendSeenAplicada` para conferência operacional. Afeta o
+  `compatibilidadeSendSeenAplicada` e `compatibilidadeSendMessageAplicada`
+  para conferência operacional. Afeta o
   painel administrador, clientes comerciais no servidor e instalações locais;
   preserva banco, configurações, cobranças, históricos, backups e sessão do
   WhatsApp. Validado com `node --check`, suíte interna completa (151 testes),
   `git diff --check` e geração do pacote; o fluxo PIX usa ainda
   `sendSeen: false` como proteção independente. Exige deploy e teste real de
-  entrega.
+  entrega. A compatibilidade também não cria mais `window.WWebJS` durante a
+  autenticação: ela aguarda a injeção oficial do `LoadUtils`, evitando que
+  `sendMessage` fique ausente na sessão.
 
 - O deploy do Windows passou a respeitar `PM2_HOME` já definido no terminal e
   usa o caminho padrão `.pm2` apenas quando não há configuração. Isso impede

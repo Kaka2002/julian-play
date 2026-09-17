@@ -29,9 +29,15 @@ instalada no processo agora fornece um wrapper seguro: usa o helper original
 quando disponível e transforma falhas de marcar a conversa como vista em
 retorno opcional, permitindo que o envio continue. O `/health` local informa
 `compatibilidadeSendSeenAplicada` para confirmar a camada antes do teste.
+O mesmo health expõe `compatibilidadeSendMessageAplicada`, que só fica `true`
+quando o `LoadUtils` oficial carregou o helper real de envio.
 O fluxo de cobrança PIX também envia explicitamente com `sendSeen: false`,
 incluindo o fallback copia e cola e a mensagem de erro, para que nenhuma
 cobrança dependa da marcação de leitura.
+Durante a autenticação, a compatibilidade aguarda o `LoadUtils` oficial do
+whatsapp-web.js antes de tocar em `window.WWebJS`; criar esse namespace parcial
+cedo demais fazia o cliente considerar a injeção concluída e deixava
+`sendMessage` ausente. O patch só é aplicado depois da injeção oficial.
 
 A correção afeta o painel administrador, clientes comerciais no servidor e
 instalações locais; o Painel Mestre não usa a sessão do WhatsApp. Banco,

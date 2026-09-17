@@ -171,7 +171,10 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
             },
             WidFactory: { createWid: valor => ({ _serialized: valor }) }
         },
-        WWebJS: { getChatModel: async valor => ({ modelo: valor }) }
+        WWebJS: {
+            getChatModel: async valor => ({ modelo: valor }),
+            sendMessage: async () => ({})
+        }
     };
 
     try {
@@ -181,6 +184,7 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
         });
         const recuperada = await global.window.WWebJS.getChat('5511999999999@c.us', { getAsModel: false });
         assert.equal(resultado.ok, true);
+        assert.equal(resultado.sendMessage, true);
         assert.equal(resultado.sendSeen, true);
         assert.equal(typeof global.window.WWebJS.sendSeen, 'function');
         assert.equal(await global.window.WWebJS.sendSeen('5511999999999@c.us'), false);
@@ -199,7 +203,8 @@ test('WhatsApp recria QueryExist quando a Store atual nao o expoe', async () => 
         Store: {
             Chat: { get: valor => valor?._serialized === wid._serialized ? chat : null },
             WidFactory: { createWid: valor => ({ _serialized: valor }) }
-        }
+        },
+        WWebJS: { sendMessage: async () => ({}) }
     };
 
     try {
@@ -232,7 +237,8 @@ test('WhatsApp cria conversa ausente usando FindOrCreateChat apos QueryExist', a
                     return { chat };
                 }
             }
-        }
+        },
+        WWebJS: { sendMessage: async () => ({}) }
     };
 
     try {
@@ -267,7 +273,10 @@ test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade
                                 Chat: { get: () => chat, find: async () => chat },
                                 WidFactory: { createWid: valor => ({ _serialized: valor }) }
                             },
-                            WWebJS: { getChatModel: async valor => ({ modelo: valor }) }
+                            WWebJS: {
+                                getChatModel: async valor => ({ modelo: valor }),
+                                sendMessage: async () => ({})
+                            }
                         };
                     }
                     return fn();
@@ -282,7 +291,7 @@ test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade
     }
 });
 
-test('WhatsApp cria WWebJS quando a Store ja esta pronta', async () => {
+test('WhatsApp aguarda a injecao oficial de WWebJS antes da compatibilidade', async () => {
     const anterior = global.window;
     const chat = { id: { _serialized: '5511777777777@c.us' } };
     global.window = {
@@ -298,8 +307,9 @@ test('WhatsApp cria WWebJS quando a Store ja esta pronta', async () => {
             pupPage: { evaluate: async fn => fn() }
         }, { intervaloMs: 50, tempoMaximoMs: 100 });
 
-        assert.equal(resultado.ok, true);
-        assert.equal(await global.window.WWebJS.getChat('5511777777777@c.us', { getAsModel: false }), chat);
+        assert.equal(resultado.ok, false);
+        assert.match(resultado.motivo, /WWebJS\.sendMessage/);
+        assert.equal(global.window.WWebJS, undefined);
     } finally {
         global.window = anterior;
     }

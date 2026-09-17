@@ -91,10 +91,17 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             };
         }
 
-        // Em algumas cargas a Store fica pronta antes do namespace WWebJS.
-        // Criar o objeto aqui permite instalar somente o helper necessário
-        // para o envio, sem substituir os demais utilitários da biblioteca.
-        window.WWebJS = window.WWebJS || {};
+        // Nunca crie WWebJS durante a autenticacao. O whatsapp-web.js usa a
+        // existencia desse objeto para decidir se deve carregar LoadUtils;
+        // criar um objeto parcial aqui impede a biblioteca de expor
+        // sendMessage e todos os envios passam a falhar depois.
+        if (!window.WWebJS || typeof window.WWebJS.sendMessage !== 'function') {
+            return {
+                ok: false,
+                motivo: 'WWebJS.sendMessage ainda indisponivel; aguardando injecao oficial',
+                ausentes: ['WWebJS.sendMessage']
+            };
+        }
 
         // O Client.sendMessage da versao atual chama este helper antes de
         // enviar qualquer texto ou midia. Algumas cargas recentes do
@@ -117,7 +124,7 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         }
 
         if (window.WWebJS.__julianGetChatCompatVersion === 3 && typeof window.Store.QueryExist === 'function') {
-            return { ok: true, reutilizada: true, queryExist: true, sendSeen: true };
+            return { ok: true, reutilizada: true, queryExist: true, sendMessage: true, sendSeen: true };
         }
 
         const getChatModel = window.WWebJS.getChatModel;
@@ -194,6 +201,7 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             ok: true,
             reutilizada: false,
             queryExist: typeof window.Store.QueryExist === 'function',
+            sendMessage: typeof window.WWebJS.sendMessage === 'function',
             sendSeen: typeof window.WWebJS.sendSeen === 'function'
         };
             });
