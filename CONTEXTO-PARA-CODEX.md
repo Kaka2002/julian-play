@@ -1742,3 +1742,8 @@ pm ci normalmente.
 ## Rollback operacional de 17/09/2026
 
 - Por solicitação operacional, o código funcional foi retornado ao commit-base `1395d8a` de 16/09/2026 às 21:57, última revisão anterior às alterações recentes de compatibilidade do WhatsApp. O rollback preserva banco, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos PM2; exige atualizar a produção e confirmar um envio real de PIX após a reinicialização.
+
+## Correção da dependência WhatsApp em 17/09/2026
+
+- Os logs após a reinicialização da sessão mostraram `getEphemeralFields` ausente no `whatsapp-web.js` 1.34.7. A dependência foi fixada em `1.34.6`, versão presente no ambiente que funcionava antes da reinicialização, para impedir atualização automática por `^1.26.0`.
+- O banco, as configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos de cada instalação permanecem preservados. O deploy deve instalar o lockfile com o processo PM2 parado e depois confirmar o envio real do QR PIX.
