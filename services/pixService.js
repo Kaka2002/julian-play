@@ -382,32 +382,58 @@ function descreverConfiguracaoPix(configPix) {
 }
 
 async function resolverDestinoQRCode(client, destino) {
+    const destinos = await resolverDestinosQRCode(client, destino);
+    return destinos[0] || '';
+}
+
+async function resolverDestinosQRCode(client, destino) {
     const original = String(destino || '').trim();
-    if (!original || original.includes('@lid') || typeof client?.getNumberId !== 'function') {
-        return original;
+    const destinos = [];
+    const adicionarDestino = (valor) => {
+        const item = String(valor || '').trim();
+        if (item && !destinos.includes(item)) destinos.push(item);
+    };
+
+    adicionarDestino(original);
+    if (!original) return destinos;
+
+    // Em conversas LID o WhatsApp Web pode falhar em getChat para midias.
+    // Recuperamos o telefone real para tentar o mesmo envio no endereco @c.us.
+    if (original.endsWith('@lid') && typeof client?.pupPage?.evaluate === 'function') {
+        try {
+            const telefoneReal = await comTimeout(
+                client.pupPage.evaluate(async (id) => {
+                    const resultado = await window.WWebJS.enforceLidAndPnRetrieval(id);
+                    return resultado?.phone?._serialized || '';
+                }, original),
+                7000,
+                'Busca do telefone real do contato LID'
+            );
+            adicionarDestino(telefoneReal);
+            if (telefoneReal) {
+                console.log(`[pix] Destino LID do QR Code tambem sera tentado como ${telefoneReal}.`);
+            }
+        } catch (err) {
+            console.warn(`[pix] Nao foi possivel converter o LID ${original} para telefone: ${err.message}.`);
+        }
     }
 
     const numero = original.replace(/@[^@]+$/, '').replace(/\D/g, '');
-    if (!numero) return original;
-
-    try {
-        const contato = await comTimeout(
-            client.getNumberId(numero),
-            15000,
-            'Validacao do destinatario do QR Code'
-        );
-        const resolvido = String(contato?._serialized || '').trim();
-        if (resolvido) {
-            if (resolvido !== original) {
-                console.log(`[pix] Destino do QR Code resolvido de ${original} para ${resolvido}.`);
-            }
-            return resolvido;
+    if (numero && typeof client?.getNumberId === 'function') {
+        try {
+            const contato = await comTimeout(
+                client.getNumberId(numero),
+                15000,
+                'Validacao do destinatario do QR Code'
+            );
+            const resolvido = String(contato?._serialized || '').trim();
+            if (resolvido) adicionarDestino(resolvido);
+        } catch (err) {
+            console.warn(`[pix] Nao foi possivel resolver o destinatario ${original}: ${err.message}.`);
         }
-    } catch (err) {
-        console.warn(`[pix] Nao foi possivel resolver o destinatario ${original}: ${err.message}. Tentando o numero cadastrado.`);
     }
 
-    return original;
+    return destinos;
 }
 
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
@@ -429,70 +455,77 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         const caption = cobrancaAutomatica
             ? legendaPixMercadoPago(planoPix, options)
             : legendaPixPorContexto(planoPix, options, configPix);
-        const destinoResolvido = await resolverDestinoQRCode(client, destino);
-        console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destinoResolvido);
-        registrarEnvioDoRobo(destinoResolvido, caption);
+        const destinosResolvidos = await resolverDestinosQRCode(client, destino);
+        let ultimoErroEnvio = null;
 
-        let enviada;
-        try {
-            enviada = await comTimeout(
-                enfileirarEnvio(
-                    () => client.sendMessage(destinoResolvido, media, {
-                        caption,
-                        // A legenda do PIX nao precisa de pre-visualizacao de links.
-                        // O WhatsApp Web pode tentar consultar metadados inexistentes
-                        // nesse caminho e falhar com "Data passed to getter...".
-                        linkPreview: false,
-                        // O pipeline de imagens do WhatsApp Web falha mesmo com a
-                        // sessao conectada (erro de getter sem id). Como documento,
-                        // o PNG continua escaneavel e nao passa pela compressao
-                        // instavel de imagens.
-                        sendMediaAsDocument: true
-                    }),
-                    `Envio do QR Code PIX ${planoPix.nome}`,
-                    {
-                        proativo: Boolean(options.proativo),
-                        persistencia: options.proativo ? {
-                            tipo: 'midia',
-                            destino: destinoResolvido,
-                            midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
-                            opcoesMensagem: { caption }
-                        } : undefined
-                    }
-                ),
-                ENVIO_TIMEOUT_MS,
-                'Envio do QR Code PIX'
-            );
-        } catch (erroMidia) {
-            // Se o WhatsApp rejeitar o anexo, ainda entregamos o pagamento por
-            // texto. O código copia e cola funciona em qualquer banco e evita
-            // que a cobrança seja perdida por uma falha exclusiva de mídia.
-            const copiaECola = cobrancaAutomatica?.qrCode || gerarPixCopiaECola(planoPix, configPix);
-            const mensagemCopiaECola = `${caption}\n\n📋 *PIX copia e cola:*\n${copiaECola}`;
-            console.warn(`[pix] Mídia do QR recusada (${erroMidia.message}); enviando PIX copia e cola como texto.`);
-            enviada = await comTimeout(
-                enfileirarEnvio(
-                    () => client.sendMessage(destinoResolvido, mensagemCopiaECola, { linkPreview: false }),
-                    `Envio do PIX copia e cola ${planoPix.nome}`,
-                    {
-                        proativo: Boolean(options.proativo),
-                        persistencia: options.proativo ? {
-                            tipo: 'texto',
-                            destino: destinoResolvido,
-                            texto: mensagemCopiaECola,
-                            opcoesMensagem: { linkPreview: false }
-                        } : undefined
-                    }
-                ),
-                ENVIO_TIMEOUT_MS,
-                'Envio do PIX copia e cola'
-            );
-            console.log(`PIX copia e cola ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+        for (const destinoResolvido of destinosResolvidos) {
+            console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destinoResolvido);
+            registrarEnvioDoRobo(destinoResolvido, caption);
+
+            try {
+                let enviada;
+                try {
+                    enviada = await comTimeout(
+                        enfileirarEnvio(
+                            () => client.sendMessage(destinoResolvido, media, {
+                                caption,
+                                // A legenda do PIX nao precisa de pre-visualizacao de links.
+                                // O WhatsApp Web pode tentar consultar metadados inexistentes
+                                // nesse caminho e falhar com "Data passed to getter...".
+                                linkPreview: false,
+                                // Como documento, o PNG evita o pipeline instavel de imagens.
+                                sendMediaAsDocument: true
+                            }),
+                            `Envio do QR Code PIX ${planoPix.nome}`,
+                            {
+                                proativo: Boolean(options.proativo),
+                                persistencia: options.proativo ? {
+                                    tipo: 'midia',
+                                    destino: destinoResolvido,
+                                    midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
+                                    opcoesMensagem: { caption }
+                                } : undefined
+                            }
+                        ),
+                        ENVIO_TIMEOUT_MS,
+                        'Envio do QR Code PIX'
+                    );
+                } catch (erroMidia) {
+                    // Se o WhatsApp rejeitar o anexo, ainda entregamos o pagamento por
+                    // texto. O codigo copia e cola funciona em qualquer banco.
+                    const copiaECola = cobrancaAutomatica?.qrCode || gerarPixCopiaECola(planoPix, configPix);
+                    const mensagemCopiaECola = `${caption}\n\n📋 *PIX copia e cola:*\n${copiaECola}`;
+                    console.warn(`[pix] Midia do QR recusada para ${destinoResolvido} (${erroMidia.message}); tentando PIX copia e cola.`);
+                    enviada = await comTimeout(
+                        enfileirarEnvio(
+                            () => client.sendMessage(destinoResolvido, mensagemCopiaECola, { linkPreview: false }),
+                            `Envio do PIX copia e cola ${planoPix.nome}`,
+                            {
+                                proativo: Boolean(options.proativo),
+                                persistencia: options.proativo ? {
+                                    tipo: 'texto',
+                                    destino: destinoResolvido,
+                                    texto: mensagemCopiaECola,
+                                    opcoesMensagem: { linkPreview: false }
+                                } : undefined
+                            }
+                        ),
+                        ENVIO_TIMEOUT_MS,
+                        'Envio do PIX copia e cola'
+                    );
+                    console.log(`PIX copia e cola ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+                }
+
+                console.log(`QR Code PIX ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
+                registrarMensagemDoRobo(enviada);
+                return true;
+            } catch (erroDestino) {
+                ultimoErroEnvio = erroDestino;
+                console.warn(`[pix] Destino ${destinoResolvido} falhou para o QR Code PIX: ${erroDestino.message}`);
+            }
         }
 
-        console.log(`QR Code PIX ${planoPix.nome} enviado com sucesso`, enviada?.id?._serialized || 'sem id');
-        registrarMensagemDoRobo(enviada);
-        return true;
+        throw ultimoErroEnvio || new Error('Nenhum destino valido para enviar o QR Code PIX.');
     } catch (error) {
         console.error(`[pix] Erro ao gerar/enviar QR Code PIX | destino=${destino || 'sem_destino'} plano=${planoPix?.nome || plano?.nome || 'sem_plano'} valor=${planoPix?.valor || plano?.valor || 'sem_valor'} ${descreverConfiguracaoPix(configPix)} erro=${error.message}`);
 
@@ -526,6 +559,7 @@ module.exports = {
     enviarQRCodePIX,
     enviarQRCodePIXParaDestino,
     resolverDestinoQRCode,
+    resolverDestinosQRCode,
     gerarPixCopiaECola,
     planos
 };

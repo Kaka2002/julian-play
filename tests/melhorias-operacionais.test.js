@@ -172,6 +172,8 @@ test('QR PIX usa documento PNG quando o pipeline de imagens falha', () => {
     assert.match(trecho, /linkPreview:\s*false/);
     assert.match(trecho, /PIX copia e cola/);
     assert.match(trecho, /gerarPixCopiaECola/);
+    assert.match(trecho, /for \(const destinoResolvido of destinosResolvidos\)/);
+    assert.match(pix, /enforceLidAndPnRetrieval/);
 });
 
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {

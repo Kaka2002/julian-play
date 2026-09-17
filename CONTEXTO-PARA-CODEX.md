@@ -116,6 +116,10 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - Se o WhatsApp também recusar o documento, o sistema envia o código PIX copia
   e cola como texto na mesma conversa. O pagamento continua possível sem
   depender de anexos.
+- Em conversas com identificador `@lid`, o envio tenta também o telefone real
+  (`@c.us`) recuperado pelo WhatsApp Web. Isso cobre o caso em que textos são
+  aceitos para o LID, mas `getChat` falha especificamente para anexos ou para
+  a mensagem de fallback. Nenhum banco, cliente, cobrança ou sessão é alterado.
 - A verificação de saúde também promove a sessão para `conectado` quando o
   próprio WhatsApp Web retorna `CONNECTED`, mesmo que a versão em uso não
   emita o evento `ready`. Isso evita reinícios contínuos após escanear o QR e

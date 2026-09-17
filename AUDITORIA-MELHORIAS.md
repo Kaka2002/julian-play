@@ -268,6 +268,9 @@ código; itens operacionais externos não são marcados como implementados.
   escaneável; não há alteração de cobrança, banco ou sessão.
 - Quando o anexo também falha, o código copia e cola é enviado como texto para
   manter a cobrança operacional sem depender de mídia.
+- Para destinatários `@lid`, o QR tenta também o telefone real em `@c.us`,
+  recuperado pelo WhatsApp Web. Isso permite contornar falha de `getChat` no
+  LID sem apagar sessão, clientes, cobranças ou históricos.
 - A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
   evento `ready`, evitando reinícios após autenticação e permitindo os envios
   somente quando o WhatsApp Web confirmou a conexão.
