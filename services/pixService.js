@@ -381,6 +381,35 @@ function descreverConfiguracaoPix(configPix) {
     ].join(' ');
 }
 
+async function resolverDestinoQRCode(client, destino) {
+    const original = String(destino || '').trim();
+    if (!original || original.includes('@lid') || typeof client?.getNumberId !== 'function') {
+        return original;
+    }
+
+    const numero = original.replace(/@[^@]+$/, '').replace(/\D/g, '');
+    if (!numero) return original;
+
+    try {
+        const contato = await comTimeout(
+            client.getNumberId(numero),
+            15000,
+            'Validacao do destinatario do QR Code'
+        );
+        const resolvido = String(contato?._serialized || '').trim();
+        if (resolvido) {
+            if (resolvido !== original) {
+                console.log(`[pix] Destino do QR Code resolvido de ${original} para ${resolvido}.`);
+            }
+            return resolvido;
+        }
+    } catch (err) {
+        console.warn(`[pix] Nao foi possivel resolver o destinatario ${original}: ${err.message}. Tentando o numero cadastrado.`);
+    }
+
+    return original;
+}
+
 async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) {
     let planoPix = null;
     let configPix = null;
@@ -400,18 +429,19 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
         const caption = cobrancaAutomatica
             ? legendaPixMercadoPago(planoPix, options)
             : legendaPixPorContexto(planoPix, options, configPix);
-        console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destino);
-        registrarEnvioDoRobo(destino, caption);
+        const destinoResolvido = await resolverDestinoQRCode(client, destino);
+        console.log(`Enviando QR Code PIX ${planoPix.nome} para:`, destinoResolvido);
+        registrarEnvioDoRobo(destinoResolvido, caption);
 
         const enviada = await comTimeout(
             enfileirarEnvio(
-                () => client.sendMessage(destino, media, { caption }),
+                () => client.sendMessage(destinoResolvido, media, { caption }),
                 `Envio do QR Code PIX ${planoPix.nome}`,
                 {
                     proativo: Boolean(options.proativo),
                     persistencia: options.proativo ? {
                         tipo: 'midia',
-                        destino,
+                        destino: destinoResolvido,
                         midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
                         opcoesMensagem: { caption }
                     } : undefined
@@ -456,6 +486,7 @@ module.exports = {
     montarPlanosPadraoComerciais,
     enviarQRCodePIX,
     enviarQRCodePIXParaDestino,
+    resolverDestinoQRCode,
     gerarPixCopiaECola,
     planos
 };

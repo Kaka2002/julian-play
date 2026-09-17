@@ -250,6 +250,15 @@ código; itens operacionais externos não são marcados como implementados.
 
 - Versão 1.3.37: a edição de atendimentos agora abre o próprio registro e permite alterar motivo, prioridade, descrição e data do próximo contato. A atualização preserva cliente, status e histórico, registra a alteração e foi validada com 143 testes internos e 11 testes E2E.
 
+## Correção de 17/09/2026
+
+- O envio automático de QR Code PIX passou a resolver o destinatário pelo ID
+  atual do WhatsApp Web antes de anexar a mídia, com fallback para o número
+  cadastrado. Corrige o erro de getter sem `id` registrado em uma renovação,
+  preservando cobranças, clientes, bancos, sessões e mensagens de texto. A
+  validação inclui resolução simulada de LID, 143 testes internos, 11 testes
+  E2E, geração do pacote e teste de pacote local limpo.
+
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
 
 - Manifesto de pacote: gerador Ed25519 criado para registrar versão, arquivo, tamanho e SHA-256; a distribuição só deve ser feita após configurar a chave privada do Painel Mestre.

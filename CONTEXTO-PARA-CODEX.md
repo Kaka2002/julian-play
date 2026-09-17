@@ -97,6 +97,15 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   continua usando os mesmos formulários protegidos; não há migração nem ação
   manual de dados após o deploy.
 
+### Correção operacional de 17/09/2026
+
+- O envio automático de QR Code PIX resolve o destinatário pelo identificador
+  atual retornado pelo WhatsApp Web (incluindo LID) antes de enviar a mídia.
+  Quando a consulta não está disponível, o número cadastrado continua sendo
+  usado como fallback. Isso evita a falha “Data passed to getter must include
+  an id property” observada em envios de renovação; textos, clientes,
+  cobranças, bancos e sessões permanecem inalterados.
+
 ## Estrutura principal
 
 ### Repositório de desenvolvimento
