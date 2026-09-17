@@ -169,7 +169,9 @@ test('WhatsApp instala compatibilidade de getChat antes dos envios', async () =>
                     return chat;
                 }
             },
-            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+            WidFactory: { createWid: valor => ({ _serialized: valor }) },
+            MsgKey: { newId: async () => 'msg-id' },
+            SendMessage: { addAndSendMsgToChat: async () => [{}, {}] }
         },
         WWebJS: {
             getChatModel: async valor => ({ modelo: valor }),
@@ -202,7 +204,9 @@ test('WhatsApp recria QueryExist quando a Store atual nao o expoe', async () => 
     global.window = {
         Store: {
             Chat: { get: valor => valor?._serialized === wid._serialized ? chat : null },
-            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+            WidFactory: { createWid: valor => ({ _serialized: valor }) },
+            MsgKey: { newId: async () => 'msg-id' },
+            SendMessage: { addAndSendMsgToChat: async () => [{}, {}] }
         },
         WWebJS: { sendMessage: async () => ({}) }
     };
@@ -221,6 +225,43 @@ test('WhatsApp recria QueryExist quando a Store atual nao o expoe', async () => 
     }
 });
 
+test('WhatsApp recupera modulos posteriores da Store para montar e enviar mensagens', async () => {
+    const anterior = global.window;
+    const chat = { id: { _serialized: '5511999999999@c.us' } };
+    const modulos = {
+        WAWebUserPrefsMeUser: {
+            getMaybeMeLidUser: () => ({ _serialized: 'me@lid' }),
+            getMaybeMePnUser: () => ({ _serialized: 'me@c.us' })
+        },
+        WAWebMsgKey: { newId: async () => 'msg-id' },
+        WAWebSendMsgChatAction: { addAndSendMsgToChat: async () => [{}, {}] },
+        WAWebConnModel: { Conn: { wid: { _serialized: 'me@c.us' } } }
+    };
+    global.window = {
+        Store: {
+            Chat: { get: () => chat, find: async () => chat },
+            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+        },
+        require: nome => modulos[nome] || {},
+        WWebJS: { sendMessage: async () => ({}) }
+    };
+
+    try {
+        const { instalarCompatibilidadeGetChat } = require('../services/whatsappCompatService');
+        const resultado = await instalarCompatibilidadeGetChat({
+            pupPage: { evaluate: async fn => fn() }
+        }, { intervaloMs: 50, tempoMaximoMs: 100 });
+
+        assert.equal(resultado.ok, true);
+        assert.equal(resultado.msgKey, true);
+        assert.equal(resultado.sendMessageStore, true);
+        assert.equal(typeof global.window.Store.MsgKey.newId, 'function');
+        assert.equal(typeof global.window.Store.SendMessage.addAndSendMsgToChat, 'function');
+    } finally {
+        global.window = anterior;
+    }
+});
+
 test('WhatsApp cria conversa ausente usando FindOrCreateChat apos QueryExist', async () => {
     const anterior = global.window;
     const wid = { _serialized: '5511888888888@c.us' };
@@ -230,6 +271,8 @@ test('WhatsApp cria conversa ausente usando FindOrCreateChat apos QueryExist', a
         Store: {
             Chat: { get: () => null, find: async () => null },
             WidFactory: { createWid: valor => ({ _serialized: valor }) },
+            MsgKey: { newId: async () => 'msg-id' },
+            SendMessage: { addAndSendMsgToChat: async () => [{}, {}] },
             FindOrCreateChat: {
                 findOrCreateLatestChat: async valor => {
                     criou += 1;
@@ -271,7 +314,9 @@ test('WhatsApp aguarda a Store ficar disponivel antes de aplicar compatibilidade
                         global.window = {
                             Store: {
                                 Chat: { get: () => chat, find: async () => chat },
-                                WidFactory: { createWid: valor => ({ _serialized: valor }) }
+                                WidFactory: { createWid: valor => ({ _serialized: valor }) },
+                                MsgKey: { newId: async () => 'msg-id' },
+                                SendMessage: { addAndSendMsgToChat: async () => [{}, {}] }
                             },
                             WWebJS: {
                                 getChatModel: async valor => ({ modelo: valor }),
@@ -297,7 +342,9 @@ test('WhatsApp recarrega a injecao oficial de WWebJS antes da compatibilidade', 
     global.window = {
         Store: {
             Chat: { get: () => chat, find: async () => chat },
-            WidFactory: { createWid: valor => ({ _serialized: valor }) }
+            WidFactory: { createWid: valor => ({ _serialized: valor }) },
+            MsgKey: { newId: async () => 'msg-id' },
+            SendMessage: { addAndSendMsgToChat: async () => [{}, {}] }
         }
     };
 

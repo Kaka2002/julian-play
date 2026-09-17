@@ -28,6 +28,17 @@ código; itens operacionais externos não são marcados como implementados.
   como fallback seguro. A alteração preserva os dados da instalação e foi
   validada na suíte interna completa.
 
+- A mesma exposição parcial podia omitir `Store.MsgKey` e
+  `Store.SendMessage`, fazendo o envio parar em `newId` depois que a identidade
+  já havia sido restaurada. A compatibilidade agora recupera individualmente
+  os módulos posteriores e os componentes de preparação/upload de mídia; o
+  envio só é considerado pronto com `MsgKey.newId` e
+  `SendMessage.addAndSendMsgToChat`. Afeta o painel administrador, clientes
+  comerciais no servidor e instalações locais; preserva banco, configurações,
+  históricos, backups e sessão do WhatsApp. Validado com teste específico de
+  recuperação dos módulos, `node --check` e a suíte interna; requer novo deploy
+  e confirmação de um ID de mensagem em cliente real.
+
 - Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
   envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente
   em uma sessão conectada. A compatibilidade instala um wrapper seguro que

@@ -65,6 +65,42 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel', ausentes };
         }
 
+        // A exposicao oficial de Store e sequencial: se um modulo de uma
+        // versao do WhatsApp mudou de nome, os modulos seguintes deixam de
+        // ser atribuidos. O envio de texto e de midia ainda depende desses
+        // modulos posteriores, principalmente MsgKey e SendMessage. Tente
+        // recupera-los individualmente pelo require da propria pagina, sem
+        // substituir os objetos que ja foram carregados.
+        const requererModulo = nome => {
+            try { return window.require(nome); } catch (_) { return null; }
+        };
+        const moduloPadrao = modulo => modulo?.default || modulo;
+        const carregarModulo = (chave, nomes, extrair = moduloPadrao, pronto = valor => Boolean(valor)) => {
+            if (pronto(window.Store[chave])) return;
+            for (const nome of nomes) {
+                const valor = extrair(requererModulo(nome));
+                if (pronto(valor)) {
+                    window.Store[chave] = valor;
+                    return;
+                }
+            }
+        };
+
+        carregarModulo('Conn', ['WAWebConnModel'], modulo => modulo?.Conn || modulo?.default?.Conn || modulo);
+        carregarModulo('MsgKey', ['WAWebMsgKey'], moduloPadrao, valor => typeof valor?.newId === 'function');
+        carregarModulo('SendMessage', ['WAWebSendMsgChatAction'], moduloPadrao, valor => typeof valor?.addAndSendMsgToChat === 'function');
+        carregarModulo('MediaPrep', ['WAWebPrepRawMedia'], moduloPadrao, valor => typeof valor?.prepRawMedia === 'function');
+        carregarModulo('MediaObject', ['WAWebMediaStorage'], moduloPadrao, valor => typeof valor?.getOrCreateMediaObject === 'function');
+        carregarModulo('MediaTypes', ['WAWebMmsMediaTypes'], moduloPadrao, valor =>
+            typeof valor?.msgToMediaType === 'function' && typeof valor?.castToV4 === 'function'
+        );
+        carregarModulo('OpaqueData', ['WAWebMediaOpaqueData'], moduloPadrao, valor => typeof valor?.createFromData === 'function');
+        carregarModulo('MediaDataUtils', ['WAWebMediaDataUtils'], moduloPadrao, valor => typeof valor?.shouldUseMediaCache === 'function');
+        carregarModulo('MediaUpload', ['WAWebMediaMmsV4Upload', 'WAWebStartMediaUploadQpl'], modulo => ({
+            ...(moduloPadrao(requererModulo('WAWebMediaMmsV4Upload')) || {}),
+            ...(moduloPadrao(requererModulo('WAWebStartMediaUploadQpl')) || {})
+        }), valor => typeof valor?.uploadMedia === 'function');
+
         // LoadUtils.sendMessage consulta estes dois getters antes de qualquer
         // texto ou mídia. Sessões restauradas podem expor Store.Chat sem
         // expor o módulo completo; preencher apenas os getters necessários
@@ -111,6 +147,15 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         }
         if (typeof window.Store.User.getMaybeMePnUser !== 'function') {
             window.Store.User.getMaybeMePnUser = obterWidDaConexao;
+        }
+
+        const ausentesEnvio = [];
+        if (typeof window.Store.User?.getMaybeMeLidUser !== 'function') ausentesEnvio.push('Store.User.getMaybeMeLidUser');
+        if (typeof window.Store.User?.getMaybeMePnUser !== 'function') ausentesEnvio.push('Store.User.getMaybeMePnUser');
+        if (typeof window.Store.MsgKey?.newId !== 'function') ausentesEnvio.push('Store.MsgKey.newId');
+        if (typeof window.Store.SendMessage?.addAndSendMsgToChat !== 'function') ausentesEnvio.push('Store.SendMessage.addAndSendMsgToChat');
+        if (ausentesEnvio.length) {
+            return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel', ausentes: ausentesEnvio };
         }
 
         // A versão atual do WhatsApp Web pode deixar o módulo oficial fora da
@@ -186,7 +231,15 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         }
 
         if (window.WWebJS.__julianGetChatCompatVersion === 3 && typeof window.Store.QueryExist === 'function') {
-            return { ok: true, reutilizada: true, queryExist: true, sendMessage: true, sendSeen: true };
+            return {
+                ok: true,
+                reutilizada: true,
+                queryExist: true,
+                sendMessage: true,
+                sendSeen: true,
+                msgKey: true,
+                sendMessageStore: true
+            };
         }
 
         const getChatModel = window.WWebJS.getChatModel;
@@ -264,7 +317,9 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
             reutilizada: false,
             queryExist: typeof window.Store.QueryExist === 'function',
             sendMessage: typeof window.WWebJS.sendMessage === 'function',
-            sendSeen: typeof window.WWebJS.sendSeen === 'function'
+            sendSeen: typeof window.WWebJS.sendSeen === 'function',
+            msgKey: typeof window.Store.MsgKey?.newId === 'function',
+            sendMessageStore: typeof window.Store.SendMessage?.addAndSendMsgToChat === 'function'
         };
             });
 

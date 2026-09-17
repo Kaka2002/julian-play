@@ -45,6 +45,12 @@ esse módulo recebem apenas os dois getters seguros necessários para conversas
 de clientes. Ele também recupera `Store.User`, usado para montar a origem da
 mensagem; se a sessão não expuser esse módulo, os métodos de identidade usam o
 identificador da conexão já autenticada.
+Como a exposição oficial pode interromper antes dos módulos posteriores, a
+mesma etapa recupera individualmente `Store.MsgKey`, `Store.SendMessage` e os
+componentes de mídia (`MediaPrep`, `MediaObject`, `MediaTypes`, `OpaqueData`,
+`MediaDataUtils` e `MediaUpload`). O envio só é liberado quando `MsgKey.newId`
+e `SendMessage.addAndSendMsgToChat` estão disponíveis; assim, a sessão não fica
+marcada como pronta enquanto ainda houver uma dependência essencial ausente.
 O fluxo de cobrança PIX também envia explicitamente com `sendSeen: false`,
 incluindo o fallback copia e cola e a mensagem de erro, para que nenhuma
 cobrança dependa da marcação de leitura.
@@ -217,6 +223,15 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   quando o telefone ainda não possui conversa na coleção local. Isso permite
   abrir a conversa real antes de `chat.sendMessage`, sem marcar envio para a
   própria conta; a sessão, o banco e os dados do cliente permanecem intactos.
+- Em 17/09/2026, os logs de produção mostraram a falha seguinte
+  `Store.MsgKey.newId` depois da recuperação de `Store.User`. A exposição
+  oficial da Store é sequencial e pode parar em um módulo alterado pelo
+  WhatsApp Web; a camada agora tenta reconstituir individualmente os módulos
+  usados pelo envio, incluindo identidade, geração de chave, ação de envio e
+  preparação/upload de mídia. O resultado só é `ok` quando `MsgKey.newId` e
+  `SendMessage.addAndSendMsgToChat` existem. Bancos, configurações, históricos,
+  backups e sessões persistidas continuam preservados; requer novo deploy e
+  um teste real com confirmação de ID no log.
 - O `/health` local agora expõe `compatibilidadeQueryExistAplicada` junto do
   indicador de `getChat`, permitindo confirmar pelo painel operacional que o
   resolvedor está ativo. Esse campo não é exposto no health público.
