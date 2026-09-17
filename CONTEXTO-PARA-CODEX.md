@@ -108,6 +108,9 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
 - O envio da mídia e da mensagem de fallback desativa a prévia de links do
   WhatsApp Web. Essa prévia podia consultar metadados inexistentes e provocar
   novamente o erro do getter mesmo depois da resolução para LID.
+- O QR PIX é enviado como documento para contornar a regressão de imagens da
+  versão 1.34.7 do `whatsapp-web.js`; o arquivo continua sendo PNG e pode ser
+  aberto e escaneado pelo cliente.
 
 ## Estrutura principal
 

@@ -262,6 +262,9 @@ código; itens operacionais externos não são marcados como implementados.
   a consulta instável de prévia de links do WhatsApp Web. A alteração afeta os
   quatro perfis e preserva dados, sessões e textos; requer novo deploy e um
   teste manual de renovação para confirmar o envio da mídia.
+- Como a versão 1.34.7 também apresenta regressão no pipeline de imagens, o QR
+  é enviado com `sendMediaAsDocument: true`. O cliente recebe o PNG como
+  documento escaneável, sem alteração de cobrança, banco ou sessão.
 
 - Controle de ativação atômica: a primeira consulta com fingerprint vincula a licença em uma atualização condicional SQLite; concorrências posteriores são registradas e bloqueadas sem alterar dados da instalação.
 
