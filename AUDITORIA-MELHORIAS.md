@@ -263,8 +263,9 @@ código; itens operacionais externos não são marcados como implementados.
   quatro perfis e preserva dados, sessões e textos; requer novo deploy e um
   teste manual de renovação para confirmar o envio da mídia.
 - A dependência `whatsapp-web.js` foi fixada na 1.34.6 para evitar a regressão
-  de envio de imagens da 1.34.7. O QR permanece como imagem PNG; não há
-  alteração de cobrança, banco ou sessão.
+  de envio de imagens da 1.34.7. Como o erro de getter sem id também ocorreu
+  com a sessão conectada, o QR passa a ser enviado como documento PNG
+  escaneável; não há alteração de cobrança, banco ou sessão.
 - A saúde da sessão agora reconhece `getState() === 'CONNECTED'` mesmo sem o
   evento `ready`, evitando reinícios após autenticação e permitindo os envios
   somente quando o WhatsApp Web confirmou a conexão.

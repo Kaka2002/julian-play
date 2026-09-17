@@ -163,6 +163,15 @@ test('saude do robo usa textos em portugues acentuados', () => {
     assert.doesNotMatch(rota, /Saude do robo/);
 });
 
+test('QR PIX usa documento PNG quando o pipeline de imagens falha', () => {
+    const fs = require('fs');
+    const pix = fs.readFileSync(path.join(__dirname, '..', 'services', 'pixService.js'), 'utf8');
+    const inicio = pix.indexOf('enviarQRCodePIXParaDestino');
+    const trecho = pix.slice(inicio, pix.indexOf('module.exports', inicio));
+    assert.match(trecho, /sendMediaAsDocument:\s*true/);
+    assert.match(trecho, /linkPreview:\s*false/);
+});
+
 test('pagina de campanhas exibe campanhas disponiveis e permite disparo', () => {
     const fs = require('fs');
     const rota = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');

@@ -109,8 +109,10 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   WhatsApp Web. Essa prévia podia consultar metadados inexistentes e provocar
   novamente o erro do getter mesmo depois da resolução para LID.
 - A dependência `whatsapp-web.js` foi fixada na versão 1.34.6, anterior à
-  regressão de envio de imagens observada na 1.34.7. O QR volta a ser enviado
-  como imagem PNG; a prévia de links continua desativada na legenda.
+  regressão de envio de imagens observada na 1.34.7. Como o pipeline de
+  imagens ainda pode falhar em sessões reais com o erro de getter sem id, o QR
+  é enviado como documento PNG escaneável; a prévia de links continua
+  desativada na legenda.
 - A verificação de saúde também promove a sessão para `conectado` quando o
   próprio WhatsApp Web retorna `CONNECTED`, mesmo que a versão em uso não
   emita o evento `ready`. Isso evita reinícios contínuos após escanear o QR e
