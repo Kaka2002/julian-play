@@ -176,6 +176,9 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   quando o telefone ainda não possui conversa na coleção local. Isso permite
   abrir a conversa real antes de `chat.sendMessage`, sem marcar envio para a
   própria conta; a sessão, o banco e os dados do cliente permanecem intactos.
+- O `/health` local agora expõe `compatibilidadeQueryExistAplicada` junto do
+  indicador de `getChat`, permitindo confirmar pelo painel operacional que o
+  resolvedor está ativo. Esse campo não é exposto no health público.
 
 ## Estrutura principal
 

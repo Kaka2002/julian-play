@@ -36,6 +36,11 @@ código; itens operacionais externos não são marcados como implementados.
   ou QR. Validado com teste de conversa ausente e preservação da confirmação
   por ID; requer novo deploy e teste real de entrega.
 
+- O health local passou a informar `compatibilidadeQueryExistAplicada`, sem
+  expor esse detalhe no endpoint público. Isso permite validar a camada antes
+  do teste de envio. Validado na suíte interna e preserva todos os dados da
+  instalação.
+
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão
   confirma o mesmo telefone. Identificadores divergentes ou da própria conta
