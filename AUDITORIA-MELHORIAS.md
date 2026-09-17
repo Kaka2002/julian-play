@@ -10,6 +10,11 @@ código; itens operacionais externos não são marcados como implementados.
   que o código atualizado seja aplicado a um daemon PM2 diferente do processo
   em produção. Nenhum banco, sessão ou backup é alterado. Validado com parse do
   PowerShell e `git diff --check`; requer novo deploy da rotina de atualização.
+- O envio de QR PIX e textos usa `chat.sendMessage` como caminho principal e
+  `client.sendMessage` apenas como fallback quando a conversa não puder ser
+  carregada. A mudança evita conclusões sem ID observadas em produção e mantém
+  a validação contra autoenvio. Validada na suíte interna completa (149 testes)
+  e no pacote local limpo.
 
 - Correção do envio de QR PIX em 17/09/2026: o telefone `@c.us` cadastrado é
   priorizado e LIDs retornados pelo WhatsApp só são aceitos quando a conversão

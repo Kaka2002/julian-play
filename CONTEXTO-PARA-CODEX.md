@@ -154,6 +154,10 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   usa `C:\\Users\\<usuario>\\.pm2` somente como padrão. Isso evita atualizar um
   daemon PM2 diferente daquele que mantém os processos de produção; bancos,
   sessões e backups continuam preservados.
+- O envio de QR e textos tenta primeiro `chat.sendMessage` após resolver a
+  conversa, pois `client.sendMessage` podia concluir sem retornar o ID nesta
+  sessão. A API direta permanece somente como fallback quando a conversa não
+  puder ser obtida; a confirmação de destinatário e ID continua obrigatória.
 
 ## Estrutura principal
 
