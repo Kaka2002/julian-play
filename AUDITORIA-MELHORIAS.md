@@ -15,6 +15,13 @@ código; itens operacionais externos não são marcados como implementados.
   históricos, backups e sessão. Validado com 151 testes internos, testes de
   navegação, geração do pacote e teste específico de recuperação do loader.
 
+- Corrigida a falha seguinte do envio de QR em sessões restauradas:
+  `window.Store.ChatGetters` podia estar ausente, causando erro em
+  `getIsNewsletter` antes do envio da mídia. A compatibilidade recupera o
+  módulo oficial quando disponível e instala somente os getters de canal e
+  transmissão como fallback. Bancos, configurações, históricos, backups e
+  sessão permanecem preservados; validado na suíte interna completa.
+
 - Correção definitiva da falha `window.WWebJS.sendSeen is not a function` no
   envio de texto e QR PIX: o whatsapp-web.js pode deixar esse helper ausente
   em uma sessão conectada. A compatibilidade instala um wrapper seguro que

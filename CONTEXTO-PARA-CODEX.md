@@ -39,6 +39,10 @@ retorno opcional, permitindo que o envio continue. O `/health` local informa
 `compatibilidadeSendSeenAplicada` para confirmar a camada antes do teste.
 O mesmo health expõe `compatibilidadeSendMessageAplicada`, que só fica `true`
 quando o `LoadUtils` oficial carregou o helper real de envio.
+O carregamento também garante `Store.ChatGetters`, usado pelo envio de mídia
+para classificar canais e transmissões; sessões restauradas que não expõem
+esse módulo recebem apenas os dois getters seguros necessários para conversas
+de clientes.
 O fluxo de cobrança PIX também envia explicitamente com `sendSeen: false`,
 incluindo o fallback copia e cola e a mensagem de erro, para que nenhuma
 cobrança dependa da marcação de leitura.

@@ -39,17 +39,19 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         // Se a injeção oficial não terminou, a própria página ainda pode
         // fornecer os módulos necessários pelo require exposto pelo WhatsApp.
         // Reconstitua somente Chat e WidFactory, sem substituir a Store inteira.
-        if ((!window.Store?.Chat || !window.Store?.WidFactory || !window.Store?.AppState || !window.Store?.FindOrCreateChat) && typeof window.require === 'function') {
+        if ((!window.Store?.Chat || !window.Store?.WidFactory || !window.Store?.AppState || !window.Store?.FindOrCreateChat || !window.Store?.ChatGetters) && typeof window.require === 'function') {
             try {
                 const colecoes = window.require('WAWebCollections');
                 const fabricaWid = window.require('WAWebWidFactory');
                 const socketModelo = window.require('WAWebSocketModel');
                 const criadorChat = window.require('WAWebFindChatAction');
+                const gettersChat = window.require('WAWebChatGetters');
                 window.Store = window.Store || {};
                 if (!window.Store.Chat && colecoes?.Chat) window.Store.Chat = colecoes.Chat;
                 if (!window.Store.WidFactory && fabricaWid) window.Store.WidFactory = fabricaWid;
                 if (!window.Store.AppState && socketModelo?.Socket) window.Store.AppState = socketModelo.Socket;
                 if (!window.Store.FindOrCreateChat && criadorChat) window.Store.FindOrCreateChat = criadorChat;
+                if (!window.Store.ChatGetters && gettersChat) window.Store.ChatGetters = gettersChat;
             } catch (_) {
                 // O bundle pode ainda estar carregando; a próxima tentativa
                 // repete a descoberta dentro da mesma janela.
@@ -61,6 +63,22 @@ async function instalarCompatibilidadeGetChat(client, opcoes = {}) {
         if (!window.Store?.WidFactory) ausentes.push('Store.WidFactory');
         if (ausentes.length) {
             return { ok: false, motivo: 'Store do WhatsApp ainda indisponivel', ausentes };
+        }
+
+        // LoadUtils.sendMessage consulta estes dois getters antes de qualquer
+        // texto ou mídia. Sessões restauradas podem expor Store.Chat sem
+        // expor o módulo completo; preencher apenas os getters necessários
+        // evita que o envio pare em `ChatGetters.getIsNewsletter`.
+        window.Store.ChatGetters = window.Store.ChatGetters || {};
+        if (typeof window.Store.ChatGetters.getIsNewsletter !== 'function') {
+            window.Store.ChatGetters.getIsNewsletter = chat => Boolean(
+                chat?.id?.isNewsletter?.() || /@newsletter\b/.test(chat?.id?._serialized || '')
+            );
+        }
+        if (typeof window.Store.ChatGetters.getIsBroadcast !== 'function') {
+            window.Store.ChatGetters.getIsBroadcast = chat => Boolean(
+                chat?.id?.isBroadcast?.() || /@broadcast\b/.test(chat?.id?._serialized || '')
+            );
         }
 
         // A versão atual do WhatsApp Web pode deixar o módulo oficial fora da
