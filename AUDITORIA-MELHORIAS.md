@@ -229,7 +229,12 @@ código; itens operacionais externos não são marcados como implementados.
   preferência fica somente no navegador, não altera dados, cálculos, campos
   de edição ou mensagens enviadas. Afeta o painel administrador, clientes
   comerciais no servidor e instalações locais; o Painel Mestre não usa este
-  layout. Validar visualmente o botão e a troca de estado após o deploy.
+  layout. As páginas Clientes, Editar cliente e Históricos não exibem o botão
+  e mantêm seus valores visíveis. A correção do escape da expressão regular
+  garante que o botão alterne de fato entre máscara e valor original. Validada
+  com teste E2E focado, suíte interna (143 testes), navegador (11 testes),
+  pacote local limpo e geração dos artefatos. Validar visualmente o botão e a
+  troca de estado após o deploy.
 
 - Privacidade e dados do cliente: o aviso, os campos de confirmação e as ações
   de exportação, anonimização e exclusão agora usam o mesmo alinhamento interno

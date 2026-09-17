@@ -3016,7 +3016,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             const botaoValores = document.querySelector('.money-visibility-toggle');
             if (!botaoValores) return;
 
-            const moeda = /(?:R\$|BRL)\s*(?:[\d.,]+|\*{3,}|•{3,})/g;
+            const moeda = /(?:R\\$|BRL)\\s*(?:[\\d.,]+|\\*{3,}|•{3,})/g;
             const ignorar = 'script,style,textarea,input,select,option,button,[data-money-ignore],.money-visibility-toggle';
             const marcarValores = () => {
                 const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {

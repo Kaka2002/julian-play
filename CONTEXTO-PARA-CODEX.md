@@ -84,6 +84,10 @@ As regras técnicas e de entrega obrigatórias estão em `AGENTS.md`.
   renderizado: não altera cálculos, bancos, valores de formulários, rotas ou
   mensagens de cobrança. Afeta o painel administrador, clientes comerciais no
   servidor e instalações locais; o Painel Mestre permanece fora deste layout.
+  As páginas de listagem, edição e históricos de clientes não exibem esse
+  controle e mantêm os valores monetários visíveis. A expressão usada para
+  localizar valores no HTML é escapada corretamente no template gerado, então
+  o clique funciona também depois de uma atualização do navegador.
 
 - A seção “Privacidade e dados do cliente” passou a recuar o aviso, os campos
   e as ações pelo mesmo espaçamento horizontal do cabeçalho do painel. A
