@@ -215,11 +215,11 @@ const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path
 const ASSETS_DIR = path.join(DATA_DIR, 'assets');
 const CLIENTES_AUTO_REFRESH_MS = Number(process.env.CLIENTES_AUTO_REFRESH_MS || 30000);
 const DASHBOARD_AUTO_REFRESH_MS = Number(process.env.DASHBOARD_AUTO_REFRESH_MS || 30000);
-const CLIENTES_POR_PAGINA = 6;
-const FINANCEIRO_POR_PAGINA = 6;
-const REGISTROS_POR_PAGINA = 6;
-const DASHBOARD_VENCIMENTOS_POR_PAGINA = 6;
-const OPCOES_POR_PAGINA = [6, 10, 20, 40, 60, 80, 100];
+const CLIENTES_POR_PAGINA = 5;
+const FINANCEIRO_POR_PAGINA = 5;
+const REGISTROS_POR_PAGINA = 5;
+const DASHBOARD_VENCIMENTOS_POR_PAGINA = 5;
+const OPCOES_POR_PAGINA = [5, 10, 20, 40, 60, 80, 100];
 const IMAGEM_CAMPANHA_AMIZADE = path.join(__dirname, '..', 'assets', 'amizade-presente.png');
 const IMAGEM_CAMPANHA_AMIZADE_BASE = path.join(__dirname, '..', 'assets', 'amizade-presente-base.png');
 const CHAVE_IMAGEM_CAMPANHA_AMIZADE = 'imagemCampanhaAmizade';
@@ -398,7 +398,7 @@ function paginaAtual(valor) {
     return Number.isFinite(pagina) && pagina > 0 ?pagina : 1;
 }
 
-function quantidadePorPagina(valor, padrao = 6) {
+function quantidadePorPagina(valor, padrao = 5) {
     const quantidade = Number.parseInt(valor, 10);
     return OPCOES_POR_PAGINA.includes(quantidade) ? quantidade : padrao;
 }
@@ -410,7 +410,7 @@ function quantidadeVencimentosDashboard(valor, padrao = DASHBOARD_VENCIMENTOS_PO
         : padrao;
 }
 
-function paginarItens(itens = [], pagina = 1, porPagina = 6) {
+function paginarItens(itens = [], pagina = 1, porPagina = 5) {
     const total = itens.length;
     const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
     const paginaSegura = Math.min(Math.max(1, pagina), totalPaginas);

@@ -42,7 +42,7 @@ function criarPendenciasRoute(deps = {}) {
                 <input name="busca" value="${escapar(filtros.busca)}" placeholder="Buscar cliente ou problema" aria-label="Buscar pendência">
                 <select name="prioridade" aria-label="Filtrar prioridade">${option('todas', filtros.prioridade, 'Todas as prioridades')}${option('critica', filtros.prioridade, 'Críticas')}${option('alta', filtros.prioridade, 'Altas')}${option('media', filtros.prioridade, 'Médias')}</select>
                 <select name="area" aria-label="Filtrar área">${option('todas', filtros.area, 'Todas as áreas')}${['clientes','financeiro','atendimentos','crm','whatsapp','paineis','campanhas','manutencao'].map(area => option(area, filtros.area, area.charAt(0).toUpperCase() + area.slice(1))).join('')}</select>
-                <select name="porPagina" aria-label="Quantidade por página">${[6,10,20,40,60,80,100].map(n => option(String(n), String(paginacao.porPagina), `${n} por página`)).join('')}</select>
+                <select name="porPagina" aria-label="Quantidade por página">${[5,10,20,40,60,80,100].map(n => option(String(n), String(paginacao.porPagina), `${n} por página`)).join('')}</select>
                 <button class="button" type="submit">Filtrar</button>
             </form>
             ${itens.length ? `<div class="pending-list">${itens.map(item => `<article class="pending-item">
@@ -82,7 +82,7 @@ function criarPendenciasRoute(deps = {}) {
         const whatsapp = getStatusWhatsApp();
         const sistema = await obterStatusSistema(whatsapp);
         const resultado = await listarPendenciasOperacionais(filtros, { operacional: { whatsapp, sistema } });
-        const paginacao = paginarItens(resultado.itens, paginaAtual(req.query.pagina), quantidadePorPagina(req.query.porPagina, 20));
+        const paginacao = paginarItens(resultado.itens, paginaAtual(req.query.pagina), quantidadePorPagina(req.query.porPagina, 5));
         return renderizar(res, { titulo: 'Central de Pendências', conteudo: tela({
             itens: paginacao.itens, resumo: resultado.resumo, filtros, paginacao
         }), ativo: 'pendencias', mensagem: String(req.query.mensagem || req.query.erro || '') });

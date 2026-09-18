@@ -1813,3 +1813,9 @@ pm ci normalmente.
 - O teste real confirmou que a falha de mídia pode variar e ainda assim o QR original é exibido. Por isso, a cobrança PIX não possui mais fallback para PNG como documento ou texto copia e cola após a tentativa de QR Code. Cada solicitação cria somente uma tentativa de mensagem.
 - Em caso de falha de confirmação, o log registra que o fallback foi bloqueado. Não há reenvio automático, pois uma segunda cobrança poderia induzir pagamento duplicado.
 - Validação automatizada cobre falha conhecida e falha genérica de mídia, ambas com uma única chamada de envio. Requer reiniciar o processo administrador e confirmar uma nova solicitação de plano no WhatsApp.
+
+## Paginação padrão de cinco registros em 18/09/2026
+
+- Todas as telas com paginação passam a iniciar com 5 registros por página: Clientes, Financeiro, cadastros, históricos, campanhas, dashboard, Pendências e histórico de licenças do Painel Mestre. O seletor mantém as opções 10, 20, 40, 60, 80 e 100.
+- A alteração afeta o painel administrador, clientes comerciais, instalações locais e Painel Mestre. Não altera bancos, dados de clientes, configurações, sessões, cobranças ou backups, nem requer migração.
+- Validação: sintaxe dos módulos alterados, 92 testes direcionados, suíte interna com 160 testes, `git diff --check`, geração do pacote e teste de instalação limpa aprovados. Aplicar com reinício do administrador e do Painel Mestre quando forem atualizados.

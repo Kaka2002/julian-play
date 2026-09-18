@@ -172,13 +172,13 @@ test('exclusao direta foi substituida por privacidade protegida por senha', () =
     assert.match(privacidade, /ANONIMIZAR/);
 });
 
-test('historico de licenca do Painel Mestre e paginado em 12 registros', () => {
+test('historico de licenca do Painel Mestre e paginado em 5 registros', () => {
     const mestre = fs.readFileSync(path.join(repoRoot, 'master', 'app.js'), 'utf8');
-    assert.match(mestre, /const tamanhoPagina = 12;/);
+    assert.match(mestre, /const tamanhoPagina = 5;/);
     assert.match(mestre, /SELECT COUNT\(\*\) AS total FROM eventos_licenca_local/);
     assert.match(mestre, /LIMIT \? OFFSET \?/);
     assert.match(mestre, /req\.query\.pagina/);
-    assert.match(mestre, /Exibindo 12 por página/);
+    assert.match(mestre, /Exibindo 5 por página/);
 });
 
 test('Painel Mestre calcula armazenamento fora da requisicao e reutiliza cache', () => {

@@ -1277,7 +1277,7 @@ function paginaHistoricoLicencaLocal(licenca, historico = {}) {
     return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" href="/assets/Logo.png"><title>Histórico da licença - Painel Mestre</title><style>
     *{box-sizing:border-box}body{margin:0;background:#f5f6f8;color:#081225;font-family:Inter,Arial,sans-serif}main{width:min(1100px,calc(100% - 30px));margin:34px auto}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:8px;padding:10px 14px;background:#4368e8;color:#fff;font:inherit;font-weight:800;text-decoration:none}h1{margin:18px 0 6px}.sub{color:#697386;margin-bottom:18px}.panel{background:#fff;border:1px solid #e2e6ed;border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.05);overflow:hidden}.event{display:grid;grid-template-columns:160px 150px 1fr;gap:14px;padding:14px 16px;border-bottom:1px solid #e8ebf0}.event:last-child{border-bottom:0}.date,.type{font-size:13px;color:#697386;font-weight:800}.msg{font-weight:800}.details{margin-top:5px;color:#697386;font-size:13px;line-height:1.4}.empty{text-align:center;padding:30px;color:#697386}.history-summary{margin:0 0 10px;color:#697386;font-size:14px}.pagination{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:18px}.page-link{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:38px;padding:0 12px;border:1px solid #d8dee8;border-radius:8px;background:#fff;color:#22304a;font-weight:800;text-decoration:none}.page-link.current{background:#4368e8;border-color:#4368e8;color:#fff}.page-link.disabled{opacity:.5;cursor:default}@media(max-width:720px){.event{grid-template-columns:1fr}.date,.type{font-size:12px}}
     </style>${temaVisualMestre()}</head><body><main><a class="button" href="/licencas#licencas-locais">Voltar</a><h1>Histórico da licença</h1><div class="sub">${escapar(licenca.cliente)} | ${escapar(licenca.instalacaoId)} | vencimento ${escapar(licenca.vencimento ? formatarDataPainel(licenca.vencimento) : 'sem vencimento')}</div>
-    <div class="history-summary">${total} registro(s) — página ${pagina} de ${totalPaginas}. Exibindo 12 por página.</div>
+    <div class="history-summary">${total} registro(s) — página ${pagina} de ${totalPaginas}. Exibindo 5 por página.</div>
     <section class="panel">
         ${eventos.length ? eventos.map(evento => `<div class="event">
             <div class="date">${escapar(formatarDataHoraPainel(evento.criadoEm))}</div>
@@ -1569,7 +1569,7 @@ async function marcarLicencaLocalTransferida(licenca, novaInstalacaoId, motivo =
 }
 
 async function listarHistoricoLicencaLocal(instalacaoId, paginaSolicitada = 1) {
-    const tamanhoPagina = 12;
+    const tamanhoPagina = 5;
     const paginaNormalizada = Math.max(1, Number.parseInt(paginaSolicitada, 10) || 1);
     const id = String(instalacaoId || '').trim();
     const totalRegistro = await masterDb.buscarUm(

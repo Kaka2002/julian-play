@@ -375,3 +375,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - O teste real confirmou que a falha de mídia pode variar e ainda assim o QR original é exibido. Por isso, a cobrança PIX não possui mais fallback para PNG como documento ou texto copia e cola após a tentativa de QR Code. Cada solicitação cria somente uma tentativa de mensagem.
 - Em caso de falha de confirmação, o log registra que o fallback foi bloqueado. Não há reenvio automático, pois uma segunda cobrança poderia induzir pagamento duplicado.
 - Validação automatizada cobre falha conhecida e falha genérica de mídia, ambas com uma única chamada de envio. Requer reiniciar o processo administrador e confirmar uma nova solicitação de plano no WhatsApp.
+
+## Paginação padrão de cinco registros em 18/09/2026
+
+- Implementado: a paginação inicia em 5 registros em todas as telas paginadas, inclusive Pendências e histórico de licenças do Painel Mestre. O seletor foi atualizado para iniciar em 5; dados e configurações existentes são preservados.
+- Validação concluída: 92 testes direcionados, suíte interna com 160 testes, verificações de sintaxe e diff, pacote local e teste de instalação limpa aprovados.
