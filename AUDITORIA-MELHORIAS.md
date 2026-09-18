@@ -380,3 +380,7 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: a paginação inicia em 5 registros em todas as telas paginadas, inclusive Pendências e histórico de licenças do Painel Mestre. O seletor foi atualizado para iniciar em 5; dados e configurações existentes são preservados.
 - Validação concluída: 92 testes direcionados, suíte interna com 160 testes, verificações de sintaxe e diff, pacote local e teste de instalação limpa aprovados.
+
+## Botão de retorno ao topo no Financeiro em 18/09/2026
+
+- Implementado: o botão de retorno ao topo passa a surgir após uma rolagem curta, tornando-o disponível no Financeiro também quando a página possui poucos registros.

@@ -3016,7 +3016,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             if (botaoTopo) {
                 const atualizarBotaoTopo = () => {
                     const paginaLonga = document.documentElement.scrollHeight > window.innerHeight + 160;
-                    botaoTopo.classList.toggle('visible', paginaLonga && window.scrollY > 360);
+                    botaoTopo.classList.toggle('visible', paginaLonga && window.scrollY > 80);
                 };
 
                 window.addEventListener('scroll', atualizarBotaoTopo, { passive: true });

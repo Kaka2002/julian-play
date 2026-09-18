@@ -1819,3 +1819,8 @@ pm ci normalmente.
 - Todas as telas com paginação passam a iniciar com 5 registros por página: Clientes, Financeiro, cadastros, históricos, campanhas, dashboard, Pendências e histórico de licenças do Painel Mestre. O seletor mantém as opções 10, 20, 40, 60, 80 e 100.
 - A alteração afeta o painel administrador, clientes comerciais, instalações locais e Painel Mestre. Não altera bancos, dados de clientes, configurações, sessões, cobranças ou backups, nem requer migração.
 - Validação: sintaxe dos módulos alterados, 92 testes direcionados, suíte interna com 160 testes, `git diff --check`, geração do pacote e teste de instalação limpa aprovados. Aplicar com reinício do administrador e do Painel Mestre quando forem atualizados.
+
+## Botão de retorno ao topo no Financeiro em 18/09/2026
+
+- O botão flutuante de retorno ao topo passa a aparecer após 80 pixels de rolagem em qualquer página longa. Antes ele exigia 360 pixels e podia permanecer oculto no Financeiro após a paginação de cinco registros.
+- A mudança afeta somente a interface compartilhada dos quatro perfis; não altera dados, configurações, sessões, cobranças ou backups.
