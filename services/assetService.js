@@ -44,7 +44,10 @@ function assetExiste(nomeArquivo) {
 function confirmarEnvioMedia(enviada) {
     const id = enviada?.id?._serialized || enviada?.id?.id || enviada?.id;
     if (!id || typeof id !== 'string' || !id.trim()) {
-        throw new Error('WhatsApp nao confirmou o envio da imagem (mensagem sem ID).');
+        // Retorno sem ID e inconclusivo: a imagem pode ter chegado.
+        // Nao disparar documento nem texto reserva para a mesma resposta.
+        console.log('Envio da imagem sem confirmacao de ID; nao repetindo para evitar duplicidade.');
+        return null;
     }
     return enviada;
 }
@@ -121,8 +124,11 @@ async function enviarImagemComLegenda(message, nomeArquivo, legenda) {
 
         const enviada = await enviarMedia(message, media, { caption: legenda }, `Envio de imagem ${nomeArquivo}`);
 
-        console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
-        registrarMensagemDoRobo(enviada);
+        if (enviada) {
+            console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || enviada.id);
+            registrarMensagemDoRobo(enviada);
+        }
+        // true encerra a tentativa, inclusive quando a confirmacao e inconclusiva.
         return true;
     } catch (err) {
         console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);
@@ -155,8 +161,11 @@ async function enviarImagem(message, nomeArquivo) {
 
         const enviada = await enviarMedia(message, media, {}, `Envio de imagem ${nomeArquivo}`);
 
-        console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || 'sem id');
-        registrarMensagemDoRobo(enviada);
+        if (enviada) {
+            console.log(`Imagem enviada: ${nomeArquivo}`, enviada?.id?._serialized || enviada.id);
+            registrarMensagemDoRobo(enviada);
+        }
+        // true encerra a tentativa, inclusive quando a confirmacao e inconclusiva.
         return true;
     } catch (err) {
         console.log(`Falha ao enviar imagem ${nomeArquivo}: ${err.message}`);

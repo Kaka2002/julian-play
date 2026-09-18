@@ -3,7 +3,7 @@ const { MessageMedia } = require('whatsapp-web.js');
 const { registrarMensagemDoRobo, registrarEnvioDoRobo } = require('./mensagensPropriasService');
 const { enfileirarEnvio } = require('./filaMensagensService');
 const { obterConfiguracoes } = require('./configuracoesPainel');
-const { listarTiposPlanos } = require('./tiposPlanos');
+const { listarTiposPlanos, ehPlanoBonusMensal } = require('./tiposPlanos');
 const { criarCobrancaMercadoPago } = require('./mercadoPagoService');
 
 const CHAVE_PIX = process.env.CHAVE_PIX || '';
@@ -139,6 +139,7 @@ async function listarPlanosComerciais() {
         const planosComerciais = planosBanco
             .filter(plano => Number(plano.ativo ?? 1) !== 0)
             .filter(plano => !planoEhTesteGratis(plano))
+            .filter(plano => !ehPlanoBonusMensal(plano))
             .map((plano, index) => {
                 const valorNumero = valorPlanoParaNumero(plano.valor);
                 const valorFormatado = formatarValorPlano(plano.valor);
@@ -404,6 +405,10 @@ function confirmarMensagemWhatsApp(enviada, destino, client) {
     return enviada;
 }
 
+function erroMidiaPodeTerSidoEnviada(erro) {
+    return /Data passed to getter must include an id property/i.test(String(erro?.message || erro || ''));
+}
+
 async function enviarComConfirmacao(client, destino, conteudo, opcoes, descricao, options = {}) {
     return comTimeout(
         enfileirarEnvio(
@@ -474,6 +479,13 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                 options
             );
         } catch (erroImagem) {
+            // Esta falha conhecida do WhatsApp Web pode ser lançada depois de
+            // a imagem já aparecer na conversa. Não enviar documento nem PIX
+            // copia e cola para evitar três cobranças para o mesmo plano.
+            if (erroMidiaPodeTerSidoEnviada(erroImagem)) {
+                console.warn(`[pix] QR Code PIX ${planoPix.nome} ficou sem confirmacao apos erro interno do WhatsApp para ${destino}; nao repetindo para evitar duplicidade.`);
+                enviada = null;
+            } else {
             console.warn(`[pix] Midia do QR recusada para ${destino} (${erroImagem.message}); tentando como documento.`);
 
             try {
@@ -504,6 +516,7 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                 } else {
                     console.log(`PIX copia e cola ${planoPix.nome} aceito sem ID; nao repetindo`);
                 }
+            }
             }
         }
 
@@ -547,5 +560,6 @@ module.exports = {
     enviarQRCodePIX,
     enviarQRCodePIXParaDestino,
     gerarPixCopiaECola,
+    erroMidiaPodeTerSidoEnviada,
     planos
 };

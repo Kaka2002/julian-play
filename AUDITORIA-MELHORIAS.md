@@ -5,6 +5,10 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Prevenção de PIX duplicado em 18/09/2026: quando o WhatsApp devolve o erro interno de getter depois de tentar enviar o QR Code, o sistema trata o resultado como inconclusivo e não envia o documento PNG nem o PIX copia e cola. Falhas explícitas de outra natureza mantêm os fallbacks existentes. Afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Dados, cobranças, configurações, sessões e backups são preservados, sem migração. Validado em teste isolado, sintaxe e diff; suíte completa e confirmação no telefone pendentes.
+
+- Menu comercial sem Bônus Mensal em 18/09/2026: o robô exclui o plano técnico Bônus Mensal da relação comercial e renumera os demais planos a partir de 1. O crédito de bônus continua restrito à ficha de cliente, onde já possui as validações de saldo e auditoria. Afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Dados, bancos, PIX, sessões, backups e configurações são preservados, sem migração. Validado com teste específico, sintaxe, diff e suíte interna com 160 testes aprovados; a atualização da instância local depende de recuperação do registro do PM2.
+
 - Correção de entrega WhatsApp/PIX em 17/09/2026: destinos resolvidos como
   `@lid` agora são tentados antes do telefone `@c.us`, o envio textual aguarda
   a confirmação disponível e resposta vazia não dispara uma segunda tentativa,
@@ -347,3 +351,21 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Correção de inicialização WhatsApp em 17/09/2026: diagnóstico confirmou sessão presa em `autenticado` sem evento `ready`, causando falha de texto e mídia. `whatsapp-web.js` foi atualizado e fixado em `1.34.7`, com a injeção oficial atualizada. Dados, configurações, backups, sessões e `DATA_DIR` preservados; 143 testes internos passaram. A validação remota exige o processo alcançar `conectado` e um envio real de PIX após o deploy.
 - Envio PIX ajustado em 17/09/2026: texto e QR usam `sendSeen=false`, removendo a chamada secundária que falhava com `sendSeen` ausente sem alterar o conteúdo da cobrança. Validação interna e navegador devem ser repetidas; dados e sessões preservados.
+
+## Correcao de duplicidade do menu em 18/09/2026
+
+- Correcao sobre a versao 1.3.37: o envio de imagens do robo preserva as opcoes originais, sem `waitUntilMsgSent`, e trata retorno sem ID como inconclusivo, encerrando a tentativa sem repetir como documento ou texto. O log nao declara entrega confirmada sem ID. Falhas explicitas continuam usando as alternativas existentes.
+- Afeta administrador, clientes comerciais e instalacoes locais; Painel Mestre inalterado. Preserva bancos, configuracoes, backups, sessoes e DATA_DIR, sem migracao. A regra de atendimento humano permanece igual.
+- Validacao automatizada cobre retorno vazio/com objeto sem ID, envio pelo chat/direto, legenda sem texto duplicado, ID valido e erro explicito. Executados: 10 testes de regressao, suite interna com 156 testes aprovados, node --check, git diff --check, geracao oficial e teste de pacote limpo aprovados. Testes de navegador nao executados nesta correcao de envio.
+- Depois de aplicar a atualizacao, conferir um unico envio real de menu com imagem no telefone. Ausencia de ID nao comprova entrega; erros explicitos e timeout continuam sujeitos ao comportamento de reserva existente.
+
+- Ajuste apos teste real de 18/09: a imagem falhou com erro interno de getter e o texto reserva chegou. Retirada a opcao adicional waitUntilMsgSent introduzida nesta correcao, restaurando o envio original que havia entregue a foto. Protecao contra duplicidade sem ID mantida; entrega visual ainda depende de novo teste real.
+
+## Compatibilidade de midia WhatsApp em 18/09/2026
+
+- O erro de getter persistiu apos retirar waitUntilMsgSent. O relato https://github.com/wwebjs/whatsapp-web.js/issues/201922 descreve colisao do campo privado __x_id da midia com o MsgKey da mensagem; o trecho correspondente existe na biblioteca 1.34.7 instalada.
+- Adaptacao versionada em compatibilidadeMidiaService remove apenas message.__x_id do objeto final de envio no navegador, antes de construir o modelo. Guarda de estrutura recusa versoes desconhecidas, aplicacao idempotente e refeita apos reinjecao. Nao modifica node_modules nem repete envio. Protecao de retorno sem ID mantida.
+- Afeta imagens e outras midias enviadas pelo cliente WhatsApp do administrador, comerciais e locais; Mestre inalterado. Preserva bancos, sessao, cache, configuracoes e backups. Sem migracao ou deploy nesta sessao; requer reinicio do processo e teste real com menu.
+- Validacao inclui reproducao isolada da colisao de ID, fonte real instalada, idempotencia, reinjecao e preservacao de texto. Confirmacao de entrega real continua pendente.
+
+- Resultado: 159 testes internos aprovados, incluindo tres novos de compatibilidade e dez de duplicidade; sintaxe dos JavaScripts e git diff --check aprovados. Entrega real apos reinicio permanece pendente; acesso do agente ao PM2 bloqueado por EPERM.

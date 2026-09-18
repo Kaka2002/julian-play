@@ -1,6 +1,11 @@
 function menuPlanos(planos = [], nomeEmpresa = 'Nossa empresa') {
-    const linhasPlanos = planos.length
-        ? planos.map((plano, index) => {
+    const planosComerciais = planos.filter(plano => String(plano?.nome || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase() !== 'bonus mensal');
+    const linhasPlanos = planosComerciais.length
+        ? planosComerciais.map((plano, index) => {
             const valor = plano.valorConfigurado === false ? 'Valor a consultar' : `R$ ${plano.valor}`;
             return `*${index + 1}* - ${plano.nome}\n${valor}`;
         }).join('\n\n')

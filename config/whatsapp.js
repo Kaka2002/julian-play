@@ -2,6 +2,7 @@
 const path = require('path');
 const chromium = require('@sparticuz/chromium');
 const { Client, LocalAuth } = require('whatsapp-web.js');
+const { instalarCompatibilidadeMidia } = require('../services/compatibilidadeMidiaService');
 const { execSync } = require('child_process');
 const {
     pausarParaAtendente,
@@ -588,6 +589,7 @@ async function iniciarWhatsApp() {
                 : {})
         });
 
+        instalarCompatibilidadeMidia(client);
         console.log('Iniciando cliente WhatsApp...');
 
         client.on('loading_screen', (percent, message) => {

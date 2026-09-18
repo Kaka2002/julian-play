@@ -1777,3 +1777,33 @@ pm ci normalmente.
 - A atualização remove somente a dependência incompatível do código executado. Banco, configurações, backups, sessões `.wwebjs_auth`, diretórios `DATA_DIR` e processos de cada instalação continuam preservados.
 - Depois do deploy, a ação manual é aguardar o processo alcançar `ready`/`conectado` e fazer um envio real de teste para um cliente. Se a sessão estiver em `autenticado` sem `conectado`, não enviar cobranças: conferir o log e usar a reconexão segura; gerar novo QR somente se o processo não recuperar a sessão.
 - O envio do PIX não solicita mais a marcação da conversa como lida (`sendSeen`); essa chamada secundária falhava em algumas cargas do WhatsApp Web e não é necessária para entregar texto ou imagem.
+
+## Correcao de duplicidade do menu em 18/09/2026
+
+- Correcao sobre a versao 1.3.37: o envio de imagens do robo preserva as opcoes originais, sem `waitUntilMsgSent`, e trata retorno sem ID como inconclusivo, encerrando a tentativa sem repetir como documento ou texto. O log nao declara entrega confirmada sem ID. Falhas explicitas continuam usando as alternativas existentes.
+- Afeta administrador, clientes comerciais e instalacoes locais; Painel Mestre inalterado. Preserva bancos, configuracoes, backups, sessoes e DATA_DIR, sem migracao. A regra de atendimento humano permanece igual.
+- Validacao automatizada cobre retorno vazio/com objeto sem ID, envio pelo chat/direto, legenda sem texto duplicado, ID valido e erro explicito. Executados: 10 testes de regressao, suite interna com 156 testes aprovados, node --check, git diff --check, geracao oficial e teste de pacote limpo aprovados. Testes de navegador nao executados nesta correcao de envio.
+- Depois de aplicar a atualizacao, conferir um unico envio real de menu com imagem no telefone. Ausencia de ID nao comprova entrega; erros explicitos e timeout continuam sujeitos ao comportamento de reserva existente.
+
+- Ajuste apos teste real de 18/09: a imagem falhou com erro interno de getter e o texto reserva chegou. Retirada a opcao adicional waitUntilMsgSent introduzida nesta correcao, restaurando o envio original que havia entregue a foto. Protecao contra duplicidade sem ID mantida; entrega visual ainda depende de novo teste real.
+
+## Compatibilidade de midia WhatsApp em 18/09/2026
+
+- O erro de getter persistiu apos retirar waitUntilMsgSent. O relato https://github.com/wwebjs/whatsapp-web.js/issues/201922 descreve colisao do campo privado __x_id da midia com o MsgKey da mensagem; o trecho correspondente existe na biblioteca 1.34.7 instalada.
+- Adaptacao versionada em compatibilidadeMidiaService remove apenas message.__x_id do objeto final de envio no navegador, antes de construir o modelo. Guarda de estrutura recusa versoes desconhecidas, aplicacao idempotente e refeita apos reinjecao. Nao modifica node_modules nem repete envio. Protecao de retorno sem ID mantida.
+- Afeta imagens e outras midias enviadas pelo cliente WhatsApp do administrador, comerciais e locais; Mestre inalterado. Preserva bancos, sessao, cache, configuracoes e backups. Sem migracao ou deploy nesta sessao; requer reinicio do processo e teste real com menu.
+- Validacao inclui reproducao isolada da colisao de ID, fonte real instalada, idempotencia, reinjecao e preservacao de texto. Confirmacao de entrega real continua pendente.
+
+- Resultado: 159 testes internos aprovados, incluindo tres novos de compatibilidade e dez de duplicidade; sintaxe dos JavaScripts e git diff --check aprovados. Entrega real apos reinicio permanece pendente; acesso do agente ao PM2 bloqueado por EPERM.
+
+## Prevenção de PIX duplicado em 18/09/2026
+
+- Quando o WhatsApp devolve o erro interno de getter após tentar entregar a imagem do QR Code, o envio passa a ser considerado inconclusivo e termina sem reenviar o PNG como documento nem mandar o PIX copia e cola. Assim, a cobrança exibida como imagem é a única resposta enviada ao cliente nesse caso.
+- Falhas explícitas diferentes continuam usando os fallbacks já existentes. A mudança afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Bancos, cobranças, PIX, configurações, sessões e backups são preservados, sem migração.
+- Validação: teste isolado reproduz o erro e confirma um único envio de mídia, além de sintaxe e diff. A suíte completa e o teste real após reiniciar o robô permanecem pendentes.
+
+## Menu comercial sem Bônus Mensal em 18/09/2026
+
+- O Bônus Mensal deixou de aparecer no menu de planos enviado pelo WhatsApp e na lista comercial usada para resolver a opção escolhida. Mensal passa a ser a opção 1, seguido pelos demais planos vendáveis. O bônus permanece como mecanismo interno, disponível somente quando um cliente já possui saldo de bônus.
+- A mudança afeta administrador, clientes comerciais e instalações locais; o Painel Mestre não participa do menu. Não altera cadastro, créditos de bônus, planos existentes, bancos, sessões, PIX, backups ou configurações. Não requer migração.
+- Validação: teste do menu com Bônus Mensal e planos comerciais, `node --check` nos módulos alterados, `git diff --check` e suíte interna com 160 testes aprovados. A atualização da instância local ainda depende de recuperação do registro do PM2.

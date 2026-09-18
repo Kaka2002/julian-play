@@ -820,3 +820,149 @@ test('configuracoes da Manutencao possuem modulo proprio e preservam protecoes',
     assert.doesNotMatch(clientes, /router\.post\('\/manutencao\/(?:licenca|robo'|pix|pix-provedor|paypal|monitoramento|acesso)/);
     assert.match(clientes, /router\.use\(criarManutencaoConfiguracoesRoute\(/);
 });
+
+function ambienteImagemMenu({ retorno, direto = false, falhar = false } = {}) {
+    const vm = require('node:vm');
+    const envios = [];
+    const ids = [];
+    const logs = [];
+    const enviar = async (midia, opcoes) => {
+        envios.push({ midia, opcoes });
+        if (falhar) throw new Error('envio recusado');
+        return retorno;
+    };
+    const contexto = vm.createContext({
+        module: { exports: {} }, __dirname: path.join(repoRoot, 'services'),
+        process: { env: {} }, console: { log: (...args) => logs.push(args.join(' ')) },
+        setTimeout: () => 0,
+        require: nome => {
+            if (nome === 'fs') return { existsSync: () => true, statSync: () => ({ size: 100 }) };
+            if (nome === 'path') return path;
+            if (nome === 'whatsapp-web.js') return { MessageMedia: { fromFilePath: () => ({ mimetype: 'image/png' }) } };
+            if (nome === './mensagensPropriasService') return { registrarEnvioDoRobo() {}, registrarMensagemDoRobo: msg => ids.push(msg) };
+            if (nome === './filaMensagensService') return { enfileirarEnvio: fn => fn() };
+            throw new Error(`Dependencia inesperada: ${nome}`);
+        }
+    });
+    vm.runInContext(fs.readFileSync(path.join(repoRoot, 'services/assetService.js'), 'utf8'), contexto);
+    const message = {
+        from: 'teste@lid', client: { sendMessage: (_destino, midia, opcoes) => enviar(midia, opcoes) },
+        getChat: async () => { if (direto) throw new Error('chat indisponivel'); return { sendMessage: enviar }; }
+    };
+    return { contexto, message, envios, ids, logs };
+}
+
+for (const direto of [false, true]) {
+    for (const retorno of [undefined, null, {}, { id: {} }]) {
+        test(`Menu sem ID nao repete imagem, documento ou texto (direto=${direto}, retorno=${JSON.stringify(retorno)})`, async () => {
+            const a = ambienteImagemMenu({ retorno, direto });
+            Object.assign(a.contexto, {
+                obterPerfilRobo: async () => ({}), simularDigitacao: async () => {}, tempoRespostaHumanizada: () => 0,
+                adicionarOpcaoSair: texto => texto, obterDestinoMensagem: msg => msg.from
+            });
+            const fonte = fs.readFileSync(path.join(repoRoot, 'services/conversaService.js'), 'utf8');
+            require('node:vm').runInContext(fonte.slice(fonte.indexOf('async function responderComDigitacao('), fonte.indexOf('async function responderEncerramentoRapido(')), a.contexto);
+            await a.contexto.responderComDigitacao(a.message, 'Menu de teste', 'menu.png');
+            assert.equal(a.envios.length, 1);
+            assert.equal(a.envios[0].midia.mimetype, 'image/png');
+            assert.equal(a.envios[0].opcoes.caption, 'Menu de teste');
+            assert.equal(a.envios[0].opcoes.sendMediaAsDocument, undefined);
+            assert.equal(a.envios[0].opcoes.waitUntilMsgSent, undefined);
+            assert.equal(a.ids.length, 0);
+            assert.ok(a.logs.some(log => log.includes('nao repetindo')));
+            assert.ok(!a.logs.some(log => log.startsWith('Imagem enviada:')));
+        });
+    }
+}
+
+test('Imagem com ID preserva registro e imagem sem legenda nao repete retorno vazio', async () => {
+    const retorno = { id: { _serialized: 'id-teste' } };
+    const a = ambienteImagemMenu({ retorno });
+    assert.equal(await a.contexto.module.exports.enviarImagemComLegenda(a.message, 'menu.png', 'Menu'), true);
+    assert.equal(a.envios.length, 1);
+    assert.equal(a.ids[0], retorno);
+    const b = ambienteImagemMenu({ direto: true });
+    assert.equal(await b.contexto.module.exports.enviarImagem(b.message, 'menu.png'), true);
+    assert.equal(b.envios.length, 1);
+});
+
+test('Menu de planos exclui Bônus Mensal e renumera somente planos comerciais', () => {
+    const menuPlanos = require('../menus/planos');
+    const menu = menuPlanos([
+        { nome: 'Bônus Mensal', valor: '0,00' },
+        { nome: 'Mensal', valor: '35,00' },
+        { nome: 'Trimestral', valor: '96,00' }
+    ], 'Julian Play');
+
+    assert.doesNotMatch(menu, /Bônus Mensal/);
+    assert.match(menu, /\*1\* - Mensal\nR\$ 35,00/);
+    assert.match(menu, /\*2\* - Trimestral\nR\$ 96,00/);
+});
+
+test('Erro explicito de imagem ainda permite resposta reserva', async () => {
+    const a = ambienteImagemMenu({ falhar: true });
+    assert.equal(await a.contexto.module.exports.enviarImagemComLegenda(a.message, 'menu.png', 'Menu'), false);
+    assert.ok(a.envios.some(envio => envio.opcoes.sendMediaAsDocument));
+    assert.equal(a.ids.length, 0);
+});
+
+test('Compatibilidade remove colisao de ID da midia e preserva MsgKey e legenda', async () => {
+    const vm = require('node:vm');
+    const { corrigirMidiaNoNavegador } = require('../services/compatibilidadeMidiaService');
+    const contexto = vm.createContext({ window: { WWebJS: {} } });
+    vm.runInContext(`window.WWebJS.sendMessage = async function(mediaOptions) {
+        const extraOptions = {};
+        const message = { id: 'chave-real', ...mediaOptions, ...extraOptions, };
+        if ('__x_id' in message) throw new Error('Data passed to getter must include an id');
+        return message;
+    };`, contexto);
+    await assert.rejects(contexto.window.WWebJS.sendMessage({ __x_id: undefined }), /Data passed/);
+    vm.runInContext('(' + corrigirMidiaNoNavegador.toString() + ')()', contexto);
+    const corrigida = contexto.window.WWebJS.sendMessage;
+    const msg = await corrigida({ __x_id: undefined, caption: 'Menu', type: 'image' });
+    assert.equal(msg.id, 'chave-real');
+    assert.equal(msg.caption, 'Menu');
+    assert.equal(msg.type, 'image');
+    assert.equal('__x_id' in msg, false);
+    vm.runInContext('(' + corrigirMidiaNoNavegador.toString() + ')()', contexto);
+    assert.equal(contexto.window.WWebJS.sendMessage, corrigida);
+    vm.runInContext('window.WWebJS.sendMessage = async function() {};', contexto);
+    assert.throws(() => vm.runInContext('(' + corrigirMidiaNoNavegador.toString() + ')()', contexto), /nao reconhecida/);
+});
+
+test('Compatibilidade reconhece fonte real instalada e pode reaplicar apos reinjecao', () => {
+    const vm = require('node:vm');
+    const { corrigirMidiaNoNavegador } = require('../services/compatibilidadeMidiaService');
+    const { LoadUtils } = require('whatsapp-web.js/src/util/Injected/Utils');
+    const contexto = vm.createContext({ window: {} });
+    for (let i = 0; i < 2; i++) {
+        vm.runInContext('(' + LoadUtils.toString() + ')()', contexto);
+        vm.runInContext('(' + corrigirMidiaNoNavegador.toString() + ')()', contexto);
+        assert.ok(contexto.window.WWebJS.sendMessage.toString().includes('delete message.__x_id;'));
+    }
+});
+
+test('Compatibilidade prepara midia antes de enviar e nao altera texto nem repete falha', async () => {
+    const { instalarCompatibilidadeMidia } = require('../services/compatibilidadeMidiaService');
+    const ordem = [];
+    const client = {
+        pupPage: { evaluate: async () => { ordem.push('preparar'); } },
+        sendMessage: async function(destino, conteudo, opcoes) {
+            assert.equal(this, client);
+            ordem.push('enviar');
+            return { destino, conteudo, opcoes };
+        }
+    };
+    instalarCompatibilidadeMidia(client);
+    const media = { mimetype: 'image/png', data: 'teste' };
+    const result = await client.sendMessage('teste@lid', media, { caption: 'Menu' });
+    assert.equal(result.conteudo, media);
+    assert.deepEqual(ordem, ['preparar', 'enviar']);
+    ordem.length = 0;
+    await client.sendMessage('teste@lid', 'Texto');
+    assert.deepEqual(ordem, ['enviar']);
+    ordem.length = 0;
+    client.pupPage.evaluate = async () => { throw new Error('incompativel'); };
+    await assert.rejects(client.sendMessage('teste@lid', media), /incompativel/);
+    assert.equal(ordem.length, 0);
+});
