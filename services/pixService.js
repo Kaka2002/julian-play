@@ -479,45 +479,12 @@ async function enviarQRCodePIXParaDestino(client, destino, plano, options = {}) 
                 options
             );
         } catch (erroImagem) {
-            // Esta falha conhecida do WhatsApp Web pode ser lançada depois de
-            // a imagem já aparecer na conversa. Não enviar documento nem PIX
-            // copia e cola para evitar três cobranças para o mesmo plano.
-            if (erroMidiaPodeTerSidoEnviada(erroImagem)) {
-                console.warn(`[pix] QR Code PIX ${planoPix.nome} ficou sem confirmacao apos erro interno do WhatsApp para ${destino}; nao repetindo para evitar duplicidade.`);
-                enviada = null;
-            } else {
-            console.warn(`[pix] Midia do QR recusada para ${destino} (${erroImagem.message}); tentando como documento.`);
-
-            try {
-                // Documento usa o mesmo PNG, mas evita o conversor de imagem
-                // que pode depender de módulos removidos pelo WhatsApp Web.
-                enviada = await enviarComConfirmacao(
-                    client,
-                    destino,
-                    media,
-                    { caption, linkPreview: false, sendSeen: false, waitUntilMsgSent: true, sendMediaAsDocument: true },
-                    `Envio do QR Code PIX ${planoPix.nome} como documento`,
-                    options
-                );
-            } catch (erroDocumento) {
-                const copiaECola = cobrancaAutomatica?.qrCode || gerarPixCopiaECola(planoPix, configPix);
-                const mensagemCopiaECola = `${caption}\n\n📋 *PIX copia e cola:*\n${copiaECola}`;
-                console.warn(`[pix] Documento do QR recusado para ${destino} (${erroDocumento.message}); tentando PIX copia e cola.`);
-                enviada = await enviarComConfirmacao(
-                    client,
-                    destino,
-                    mensagemCopiaECola,
-                    { linkPreview: false, sendSeen: false, waitUntilMsgSent: true },
-                    `Envio do PIX copia e cola ${planoPix.nome}`,
-                    options
-                );
-                if (enviada) {
-                    console.log(`PIX copia e cola ${planoPix.nome} confirmado`, idMensagem(enviada));
-                } else {
-                    console.log(`PIX copia e cola ${planoPix.nome} aceito sem ID; nao repetindo`);
-                }
-            }
-            }
+            // O WhatsApp Web pode informar erro depois que o QR ja foi entregue.
+            // PIX e uma cobranca: nunca criar um segundo envio como documento ou texto.
+            // O cliente recebe apenas a tentativa original de QR Code.
+            const detalhe = String(erroImagem?.message || erroImagem || 'erro sem detalhe');
+            console.warn(`[pix] QR Code PIX ${planoPix.nome} sem confirmacao para ${destino} (${detalhe}); fallback bloqueado para evitar duplicidade.`);
+            enviada = null;
         }
 
         if (enviada) {

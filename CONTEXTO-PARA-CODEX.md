@@ -1807,3 +1807,9 @@ pm ci normalmente.
 - O Bônus Mensal deixou de aparecer no menu de planos enviado pelo WhatsApp e na lista comercial usada para resolver a opção escolhida. Mensal passa a ser a opção 1, seguido pelos demais planos vendáveis. O bônus permanece como mecanismo interno, disponível somente quando um cliente já possui saldo de bônus.
 - A mudança afeta administrador, clientes comerciais e instalações locais; o Painel Mestre não participa do menu. Não altera cadastro, créditos de bônus, planos existentes, bancos, sessões, PIX, backups ou configurações. Não requer migração.
 - Validação: teste do menu com Bônus Mensal e planos comerciais, `node --check` nos módulos alterados, `git diff --check` e suíte interna com 160 testes aprovados. A atualização da instância local ainda depende de recuperação do registro do PM2.
+
+## Bloqueio definitivo de fallback PIX em 18/09/2026
+
+- O teste real confirmou que a falha de mídia pode variar e ainda assim o QR original é exibido. Por isso, a cobrança PIX não possui mais fallback para PNG como documento ou texto copia e cola após a tentativa de QR Code. Cada solicitação cria somente uma tentativa de mensagem.
+- Em caso de falha de confirmação, o log registra que o fallback foi bloqueado. Não há reenvio automático, pois uma segunda cobrança poderia induzir pagamento duplicado.
+- Validação automatizada cobre falha conhecida e falha genérica de mídia, ambas com uma única chamada de envio. Requer reiniciar o processo administrador e confirmar uma nova solicitação de plano no WhatsApp.
