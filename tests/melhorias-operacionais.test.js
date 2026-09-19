@@ -902,6 +902,9 @@ test('painel separa receita recorrente da receita realmente recebida no mês', (
     assert.equal(real.total, 45);
     assert.equal(real.pagamentos, 1);
     assert.match(fonte, /Receita recebida neste mês/);
+    assert.match(fonte, /Conferência mensal/);
+    assert.match(fonte, /Diferença a receber/);
+    assert.match(fonte, /Recebido acima da projeção/);
     assert.match(fonte, /listarPagamentosFinanceiro\(\{ mes: mesAtualInput\(\), status: 'validos' \}\)/);
 });
 
