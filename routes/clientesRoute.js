@@ -734,7 +734,7 @@ function calcularReceitaRealDoMes(pagamentos = []) {
     return { total, pagamentos: pagamentos.length };
 }
 
-function calcularAnaliseReceitaMensal(receitaRecorrente = {}, pagamentos = [], planos = [], carteiraAtiva = []) {
+function calcularAnaliseReceitaMensal(receitaRecorrente = {}, pagamentos = [], planos = []) {
     const receitaReal = calcularReceitaRealDoMes(pagamentos);
     const planoMensal = planos.find(plano => String(plano.nome || '').trim().toLowerCase() === 'mensal');
     const valorMensalBase = numeroMoeda(planoMensal?.valor);
@@ -745,13 +745,7 @@ function calcularAnaliseReceitaMensal(receitaRecorrente = {}, pagamentos = [], p
         if (nome.includes('anual')) return 12;
         return 0;
     };
-    const antecipados = carteiraAtiva.map(cliente => ({
-        plano: cliente.pagamentoPlano || cliente.plano,
-        valorPlano: cliente.pagamentoValorPlano || cliente.valorPlano,
-        valorTotal: cliente.pagamentoValorPlano || cliente.valorPlano,
-        diasContrato: cliente.pagamentoDiasContrato || cliente.diasContrato
-    })).map(pagamento => ({ ...pagamento, mesesAntecipados: mesesAntecipados(pagamento) })).filter(pagamento => pagamento.mesesAntecipados > 0);
-    const antecipadosNoMes = pagamentos.map(pagamento => ({ ...pagamento, mesesAntecipados: mesesAntecipados(pagamento) })).filter(pagamento => pagamento.mesesAntecipados > 0);
+    const antecipados = pagamentos.map(pagamento => ({ ...pagamento, mesesAntecipados: mesesAntecipados(pagamento) })).filter(pagamento => pagamento.mesesAntecipados > 0);
     const totalAntecipado = antecipados.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorPlano || pagamento.valorTotal), 0);
     const equivalenteMensalAntecipado = antecipados.reduce((soma, pagamento) => {
         const dias = Number(pagamento.diasContrato || 0);
@@ -769,10 +763,6 @@ function calcularAnaliseReceitaMensal(receitaRecorrente = {}, pagamentos = [], p
         caixaCoincide: Math.abs(variacaoCaixa) < 0.005,
         vendasAntecipadas: {
             quantidade: antecipados.length, total: totalAntecipado, equivalenteMensal: equivalenteMensalAntecipado,
-            novasNoMes: {
-                quantidade: antecipadosNoMes.length,
-                total: antecipadosNoMes.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorPlano || pagamento.valorTotal), 0)
-            },
             valorReferencia: referenciaSemDesconto, descontoTotal,
             percentualDesconto: referenciaSemDesconto > 0 ?(descontoTotal / referenciaSemDesconto) * 100 : 0,
             porPlano: ['Trimestral', 'Semestral', 'Anual'].map(nome => {
@@ -7559,10 +7549,10 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function receitaMensalCard(receita, receitaReal, planos = [], carteiraAtiva = []) {
-    const analise = calcularAnaliseReceitaMensal(receita, receitaReal.itens || [], planos, carteiraAtiva);
+function receitaMensalCard(receita, receitaReal, planos = []) {
+    const analise = calcularAnaliseReceitaMensal(receita, receitaReal.itens || [], planos);
     const notaAntecipada = analise.vendasAntecipadas.quantidade
-        ?`${analise.vendasAntecipadas.quantidade} contrato(s): ${analise.vendasAntecipadas.porPlano.map(item => `${item.nome} (${item.quantidade}, ${item.descontoPercentual.toFixed(1).replace('.', ',')}% de desconto)`).join(' | ')}. ${analise.vendasAntecipadas.novasNoMes.quantidade} nova(s) venda(s) antecipada(s) no mês, total de ${formatarMoeda(analise.vendasAntecipadas.novasNoMes.total)}. Economia total: ${formatarMoeda(analise.vendasAntecipadas.descontoTotal)}.`
+        ?`${analise.vendasAntecipadas.quantidade} venda(s): ${analise.vendasAntecipadas.porPlano.map(item => `${item.nome} (${item.quantidade}, ${item.descontoPercentual.toFixed(1).replace('.', ',')}% de desconto)`).join(' | ')}. Economia total: ${formatarMoeda(analise.vendasAntecipadas.descontoTotal)}.`
         :'Nenhum contrato antecipado registrado neste mês.';
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
@@ -7598,7 +7588,7 @@ function receitaMensalCard(receita, receitaReal, planos = [], carteiraAtiva = []
                 <span class="revenue-note">${escapar(receitaReal.pagamentos)} pagamento(s) válido(s), incluindo aplicativo quando cobrado.</span>
             </div>
             <div class="revenue-real">
-                <div class="revenue-title">Contratos antecipados em vigência</div>
+                <div class="revenue-title">Vendas antecipadas no mês</div>
                 <strong class="revenue-real-total">${escapar(formatarMoeda(analise.vendasAntecipadas.total))}</strong>
                 <span class="revenue-note">${escapar(notaAntecipada)}</span>
             </div>
@@ -7715,7 +7705,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             </div>
         </div>
     </section>
-    ${receitaMensalCard(receita, receitaReal, planos, receitaBase)}
+    ${receitaMensalCard(receita, receitaReal, planos)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -8346,7 +8336,7 @@ function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, 
         ${metricCard({ label: 'Receita recebida', valor: formatarMoeda(receitaMes), nota: `${pagamentosMes} pagamento(s) no mês`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Mensal recorrente', valor: formatarMoeda(receitaRecorrente), nota: 'Projeção dos planos ativos', tipo: 'info', icone: 'trend' })}
         ${metricCard({ label: analise.caixaCoincide ?'Caixa e recorrente iguais' :'Variação de caixa', valor: formatarMoeda(analise.caixaCoincide ?0 :Math.abs(analise.variacaoCaixa)), nota: notaDiferenca, tipo: analise.caixaCoincide ?'green' : 'info', icone: 'trend' })}
-        ${metricCard({ label: 'Contratos antecipados ativos', valor: formatarMoeda(analise.vendasAntecipadas.total), nota: `${analise.vendasAntecipadas.quantidade} contrato(s) em vigência; ${analise.vendasAntecipadas.novasNoMes.quantidade} nova(s) venda(s) neste mês`, tipo: 'green', icone: 'trend' })}
+        ${metricCard({ label: 'Vendas antecipadas no mês', valor: formatarMoeda(analise.vendasAntecipadas.total), nota: `${analise.vendasAntecipadas.quantidade} venda(s) trimestral, semestral ou anual no mês`, tipo: 'green', icone: 'trend' })}
         ${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita menos despesas' : 'Despesas acima da receita', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
     </section>

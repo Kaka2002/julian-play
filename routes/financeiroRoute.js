@@ -73,7 +73,7 @@ function criarFinanceiroRoute(deps = {}) {
             listarTiposPlanos()
         ]);
         const recorrente = calcularReceitaMensal(receitaBase);
-        const analiseReceita = calcularAnaliseReceitaMensal(recorrente, pagamentos, planos, receitaBase);
+        const analiseReceita = calcularAnaliseReceitaMensal(recorrente, pagamentos, planos);
         return renderizar(res, {
             titulo: 'Despesas',
             conteudo: telaDespesasFinanceiras({

@@ -11,11 +11,11 @@ código; itens operacionais externos não são marcados como implementados.
 
 - A conferência de receita também está em **Financeiro > Despesas**, ao lado de despesas e saldo mensal. Assim, a análise do mês reúne projeção recorrente, recebido real, diferença entre ambos e resultado após custos.
 
-- Contratos com pagamento antecipado passaram a ser destacados positivamente no Dashboard e no Financeiro. Clientes ativos com planos Trimestral, Semestral ou Anual, inclusive pagos em meses anteriores, são exibidos como contratos antecipados em vigência, com o equivalente mensal ao longo da vigência; a diferença entre caixa e recorrência não é mais apresentada como atraso.
+- Vendas com pagamento antecipado passaram a ser destacadas positivamente no Dashboard e no Financeiro quando realizadas no mês filtrado. Planos Trimestral, Semestral e Anual pagos em períodos anteriores compõem somente a receita recorrente mensal equivalente, sem serem somados novamente como caixa ou nova venda; a diferença entre caixa e recorrência não é apresentada como atraso.
 
 - O indicador de vendas antecipadas passou a abranger somente Trimestral, Semestral e Anual, com desconto comparado ao valor mensal multiplicado pelo período contratado. O percentual por plano e a economia do mês tornam a estratégia comercial auditável.
 
-- A carteira antecipada ativa e as novas vendas antecipadas do mês são exibidas separadamente, evitando que a renovação recente seja diluída entre contratos antigos ainda vigentes.
+- A venda antecipada do mês é exibida sem misturar contratos antigos ainda vigentes, preservando a leitura correta de caixa e recorrência.
 
 - Prevenção de PIX duplicado em 18/09/2026: quando o WhatsApp devolve o erro interno de getter depois de tentar enviar o QR Code, o sistema trata o resultado como inconclusivo e não envia o documento PNG nem o PIX copia e cola. Falhas explícitas de outra natureza mantêm os fallbacks existentes. Afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Dados, cobranças, configurações, sessões e backups são preservados, sem migração. Validado em teste isolado, sintaxe e diff; suíte completa e confirmação no telefone pendentes.
 
