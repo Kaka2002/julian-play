@@ -9,7 +9,7 @@ function criarFinanceiroRoute(deps = {}) {
         listarDespesasFinanceiras, buscarDespesaFinanceiraPorId,
         criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira,
         telaDespesasFinanceiras, telaEditarDespesaFinanceira, calcularReceitaRealDoMes,
-        listarReceitaMensalFinanceira, calcularReceitaMensal
+        calcularAnaliseReceitaMensal, listarReceitaMensalFinanceira, listarTiposPlanos, calcularReceitaMensal
     } = deps;
 
     function filtrosDespesas(query = {}) {
@@ -66,18 +66,19 @@ function criarFinanceiroRoute(deps = {}) {
     router.get('/financeiro/despesas', async (req, res) => {
         desativarCache(res);
         const filtros = filtrosDespesas(req.query);
-        const [despesas, pagamentos, receitaBase] = await Promise.all([
+        const [despesas, pagamentos, receitaBase, planos] = await Promise.all([
             listarDespesasFinanceiras(filtros),
             listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' }),
-            listarReceitaMensalFinanceira()
+            listarReceitaMensalFinanceira(),
+            listarTiposPlanos()
         ]);
-        const receita = calcularReceitaRealDoMes(pagamentos);
         const recorrente = calcularReceitaMensal(receitaBase);
+        const analiseReceita = calcularAnaliseReceitaMensal(recorrente, pagamentos, planos);
         return renderizar(res, {
             titulo: 'Despesas',
             conteudo: telaDespesasFinanceiras({
-                despesas, filtros, receitaMes: receita.total, pagamentosMes: receita.pagamentos,
-                receitaRecorrente: recorrente.total
+                despesas, filtros, receitaMes: analiseReceita.total, pagamentosMes: analiseReceita.pagamentos,
+                receitaRecorrente: recorrente.total, analiseReceita
             }),
             mensagem: req.query.mensagem || '', ativo: 'financeiro'
         });

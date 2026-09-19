@@ -734,6 +734,49 @@ function calcularReceitaRealDoMes(pagamentos = []) {
     return { total, pagamentos: pagamentos.length };
 }
 
+function calcularAnaliseReceitaMensal(receitaRecorrente = {}, pagamentos = [], planos = []) {
+    const receitaReal = calcularReceitaRealDoMes(pagamentos);
+    const planoMensal = planos.find(plano => String(plano.nome || '').trim().toLowerCase() === 'mensal');
+    const valorMensalBase = numeroMoeda(planoMensal?.valor);
+    const mesesAntecipados = pagamento => {
+        const nome = String(pagamento.plano || '').toLowerCase();
+        if (nome.includes('trimestral')) return 3;
+        if (nome.includes('semestral')) return 6;
+        if (nome.includes('anual')) return 12;
+        return 0;
+    };
+    const antecipados = pagamentos.map(pagamento => ({ ...pagamento, mesesAntecipados: mesesAntecipados(pagamento) })).filter(pagamento => pagamento.mesesAntecipados > 0);
+    const totalAntecipado = antecipados.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorTotal), 0);
+    const equivalenteMensalAntecipado = antecipados.reduce((soma, pagamento) => {
+        const dias = Number(pagamento.diasContrato || 0);
+        return soma + (dias > 0 ?(numeroMoeda(pagamento.valorTotal) / dias) * 30 : 0);
+    }, 0);
+    const variacaoCaixa = receitaReal.total - Number(receitaRecorrente.total || 0);
+    const referenciaSemDesconto = antecipados.reduce((soma, pagamento) => soma + (valorMensalBase * pagamento.mesesAntecipados), 0);
+    const totalPlanosAntecipados = antecipados.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorPlano || pagamento.valorTotal), 0);
+    const descontoTotal = Math.max(0, referenciaSemDesconto - totalPlanosAntecipados);
+
+    return {
+        ...receitaReal,
+        recorrente: Number(receitaRecorrente.total || 0),
+        variacaoCaixa,
+        caixaCoincide: Math.abs(variacaoCaixa) < 0.005,
+        vendasAntecipadas: {
+            quantidade: antecipados.length, total: totalAntecipado, equivalenteMensal: equivalenteMensalAntecipado,
+            valorReferencia: referenciaSemDesconto, descontoTotal,
+            percentualDesconto: referenciaSemDesconto > 0 ?(descontoTotal / referenciaSemDesconto) * 100 : 0,
+            porPlano: ['Trimestral', 'Semestral', 'Anual'].map(nome => {
+                const itens = antecipados.filter(pagamento => String(pagamento.plano || '').toLowerCase().includes(nome.toLowerCase()));
+                const totalPago = itens.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorPlano || pagamento.valorTotal), 0);
+                const meses = itens.reduce((soma, pagamento) => soma + pagamento.mesesAntecipados, 0);
+                const referencia = valorMensalBase * meses;
+                const desconto = Math.max(0, referencia - totalPago);
+                return { nome, quantidade: itens.length, descontoPercentual: referencia > 0 ?(desconto / referencia) * 100 : 0 };
+            }).filter(item => item.quantidade > 0)
+        }
+    };
+}
+
 function calcularDiasRestantes(vencimento) {
     const info = infoTempoVencimento(vencimento);
     return info ?info.diasMensagem : null;
@@ -7506,7 +7549,11 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function receitaMensalCard(receita, receitaReal) {
+function receitaMensalCard(receita, receitaReal, planos = []) {
+    const analise = calcularAnaliseReceitaMensal(receita, receitaReal.itens || [], planos);
+    const notaAntecipada = analise.vendasAntecipadas.quantidade
+        ?`${analise.vendasAntecipadas.quantidade} contrato(s): ${analise.vendasAntecipadas.porPlano.map(item => `${item.nome} (${item.quantidade}, ${item.descontoPercentual.toFixed(1).replace('.', ',')}% de desconto)`).join(' | ')}. Economia total: ${formatarMoeda(analise.vendasAntecipadas.descontoTotal)}.`
+        :'Nenhum contrato antecipado registrado neste mês.';
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
         ?receita.itens.map((item) => {
@@ -7540,8 +7587,14 @@ function receitaMensalCard(receita, receitaReal) {
                 <strong class="revenue-real-total">${escapar(formatarMoeda(receitaReal.total))}</strong>
                 <span class="revenue-note">${escapar(receitaReal.pagamentos)} pagamento(s) válido(s), incluindo aplicativo quando cobrado.</span>
             </div>
+            <div class="revenue-real">
+                <div class="revenue-title">Vendas antecipadas no mês</div>
+                <strong class="revenue-real-total">${escapar(formatarMoeda(analise.vendasAntecipadas.total))}</strong>
+                <span class="revenue-note">${escapar(notaAntecipada)}</span>
+            </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
+        <div class="notice info" style="margin:0 0 16px;">O caixa recebido no mês pode ser diferente da receita recorrente: planos trimestrais, semestrais e anuais são pagos antes e continuam compondo a receita mensal equivalente durante toda a vigência. Essa variação não é tratada como valor em atraso.</div>
         <div class="revenue-list">${linhas}</div>
     </section>`;
 }
@@ -7594,7 +7647,7 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = []) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = []) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
@@ -7653,7 +7706,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             </div>
         </div>
     </section>
-    ${receitaMensalCard(receita, receitaReal)}
+    ${receitaMensalCard(receita, receitaReal, planos)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -8260,14 +8313,13 @@ function formularioDespesaFinanceira({ despesa = {}, mes = mesAtualInput(), acao
     </section>`;
 }
 
-function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0, receitaRecorrente = 0 }) {
+function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0, receitaRecorrente = 0, analiseReceita = null }) {
     const resumo = resumoDespesasFinanceiras(despesas);
     const saldo = receitaMes - resumo.total;
-    const diferencaRecorrente = receitaMes - receitaRecorrente;
-    const receitasIguais = Math.abs(diferencaRecorrente) < 0.005;
-    const notaDiferenca = receitasIguais
-        ?'Recebido igual à projeção recorrente'
-        : diferencaRecorrente > 0 ?'Recebido acima da projeção recorrente' : 'Falta receber para atingir a projeção';
+    const analise = analiseReceita || { variacaoCaixa: receitaMes - receitaRecorrente, caixaCoincide: Math.abs(receitaMes - receitaRecorrente) < 0.005, vendasAntecipadas: { quantidade: 0, total: 0 } };
+    const notaDiferenca = analise.caixaCoincide
+        ?'Caixa do mês igual à projeção recorrente'
+        : analise.variacaoCaixa > 0 ?'Caixa acima da projeção; pode conter vendas antecipadas' :'Caixa abaixo da projeção; contratos antecipados anteriores continuam ativos';
     const linhas = despesas.length
         ?despesas.map(despesa => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(despesa.dataPagamento))}</td>
@@ -8284,7 +8336,8 @@ function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, 
     <section class="metrics">
         ${metricCard({ label: 'Receita recebida', valor: formatarMoeda(receitaMes), nota: `${pagamentosMes} pagamento(s) no mês`, tipo: 'green', icone: 'financeiro' })}
         ${metricCard({ label: 'Mensal recorrente', valor: formatarMoeda(receitaRecorrente), nota: 'Projeção dos planos ativos', tipo: 'info', icone: 'trend' })}
-        ${metricCard({ label: receitasIguais ?'Receitas iguais' :'Diferença recorrente', valor: formatarMoeda(receitasIguais ?0 :Math.abs(diferencaRecorrente)), nota: notaDiferenca, tipo: receitasIguais ?'green' : diferencaRecorrente > 0 ?'info' : 'orange', icone: 'trend' })}
+        ${metricCard({ label: analise.caixaCoincide ?'Caixa e recorrente iguais' :'Variação de caixa', valor: formatarMoeda(analise.caixaCoincide ?0 :Math.abs(analise.variacaoCaixa)), nota: notaDiferenca, tipo: analise.caixaCoincide ?'green' : 'info', icone: 'trend' })}
+        ${metricCard({ label: 'Vendas antecipadas', valor: formatarMoeda(analise.vendasAntecipadas.total), nota: `${analise.vendasAntecipadas.quantidade} contrato(s) trimestral, semestral ou anual; desconto médio ${Number(analise.vendasAntecipadas.percentualDesconto || 0).toFixed(1).replace('.', ',')}%`, tipo: 'green', icone: 'trend' })}
         ${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita menos despesas' : 'Despesas acima da receita', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
     </section>
@@ -9387,13 +9440,14 @@ router.get('/clientes', async (req, res) => {
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
-    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial] = await Promise.all([
+    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
         listarClientesAniversarioHoje(anoAtual),
         resumoAtendimentos(),
-        resumoCrm()
+        resumoCrm(),
+        listarTiposPlanos()
     ]);
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
@@ -9401,7 +9455,7 @@ router.get('/clientes', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos),
         mensagem,
         ativo: 'painel'
     });
@@ -9553,7 +9607,9 @@ router.use(criarFinanceiroRoute({
     telaDespesasFinanceiras,
     telaEditarDespesaFinanceira,
     calcularReceitaRealDoMes,
+    calcularAnaliseReceitaMensal,
     listarReceitaMensalFinanceira,
+    listarTiposPlanos,
     calcularReceitaMensal
 }));
 

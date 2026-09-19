@@ -11,6 +11,10 @@ código; itens operacionais externos não são marcados como implementados.
 
 - A conferência de receita também está em **Financeiro > Despesas**, ao lado de despesas e saldo mensal. Assim, a análise do mês reúne projeção recorrente, recebido real, diferença entre ambos e resultado após custos.
 
+- Contratos com pagamento antecipado passaram a ser destacados positivamente no Dashboard e no Financeiro. Pagamentos de planos acima de 30 dias são exibidos como vendas antecipadas, com o equivalente mensal ao longo da vigência; a diferença entre caixa e recorrência não é mais apresentada como atraso.
+
+- O indicador de vendas antecipadas passou a abranger somente Trimestral, Semestral e Anual, com desconto comparado ao valor mensal multiplicado pelo período contratado. O percentual por plano e a economia do mês tornam a estratégia comercial auditável.
+
 - Prevenção de PIX duplicado em 18/09/2026: quando o WhatsApp devolve o erro interno de getter depois de tentar enviar o QR Code, o sistema trata o resultado como inconclusivo e não envia o documento PNG nem o PIX copia e cola. Falhas explícitas de outra natureza mantêm os fallbacks existentes. Afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Dados, cobranças, configurações, sessões e backups são preservados, sem migração. Validado em teste isolado, sintaxe e diff; suíte completa e confirmação no telefone pendentes.
 
 - Menu comercial sem Bônus Mensal em 18/09/2026: o robô exclui o plano técnico Bônus Mensal da relação comercial e renumera os demais planos a partir de 1. O crédito de bônus continua restrito à ficha de cliente, onde já possui as validações de saldo e auditoria. Afeta administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Dados, bancos, PIX, sessões, backups e configurações são preservados, sem migração. Validado com teste específico, sintaxe, diff e suíte interna com 160 testes aprovados; a atualização da instância local depende de recuperação do registro do PM2.
