@@ -1438,27 +1438,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 800;
         }
 
-        .revenue-comparison {
-            min-width: 260px;
-            padding: 14px 18px;
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            background: #fffaf0;
-        }
-
-        .revenue-comparison.equal {
-            border-color: #b8ebd4;
-            background: var(--green-soft);
-        }
-
-        .revenue-comparison-total {
-            display: block;
-            margin-top: 7px;
-            font-size: 24px;
-            line-height: 1;
-            font-weight: 800;
-        }
-
         .revenue-icon {
             display: grid;
             place-items: center;
@@ -1730,8 +1709,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .dashboard-page .revenue-note { display: inline; margin-top: 0; font-size: 13px; }
             .dashboard-page .revenue-real { min-width: 230px; padding: 9px 12px; }
             .dashboard-page .revenue-real-total { display: inline-block; margin: 4px 8px 0 0; font-size: 26px; }
-            .dashboard-page .revenue-comparison { min-width: 230px; padding: 9px 12px; }
-            .dashboard-page .revenue-comparison-total { display: inline-block; margin: 4px 8px 0 0; font-size: 22px; }
             .dashboard-page .revenue-icon { width: 38px; height: 38px; border-radius: 10px; }
             .dashboard-page .revenue-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 28px; padding-top: 9px; }
             .dashboard-page .revenue-row { grid-template-columns: minmax(85px, 1fr) auto 74px auto; gap: 8px; }
@@ -7530,14 +7507,6 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
 }
 
 function receitaMensalCard(receita, receitaReal) {
-    const diferenca = receitaReal.total - receita.total;
-    const valoresIguais = Math.abs(diferenca) < 0.005;
-    const tituloComparacao = valoresIguais ?'Conferência mensal' : diferenca > 0 ?'Recebido acima da projeção' : 'Diferença a receber';
-    const notaComparacao = valoresIguais
-        ?'O recebido no mês está igual ao valor recorrente projetado.'
-        : diferenca > 0
-            ?'O recebido ultrapassou a projeção recorrente; pode incluir aplicativo ou pagamento antecipado.'
-            :'Falta receber esta diferença para atingir a projeção recorrente.';
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
         ?receita.itens.map((item) => {
@@ -7570,11 +7539,6 @@ function receitaMensalCard(receita, receitaReal) {
                 <div class="revenue-title">Receita recebida neste mês</div>
                 <strong class="revenue-real-total">${escapar(formatarMoeda(receitaReal.total))}</strong>
                 <span class="revenue-note">${escapar(receitaReal.pagamentos)} pagamento(s) válido(s), incluindo aplicativo quando cobrado.</span>
-            </div>
-            <div class="revenue-comparison ${valoresIguais ?'equal' :''}">
-                <div class="revenue-title">${escapar(tituloComparacao)}</div>
-                <strong class="revenue-comparison-total">${escapar(valoresIguais ?formatarMoeda(0) :formatarMoeda(Math.abs(diferenca)))}</strong>
-                <span class="revenue-note">${escapar(notaComparacao)}</span>
             </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
@@ -8296,9 +8260,14 @@ function formularioDespesaFinanceira({ despesa = {}, mes = mesAtualInput(), acao
     </section>`;
 }
 
-function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0 }) {
+function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0, receitaRecorrente = 0 }) {
     const resumo = resumoDespesasFinanceiras(despesas);
     const saldo = receitaMes - resumo.total;
+    const diferencaRecorrente = receitaMes - receitaRecorrente;
+    const receitasIguais = Math.abs(diferencaRecorrente) < 0.005;
+    const notaDiferenca = receitasIguais
+        ?'Recebido igual à projeção recorrente'
+        : diferencaRecorrente > 0 ?'Recebido acima da projeção recorrente' : 'Falta receber para atingir a projeção';
     const linhas = despesas.length
         ?despesas.map(despesa => `<tr>
             <td data-label="Data">${escapar(formatarDataHoraCurta(despesa.dataPagamento))}</td>
@@ -8314,6 +8283,8 @@ function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, 
     return `<section class="page-title page-title-with-action"><div><h1>Despesas</h1><div class="subtitle">Custos e pagamentos efetuados para comparar com a receita recebida.</div></div><a class="button secondary" href="/financeiro">Voltar ao financeiro</a></section>
     <section class="metrics">
         ${metricCard({ label: 'Receita recebida', valor: formatarMoeda(receitaMes), nota: `${pagamentosMes} pagamento(s) no mês`, tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Mensal recorrente', valor: formatarMoeda(receitaRecorrente), nota: 'Projeção dos planos ativos', tipo: 'info', icone: 'trend' })}
+        ${metricCard({ label: receitasIguais ?'Receitas iguais' :'Diferença recorrente', valor: formatarMoeda(receitasIguais ?0 :Math.abs(diferencaRecorrente)), nota: notaDiferenca, tipo: receitasIguais ?'green' : diferencaRecorrente > 0 ?'info' : 'orange', icone: 'trend' })}
         ${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s)`, tipo: 'red', icone: 'trash' })}
         ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita menos despesas' : 'Despesas acima da receita', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
     </section>
@@ -9581,7 +9552,9 @@ router.use(criarFinanceiroRoute({
     removerDespesaFinanceira,
     telaDespesasFinanceiras,
     telaEditarDespesaFinanceira,
-    calcularReceitaRealDoMes
+    calcularReceitaRealDoMes,
+    listarReceitaMensalFinanceira,
+    calcularReceitaMensal
 }));
 
 router.get('/preparacao-comercial', async (req, res) => {

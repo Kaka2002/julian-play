@@ -26,7 +26,9 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 - A migração formal `2026-09-19-012-despesas-financeiras` cria a tabela isolada de despesas e gera o backup pré-migração previsto pelo executor. Afeta o painel administrador, os painéis comerciais no servidor e as instalações locais; o Painel Mestre não usa esse layout. Dados financeiros, clientes, sessões e configurações existentes são preservados.
 - Depois de atualizar, reiniciar somente o processo do painel que atende a instalação para aplicar a migração e abrir `Financeiro > Despesas`. Foram executados `node --check`, a suíte interna, `git diff --check`, a geração do pacote e o teste de pacote limpo.
 
-- O Painel também compara a projeção de receita mensal recorrente com a receita efetivamente recebida no mês: mostra **Conferência mensal** quando os totais forem iguais, ou destaca o valor acima da projeção e o valor ainda a receber quando houver diferença. O recebimento inclui assinatura de aplicativo quando cobrada; por isso pagamentos antecipados ou serviços eventuais podem resultar em valor acima da projeção. A comparação não altera pagamentos, clientes ou configurações.
+- O Painel mostra, de forma resumida, a projeção de receita mensal recorrente e a receita efetivamente recebida no mês. A conferência detalhada entre os valores fica centralizada em `Financeiro > Despesas`; o recebimento inclui assinatura de aplicativo quando cobrada e pode conter pagamentos antecipados ou serviços eventuais.
+
+- A página `Financeiro > Despesas` apresenta a mesma comparação junto do saldo: receita recebida, mensal recorrente projetada, diferença recorrente, despesas pagas e saldo do mês. A diferença compara recebido e recorrente; o saldo sempre subtrai somente as despesas válidas do recebido.
 
 Na versão 1.3.38, foi adicionada a tela separada Mensagens informativas, que
 permite selecionar clientes e enviar texto com uma ou mais imagens fora das
