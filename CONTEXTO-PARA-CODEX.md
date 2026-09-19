@@ -30,9 +30,11 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 - A página `Financeiro > Despesas` apresenta a mesma comparação junto do saldo: receita recebida, mensal recorrente projetada, diferença recorrente, despesas pagas e saldo do mês. A diferença compara recebido e recorrente; o saldo sempre subtrai somente as despesas válidas do recebido.
 
-- Para não classificar contratos trimestrais, semestrais ou anuais como inadimplência nos meses posteriores ao pagamento, o Dashboard destaca **Vendas antecipadas no mês**: pagamentos válidos com vigência acima de 30 dias e seu equivalente mensal durante o contrato. Em `Financeiro > Despesas`, a comparação é apresentada como **Variação de caixa**, acompanhada de vendas antecipadas; não usa o rótulo de valor a receber. Afeta painel administrador, clientes comerciais no servidor e instalações locais, sem mudar contratos, pagamentos ou saldo dos clientes.
+- Para não classificar contratos trimestrais, semestrais ou anuais como inadimplência nos meses posteriores ao pagamento, o Dashboard destaca **Contratos antecipados em vigência**: clientes ativos que já quitaram um desses planos, mesmo em meses anteriores, e seu equivalente mensal durante o contrato. Em `Financeiro > Despesas`, a comparação é apresentada como **Variação de caixa**, acompanhada desses contratos ativos; não usa o rótulo de valor a receber. Afeta painel administrador, clientes comerciais no servidor e instalações locais, sem mudar contratos, pagamentos ou saldo dos clientes.
 
 - As vendas antecipadas consideram somente os planos **Trimestral**, **Semestral** e **Anual**. O desconto é calculado contra a contratação pelo valor do plano Mensal durante 3, 6 ou 12 meses, respectivamente; o Dashboard detalha o percentual por tipo de plano e a economia total, enquanto o Financeiro mostra a média do mês.
+
+- O indicador também separa a carteira antecipada em vigência das **novas vendas antecipadas no mês**. Assim, uma renovação trimestral recente compõe a venda do mês sem ocultar os contratos pagos em períodos anteriores que ainda estão ativos.
 
 Na versão 1.3.38, foi adicionada a tela separada Mensagens informativas, que
 permite selecionar clientes e enviar texto com uma ou mais imagens fora das
