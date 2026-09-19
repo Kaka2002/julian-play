@@ -170,6 +170,7 @@ const { listarAuditoriaCliente, registrarEventoCliente } = require('../services/
 const { listarPendenciasOperacionais, atualizarControlePendencia, concluirPendencia, excluirPendencia } = require('../services/pendenciasOperacionaisService');
 const { listarDivergenciasFinanceiras, executarConciliacaoFinanceira } = require('../services/conciliacaoFinanceiraService');
 const { listarGruposClientesDuplicados } = require('../services/clientesDuplicadosService');
+const { CATEGORIAS: CATEGORIAS_DESPESA, listarDespesasFinanceiras, buscarDespesaFinanceiraPorId, criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira } = require('../services/despesasFinanceirasService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
@@ -8164,7 +8165,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
 
     <section class="clients-panel">
         <div class="panel-head"><div><h2 class="panel-title">Conferência e conciliação</h2><div class="subtitle">Comprovantes PayPal, divergências, confirmação auditada e estornos.</div></div>
-        <div class="actions"><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
+        <div class="actions"><a class="button secondary" href="/financeiro/despesas">Despesas</a><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
     </section>
 
     <section class="finance-breakdown-grid">
@@ -8229,6 +8230,64 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
             porPagina: paginacaoFinanceiro.porPagina
         })}
     </section>`;
+}
+
+function resumoDespesasFinanceiras(despesas = []) {
+    return despesas.reduce((resumo, despesa) => {
+        if (despesa.excluidoEm) return resumo;
+        resumo.total += numeroMoeda(despesa.valor);
+        resumo.quantidade += 1;
+        return resumo;
+    }, { total: 0, quantidade: 0 });
+}
+
+function formularioDespesaFinanceira({ despesa = {}, mes = mesAtualInput(), acao = '/financeiro/despesas', textoBotao = 'Registrar despesa' } = {}) {
+    const categorias = CATEGORIAS_DESPESA.map(categoria => `<option value="${escapar(categoria)}" ${categoria === despesa.categoria ?'selected' : ''}>${escapar(categoria)}</option>`).join('');
+    const dataPagamento = String(despesa.dataPagamento || `${mes}-01`).slice(0, 10);
+
+    return `<section class="clients-panel" style="margin-bottom:24px;">
+        <div class="panel-head"><div><h2 class="panel-title">${despesa.id ?'Editar despesa' : 'Nova despesa'}</h2><div class="subtitle">Registre pagamentos efetuados para acompanhar os custos reais do mês.</div></div></div>
+        <form class="form-grid" method="post" action="${escapar(acao)}">
+            <input type="hidden" name="mes" value="${escapar(mes)}">
+            <label>Descrição<input name="descricao" maxlength="160" required value="${escapar(despesa.descricao || '')}" placeholder="Ex.: Assinatura do aplicativo"></label>
+            <label>Categoria<select name="categoria">${categorias}</select></label>
+            <label>Valor (R$)<input name="valor" inputmode="decimal" required value="${escapar(despesa.valor || '')}" placeholder="0,00"></label>
+            <label>Data do pagamento<input type="date" name="dataPagamento" required value="${escapar(dataPagamento)}"></label>
+            <label>Forma de pagamento<input name="formaPagamento" maxlength="80" value="${escapar(despesa.formaPagamento || '')}" placeholder="Ex.: PIX, cartão, boleto"></label>
+            <label style="grid-column:1 / -1;">Observações<textarea name="observacoes" maxlength="1000" rows="3" placeholder="Detalhes opcionais para conferência">${escapar(despesa.observacoes || '')}</textarea></label>
+            <div class="actions" style="grid-column:1 / -1;"><button class="button green" type="submit">${icon('plus')} ${escapar(textoBotao)}</button><a class="button secondary" href="/financeiro/despesas?mes=${encodeURIComponent(mes)}">Cancelar</a></div>
+        </form>
+    </section>`;
+}
+
+function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0 }) {
+    const resumo = resumoDespesasFinanceiras(despesas);
+    const saldo = receitaMes - resumo.total;
+    const linhas = despesas.length
+        ?despesas.map(despesa => `<tr>
+            <td data-label="Data">${escapar(formatarDataHoraCurta(despesa.dataPagamento))}</td>
+            <td data-label="Descrição"><div class="cell-title">${escapar(despesa.descricao)}</div><div class="cell-muted">${escapar(despesa.observacoes || '')}</div></td>
+            <td data-label="Categoria">${escapar(despesa.categoria || 'Outros')}</td>
+            <td data-label="Pagamento">${escapar(despesa.formaPagamento || '-')}</td>
+            <td data-label="Valor"><strong>${escapar(formatarMoeda(numeroMoeda(despesa.valor)))}</strong></td>
+            <td data-label="Status">${despesa.excluidoEm ?'<span class="badge red">Removida</span>' : '<span class="badge green">Válida</span>'}</td>
+            <td data-label="Ações"><div class="actions">${despesa.excluidoEm ?'' : `<a class="button secondary icon-only" href="/financeiro/despesas/${escapar(despesa.id)}/editar?mes=${encodeURIComponent(filtros.mes || '')}" title="Editar despesa">${icon('edit')}</a><form method="post" action="/financeiro/despesas/${escapar(despesa.id)}/excluir" onsubmit="return confirm('Remover esta despesa do resumo? O histórico será preservado.');"><input type="hidden" name="mes" value="${escapar(filtros.mes || '')}"><button class="button secondary icon-only" type="submit" title="Remover despesa">${icon('trash')}</button></form>`}</div></td>
+        </tr>`).join('')
+        : '<tr><td colspan="7" class="empty">Nenhuma despesa encontrada neste mês.</td></tr>';
+
+    return `<section class="page-title page-title-with-action"><div><h1>Despesas</h1><div class="subtitle">Custos e pagamentos efetuados para comparar com a receita recebida.</div></div><a class="button secondary" href="/financeiro">Voltar ao financeiro</a></section>
+    <section class="metrics">
+        ${metricCard({ label: 'Receita recebida', valor: formatarMoeda(receitaMes), nota: `${pagamentosMes} pagamento(s) no mês`, tipo: 'green', icone: 'financeiro' })}
+        ${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s)`, tipo: 'red', icone: 'trash' })}
+        ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita menos despesas' : 'Despesas acima da receita', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
+    </section>
+    <form class="clients-toolbar" method="get" action="/financeiro/despesas"><input type="month" name="mes" value="${escapar(filtros.mes || mesAtualInput())}" onchange="this.form.submit()"><div class="clients-search">${icon('search')}<input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar descrição, categoria ou pagamento..."></div><select name="status" onchange="this.form.submit()">${[['validas','Válidas'],['removidas','Removidas'],['todas','Todas']].map(([valor,texto]) => `<option value="${valor}" ${valor === filtros.status ?'selected' : ''}>${texto}</option>`).join('')}</select><button class="button secondary" type="submit">${icon('search')} Filtrar</button></form>
+    ${formularioDespesaFinanceira({ mes: filtros.mes || mesAtualInput() })}
+    <section class="clients-panel"><table class="clients-table"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>${linhas}</tbody></table></section>`;
+}
+
+function telaEditarDespesaFinanceira(despesa, mes) {
+    return `<section class="page-title"><h1>Editar despesa</h1><div class="subtitle">Atualize o lançamento sem perder o histórico financeiro.</div></section>${formularioDespesaFinanceira({ despesa, mes, acao: `/financeiro/despesas/${despesa.id}/editar`, textoBotao: 'Salvar alterações' })}`;
 }
 
 function planoCard(plano) {
@@ -9478,7 +9537,15 @@ router.use(criarFinanceiroRoute({
     financeiroPorPagina: FINANCEIRO_POR_PAGINA,
     renderizar,
     telaFinanceiro,
-    gerarCsvFinanceiro
+    gerarCsvFinanceiro,
+    listarDespesasFinanceiras,
+    buscarDespesaFinanceiraPorId,
+    criarDespesaFinanceira,
+    atualizarDespesaFinanceira,
+    removerDespesaFinanceira,
+    telaDespesasFinanceiras,
+    telaEditarDespesaFinanceira,
+    calcularReceitaRealDoMes
 }));
 
 router.get('/preparacao-comercial', async (req, res) => {

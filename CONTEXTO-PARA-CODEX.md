@@ -19,6 +19,13 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ## Objetivo do sistema
 
+### Controle de despesas em 19/09/2026
+
+- O Financeiro possui a página `Financeiro > Despesas`, destinada ao registro de pagamentos efetuados. Cada lançamento guarda descrição, categoria, valor, data, forma de pagamento e observações; pode ser editado e removido do resumo sem apagar o histórico.
+- A página compara, no mês escolhido, a receita efetivamente recebida nos pagamentos válidos, as despesas válidas e o saldo resultante. A receita recorrente permanece uma projeção de contratos ativos e não é usada nesse comparativo de caixa.
+- A migração formal `2026-09-19-012-despesas-financeiras` cria a tabela isolada de despesas e gera o backup pré-migração previsto pelo executor. Afeta o painel administrador, os painéis comerciais no servidor e as instalações locais; o Painel Mestre não usa esse layout. Dados financeiros, clientes, sessões e configurações existentes são preservados.
+- Depois de atualizar, reiniciar somente o processo do painel que atende a instalação para aplicar a migração e abrir `Financeiro > Despesas`. Foram executados `node --check`, a suíte interna, `git diff --check`, a geração do pacote e o teste de pacote limpo.
+
 Na versão 1.3.38, foi adicionada a tela separada Mensagens informativas, que
 permite selecionar clientes e enviar texto com uma ou mais imagens fora das
 campanhas. O envio ignora clientes sem telefone, inativos ou com opt-out de
