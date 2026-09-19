@@ -702,9 +702,10 @@ function calcularReceitaMensal(clientes) {
             const grupo = grupoPlanoReceita(base);
             const dias = diasPlanoCliente(base);
             const valorPlano = temHistoricoFinanceiro && !temPagamentoValido ?0 : numeroMoeda(base.valorPlano);
-            const assinaturaApp = temHistoricoFinanceiro && !temPagamentoValido ?0 : numeroMoeda(base.assinaturaApp);
             const mensalPlano = dias > 0 ?(valorPlano / dias) * 30 : valorPlano;
-            const mensal = mensalPlano + assinaturaApp;
+            // Assinatura de aplicativo é cobrança eventual: entra na receita
+            // realizada quando paga, mas não infla a projeção recorrente.
+            const mensal = mensalPlano;
             const atual = grupos.get(grupo) || { plano: grupo, clientes: 0, total: 0 };
 
             if (mensal <= 0 && temHistoricoFinanceiro) return;
@@ -725,6 +726,11 @@ function calcularReceitaMensal(clientes) {
     const total = itens.reduce((soma, item) => soma + item.total, 0);
 
     return { total, itens };
+}
+
+function calcularReceitaRealDoMes(pagamentos = []) {
+    const total = pagamentos.reduce((soma, pagamento) => soma + numeroMoeda(pagamento.valorTotal), 0);
+    return { total, pagamentos: pagamentos.length };
 }
 
 function calcularDiasRestantes(vencimento) {
@@ -1415,6 +1421,22 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-weight: 600;
         }
 
+        .revenue-real {
+            min-width: 260px;
+            padding: 14px 18px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #f8faff;
+        }
+
+        .revenue-real-total {
+            display: block;
+            margin-top: 7px;
+            font-size: 28px;
+            line-height: 1;
+            font-weight: 800;
+        }
+
         .revenue-icon {
             display: grid;
             place-items: center;
@@ -1684,6 +1706,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .dashboard-page .revenue-title { font-size: 16px; }
             .dashboard-page .revenue-total { display: inline-block; margin-top: 4px; margin-right: 10px; font-size: 34px; }
             .dashboard-page .revenue-note { display: inline; margin-top: 0; font-size: 13px; }
+            .dashboard-page .revenue-real { min-width: 230px; padding: 9px 12px; }
+            .dashboard-page .revenue-real-total { display: inline-block; margin: 4px 8px 0 0; font-size: 26px; }
             .dashboard-page .revenue-icon { width: 38px; height: 38px; border-radius: 10px; }
             .dashboard-page .revenue-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 28px; padding-top: 9px; }
             .dashboard-page .revenue-row { grid-template-columns: minmax(85px, 1fr) auto 74px auto; gap: 8px; }
@@ -7481,7 +7505,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
 
-function receitaMensalCard(receita) {
+function receitaMensalCard(receita, receitaReal) {
     const maiorValor = Math.max(...receita.itens.map(item => item.total), 1);
     const linhas = receita.itens.length
         ?receita.itens.map((item) => {
@@ -7508,7 +7532,12 @@ function receitaMensalCard(receita) {
                     </button>
                 </div>
                 <strong class="revenue-total">${escapar(formatarMoeda(receita.total))}</strong>
-                <span class="revenue-note">Baseada nos pagamentos válidos e nos clientes ativos sem histórico financeiro</span>
+                <span class="revenue-note">Projeção dos planos ativos; não inclui assinatura de aplicativo.</span>
+            </div>
+            <div class="revenue-real">
+                <div class="revenue-title">Receita recebida neste mês</div>
+                <strong class="revenue-real-total">${escapar(formatarMoeda(receitaReal.total))}</strong>
+                <span class="revenue-note">${escapar(receitaReal.pagamentos)} pagamento(s) válido(s), incluindo aplicativo quando cobrado.</span>
             </div>
             <span class="revenue-icon">${icon('trend')}</span>
         </div>
@@ -7564,9 +7593,10 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = []) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
+    const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
     const proximos = clientesComVencimentoProximo(clientes);
     const proximosPaginados = paginarItens(proximos, pagina, porPagina);
     const suporteAberto = Number(resumoSuporte.abertos || 0) + Number(resumoSuporte.emAndamento || 0);
@@ -7622,7 +7652,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             </div>
         </div>
     </section>
-    ${receitaMensalCard(receita)}
+    ${receitaMensalCard(receita, receitaReal)}
     ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -9291,9 +9321,10 @@ router.get('/clientes', async (req, res) => {
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
-    const [clientes, receitaBase, aniversariantes, resumoSuporte, resumoComercial] = await Promise.all([
+    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
+        listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
         listarClientesAniversarioHoje(anoAtual),
         resumoAtendimentos(),
         resumoCrm()
@@ -9304,7 +9335,7 @@ router.get('/clientes', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes),
         mensagem,
         ativo: 'painel'
     });

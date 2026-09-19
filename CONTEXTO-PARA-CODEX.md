@@ -1824,3 +1824,10 @@ pm ci normalmente.
 
 - O botão flutuante de retorno ao topo passa a aparecer após 80 pixels de rolagem em qualquer página longa. Antes ele exigia 360 pixels e podia permanecer oculto no Financeiro após a paginação de cinco registros.
 - A mudança afeta somente a interface compartilhada dos quatro perfis; não altera dados, configurações, sessões, cobranças ou backups.
+
+## Receita recorrente e receita recebida em 19/09/2026
+
+- A Receita Mensal Recorrente agora projeta somente a mensalidade proporcional dos planos ativos. A assinatura de aplicativo deixou de ser repetida na projeção mensal e continua entrando somente quando houver pagamento ou renovação registrada.
+- O Painel de Controle passa a mostrar também a Receita recebida neste mês, calculada pela soma integral dos pagamentos válidos do mês, incluindo a assinatura de aplicativo quando efetivamente cobrada, e informa a quantidade de pagamentos considerada.
+- A mudança afeta o painel administrador, clientes comerciais e instalações locais. Não altera bancos, pagamentos, configurações, sessões, cobranças ou backups; o Painel Mestre permanece inalterado.
+- Validação: sintaxe do roteador, teste específico de cálculo e exibição, suíte interna, `git diff --check`, geração do pacote e teste de instalação limpa aprovados.

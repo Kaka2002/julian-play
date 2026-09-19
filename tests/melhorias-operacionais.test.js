@@ -886,6 +886,25 @@ test('Imagem com ID preserva registro e imagem sem legenda nao repete retorno va
     assert.equal(b.envios.length, 1);
 });
 
+test('painel separa receita recorrente da receita realmente recebida no mês', () => {
+    const vm = require('node:vm');
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    const inicio = fonte.indexOf('function diasPlanoCliente(');
+    const fim = fonte.indexOf('function calcularDiasRestantes(', inicio);
+    const contexto = vm.createContext({
+        clienteEhTeste: cliente => cliente.status === 'teste',
+        numeroMoeda: valor => Number(String(valor || '0').replace(',', '.')) || 0
+    });
+    vm.runInContext(fonte.slice(inicio, fim), contexto);
+    const recorrente = contexto.calcularReceitaMensal([{ status: 'ativo', plano: 'Mensal', diasContrato: 30, valorPlano: '35,00', assinaturaApp: '10,00' }]);
+    const real = contexto.calcularReceitaRealDoMes([{ valorTotal: '45,00' }]);
+    assert.equal(recorrente.total, 35);
+    assert.equal(real.total, 45);
+    assert.equal(real.pagamentos, 1);
+    assert.match(fonte, /Receita recebida neste mês/);
+    assert.match(fonte, /listarPagamentosFinanceiro\(\{ mes: mesAtualInput\(\), status: 'validos' \}\)/);
+});
+
 test('Menu de planos exclui Bônus Mensal e renumera somente planos comerciais', () => {
     const menuPlanos = require('../menus/planos');
     const menu = menuPlanos([

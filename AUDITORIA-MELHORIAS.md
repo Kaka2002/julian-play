@@ -384,3 +384,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 ## Botão de retorno ao topo no Financeiro em 18/09/2026
 
 - Implementado: o botão de retorno ao topo passa a surgir após uma rolagem curta, tornando-o disponível no Financeiro também quando a página possui poucos registros.
+
+## Receita recorrente e receita recebida em 19/09/2026
+
+- Implementado: a projeção recorrente considera somente o valor proporcional dos planos ativos. A receita recebida no mês soma os pagamentos válidos, incluindo aplicativo apenas no pagamento ou renovação que o registrou, permitindo comparar projeção e valor real.
+- Validação concluída: testes de cálculo e interface, suíte interna, sintaxe, pacote local e teste de instalação limpa aprovados.
