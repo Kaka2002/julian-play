@@ -886,6 +886,23 @@ test('Imagem com ID preserva registro e imagem sem legenda nao repete retorno va
     assert.equal(b.envios.length, 1);
 });
 
+test('comprovante PIX recebido pelo WhatsApp fica pendente uma vez e renova apos conferencia', () => {
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const db=require('./database/sqlite');await db.ready;const run=(s,p=[])=>new Promise((ok,no)=>db.run(s,p,function(e){e?no(e):ok({id:this.lastID,changes:this.changes})}));const get=(s,p=[])=>new Promise((ok,no)=>db.get(s,p,(e,r)=>e?no(e):ok(r)));const plano=await run("INSERT INTO tipos_planos(nome,dias,valor) VALUES('Trimestral',90,'96,00')");const cliente=await run("INSERT INTO clientes(nome,telefone,plano,tipoPlanoId,diasContrato,valorPlano,dataInicio,dataVencimento,vencimento,status) VALUES(?,?,?,?,?,?,?,?,?,?)",['Cliente PIX','5511998887777','Trimestral',plano.id,90,'96,00','2026-09-03T10:00','2026-12-02T23:59','2026-12-02','ativo']);const s=require('./services/pagamentoManualService');const imagem=Buffer.from('89504e470d0a1a0a0000000','hex');const primeiro=await s.registrarComprovanteWhatsapp({telefone:'5511998887777',messageId:'whatsapp-msg-1',mimetype:'image/png',arquivo:imagem});const segundo=await s.registrarComprovanteWhatsapp({telefone:'5511998887777',messageId:'whatsapp-msg-1',mimetype:'image/png',arquivo:imagem});const pendente=await get('SELECT * FROM cobrancas_pix WHERE id=?',[primeiro.cobrancaId]);const existeArquivo=fs.existsSync(path.join(db.dataDir,'comprovantes-pagamentos',pendente.comprovanteArquivo));const ok=await s.confirmarPagamentoManual(primeiro.cobrancaId,{identificadorManual:'PIX-TESTE-1',conferidoPor:'admin'});const pagamento=await get('SELECT formaPagamento,plano FROM cliente_pagamentos WHERE id=?',[ok.renovacao.pagamentoId]);process.stdout.write(JSON.stringify({registrado:primeiro.registrado,pendente:pendente.status,arquivo:existeArquivo,duplicado:segundo.duplicado,aprovado:ok.aprovado,forma:pagamento.formaPagamento,plano:pagamento.plano}));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        assert.deepEqual(JSON.parse(resultado.stdout), {
+            registrado: true,
+            pendente: 'aguardando_conferencia',
+            arquivo: true,
+            duplicado: true,
+            aprovado: true,
+            forma: 'PIX (comprovante WhatsApp)',
+            plano: 'Trimestral'
+        });
+    } finally {
+        removerAmbiente(resultado.ambiente);
+    }
+});
+
 test('painel separa receita recorrente da receita realmente recebida no mês', () => {
     const vm = require('node:vm');
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');

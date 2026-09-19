@@ -15,7 +15,8 @@ const migrations = [
     require('./009-governanca-privacidade'),
     require('./010-indicacao-cliente'),
     require('./011-auditoria-clientes'),
-    require('./012-despesas-financeiras')
+    require('./012-despesas-financeiras'),
+    require('./013-comprovantes-pix-whatsapp')
 ];
 
 function run(db, sql, params = []) {

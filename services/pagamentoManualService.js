@@ -1,5 +1,8 @@
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const db = require('../database/sqlite');
-const { buscarClientePorId, renovarCliente, adicionarNotaCliente } = require('./clientes');
+const { buscarClientePorId, buscarClientePorTelefone, renovarCliente, adicionarNotaCliente } = require('./clientes');
 const { registrarEventoSistema } = require('./eventosSistema');
 
 function executar(sql, params = []) {
@@ -23,6 +26,32 @@ function buscarTodos(sql, params = []) {
     }));
 }
 
+const PASTA_COMPROVANTES = path.join(db.dataDir, 'comprovantes-pagamentos');
+const TIPOS_COMPROVANTE = {
+    'image/jpeg': { extensao: '.jpg', assinaturas: ['ffd8ff'] },
+    'image/png': { extensao: '.png', assinaturas: ['89504e470d0a1a0a'] },
+    'application/pdf': { extensao: '.pdf', assinaturas: ['25504446'] }
+};
+
+function tipoComprovanteValido(buffer, mimetype) {
+    const regra = TIPOS_COMPROVANTE[String(mimetype || '').toLowerCase()];
+    if (!regra || !Buffer.isBuffer(buffer) || !buffer.length || buffer.length > 5 * 1024 * 1024) return null;
+    const inicio = buffer.subarray(0, 16).toString('hex').toLowerCase();
+    return regra.assinaturas.some(assinatura => inicio.startsWith(assinatura)) ? regra : null;
+}
+
+function numeroMoeda(valor) {
+    const texto = String(valor ?? '').trim().replace(/\s/g, '');
+    if (!texto) return 0;
+    const normalizado = texto.includes(',') ? texto.replace(/\./g, '').replace(',', '.') : texto;
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : 0;
+}
+
+function referenciaComprovanteWhatsapp(messageId) {
+    return `PIX-WA-${crypto.createHash('sha256').update(String(messageId || '')).digest('hex').slice(0, 24).toUpperCase()}`;
+}
+
 async function registrarCobrancaManual(dados = {}) {
     if (!dados.referencia || !dados.clienteId || Number(dados.valorTotal || 0) <= 0) {
         throw new Error('Dados incompletos para registrar cobrança manual.');
@@ -43,7 +72,7 @@ async function registrarCobrancaManual(dados = {}) {
 
 function listarCobrancasManuais(filtros = {}) {
     const params = [];
-    let where = `c.provedor IN ('paypal_manual', 'manual')`;
+    let where = `c.provedor IN ('paypal_manual', 'manual', 'pix_comprovante_whatsapp')`;
     if (filtros.status && filtros.status !== 'todos') {
         where += ' AND c.status = ?';
         params.push(filtros.status);
@@ -58,13 +87,78 @@ function listarCobrancasManuais(filtros = {}) {
     `, params);
 }
 
+async function registrarComprovanteWhatsapp(dados = {}) {
+    const telefone = String(dados.telefone || '').trim();
+    const messageId = String(dados.messageId || '').trim();
+    const arquivoBuffer = Buffer.isBuffer(dados.arquivo) ? dados.arquivo : Buffer.from(dados.arquivo || '');
+    const tipo = tipoComprovanteValido(arquivoBuffer, dados.mimetype);
+    if (!telefone || !messageId || !tipo) {
+        return { registrado: false, motivo: 'arquivo_invalido' };
+    }
+
+    const cliente = await buscarClientePorTelefone(telefone);
+    if (!cliente) return { registrado: false, motivo: 'cliente_nao_encontrado' };
+
+    const referencia = referenciaComprovanteWhatsapp(messageId);
+    const existente = await buscarUm('SELECT id, status FROM cobrancas_pix WHERE referencia = ?', [referencia]);
+    if (existente) return { registrado: false, duplicado: true, cobrancaId: existente.id, status: existente.status };
+
+    const valorPlano = String(cliente.valorPlano || '0,00');
+    const assinaturaApp = String(cliente.assinaturaApp || '0,00');
+    const valorTotal = (numeroMoeda(valorPlano) + numeroMoeda(assinaturaApp)).toFixed(2);
+    if (Number(valorTotal) <= 0 || !cliente.plano || Number(cliente.diasContrato || 0) <= 0) {
+        return { registrado: false, motivo: 'contrato_cliente_incompleto' };
+    }
+
+    fs.mkdirSync(PASTA_COMPROVANTES, { recursive: true });
+    const nomeArquivo = `${referencia.toLowerCase()}-${crypto.randomBytes(8).toString('hex')}${tipo.extensao}`;
+    const caminhoArquivo = path.join(PASTA_COMPROVANTES, nomeArquivo);
+    await fs.promises.writeFile(caminhoArquivo, arquivoBuffer, { flag: 'wx' });
+
+    try {
+        await registrarCobrancaManual({
+            referencia,
+            provedor: 'pix_comprovante_whatsapp',
+            clienteId: cliente.id,
+            plano: cliente.plano,
+            tipoPlanoId: cliente.tipoPlanoId || '',
+            diasContrato: cliente.diasContrato,
+            valorPlano,
+            assinaturaApp,
+            valorTotal,
+            moeda: 'BRL'
+        });
+        await executar(`UPDATE cobrancas_pix
+            SET comprovanteArquivo = ?, comprovanteRecebidoEm = ?, status = 'aguardando_conferencia',
+                erro = '', atualizadoEm = CURRENT_TIMESTAMP
+            WHERE referencia = ? AND provedor = 'pix_comprovante_whatsapp'`, [
+            nomeArquivo, new Date().toISOString(), referencia
+        ]);
+    } catch (err) {
+        await fs.promises.unlink(caminhoArquivo).catch(() => {});
+        if (/UNIQUE constraint failed: cobrancas_pix\.referencia/i.test(err.message)) {
+            const repetido = await buscarUm('SELECT id, status FROM cobrancas_pix WHERE referencia = ?', [referencia]);
+            return { registrado: false, duplicado: true, cobrancaId: repetido?.id, status: repetido?.status };
+        }
+        throw err;
+    }
+
+    const cobranca = await buscarUm('SELECT id FROM cobrancas_pix WHERE referencia = ?', [referencia]);
+    await adicionarNotaCliente(cliente.id, 'Comprovante PIX recebido pelo WhatsApp e aguardando conferência.');
+    await registrarEventoSistema('pix_comprovante_whatsapp_recebido', 'info',
+        'Comprovante PIX recebido pelo WhatsApp e aguardando conferência.', {
+            cobrancaId: cobranca?.id || null, clienteId: cliente.id, referencia
+        });
+    return { registrado: true, cobrancaId: cobranca?.id || null, clienteId: cliente.id, referencia };
+}
+
 async function registrarComprovanteManual(cobrancaId, arquivo) {
     const agora = new Date().toISOString();
     const resultado = await executar(
         `UPDATE cobrancas_pix
          SET comprovanteArquivo = ?, comprovanteRecebidoEm = ?, status = 'aguardando_conferencia',
              erro = '', atualizadoEm = CURRENT_TIMESTAMP
-         WHERE id = ? AND provedor IN ('paypal_manual', 'manual')
+         WHERE id = ? AND provedor IN ('paypal_manual', 'manual', 'pix_comprovante_whatsapp')
            AND status IN ('aguardando_comprovante', 'aguardando_conferencia')`,
         [arquivo, agora, cobrancaId]
     );
@@ -77,14 +171,14 @@ async function registrarComprovanteManual(cobrancaId, arquivo) {
 async function confirmarPagamentoManual(cobrancaId, dados = {}) {
     const identificador = String(dados.identificadorManual || '').trim();
     const conferidoPor = String(dados.conferidoPor || '').trim();
-    if (!identificador) throw new Error('Informe o identificador da transação conferida no PayPal.');
+    if (!identificador) throw new Error('Informe o identificador PIX ou uma observação da conferência.');
     if (!conferidoPor) throw new Error('Não foi possível identificar o administrador responsável.');
 
     const cobranca = await buscarUm(
-        `SELECT * FROM cobrancas_pix WHERE id = ? AND provedor IN ('paypal_manual', 'manual')`,
+        `SELECT * FROM cobrancas_pix WHERE id = ? AND provedor IN ('paypal_manual', 'manual', 'pix_comprovante_whatsapp')`,
         [cobrancaId]
     );
-    if (!cobranca) throw new Error('Cobrança manual não encontrada.');
+    if (!cobranca) throw new Error('Cobrança pendente não encontrada.');
     if (cobranca.status === 'aprovado') return { duplicado: true, cobranca };
     if (cobranca.status === 'estornado') throw new Error('Pagamento já estornado.');
     if (!cobranca.comprovanteArquivo) throw new Error('Anexe o comprovante antes da confirmação.');
@@ -94,7 +188,7 @@ async function confirmarPagamentoManual(cobrancaId, dados = {}) {
          WHERE provedor = ? AND identificadorManual = ? AND id <> ? LIMIT 1`,
         [cobranca.provedor, identificador, cobranca.id]
     );
-    if (repetido) throw new Error('Este identificador PayPal já foi usado em outra cobrança.');
+    if (repetido) throw new Error('Este identificador já foi usado em outra cobrança.');
 
     const bloqueio = await executar(
         `UPDATE cobrancas_pix SET status = 'processando_manual', identificadorManual = ?,
@@ -115,7 +209,11 @@ async function confirmarPagamentoManual(cobrancaId, dados = {}) {
             diasContrato: cobranca.diasContrato,
             valorPlano: cobranca.valorPlano,
             assinaturaApp: cobranca.assinaturaApp,
-            formaPagamento: cobranca.provedor === 'paypal_manual' ? 'PayPal manual' : 'Pagamento manual',
+            formaPagamento: cobranca.provedor === 'paypal_manual'
+                ? 'PayPal manual'
+                : cobranca.provedor === 'pix_comprovante_whatsapp'
+                    ? 'PIX (comprovante WhatsApp)'
+                    : 'Pagamento manual',
             reiniciarPeriodo: true,
             observacoes: `Conferido por ${conferidoPor}. Transação: ${identificador}. Referência: ${cobranca.referencia}.`
         });
@@ -128,9 +226,9 @@ async function confirmarPagamentoManual(cobrancaId, dados = {}) {
             [renovacao.pagamentoId, agora, agora, vencimentoAnterior, vencimentoNovo, cobranca.id]
         );
         await adicionarNotaCliente(cobranca.clienteId,
-            `Pagamento manual confirmado por ${conferidoPor}. Identificador: ${identificador}.`);
+            `Pagamento confirmado por ${conferidoPor}. Identificador: ${identificador}.`);
         await registrarEventoSistema('pagamento_manual_confirmado', 'sucesso',
-            'Pagamento manual conferido e cliente renovado.', {
+            'Pagamento conferido e cliente renovado.', {
                 cobrancaId: cobranca.id, clienteId: cobranca.clienteId, pagamentoId: renovacao.pagamentoId,
                 identificador, conferidoPor, vencimentoAnterior, vencimentoNovo
             });
@@ -149,7 +247,7 @@ async function estornarPagamentoManual(cobrancaId, dados = {}) {
     const estornadoPor = String(dados.estornadoPor || '').trim();
     if (motivo.length < 5) throw new Error('Informe o motivo do estorno.');
     const cobranca = await buscarUm(
-        `SELECT * FROM cobrancas_pix WHERE id = ? AND provedor IN ('paypal_manual', 'manual')`,
+        `SELECT * FROM cobrancas_pix WHERE id = ? AND provedor IN ('paypal_manual', 'manual', 'pix_comprovante_whatsapp')`,
         [cobrancaId]
     );
     if (!cobranca || cobranca.status !== 'aprovado') throw new Error('Somente pagamento manual aprovado pode ser estornado.');
@@ -183,6 +281,7 @@ module.exports = {
     registrarCobrancaManual,
     listarCobrancasManuais,
     registrarComprovanteManual,
+    registrarComprovanteWhatsapp,
     confirmarPagamentoManual,
     estornarPagamentoManual
 };

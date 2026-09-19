@@ -8216,7 +8216,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     </section>
 
     <section class="clients-panel">
-        <div class="panel-head"><div><h2 class="panel-title">Conferência e conciliação</h2><div class="subtitle">Comprovantes PayPal, divergências, confirmação auditada e estornos.</div></div>
+        <div class="panel-head"><div><h2 class="panel-title">Conferência e conciliação</h2><div class="subtitle">Comprovantes PIX recebidos pelo WhatsApp, conferência auditada e estornos.</div></div>
         <div class="actions"><a class="button secondary" href="/financeiro/despesas">Despesas</a><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
     </section>
 

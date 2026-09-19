@@ -15,6 +15,7 @@ const {
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
+const { registrarComprovanteWhatsapp } = require('../services/pagamentoManualService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -325,6 +326,43 @@ function obterTipoMensagem(message) {
         'desconhecido';
 }
 
+async function obterTelefoneParaComprovante(message) {
+    const telefoneOriginal = obterTelefoneMensagem(message);
+    if (!/@lid$/i.test(String(telefoneOriginal || ''))) return telefoneOriginal;
+    try {
+        const contato = await message.getContact();
+        return contato?.number || contato?.id?.user || telefoneOriginal;
+    } catch (err) {
+        console.log(`Não foi possível resolver o contato LID do comprovante: ${err.message}`);
+        return telefoneOriginal;
+    }
+}
+
+async function registrarComprovantePixRecebido(message) {
+    if (!message?.hasMedia) return { registrado: false, motivo: 'sem_midia' };
+    try {
+        const media = await message.downloadMedia();
+        const resultado = await registrarComprovanteWhatsapp({
+            telefone: await obterTelefoneParaComprovante(message),
+            messageId: getMessageId(message),
+            mimetype: media?.mimetype,
+            arquivo: media?.data ? Buffer.from(media.data, 'base64') : Buffer.alloc(0)
+        });
+        if (resultado.registrado) {
+            pausarParaAtendente(obterTelefoneMensagem(message), 'Comprovante PIX recebido', 'comprovante_pix');
+            console.log(`[pix] Comprovante recebido pelo WhatsApp: cobrança ${resultado.cobrancaId}, cliente ${resultado.clienteId}.`);
+        } else if (resultado.duplicado) {
+            console.log(`[pix] Comprovante do WhatsApp já registrado: cobrança ${resultado.cobrancaId}.`);
+        } else {
+            console.log(`[pix] Mídia recebida não registrada como comprovante: ${resultado.motivo}.`);
+        }
+        return resultado;
+    } catch (err) {
+        console.log(`[pix] Falha ao registrar comprovante recebido pelo WhatsApp: ${err.message}`);
+        return { registrado: false, motivo: 'erro' };
+    }
+}
+
 function ehEventoInternoWhatsapp(message) {
     const tipo = normalizar(obterTipoMensagem(message));
     const subtipo = normalizar(message?._data?.subtype || '');
@@ -426,7 +464,7 @@ async function removerRespostaAutomaticaForaDoHorario(message) {
     }
 }
 
-function processarMensagemEmFila(message, options = {}) {
+async function processarMensagemEmFila(message, options = {}) {
     if (!message) return;
 
     if (!ehConversaCliente(message)) {
@@ -470,6 +508,12 @@ function processarMensagemEmFila(message, options = {}) {
             console.log('Erro ao registrar teste liberado:', err.message);
         });
         console.log('Mensagem própria ignorada sem registrar conteúdo.');
+        return;
+    }
+
+    if (message.hasMedia) {
+        if (jaProcessouMensagem(message)) return;
+        await registrarComprovantePixRecebido(message);
         return;
     }
 
