@@ -34,6 +34,13 @@ test('Painel Mestre compara automaticamente a versão de cada instalação', () 
     assert.match(mestre, /version: packageInfo\.version/);
 });
 
+test('painel administrativo exibe a versão do pacote abaixo do nome do sistema', () => {
+    const clientesRoute = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(clientesRoute, /const packageInfo = require\('\.\.\/package\.json'\)/);
+    assert.match(clientesRoute, /const versaoSistema = packageInfo\.version \|\| '1\.0\.0'/);
+    assert.match(clientesRoute, /class="brand-copy"[\s\S]*class="version-pill">Versão \$\{escapar\(versaoSistema\)\}/);
+});
+
 test('nova instalação do Painel Mestre exige usuário e senha sem valores automáticos', () => {
     const provisionador = fs.readFileSync(path.join(repoRoot, 'master', 'provisionador.js'), 'utf8');
     const mestre = fs.readFileSync(path.join(repoRoot, 'master', 'app.js'), 'utf8');

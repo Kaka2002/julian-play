@@ -21,6 +21,8 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ### Controle de despesas em 19/09/2026
 
+- A versão de entrega atual é **1.3.38**. O Painel Administrativo passa a exibir, abaixo do nome configurado do sistema no cabeçalho, o mesmo selo de versão lido do `package.json` já usado pelo Painel Mestre. O número é único para os dois painéis e muda junto da versão do pacote, sem gravar dados no banco nem afetar instalações existentes.
+
 - Os comprovantes PIX enviados por clientes no WhatsApp (JPG, PNG ou PDF de até 5 MB) passam a ser armazenados no diretório persistente da instalação e criam uma cobrança em **Aguardando conferência**. A página `Financeiro > Abrir pagamentos pendentes` permite abrir o comprovante, registrar o identificador PIX ou observação da conferência e então renovar o cliente. A renovação registra a forma de pagamento `PIX (comprovante WhatsApp)`. A mesma mensagem não cria cobrança duplicada; mídias sem cliente identificado, contrato completo ou formato suportado são apenas registradas no log. A migração `2026-09-19-013-comprovantes-pix-whatsapp` cria o índice operacional e mantém o backup pré-migração do executor. Afeta painel administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Clientes, pagamentos, dados, sessões e configurações existentes são preservados.
 
 - O Financeiro possui a página `Financeiro > Despesas`, destinada ao registro de pagamentos efetuados. Cada lançamento guarda descrição, categoria, valor, data, forma de pagamento e observações; pode ser editado e removido do resumo sem apagar o histórico.

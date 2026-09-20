@@ -13,6 +13,7 @@ const criarManutencaoWhatsappRoute = require('./manutencaoWhatsappRoute');
 const criarManutencaoConfiguracoesRoute = require('./manutencaoConfiguracoesRoute');
 const fs = require('fs');
 const path = require('path');
+const packageInfo = require('../package.json');
 const { AsyncLocalStorage } = require('async_hooks');
 const { execFile, spawn } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
@@ -895,6 +896,7 @@ function icon(nome) {
 function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {} }) {
     const status = getStatusWhatsApp();
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
+    const versaoSistema = packageInfo.version || '1.0.0';
     const logoUrl = config.logoUrl || '';
     const marcaDaguaUrl = '/assets/julian-play-fundo-painel.png';
     const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : ativo === 'painel' ? 'dashboard-page' : '';
@@ -1046,6 +1048,27 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .brand-text {
             font-weight: 800;
             overflow-wrap: anywhere;
+        }
+
+        .brand-copy {
+            display: grid;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .version-pill {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            padding: 3px 7px;
+            border: 1px solid rgba(255, 255, 255, .36);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .14);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            line-height: 1;
+            white-space: nowrap;
         }
 
         .brand-icon {
@@ -3047,7 +3070,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                         <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
                     </label>
                 </form>
-                <a class="brand-text" href="/clientes">${escapar(nomeSistema)}</a>
+                <div class="brand-copy"><a class="brand-text" href="/clientes">${escapar(nomeSistema)}</a><span class="version-pill">Versão ${escapar(versaoSistema)}</span></div>
             </div>
             <nav>
                 <a class="navlink ${ativo === 'painel' ?'active' : ''}" href="/clientes">${icon('painel')} Painel</a>
