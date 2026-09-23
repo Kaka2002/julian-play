@@ -5,6 +5,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Cópia de campos da ficha de cliente em 23/09/2026: a versão **1.3.39** adiciona ícone de cópia nos campos textuais e URLs da ficha, inclusive nas conexões de aplicativo acrescentadas durante a edição. A cópia é local ao navegador e não altera nem envia dados do cliente. Afeta administrador, comerciais e instalações locais; Mestre inalterado. Validado com sintaxe, teste direcionado, suíte interna, diff, pacote e instalação limpa.
+
 - Versionamento visual em 20/09/2026: a versão oficial do pacote foi atualizada para **1.3.38** e o Painel Administrativo passou a mostrar o selo abaixo do nome do sistema, usando a mesma origem (`package.json`) do Painel Mestre. A alteração é visual e não modifica bancos, clientes, sessões ou configurações.
 
 - Comprovantes PIX recebidos pelo WhatsApp em 19/09/2026: mídias JPG, PNG e PDF de até 5 MB são vinculadas ao cliente e ao plano atual como pendência única de conferência. Em `Financeiro > Abrir pagamentos pendentes`, o administrador abre o arquivo, confere o pagamento no banco, informa o identificador PIX ou observação e confirma a renovação auditada. A confirmação registra `PIX (comprovante WhatsApp)` como forma de pagamento. O robô não responde ao comprovante e pausa o atendimento; arquivos inválidos, mensagens repetidas ou contatos sem cliente não criam cobrança. A migração `013-comprovantes-pix-whatsapp` cria o índice operacional com o backup prévio. Afeta administrador, comerciais e instalações locais; Mestre inalterado. Dados, sessões e configurações são preservados. Validação: sintaxe, teste direcionado, suíte interna, diff, pacote e teste de pacote limpo.

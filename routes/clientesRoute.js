@@ -2595,6 +2595,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             font-size: 13px;
         }
 
+        .copyable-field { position: relative; }
+        .copyable-field > input { padding-right: 42px; }
+        .phone-field input { padding-right: 42px; }
+        .copy-field-button { position:absolute; right:7px; bottom:7px; display:inline-grid; place-items:center; width:30px; height:30px; padding:0; border:0; border-radius:7px; background:transparent; color:#5570d8; cursor:pointer; }
+        .copy-field-button:hover,.copy-field-button:focus-visible { background:var(--blue-soft); color:var(--blue); outline:none; }
+        .copy-field-button svg { width:17px; height:17px; }
+
         .toggle-line {
             min-height: 42px;
             display: flex;
@@ -6615,8 +6622,37 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             event.target.value = formatarMac(event.target.value);
         });
 
+        function ativarCopiaDosCampos(contexto = document) {
+            const seletor = 'input[type="text"], input[type="url"], input[type="tel"], input[type="password"]';
+            contexto.querySelectorAll(seletor).forEach((campo) => {
+                const rotulo = campo.closest('label');
+                if (!rotulo || rotulo.querySelector('.copy-field-button') || campo.disabled || campo.readOnly) return;
+                rotulo.classList.add('copyable-field');
+                const botao = document.createElement('button');
+                botao.type = 'button';
+                botao.className = 'copy-field-button';
+                botao.title = 'Copiar conteúdo';
+                botao.setAttribute('aria-label', 'Copiar conteúdo do campo');
+                botao.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+                botao.addEventListener('click', async () => {
+                    const valor = String(campo.value || '').trim();
+                    if (!valor) return;
+                    try { await navigator.clipboard.writeText(valor); }
+                    catch (_) { campo.focus(); campo.select(); document.execCommand('copy'); }
+                    botao.title = 'Copiado';
+                    botao.setAttribute('aria-label', 'Conteúdo copiado');
+                    setTimeout(() => { botao.title = 'Copiar conteúdo'; botao.setAttribute('aria-label', 'Copiar conteúdo do campo'); }, 1400);
+                });
+                rotulo.appendChild(botao);
+            });
+        }
+
+        ativarCopiaDosCampos();
+
         adicionarAcessoApp?.addEventListener('click', () => {
-            listaAcessosApp?.appendChild(novaLinhaAcessoApp());
+            const novaLinha = novaLinhaAcessoApp();
+            listaAcessosApp?.appendChild(novaLinha);
+            ativarCopiaDosCampos(novaLinha);
         });
 
         document.addEventListener('click', (event) => {
