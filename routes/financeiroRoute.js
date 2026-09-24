@@ -8,7 +8,10 @@ function criarFinanceiroRoute(deps = {}) {
         financeiroPorPagina, renderizar, telaFinanceiro, gerarCsvFinanceiro,
         listarDespesasFinanceiras, buscarDespesaFinanceiraPorId,
         criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira,
+        listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId,
+        criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro,
         telaDespesasFinanceiras, telaEditarDespesaFinanceira, calcularReceitaRealDoMes,
+        telaRendimentosFinanceiros, telaEditarRendimentoFinanceiro,
         calcularAnaliseReceitaMensal, listarReceitaMensalFinanceira, listarTiposPlanos, calcularReceitaMensal
     } = deps;
 
@@ -66,8 +69,9 @@ function criarFinanceiroRoute(deps = {}) {
     router.get('/financeiro/despesas', async (req, res) => {
         desativarCache(res);
         const filtros = filtrosDespesas(req.query);
-        const [despesas, pagamentos, receitaBase, planos] = await Promise.all([
+        const [despesas, rendimentos, pagamentos, receitaBase, planos] = await Promise.all([
             listarDespesasFinanceiras(filtros),
+            listarRendimentosFinanceiros({ mes: filtros.mes, status: 'validos' }),
             listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' }),
             listarReceitaMensalFinanceira(),
             listarTiposPlanos()
@@ -78,7 +82,7 @@ function criarFinanceiroRoute(deps = {}) {
             titulo: 'Despesas',
             conteudo: telaDespesasFinanceiras({
                 despesas, filtros, receitaMes: analiseReceita.total, pagamentosMes: analiseReceita.pagamentos,
-                receitaRecorrente: recorrente.total, analiseReceita
+                receitaRecorrente: recorrente.total, rendimentosMes: rendimentos.reduce((total, item) => total + Number(String(item.valor || 0).replace('.', '').replace(',', '.')), 0), analiseReceita
             }),
             mensagem: req.query.mensagem || '', ativo: 'financeiro'
         });
@@ -126,6 +130,47 @@ function criarFinanceiroRoute(deps = {}) {
             if (err?.message) return res.redirect(urlDespesas(filtros, err.message));
             return next(err);
         }
+    });
+
+    router.get('/financeiro/rendimentos', async (req, res) => {
+        desativarCache(res);
+        const filtros = filtrosDespesas(req.query);
+        const [rendimentos, despesas, pagamentos] = await Promise.all([
+            listarRendimentosFinanceiros(filtros),
+            listarDespesasFinanceiras({ mes: filtros.mes, status: 'validas' }),
+            listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' })
+        ]);
+        const receitaMes = calcularReceitaRealDoMes(pagamentos).total;
+        const despesasMes = despesas.reduce((total, despesa) => total + Number(String(despesa.valor || 0).replace('.', '').replace(',', '.')), 0);
+        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
+    });
+
+    function urlRendimentos(filtros, mensagem = '') {
+        const query = new URLSearchParams({ mes: filtros.mes });
+        if (filtros.busca) query.set('busca', filtros.busca);
+        if (filtros.status && filtros.status !== 'validas') query.set('status', filtros.status);
+        if (mensagem) query.set('mensagem', mensagem);
+        return `/financeiro/rendimentos?${query.toString()}`;
+    }
+    router.post('/financeiro/rendimentos', async (req, res, next) => {
+        const filtros = filtrosDespesas(req.body);
+        try { await criarRendimentoFinanceiro(req.body, req.usuarioPainel || 'sistema'); return res.redirect(urlRendimentos(filtros, 'Rendimento registrado com sucesso.')); }
+        catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
+    });
+    router.get('/financeiro/rendimentos/:id/editar', async (req, res) => {
+        desativarCache(res); const filtros = filtrosDespesas(req.query); const rendimento = await buscarRendimentoFinanceiroPorId(req.params.id, false);
+        if (!rendimento) return res.redirect(urlRendimentos(filtros, 'Rendimento não encontrado.'));
+        return renderizar(res, { titulo: 'Editar rendimento', conteudo: telaEditarRendimentoFinanceiro(rendimento, filtros.mes), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
+    });
+    router.post('/financeiro/rendimentos/:id/editar', async (req, res, next) => {
+        const filtros = filtrosDespesas(req.body);
+        try { await atualizarRendimentoFinanceiro(req.params.id, req.body, req.usuarioPainel || 'sistema'); return res.redirect(urlRendimentos(filtros, 'Rendimento atualizado com sucesso.')); }
+        catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
+    });
+    router.post('/financeiro/rendimentos/:id/excluir', async (req, res, next) => {
+        const filtros = filtrosDespesas(req.body);
+        try { await removerRendimentoFinanceiro(req.params.id, req.usuarioPainel || 'sistema'); return res.redirect(urlRendimentos(filtros, 'Rendimento removido do resumo; o histórico foi preservado.')); }
+        catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
     });
 
     return router;

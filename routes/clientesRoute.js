@@ -172,6 +172,7 @@ const { listarPendenciasOperacionais, atualizarControlePendencia, concluirPenden
 const { listarDivergenciasFinanceiras, executarConciliacaoFinanceira } = require('../services/conciliacaoFinanceiraService');
 const { listarGruposClientesDuplicados } = require('../services/clientesDuplicadosService');
 const { CATEGORIAS: CATEGORIAS_DESPESA, listarDespesasFinanceiras, buscarDespesaFinanceiraPorId, criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira } = require('../services/despesasFinanceirasService');
+const { listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId, criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro } = require('../services/rendimentosFinanceirosService');
 const { verificarExclusaoDefinitivaCliente } = require('../services/privacidadeService');
 const {
     salvarProtecaoWhatsapp
@@ -8278,7 +8279,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
 
     <section class="clients-panel">
         <div class="panel-head"><div><h2 class="panel-title">Conferência e conciliação</h2><div class="subtitle">Comprovantes PIX recebidos pelo WhatsApp, conferência auditada e estornos.</div></div>
-        <div class="actions"><a class="button secondary" href="/financeiro/despesas">Despesas</a><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
+        <div class="actions"><a class="button secondary" href="/financeiro/rendimentos">Rendimentos</a><a class="button secondary" href="/financeiro/despesas">Despesas</a><a class="button secondary" href="/financeiro/conciliacao">Conciliar financeiro</a><a class="button secondary" href="/pagamentos-manuais">Abrir pagamentos pendentes</a></div></div>
     </section>
 
     <section class="finance-breakdown-grid">
@@ -8373,9 +8374,9 @@ function formularioDespesaFinanceira({ despesa = {}, mes = mesAtualInput(), acao
     </section>`;
 }
 
-function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0, receitaRecorrente = 0, analiseReceita = null }) {
+function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, pagamentosMes = 0, receitaRecorrente = 0, rendimentosMes = 0, analiseReceita = null }) {
     const resumo = resumoDespesasFinanceiras(despesas);
-    const saldo = receitaMes - resumo.total;
+    const saldo = receitaMes + rendimentosMes - resumo.total;
     const analise = analiseReceita || { variacaoCaixa: receitaMes - receitaRecorrente, caixaCoincide: Math.abs(receitaMes - receitaRecorrente) < 0.005, vendasAntecipadas: { quantidade: 0, total: 0 } };
     const notaDiferenca = analise.caixaCoincide
         ?'Caixa do mês igual à projeção recorrente'
@@ -8398,8 +8399,9 @@ function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, 
         ${metricCard({ label: 'Mensal recorrente', valor: formatarMoeda(receitaRecorrente), nota: 'Projeção dos planos ativos', tipo: 'info', icone: 'trend' })}
         ${metricCard({ label: analise.caixaCoincide ?'Caixa e recorrente iguais' :'Variação de caixa', valor: formatarMoeda(analise.caixaCoincide ?0 :Math.abs(analise.variacaoCaixa)), nota: notaDiferenca, tipo: analise.caixaCoincide ?'green' : 'info', icone: 'trend' })}
         ${metricCard({ label: 'Vendas antecipadas no mês', valor: formatarMoeda(analise.vendasAntecipadas.total), nota: `${analise.vendasAntecipadas.quantidade} venda(s) trimestral, semestral ou anual no mês`, tipo: 'green', icone: 'trend' })}
+        ${metricCard({ label: 'Rendimentos da conta', valor: formatarMoeda(rendimentosMes), nota: 'Créditos financeiros no mês', tipo: 'green', icone: 'trend' })}
         ${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s)`, tipo: 'red', icone: 'trash' })}
-        ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita menos despesas' : 'Despesas acima da receita', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
+        ${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: saldo >= 0 ?'Receita + rendimentos - despesas' : 'Despesas acima das entradas', tipo: saldo >= 0 ?'info' : 'orange', icone: 'financeiro' })}
     </section>
     <form class="clients-toolbar" method="get" action="/financeiro/despesas"><input type="month" name="mes" value="${escapar(filtros.mes || mesAtualInput())}" onchange="this.form.submit()"><div class="clients-search">${icon('search')}<input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar descrição, categoria ou pagamento..."></div><select name="status" onchange="this.form.submit()">${[['validas','Válidas'],['removidas','Removidas'],['todas','Todas']].map(([valor,texto]) => `<option value="${valor}" ${valor === filtros.status ?'selected' : ''}>${texto}</option>`).join('')}</select><button class="button secondary" type="submit">${icon('search')} Filtrar</button></form>
     ${formularioDespesaFinanceira({ mes: filtros.mes || mesAtualInput() })}
@@ -8408,6 +8410,31 @@ function telaDespesasFinanceiras({ despesas = [], filtros = {}, receitaMes = 0, 
 
 function telaEditarDespesaFinanceira(despesa, mes) {
     return `<section class="page-title"><h1>Editar despesa</h1><div class="subtitle">Atualize o lançamento sem perder o histórico financeiro.</div></section>${formularioDespesaFinanceira({ despesa, mes, acao: `/financeiro/despesas/${despesa.id}/editar`, textoBotao: 'Salvar alterações' })}`;
+}
+
+function resumoRendimentosFinanceiros(rendimentos = []) {
+    return rendimentos.reduce((resumo, rendimento) => {
+        if (rendimento.excluidoEm) return resumo;
+        resumo.total += numeroMoeda(rendimento.valor);
+        resumo.quantidade += 1;
+        return resumo;
+    }, { total: 0, quantidade: 0 });
+}
+
+function formularioRendimentoFinanceiro({ rendimento = {}, mes = mesAtualInput(), acao = '/financeiro/rendimentos', textoBotao = 'Registrar rendimento' } = {}) {
+    const dataRecebimento = String(rendimento.dataRecebimento || `${mes}-01`).slice(0, 10);
+    return `<section class="clients-panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${rendimento.id ?'Editar rendimento' :'Novo rendimento'}</h2><div class="subtitle">Registre o rendimento da conta onde você recebe os pagamentos dos clientes.</div></div></div><form class="form-grid" method="post" action="${escapar(acao)}"><input type="hidden" name="mes" value="${escapar(mes)}"><label>Descrição<input name="descricao" maxlength="160" required value="${escapar(rendimento.descricao || '')}" placeholder="Ex.: Rendimento automático da conta"></label><label>Valor (R$)<input name="valor" inputmode="decimal" required value="${escapar(rendimento.valor || '')}" placeholder="0,00"></label><label>Data do recebimento<input type="date" name="dataRecebimento" required value="${escapar(dataRecebimento)}"></label><label>Instituição financeira<input name="instituicao" maxlength="120" value="${escapar(rendimento.instituicao || '')}" placeholder="Ex.: Mercado Pago"></label><label style="grid-column:1 / -1;">Observações<textarea name="observacoes" maxlength="1000" rows="3" placeholder="Detalhes opcionais para conferência">${escapar(rendimento.observacoes || '')}</textarea></label><div class="actions" style="grid-column:1 / -1;"><button class="button green" type="submit">${icon('plus')} ${escapar(textoBotao)}</button><a class="button secondary" href="/financeiro/rendimentos?mes=${encodeURIComponent(mes)}">Cancelar</a></div></form></section>`;
+}
+
+function telaRendimentosFinanceiros({ rendimentos = [], filtros = {}, receitaMes = 0, despesasMes = 0 }) {
+    const resumo = resumoRendimentosFinanceiros(rendimentos);
+    const saldo = receitaMes + resumo.total - despesasMes;
+    const linhas = rendimentos.length ?rendimentos.map(rendimento => `<tr><td data-label="Data">${escapar(formatarDataHoraCurta(rendimento.dataRecebimento))}</td><td data-label="Descrição"><div class="cell-title">${escapar(rendimento.descricao)}</div><div class="cell-muted">${escapar(rendimento.observacoes || '')}</div></td><td data-label="Instituição">${escapar(rendimento.instituicao || '-')}</td><td data-label="Valor"><strong>${escapar(formatarMoeda(numeroMoeda(rendimento.valor)))}</strong></td><td data-label="Status">${rendimento.excluidoEm ?'<span class="badge red">Removido</span>' :'<span class="badge green">Válido</span>'}</td><td data-label="Ações"><div class="actions">${rendimento.excluidoEm ?'' :`<a class="button secondary icon-only" href="/financeiro/rendimentos/${escapar(rendimento.id)}/editar?mes=${encodeURIComponent(filtros.mes || '')}" title="Editar rendimento">${icon('edit')}</a><form method="post" action="/financeiro/rendimentos/${escapar(rendimento.id)}/excluir" onsubmit="return confirm('Remover este rendimento do resumo? O histórico será preservado.');"><input type="hidden" name="mes" value="${escapar(filtros.mes || '')}"><button class="button secondary icon-only" type="submit" title="Remover rendimento">${icon('trash')}</button></form>`}</div></td></tr>`).join('') :'<tr><td colspan="6" class="empty">Nenhum rendimento encontrado neste mês.</td></tr>';
+    return `<section class="page-title page-title-with-action"><div><h1>Rendimentos</h1><div class="subtitle">Rendimentos da conta somados ao saldo real do mês, separados dos pagamentos dos clientes.</div></div><a class="button secondary" href="/financeiro">Voltar ao financeiro</a></section><section class="metrics">${metricCard({ label: 'Rendimentos recebidos', valor: formatarMoeda(resumo.total), nota: `${resumo.quantidade} lançamento(s) no mês`, tipo: 'green', icone: 'trend' })}${metricCard({ label: 'Receita de clientes', valor: formatarMoeda(receitaMes), nota: 'Pagamentos válidos no mês', tipo: 'info', icone: 'financeiro' })}${metricCard({ label: 'Despesas pagas', valor: formatarMoeda(despesasMes), nota: 'Lançamentos válidos no mês', tipo: 'red', icone: 'trash' })}${metricCard({ label: 'Saldo do mês', valor: formatarMoeda(saldo), nota: 'Clientes + rendimentos - despesas', tipo: saldo >= 0 ?'info' :'orange', icone: 'financeiro' })}</section><form class="clients-toolbar" method="get" action="/financeiro/rendimentos"><input type="month" name="mes" value="${escapar(filtros.mes || mesAtualInput())}" onchange="this.form.submit()"><div class="clients-search">${icon('search')}<input name="busca" value="${escapar(filtros.busca || '')}" placeholder="Buscar descrição, instituição ou observação..."></div><select name="status" onchange="this.form.submit()">${[['validos','Válidos'],['removidos','Removidos'],['todos','Todos']].map(([valor,texto]) => `<option value="${valor}" ${valor === filtros.status ?'selected' :''}>${texto}</option>`).join('')}</select><button class="button secondary" type="submit">${icon('search')} Filtrar</button></form>${formularioRendimentoFinanceiro({ mes: filtros.mes || mesAtualInput() })}<section class="clients-panel"><table class="clients-table"><thead><tr><th>Data</th><th>Descrição</th><th>Instituição</th><th>Valor</th><th>Status</th><th>Ações</th></tr></thead><tbody>${linhas}</tbody></table></section>`;
+}
+
+function telaEditarRendimentoFinanceiro(rendimento, mes) {
+    return `<section class="page-title"><h1>Editar rendimento</h1><div class="subtitle">Atualize o lançamento sem perder o histórico financeiro.</div></section>${formularioRendimentoFinanceiro({ rendimento, mes, acao: `/financeiro/rendimentos/${rendimento.id}/editar`, textoBotao: 'Salvar alterações' })}`;
 }
 
 function planoCard(plano) {
@@ -9664,8 +9691,15 @@ router.use(criarFinanceiroRoute({
     criarDespesaFinanceira,
     atualizarDespesaFinanceira,
     removerDespesaFinanceira,
+    listarRendimentosFinanceiros,
+    buscarRendimentoFinanceiroPorId,
+    criarRendimentoFinanceiro,
+    atualizarRendimentoFinanceiro,
+    removerRendimentoFinanceiro,
     telaDespesasFinanceiras,
     telaEditarDespesaFinanceira,
+    telaRendimentosFinanceiros,
+    telaEditarRendimentoFinanceiro,
     calcularReceitaRealDoMes,
     calcularAnaliseReceitaMensal,
     listarReceitaMensalFinanceira,

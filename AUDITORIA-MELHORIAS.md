@@ -5,6 +5,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Rendimentos financeiros em 23/09/2026: incluída a página **Financeiro > Rendimentos** para registrar créditos da conta, com descrição, valor, data, instituição financeira e observações. O saldo mensal soma pagamentos válidos de clientes e rendimentos válidos, e subtrai as despesas válidas. Cada origem permanece separada; o lançamento pode ser editado ou removido do resumo, preservando o histórico. A migração `014-rendimentos-financeiros` cria a estrutura isolada com backup prévio. Afeta administrador, comerciais e instalações locais; Mestre inalterado. Nenhum acesso bancário é armazenado.
+
 - Cópia de campos da ficha de cliente em 23/09/2026: a versão **1.3.40** adiciona ícone de cópia nos campos textuais e URLs da ficha, inclusive nas conexões de aplicativo acrescentadas durante a edição. Campos com lista de escolha, `Indicado por`, `Valor do Plano` e `Assinatura App` ficam sem o ícone. A cópia é local ao navegador e não altera nem envia dados do cliente. Afeta administrador, comerciais e instalações locais; Mestre inalterado. Validado com sintaxe, teste direcionado, suíte interna, diff, pacote e instalação limpa.
 
 - Versionamento visual em 20/09/2026: a versão oficial do pacote foi atualizada para **1.3.38** e o Painel Administrativo passou a mostrar o selo abaixo do nome do sistema, usando a mesma origem (`package.json`) do Painel Mestre. A alteração é visual e não modifica bancos, clientes, sessões ou configurações.
