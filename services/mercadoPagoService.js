@@ -68,6 +68,52 @@ async function requisicaoMercadoPago(caminho, accessToken, opcoes = {}) {
     }
 }
 
+function csvLinhas(texto) {
+    const linhas = String(texto || '').replace(/^\uFEFF/, '').split(/\r?\n/).filter(Boolean);
+    if (linhas.length < 2) return [];
+    const separador = linhas[0].includes(';') ?';' :',';
+    const colunas = linhas.shift().split(separador).map(item => item.trim().replace(/^"|"$/g, '').toUpperCase());
+    return linhas.map(linha => {
+        const valores = linha.split(separador).map(item => item.trim().replace(/^"|"$/g, ''));
+        return Object.fromEntries(colunas.map((coluna, indice) => [coluna, valores[indice] || '']));
+    });
+}
+
+function valorRelatorio(item) {
+    const valor = item.NET_CREDIT_AMOUNT || item.NET_AMOUNT || item.SETTLEMENT_NET_AMOUNT || item.TOTAL_AMOUNT || item.AMOUNT || '0';
+    return moedaNumero(valor);
+}
+
+async function importarRendimentosMercadoPago() {
+    const config = await obterConfiguracoes();
+    const accessToken = String(config.mercadoPagoAccessToken || '').trim();
+    if (!accessToken) throw new Error('Configure primeiro o Access Token do Mercado Pago em Manutenção.');
+    const lista = await requisicaoMercadoPago('/v1/account/release_report/list', accessToken);
+    const relatorio = Array.isArray(lista)
+        ?lista.filter(item => item.status === 'processed' && item.file_name)
+            .sort((a, b) => new Date(b.generation_date || b.last_modified || 0) - new Date(a.generation_date || a.last_modified || 0))[0]
+        :null;
+    if (!relatorio) throw new Error('Nenhum relatório de liberações pronto foi encontrado no Mercado Pago. Configure ou gere o relatório de liberações primeiro.');
+    const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!resposta.ok) throw new Error(`Mercado Pago: não foi possível baixar o relatório (${resposta.status}).`);
+    const { criarRendimentoFinanceiro } = require('./rendimentosFinanceirosService');
+    const linhas = csvLinhas(await resposta.text()); let importados = 0;
+    for (const item of linhas) {
+        const descricao = String(item.DESCRIPTION || item.TRANSACTION_TYPE || '').toLowerCase();
+        if (!descricao.includes('asset_management_gain')) continue;
+        const valor = valorRelatorio(item); if (valor <= 0) continue;
+        const identificador = String(item.SOURCE_ID || item.OPERATION_ID || item.TRANSACTION_ID || `${relatorio.file_name}:${item.DATE_CREATED || item.DATE || ''}:${valor}`);
+        const existe = await buscarUm('SELECT id FROM rendimentos_mercado_pago_importados WHERE identificadorExterno = ?', [identificador]);
+        if (existe) continue;
+        const data = String(item.DATE_CREATED || item.DATE || item.RELEASE_DATE || new Date().toISOString()).slice(0, 10);
+        const rendimento = await criarRendimentoFinanceiro({ descricao: 'Rendimento Mercado Pago', valor: moedaTexto(valor), dataRecebimento: /^\d{4}-\d{2}-\d{2}$/.test(data) ?data :new Date().toISOString().slice(0, 10), instituicao: 'Mercado Pago', observacoes: `Importado do relatório ${relatorio.file_name}. Operação: ${identificador}` }, 'importação Mercado Pago');
+        await executar('INSERT INTO rendimentos_mercado_pago_importados (identificadorExterno, rendimentoId, arquivoRelatorio) VALUES (?, ?, ?)', [identificador, rendimento.id, relatorio.file_name]);
+        importados += 1;
+    }
+    await registrarEventoSistema('rendimento_mercado_pago', 'info', 'Rendimentos Mercado Pago sincronizados.', { arquivo: relatorio.file_name, importados });
+    return { arquivo: relatorio.file_name, importados };
+}
+
 async function criarCobrancaMercadoPago(plano = {}, opcoes = {}) {
     const clienteId = Number.parseInt(opcoes.clienteId || 0, 10);
     if (!clienteId) return null;
@@ -326,5 +372,6 @@ module.exports = {
     verificarCobrancasPendentesMercadoPago,
     listarConfirmacoesPixPendentes,
     listarConfirmacoesPixControlePendentes,
-    marcarConfirmacaoPixControle
+    marcarConfirmacaoPixControle,
+    importarRendimentosMercadoPago
 };

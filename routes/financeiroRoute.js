@@ -10,6 +10,8 @@ function criarFinanceiroRoute(deps = {}) {
         criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira,
         listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId,
         criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro,
+        importarRendimentosMercadoPago,
+        obterConciliacaoSaldo, salvarConciliacaoSaldo,
         telaDespesasFinanceiras, telaEditarDespesaFinanceira, calcularReceitaRealDoMes,
         telaRendimentosFinanceiros, telaEditarRendimentoFinanceiro,
         calcularAnaliseReceitaMensal, listarReceitaMensalFinanceira, listarTiposPlanos, calcularReceitaMensal
@@ -135,14 +137,15 @@ function criarFinanceiroRoute(deps = {}) {
     router.get('/financeiro/rendimentos', async (req, res) => {
         desativarCache(res);
         const filtros = filtrosDespesas(req.query);
-        const [rendimentos, despesas, pagamentos] = await Promise.all([
+        const [rendimentos, despesas, pagamentos, conciliacao] = await Promise.all([
             listarRendimentosFinanceiros(filtros),
             listarDespesasFinanceiras({ mes: filtros.mes, status: 'validas' }),
-            listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' })
+            listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' }),
+            obterConciliacaoSaldo(filtros.mes)
         ]);
         const receitaMes = calcularReceitaRealDoMes(pagamentos).total;
         const despesasMes = despesas.reduce((total, despesa) => total + Number(String(despesa.valor || 0).replace('.', '').replace(',', '.')), 0);
-        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
+        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes, conciliacao }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
     });
 
     function urlRendimentos(filtros, mensagem = '') {
@@ -155,6 +158,18 @@ function criarFinanceiroRoute(deps = {}) {
     router.post('/financeiro/rendimentos', async (req, res, next) => {
         const filtros = filtrosDespesas(req.body);
         try { await criarRendimentoFinanceiro(req.body, req.usuarioPainel || 'sistema'); return res.redirect(urlRendimentos(filtros, 'Rendimento registrado com sucesso.')); }
+        catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
+    });
+    router.post('/financeiro/rendimentos/sincronizar-mercado-pago', async (req, res, next) => {
+        const filtros = filtrosDespesas(req.body);
+        try {
+            const resultado = await importarRendimentosMercadoPago();
+            return res.redirect(urlRendimentos(filtros, resultado.importados ?`${resultado.importados} rendimento(s) importado(s) do Mercado Pago.` :'Nenhum rendimento novo encontrado no relatório Mercado Pago.'));
+        } catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
+    });
+    router.post('/financeiro/rendimentos/conciliacao-saldo', async (req, res, next) => {
+        const filtros = filtrosDespesas(req.body);
+        try { await salvarConciliacaoSaldo(filtros.mes, req.body); return res.redirect(urlRendimentos(filtros, 'Conciliação salva.')); }
         catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
     });
     router.get('/financeiro/rendimentos/:id/editar', async (req, res) => {

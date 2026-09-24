@@ -17,7 +17,9 @@ const migrations = [
     require('./011-auditoria-clientes'),
     require('./012-despesas-financeiras'),
     require('./013-comprovantes-pix-whatsapp'),
-    require('./014-rendimentos-financeiros')
+    require('./014-rendimentos-financeiros'),
+    require('./015-importacoes-rendimentos-mercado-pago'),
+    require('./016-conciliacao-saldo-financeiro')
 ];
 
 function run(db, sql, params = []) {

@@ -1,0 +1,7 @@
+const db = require('../database/sqlite');
+function executar(sql, params = []) { return db.ready.then(() => new Promise((ok, no) => db.run(sql, params, function (e) { e ?no(e) :ok({ changes: this.changes }); }))); }
+function buscarUm(sql, params = []) { return db.ready.then(() => new Promise((ok, no) => db.get(sql, params, (e, r) => e ?no(e) :ok(r || null)))); }
+function moeda(valor) { const n = Number(String(valor || '').replace(/R\$\s*/gi, '').replace(/\./g, '').replace(',', '.')); if (!Number.isFinite(n) || Math.abs(n) > 100000000) throw new Error('Informe um valor válido.'); return n.toFixed(2).replace('.', ','); }
+async function obterConciliacaoSaldo(mes) { return (await buscarUm('SELECT * FROM conciliacoes_saldo_financeiro WHERE mes = ?', [mes])) || { mes, saldoInicial: '0,00', saldoBanco: '0,00' }; }
+async function salvarConciliacaoSaldo(mes, dados = {}) { if (!/^\d{4}-\d{2}$/.test(String(mes))) throw new Error('Mês inválido.'); const inicial = moeda(dados.saldoInicial); const banco = moeda(dados.saldoBanco); await executar(`INSERT INTO conciliacoes_saldo_financeiro (mes, saldoInicial, saldoBanco, atualizadoEm) VALUES (?, ?, ?, CURRENT_TIMESTAMP) ON CONFLICT(mes) DO UPDATE SET saldoInicial = excluded.saldoInicial, saldoBanco = excluded.saldoBanco, atualizadoEm = CURRENT_TIMESTAMP`, [mes, inicial, banco]); return obterConciliacaoSaldo(mes); }
+module.exports = { obterConciliacaoSaldo, salvarConciliacaoSaldo };
