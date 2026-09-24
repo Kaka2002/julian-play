@@ -6624,9 +6624,11 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         function ativarCopiaDosCampos(contexto = document) {
             const seletor = 'input[type="text"], input[type="url"], input[type="tel"], input[type="password"]';
+            const camposSemCopia = new Set(['indicadoPor', 'valorPlano', 'assinaturaApp']);
             contexto.querySelectorAll(seletor).forEach((campo) => {
                 const rotulo = campo.closest('label');
-                if (!rotulo || rotulo.querySelector('.copy-field-button') || campo.disabled || campo.readOnly) return;
+                if (!rotulo || rotulo.querySelector('.copy-field-button') || campo.disabled || campo.readOnly
+                    || campo.list || camposSemCopia.has(campo.name)) return;
                 rotulo.classList.add('copyable-field');
                 const botao = document.createElement('button');
                 botao.type = 'button';

@@ -21,7 +21,7 @@ prevalecem sobre os marcos históricos abaixo. A produção está no computador
 
 ### Controle de despesas em 19/09/2026
 
-- A versão de entrega atual é **1.3.39**. Na ficha de clientes, os campos textuais de cadastro e acesso, incluindo usuário, senha, MAC, ID, telefone e URL de ativação, possuem um ícone de cópia individual. O clique copia somente o conteúdo do respectivo campo e confirma visualmente a ação; campos adicionados em novas linhas de acesso também recebem o controle. A alteração afeta painel administrador, comerciais e instalações locais, sem gravar ou transmitir conteúdo adicional, nem alterar clientes, sessões ou configurações.
+- A versão de entrega atual é **1.3.40**. Na ficha de clientes, os campos textuais de cadastro e acesso, incluindo usuário, senha, MAC, ID, telefone e URL de ativação, possuem um ícone de cópia individual. O clique copia somente o conteúdo do respectivo campo e confirma visualmente a ação; campos adicionados em novas linhas de acesso também recebem o controle. Campos de escolha por lista, `Indicado por`, `Valor do Plano` e `Assinatura App` não exibem cópia. A alteração afeta painel administrador, comerciais e instalações locais, sem gravar ou transmitir conteúdo adicional, nem alterar clientes, sessões ou configurações.
 
 - A versão de entrega atual é **1.3.38**. O Painel Administrativo passa a exibir, abaixo do nome configurado do sistema no cabeçalho, o mesmo selo de versão lido do `package.json` já usado pelo Painel Mestre. O número é único para os dois painéis e muda junto da versão do pacote, sem gravar dados no banco nem afetar instalações existentes.
 

@@ -893,6 +893,8 @@ test('ficha do cliente oferece cópia segura para campos textuais e URLs de aces
     assert.match(rota, /navigator\.clipboard\.writeText\(valor\)/);
     assert.match(rota, /copy-field-button/);
     assert.match(rota, /ativarCopiaDosCampos\(novaLinha\)/);
+    assert.match(rota, /const camposSemCopia = new Set\(\['indicadoPor', 'valorPlano', 'assinaturaApp'\]\)/);
+    assert.match(rota, /campo\.list \|\| camposSemCopia\.has\(campo\.name\)/);
 });
 
 test('comprovante PIX recebido pelo WhatsApp fica pendente uma vez e renova apos conferencia', () => {
