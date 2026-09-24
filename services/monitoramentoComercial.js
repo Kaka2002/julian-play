@@ -539,6 +539,17 @@ async function executarMonitoramento(controles = {}) {
         await verificarSaudeOperacional(config, agora, controles, statusWhatsApp);
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
+        const diaAtual = agora.data;
+        if (config.mercadoPagoAccessToken && config.ultimoSincronismoRendimentosMP !== diaAtual) {
+            try {
+                const { importarRendimentosMercadoPago } = require('./mercadoPagoService');
+                await importarRendimentosMercadoPago();
+                await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
+            } catch (erroRendimentos) {
+                await registrarEventoSistema('rendimento_mercado_pago', 'alerta', `Sincronização diária de rendimentos Mercado Pago pendente: ${erroRendimentos.message}`, { data: diaAtual });
+                await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
+            }
+        }
         if (
             process.env.JULIAN_PLAY_INSTALL_MODE === 'local'
             && config.pixProvedor === 'mercado_pago'
