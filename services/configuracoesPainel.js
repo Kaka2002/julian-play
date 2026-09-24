@@ -25,6 +25,7 @@ async function obterConfiguracoes() {
     const config = {
         nomeSistema: 'Controle de Cliente IPTV e P2P',
         logoUrl: '',
+        marcaDaguaUrl: '',
         licencaCliente: '',
         licencaTelefone: '',
         licencaAtivacao: '',
@@ -198,6 +199,7 @@ async function salvarConfiguracoesAcesso(dados = {}) {
 async function salvarConfiguracoesPainel(dados = {}) {
     await salvarConfiguracao('nomeSistema', dados.nomeSistema || 'Controle de Cliente IPTV e P2P');
     await salvarConfiguracao('logoUrl', dados.logoUrl || '');
+    await salvarConfiguracao('marcaDaguaUrl', dados.marcaDaguaUrl || '');
 
     return obterConfiguracoes();
 }

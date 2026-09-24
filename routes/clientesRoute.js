@@ -902,7 +902,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const versaoSistema = packageInfo.version || '1.0.0';
     const logoUrl = config.logoUrl || '';
-    const marcaDaguaUrl = '/assets/julian-play-fundo-painel.png';
+    const marcaDaguaUrl = config.marcaDaguaUrl || '/assets/julian-play-fundo-painel.png';
     const bodyClass = ativo === 'preparacao' ? 'commercial-mode' : ativo === 'painel' ? 'dashboard-page' : '';
     const licenca = calcularEstadoLicenca(config);
     const avisoLicenca = (() => {
@@ -8571,7 +8571,7 @@ function telaModelos({ modelos, config }) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Marca do Painel</h2>
-                <div class="subtitle">Nome exibido no topo e logo opcional</div>
+                <div class="subtitle">Nome, logo e imagem de fundo exibida no painel</div>
             </div>
         </div>
         <form method="post" action="/configuracoes/logo" enctype="multipart/form-data">
@@ -8588,6 +8588,7 @@ function telaModelos({ modelos, config }) {
         <form class="logo-config" method="post" action="/configuracoes/painel">
             ${campo({ nome: 'nomeSistema', label: 'Nome do sistema', valor: config.nomeSistema || 'Controle de Cliente IPTV e P2P' })}
             ${campo({ nome: 'logoUrl', label: 'URL ou caminho do logo', valor: config.logoUrl || '', tipo: 'text' })}
+            ${campo({ nome: 'marcaDaguaUrl', label: 'URL ou caminho da imagem de fundo', valor: config.marcaDaguaUrl || '', tipo: 'text', attrs: 'placeholder="Vazio usa a imagem padrão do painel"' })}
             <button class="button" type="submit">${icon('image')} Salvar marca</button>
         </form>
         <form class="logo-config" method="post" action="/configuracoes/logo" enctype="multipart/form-data" style="padding-top:0;">
@@ -8595,6 +8596,13 @@ function telaModelos({ modelos, config }) {
                 Escolher logo no computador
                 <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" onchange="this.form.submit()">
                 <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar logo</span>
+            </label>
+        </form>
+        <form class="logo-config" method="post" action="/configuracoes/marca-dagua" enctype="multipart/form-data" style="padding-top:0;">
+            <label class="logo-upload">
+                Escolher imagem de fundo no computador
+                <input type="file" name="marcaDagua" accept="image/png,image/jpeg,image/webp,image/gif" onchange="this.form.submit()">
+                <span class="button secondary" style="margin-top:7px;">${icon('image')} Procurar imagem de fundo</span>
             </label>
         </form>
     </section>
@@ -10194,10 +10202,34 @@ router.post('/configuracoes/logo', async (req, res) => {
         const config = await obterConfiguracoes();
         await salvarConfiguracoesPainel({
             nomeSistema: config.nomeSistema,
-            logoUrl: `/tenant-assets/${nomeArquivo}?v=${Date.now()}`
+            logoUrl: `/tenant-assets/${nomeArquivo}?v=${Date.now()}`,
+            marcaDaguaUrl: config.marcaDaguaUrl
         });
 
         res.redirect('/modelos?mensagem=Logo atualizada com sucesso');
+    } catch (err) {
+        res.redirect(`/modelos?mensagem=${encodeURIComponent(err.message)}`);
+    }
+});
+
+router.post('/configuracoes/marca-dagua', async (req, res) => {
+    try {
+        const upload = await lerUploadMultipart(req, { campo: 'marcaDagua' });
+        if (!extensaoLogoPermitida(upload.filename) || path.extname(upload.filename).toLowerCase() === '.svg') {
+            return res.redirect('/modelos?mensagem=Use uma imagem de fundo PNG, JPG, WEBP ou GIF');
+        }
+        validarImagemUpload(upload.filename, upload.buffer);
+        fs.mkdirSync(ASSETS_DIR, { recursive: true });
+        const extensao = path.extname(upload.filename).toLowerCase();
+        const nomeArquivo = `marca-dagua-painel${extensao}`;
+        fs.writeFileSync(path.join(ASSETS_DIR, nomeArquivo), upload.buffer);
+        const config = await obterConfiguracoes();
+        await salvarConfiguracoesPainel({
+            nomeSistema: config.nomeSistema,
+            logoUrl: config.logoUrl,
+            marcaDaguaUrl: `/tenant-assets/${nomeArquivo}?v=${Date.now()}`
+        });
+        res.redirect('/modelos?mensagem=Imagem de fundo atualizada com sucesso');
     } catch (err) {
         res.redirect(`/modelos?mensagem=${encodeURIComponent(err.message)}`);
     }
