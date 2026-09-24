@@ -26,7 +26,9 @@ function buscarTodos(sql, params = []) {
 }
 
 function moedaNumero(valor) {
-    const numero = Number(String(valor || '0').replace(/\./g, '').replace(',', '.'));
+    const texto = String(valor || '0').trim().replace(/R\$\s*/gi, '').replace(/\s/g, '');
+    const normalizado = texto.includes(',') ?texto.replace(/\./g, '').replace(',', '.') :texto;
+    const numero = Number(normalizado);
     return Number.isFinite(numero) ? numero : 0;
 }
 
@@ -84,20 +86,74 @@ function valorRelatorio(item) {
     return moedaNumero(valor);
 }
 
+const COLUNAS_RELATORIO_FINANCEIRO = ['DATE', 'SOURCE_ID', 'EXTERNAL_REFERENCE', 'RECORD_TYPE', 'DESCRIPTION', 'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT', 'PAYMENT_METHOD'];
+
+function dataRelatorio(item) {
+    const bruto = String(item.DATE || item.DATE_CREATED || item.RELEASE_DATE || '').trim();
+    const data = new Date(bruto);
+    return Number.isNaN(data.getTime()) ?new Date().toISOString().slice(0, 10) :data.toISOString().slice(0, 10);
+}
+
+async function garantirRelatorioMercadoPago(accessToken) {
+    let configuracao = null;
+    try { configuracao = await requisicaoMercadoPago('/v1/account/release_report/config', accessToken); } catch (erro) {
+        if (!/404/.test(erro.message)) throw erro;
+    }
+    const configuracaoDesejada = {
+        file_name_prefix: configuracao?.file_name_prefix || 'julian-play-financeiro',
+        include_withdrawal_at_end: true,
+        execute_after_withdrawal: false,
+        display_timezone: 'GMT-03',
+        frequency: { hour: 3, type: 'daily', value: 1 },
+        columns: COLUNAS_RELATORIO_FINANCEIRO.map(key => ({ key }))
+    };
+    if (!configuracao) {
+        configuracao = await requisicaoMercadoPago('/v1/account/release_report/config', accessToken, { method: 'POST', body: JSON.stringify(configuracaoDesejada) });
+    } else {
+        const atuais = new Set((configuracao.columns || []).map(coluna => coluna.key));
+        if (COLUNAS_RELATORIO_FINANCEIRO.some(coluna => !atuais.has(coluna))) {
+            configuracao = await requisicaoMercadoPago('/v1/account/release_report/config', accessToken, { method: 'PUT', body: JSON.stringify({ ...configuracao, ...configuracaoDesejada }) });
+        }
+    }
+    configuracao = await requisicaoMercadoPago('/v1/account/release_report/config', accessToken);
+    if (!configuracao.scheduled) await requisicaoMercadoPago('/v1/account/release_report/schedule', accessToken, { method: 'POST' });
+    return configuracao;
+}
+
+function movimentosDoRelatorio(linhas, arquivo) {
+    return linhas.map((item, indice) => {
+        const tipo = String(item.RECORD_TYPE || '').toLowerCase();
+        const descricao = String(item.DESCRIPTION || item.TRANSACTION_TYPE || '').toLowerCase();
+        const credito = moedaNumero(item.NET_CREDIT_AMOUNT || '0');
+        const debito = moedaNumero(item.NET_DEBIT_AMOUNT || '0');
+        const identificador = String(item.SOURCE_ID || item.OPERATION_ID || item.TRANSACTION_ID || `${arquivo}:${item.DATE || item.DATE_CREATED || ''}:${tipo}:${descricao}:${credito}:${debito}:${indice}`);
+        return { identificador, data: dataRelatorio(item), tipo, descricao, credito, debito };
+    }).filter(item => item.tipo !== 'subtotal' && item.tipo !== 'total' && item.tipo !== 'available_balance' && (item.credito || item.debito));
+}
+
 async function importarRendimentosMercadoPago() {
     const config = await obterConfiguracoes();
     const accessToken = String(config.mercadoPagoAccessToken || '').trim();
     if (!accessToken) throw new Error('Configure primeiro o Access Token do Mercado Pago em Manutenção.');
+    await garantirRelatorioMercadoPago(accessToken);
     const lista = await requisicaoMercadoPago('/v1/account/release_report/list', accessToken);
     const relatorio = Array.isArray(lista)
         ?lista.filter(item => item.status === 'processed' && item.file_name)
             .sort((a, b) => new Date(b.generation_date || b.last_modified || 0) - new Date(a.generation_date || a.last_modified || 0))[0]
         :null;
-    if (!relatorio) throw new Error('Nenhum relatório de liberações pronto foi encontrado no Mercado Pago. Configure ou gere o relatório de liberações primeiro.');
+    if (!relatorio) throw new Error('O relatório financeiro foi configurado e ficará disponível após a primeira geração diária do Mercado Pago. Tente sincronizar novamente quando ele estiver pronto.');
     const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${accessToken}` } });
     if (!resposta.ok) throw new Error(`Mercado Pago: não foi possível baixar o relatório (${resposta.status}).`);
     const { criarRendimentoFinanceiro } = require('./rendimentosFinanceirosService');
-    const linhas = csvLinhas(await resposta.text()); let importados = 0;
+    const linhas = csvLinhas(await resposta.text()); let importados = 0; let movimentosImportados = 0;
+    const movimentos = movimentosDoRelatorio(linhas, relatorio.file_name);
+    for (const movimento of movimentos) {
+        const existe = await buscarUm('SELECT id FROM movimentos_mercado_pago WHERE identificadorExterno = ?', [movimento.identificador]);
+        if (existe) continue;
+        await executar(`INSERT INTO movimentos_mercado_pago (identificadorExterno, dataMovimento, tipoRegistro, descricao, credito, debito, arquivoRelatorio)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`, [movimento.identificador, movimento.data, movimento.tipo, movimento.descricao, moedaTexto(movimento.credito), moedaTexto(movimento.debito), relatorio.file_name]);
+        movimentosImportados += 1;
+    }
     for (const item of linhas) {
         const descricao = String(item.DESCRIPTION || item.TRANSACTION_TYPE || '').toLowerCase();
         if (!descricao.includes('asset_management_gain')) continue;
@@ -105,13 +161,12 @@ async function importarRendimentosMercadoPago() {
         const identificador = String(item.SOURCE_ID || item.OPERATION_ID || item.TRANSACTION_ID || `${relatorio.file_name}:${item.DATE_CREATED || item.DATE || ''}:${valor}`);
         const existe = await buscarUm('SELECT id FROM rendimentos_mercado_pago_importados WHERE identificadorExterno = ?', [identificador]);
         if (existe) continue;
-        const data = String(item.DATE_CREATED || item.DATE || item.RELEASE_DATE || new Date().toISOString()).slice(0, 10);
-        const rendimento = await criarRendimentoFinanceiro({ descricao: 'Rendimento Mercado Pago', valor: moedaTexto(valor), dataRecebimento: /^\d{4}-\d{2}-\d{2}$/.test(data) ?data :new Date().toISOString().slice(0, 10), instituicao: 'Mercado Pago', observacoes: `Importado do relatório ${relatorio.file_name}. Operação: ${identificador}` }, 'importação Mercado Pago');
+        const rendimento = await criarRendimentoFinanceiro({ descricao: 'Rendimento Mercado Pago', valor: moedaTexto(valor), dataRecebimento: dataRelatorio(item), instituicao: 'Mercado Pago', observacoes: `Importado do relatório ${relatorio.file_name}. Operação: ${identificador}` }, 'importação Mercado Pago');
         await executar('INSERT INTO rendimentos_mercado_pago_importados (identificadorExterno, rendimentoId, arquivoRelatorio) VALUES (?, ?, ?)', [identificador, rendimento.id, relatorio.file_name]);
         importados += 1;
     }
-    await registrarEventoSistema('rendimento_mercado_pago', 'info', 'Rendimentos Mercado Pago sincronizados.', { arquivo: relatorio.file_name, importados });
-    return { arquivo: relatorio.file_name, importados };
+    await registrarEventoSistema('rendimento_mercado_pago', 'info', 'Extrato e rendimentos Mercado Pago sincronizados.', { arquivo: relatorio.file_name, importados, movimentosImportados });
+    return { arquivo: relatorio.file_name, importados, movimentosImportados };
 }
 
 async function criarCobrancaMercadoPago(plano = {}, opcoes = {}) {

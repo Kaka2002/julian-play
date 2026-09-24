@@ -547,7 +547,6 @@ async function executarMonitoramento(controles = {}) {
                 await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
             } catch (erroRendimentos) {
                 await registrarEventoSistema('rendimento_mercado_pago', 'alerta', `Sincronização diária de rendimentos Mercado Pago pendente: ${erroRendimentos.message}`, { data: diaAtual });
-                await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
             }
         }
         if (

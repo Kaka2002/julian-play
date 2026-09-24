@@ -1,4 +1,4 @@
-# Auditoria das melhorias recomendadas
+- A versão de entrega atual é **1.3.43**. A sincronização do Mercado Pago inicializa e agenda automaticamente o Relatório de Liberações diário pela API oficial quando o Access Token já estiver configurado. Quando o arquivo fica pronto, o sistema importa créditos, débitos e rendimentos com identificadores únicos, preserva o histórico importado e tenta novamente após falha em vez de marcar uma sincronização incompleta como concluída. O saldo exibido continua sendo conciliado sem reescrever pagamentos ou despesas já registrados; a migração `2026-09-23-017-movimentos-mercado-pago` registra as movimentações externas. Afeta painel administrador, comerciais e instalações locais; Painel Mestre inalterado.\r\n\r\n# Auditoria das melhorias recomendadas
 
 Atualizada em 11/09/2026. Este documento registra o estado comprovado no
 código; itens operacionais externos não são marcados como implementados.
