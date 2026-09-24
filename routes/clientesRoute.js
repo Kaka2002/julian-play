@@ -880,6 +880,7 @@ function icon(nome) {
         search: '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>',
         eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
         'eye-off': '<svg viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-3.2 4.5"/><path d="M6.6 6.6C3.8 8.5 2 12 2 12s3.5 8 10 8a10.7 10.7 0 0 0 4.1-.8"/></svg>',
+        'eye-closed': '<svg viewBox="0 0 24 24"><path d="M4 11.5c2.3 3.3 5 5 8 5s5.7-1.7 8-5"/><path d="m6.8 15.3-1.4 2.1M10 16.2l-.5 2.3M14 16.2l.5 2.3m2.7-3.2 1.4 2.1"/></svg>',
         plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
         edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
         trash: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
@@ -3179,7 +3180,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 document.body.classList.toggle('money-values-visible', valoresVisiveis);
                 document.querySelectorAll('.money-value').forEach((elemento) => {
                     const moedaOriginal = elemento.dataset.moneyOriginal || 'R$ 0,00';
-                    elemento.textContent = valoresVisiveis ? moedaOriginal : (moedaOriginal.startsWith('BRL') ? 'BRL •••' : 'R$ •••');
+                    elemento.textContent = valoresVisiveis ? moedaOriginal : (moedaOriginal.startsWith('BRL') ? 'BRL ***' : 'R$ ***');
                 });
                 botaoValores.setAttribute('aria-pressed', String(valoresVisiveis));
                 const texto = valoresVisiveis ? 'Ocultar valores monetários' : 'Mostrar valores monetários';
@@ -7638,7 +7639,7 @@ function receitaMensalCard(receita, receitaReal, planos = []) {
                 <div class="revenue-title-line">
                     <div class="revenue-title">Receita Mensal Recorrente</div>
                     <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
-                        <span class="money-icon-hidden">${icon('eye-off')}</span>
+                        <span class="money-icon-hidden">${icon('eye-closed')}</span>
                         <span class="money-icon-visible">${icon('eye')}</span>
                         <span class="sr-only">Valores monetários</span>
                     </button>
@@ -8266,7 +8267,7 @@ function telaFinanceiro({ pagamentos = [], filtros = {}, paginacaoFinanceiro, cl
     return `<section class="page-title page-title-with-action">
         <div><h1>Financeiro</h1><div class="subtitle">Pagamentos recebidos, removidos e conferência da receita</div></div>
         <button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários">
-            <span class="money-icon-hidden">${icon('eye-off')}</span>
+            <span class="money-icon-hidden">${icon('eye-closed')}</span>
             <span class="money-icon-visible">${icon('eye')}</span>
             <span class="sr-only">Valores monetários</span>
         </button>
