@@ -22,6 +22,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Separação entre robô comercial e Assistente de gestão em 25/09/2026: a versão **1.3.53** mantém as palavras-chave comerciais, inclusive `menu`, disponíveis para números também autorizados para gestão. O assistente administrativo só responde a comandos com `gestão` no início ou no fim, por exemplo `gestão resumo do mês` e `menu gestão`; a confirmação de comprovante usa `GESTÃO CONFIRMAR <número>`. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões, backups e DATA_DIR são preservados. Validação: sintaxe, testes dedicados e `git diff --check`.
+
 - Conferência assistida de comprovantes em 25/09/2026: a versão **1.3.52** permite listar comprovantes pendentes e confirmar uma renovação somente após prévia e confirmação explícita pelo WhatsApp autorizado. A conferência bancária continua humana; dados, sessões e histórico são preservados.
 
 - Assistente e digitação para contatos LID em 25/09/2026: a versão **1.3.51** compara o LID da mensagem com o número autorizado resolvido pelo WhatsApp e restaura a simulação de “digitando…” pela conversa do telefone real quando o LID não fornece um chat. Falhas de resolução ou digitação não interrompem o atendimento comercial. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões e backups permanecem inalterados. Validação: sintaxe, testes do assistente, suíte, pacote e instalação limpa.

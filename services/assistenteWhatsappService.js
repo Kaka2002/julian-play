@@ -26,25 +26,32 @@ function autorizado(config, telefone) {
     return numerosAutorizados(config).includes(telefoneNumerico(telefone));
 }
 function ajuda() {
-    return `🤖 *ASSISTENTE DE GESTÃO*\n\nConsultas disponíveis:\n• resumo do mês\n• vencimentos hoje\n• vencimentos amanhã\n• consultar cliente Nome ou telefone\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
+    return `🤖 *ASSISTENTE DE GESTÃO*\n\nUse “gestão” no início ou no fim do comando, para não misturar com o robô comercial.\n\nExemplos:\n• gestão resumo do mês\n• vencimentos hoje gestão\n• gestão consultar cliente Nome ou telefone\n• menu gestão\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
 }
 function dataBrasil(valor = '') {
     const data = new Date(valor);
     return Number.isNaN(data.getTime()) ?'não informado' :data.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
-function tokenConfirmacao(id) { return `CONFIRMAR ${Number(id)}`; }
+function tokenConfirmacao(id) { return `GESTÃO CONFIRMAR ${Number(id)}`; }
+function extrairPedidoGestao(texto) {
+    const pedido = normalizar(texto);
+    if (pedido.startsWith('gestao ')) return pedido.slice('gestao '.length).trim();
+    if (pedido.endsWith(' gestao')) return pedido.slice(0, -' gestao'.length).trim();
+    return '';
+}
 
 async function responderConsulta({ texto, telefone }) {
     const config = await obterConfiguracoes();
     if (!autorizado(config, telefone)) return null;
-    const pedido = normalizar(texto);
+    const pedido = extrairPedidoGestao(texto);
+    if (!pedido) return null;
     let resposta = '';
 
     if (['ajuda', 'comandos', 'menu', 'assistente'].includes(pedido)) resposta = `${ajuda()}\n• comprovantes pendentes\n• confirmar comprovante <número>`;
     else if (pedido === 'comprovantes pendentes' || pedido === 'comprovantes') {
         const cobrancas = await listarCobrancasManuais({ status: 'aguardando_conferencia' });
         resposta = cobrancas.length
-            ? `🧾 *COMPROVANTES PENDENTES*\n\n${cobrancas.slice(0, 10).map(c => `• #${c.id} — ${c.clienteNome} — ${moeda(c.valorTotal)}\n  Plano: ${c.plano}`).join('\n')}\n\nApós conferir no banco, envie “confirmar comprovante <número>”.`
+            ? `🧾 *COMPROVANTES PENDENTES*\n\n${cobrancas.slice(0, 10).map(c => `• #${c.id} — ${c.clienteNome} — ${moeda(c.valorTotal)}\n  Plano: ${c.plano}`).join('\n')}\n\nApós conferir no banco, envie “gestão confirmar comprovante <número>”.`
             : '🧾 Não há comprovantes aguardando conferência.';
     } else if (/^confirmar comprovante \d+$/.test(pedido)) {
         const id = Number(pedido.match(/\d+$/)[0]);
@@ -54,7 +61,7 @@ async function responderConsulta({ texto, telefone }) {
     } else if (/^confirmar \d+$/.test(pedido)) {
         const id = Number(pedido.match(/\d+$/)[0]);
         const chaveConfirmacao = `${telefoneNumerico(telefone)}:${id}`;
-        if (Number(confirmacoesPendentes.get(chaveConfirmacao) || 0) < Date.now()) return 'Peça primeiro a prévia com “confirmar comprovante <número>”.';
+        if (Number(confirmacoesPendentes.get(chaveConfirmacao) || 0) < Date.now()) return 'Peça primeiro a prévia com “gestão confirmar comprovante <número>”.';
         confirmacoesPendentes.delete(chaveConfirmacao);
         const identificador = `ASSIST-WA-${id}-${Date.now()}`;
         const resultado = await confirmarPagamentoManual(id, { identificadorManual: identificador, conferidoPor: `WhatsApp ${telefoneNumerico(telefone)}` });
@@ -87,7 +94,7 @@ async function responderConsulta({ texto, telefone }) {
         resposta = cliente
             ? `🔎 *CLIENTE*\n\nNome: *${cliente.nome}*\nStatus: *${cliente.status || '-'}*\nPlano: *${cliente.plano || '-'}*\nVencimento: *${dataBrasil(cliente.dataVencimento || cliente.vencimento)}*`
             : '🔎 Não encontrei esse cliente. Envie “consultar cliente” seguido do nome ou telefone.';
-    } else return ajuda();
+    } else return null;
 
     await registrarEventoSistema('assistente_whatsapp_consulta', 'info', 'Consulta administrativa respondida pelo WhatsApp.', {
         telefone: telefoneNumerico(telefone), comando: pedido.slice(0, 160)

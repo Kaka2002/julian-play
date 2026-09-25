@@ -27,6 +27,12 @@
 
 - O Assistente lista comprovantes aguardando conferência e exige prévia seguida de confirmação dentro de dez minutos para renovar. A pessoa responsável continua conferindo valor e transação no banco antes da ação; a renovação usa o serviço financeiro existente e fica auditada.
 
+## Separação do robô comercial e da gestão na versão 1.3.53
+
+- Um WhatsApp autorizado pode continuar testando e usando o robô comercial. Mensagens normais, como `menu`, `bom dia`, opções e demais palavras-chave configuradas, não são interceptadas pelo Assistente de gestão.
+- O Assistente de gestão responde somente quando o comando contiver `gestão` no início ou no fim: `gestão resumo do mês`, `vencimentos hoje gestão`, `gestão consultar cliente Ana` e `menu gestão`. A confirmação assistida de comprovante também exige `GESTÃO CONFIRMAR <número>`.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados. Validado com sintaxe, testes dedicados e verificação de diff.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
