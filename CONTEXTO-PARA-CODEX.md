@@ -6,6 +6,11 @@
 - O manifesto externo passa a registrar hash, tamanho, data e assinatura Ed25519. Ele é um artefato gerado e fica fora do Git, como o ZIP. A instalação e a atualização local verificam somente a chave pública distribuída. Painel Mestre, administrador, clientes comerciais e instalação local preservam bancos, configurações, sessões, backups e isolamento de dados; não há migração ou seed.
 - Validação: teste isolado gera e verifica assinatura a partir de um caminho protegido temporário. Ainda é necessário gerar o pacote oficial após o deploy para produzir o manifesto assinado.
 
+## Isolamento de falha do Assistente WhatsApp na versão 1.3.49
+
+- Se uma consulta ou resposta do Assistente de gestão falhar, o processamento segue para o atendimento comercial normal. O assistente continua opcional e não pode suspender respostas, campanhas ou avisos automáticos.
+- Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Não altera bancos, configurações, sessões, backups ou DATA_DIR. Após atualização, retomar a sessão do WhatsApp somente se ela estiver desconectada.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

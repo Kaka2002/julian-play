@@ -22,6 +22,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Isolamento do Assistente WhatsApp em 25/09/2026: a versão **1.3.49** impede que uma falha de consulta ou envio do assistente interrompa o atendimento comercial. Quando o assistente não conseguir responder, a mensagem segue para o fluxo automático já existente. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões e backups permanecem inalterados. Validação: sintaxe, testes do assistente, suíte, pacote e instalação limpa.
+
 - Assinatura do manifesto do pacote em 25/09/2026: a versão **1.3.48** permite ao gerador usar uma chave Ed25519 por caminho protegido, definido por `LICENSE_PRIVATE_KEY_PATH` ou por `licenseSigningPrivateKeyPath` no arquivo local ignorado do Painel Mestre. A chave privada não entra no Git, no pacote nem no manifesto; o pacote traz somente hash, metadados e assinatura verificável pela chave pública distribuída. A configuração atual aponta para uma chave existente cuja pública corresponde à chave do pacote, sem rotação. Afeta a geração e a validação das entregas para administrador, comercial e instalação local; Painel Mestre, bancos, sessões, backups e dados de clientes permanecem inalterados. Validação: assinatura e verificação com chave temporária, sintaxe, suíte, pacote e instalação limpa.
 
 - Sincronização de rendimentos Mercado Pago em 23/09/2026: a página Financeiro > Rendimentos consulta o relatório de liberações pronto na conta e importa apenas `asset_management_gain`, com deduplicação por operação externa. Demais movimentos não entram como rendimento. Depende do relatório de liberações configurado no Mercado Pago e do Access Token já protegido no cofre da instalação.

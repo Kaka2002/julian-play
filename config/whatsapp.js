@@ -505,7 +505,8 @@ async function processarMensagemEmFila(message, options = {}) {
             }
         } catch (err) {
             console.log(`Assistente administrativo falhou: ${err.message}`);
-            return;
+            // O assistente é opcional: uma falha na consulta ou no envio dele
+            // nunca pode impedir o atendimento comercial já existente.
         }
     }
 
