@@ -13,7 +13,7 @@ const {
     normalizar
 } = require('../services/conversaService');
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
-const { responderConsulta: responderAssistenteWhatsapp, ehAssistenteAutorizado } = require('../services/assistenteWhatsappService');
+const { responderConsulta: responderAssistenteWhatsapp, obterTelefoneAssistenteAutorizado } = require('../services/assistenteWhatsappService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
 const { registrarComprovanteWhatsapp } = require('../services/pagamentoManualService');
@@ -483,13 +483,10 @@ async function processarMensagemEmFila(message, options = {}) {
     const texto = normalizar(textoMensagem);
 
     const telefoneMensagem = obterTelefoneMensagem(message);
-    const telefoneAssistente = await obterTelefoneParaComprovante(message);
-    const destinoAssistente = String(telefoneAssistente || '').includes('@')
-        ? telefoneAssistente
-        : telefoneAssistente ? `${String(telefoneAssistente).replace(/\D/g, '')}@c.us` : telefoneMensagem;
+    const telefoneAssistente = await obterTelefoneAssistenteAutorizado({ telefone: telefoneMensagem, client });
 
     if (texto && !foiMensagemDoRobo(message) && await licencaPermiteUso()
-        && await ehAssistenteAutorizado(telefoneAssistente)) {
+        && telefoneAssistente) {
         try {
             const idAssistente = getMessageId(message);
             if (mensagensAssistenteProcessadas.has(idAssistente)) return;
@@ -502,10 +499,10 @@ async function processarMensagemEmFila(message, options = {}) {
                 telefone: telefoneAssistente
             });
             if (respostaAssistente) {
-                registrarEnvioDoRobo(destinoAssistente, respostaAssistente);
-                const enviada = await client.sendMessage(destinoAssistente, respostaAssistente, { sendSeen: false });
+                registrarEnvioDoRobo(telefoneMensagem, respostaAssistente);
+                const enviada = await client.sendMessage(telefoneMensagem, respostaAssistente, { sendSeen: false });
                 registrarMensagemDoRobo(enviada);
-                console.log(`Assistente administrativo respondeu: ${destinoAssistente}`);
+                console.log(`Assistente administrativo respondeu: ${telefoneMensagem}`);
                 return;
             }
         } catch (err) {

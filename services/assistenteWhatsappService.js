@@ -16,10 +16,12 @@ function moedaNumero(valor) {
 }
 function moeda(valor) { return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 function mesAtual() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }).slice(0, 7); }
+function numerosAutorizados(config = {}) {
+    return String(config.assistenteWhatsappNumerosAutorizados || '').split(/[\s,;]+/).map(telefoneNumerico).filter(Boolean);
+}
 function autorizado(config, telefone) {
     if (String(config.assistenteWhatsappAtivo || '0') !== '1') return false;
-    const numeros = String(config.assistenteWhatsappNumerosAutorizados || '').split(/[\s,;]+/).map(telefoneNumerico).filter(Boolean);
-    return numeros.includes(telefoneNumerico(telefone));
+    return numerosAutorizados(config).includes(telefoneNumerico(telefone));
 }
 function ajuda() {
     return `🤖 *ASSISTENTE DE GESTÃO*\n\nConsultas disponíveis:\n• resumo do mês\n• vencimentos hoje\n• vencimentos amanhã\n• consultar cliente Nome ou telefone\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
@@ -75,4 +77,25 @@ async function ehAssistenteAutorizado(telefone) {
     return autorizado(await obterConfiguracoes(), telefone);
 }
 
-module.exports = { responderConsulta, ehAssistenteAutorizado, autorizado, normalizar };
+async function obterTelefoneAssistenteAutorizado({ telefone, client } = {}) {
+    const config = await obterConfiguracoes();
+    if (String(config.assistenteWhatsappAtivo || '0') !== '1') return '';
+
+    const recebido = String(telefone || '').trim();
+    const numeros = numerosAutorizados(config);
+    const numerico = telefoneNumerico(recebido);
+    if (numeros.includes(numerico)) return numerico;
+    if (!recebido.endsWith('@lid') || typeof client?.getNumberId !== 'function') return '';
+
+    for (const numero of numeros) {
+        try {
+            const contato = await client.getNumberId(numero);
+            if (String(contato?._serialized || '').trim() === recebido) return numero;
+        } catch (err) {
+            console.log(`Não foi possível verificar o número autorizado do assistente: ${err.message}`);
+        }
+    }
+    return '';
+}
+
+module.exports = { responderConsulta, ehAssistenteAutorizado, obterTelefoneAssistenteAutorizado, autorizado, normalizar };

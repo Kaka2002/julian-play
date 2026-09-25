@@ -17,6 +17,12 @@
 - A mesma resolução é aplicada ao número autorizado do Assistente de gestão. Assim, a autorização cadastrada com DDI, DDD e número continua válida mesmo quando a mensagem chegar como LID.
 - Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, configurações, sessões, backups e DATA_DIR são preservados. Não há migração, seed ou ação manual de dados.
 
+## Assistente e digitação para contatos LID na versão 1.3.51
+
+- O Assistente de gestão compara o LID recebido com a resolução feita pelo WhatsApp para cada número autorizado. Assim, o número cadastrado com DDI e DDD é reconhecido mesmo quando o WhatsApp não expõe o telefone na mensagem recebida.
+- A simulação de digitação tenta a conversa original e, se ela for um LID que não oferece chat, usa a conversa resolvida pelo telefone real antes de enviar a resposta. Uma falha nessa simulação continua sem bloquear a resposta comercial.
+- Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva bancos, configurações, sessões, backups e DATA_DIR; não há migração, seed ou ação manual de dados.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

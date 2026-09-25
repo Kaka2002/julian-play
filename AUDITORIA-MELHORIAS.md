@@ -22,6 +22,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Assistente e digitação para contatos LID em 25/09/2026: a versão **1.3.51** compara o LID da mensagem com o número autorizado resolvido pelo WhatsApp e restaura a simulação de “digitando…” pela conversa do telefone real quando o LID não fornece um chat. Falhas de resolução ou digitação não interrompem o atendimento comercial. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões e backups permanecem inalterados. Validação: sintaxe, testes do assistente, suíte, pacote e instalação limpa.
+
 - Resposta automática para contatos identificados por LID em 25/09/2026: a versão **1.3.50** resolve o telefone real antes de responder e mantém o LID como alternativa. Isso recupera o envio quando o WhatsApp Web falha nos getters internos do LID. A autorização do Assistente de gestão também usa o telefone resolvido. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, dados, configurações, sessões e backups permanecem inalterados. Validação: sintaxe, testes do assistente, suíte, pacote e instalação limpa.
 
 - Isolamento do Assistente WhatsApp em 25/09/2026: a versão **1.3.49** impede que uma falha de consulta ou envio do assistente interrompa o atendimento comercial. Quando o assistente não conseguir responder, a mensagem segue para o fluxo automático já existente. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões e backups permanecem inalterados. Validação: sintaxe, testes do assistente, suíte, pacote e instalação limpa.

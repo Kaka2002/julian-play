@@ -225,7 +225,14 @@ async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
     if (!DIGITACAO_ATIVA || tempo <= 0) return;
 
     try {
-        const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat');
+        let chat;
+        try {
+            chat = await comTimeout(message.getChat(), 5000, 'Busca do chat');
+        } catch (erroChat) {
+            const telefoneReal = await obterTelefoneClienteMensagem(message);
+            if (!telefoneReal || typeof message?.client?.getChatById !== 'function') throw erroChat;
+            chat = await comTimeout(message.client.getChatById(telefoneReal), 5000, 'Busca do chat pelo telefone real');
+        }
         await comTimeout(chat.sendStateTyping(), 5000, 'Estado digitando');
         await esperar(tempo);
         await comTimeout(chat.clearState(), 5000, 'Limpeza do estado digitando');
