@@ -47,9 +47,10 @@ test('assistente responde resumo e consulta sem alterar cliente ou pagamento', (
         const vencidos=await a.responderConsulta({texto:'quem está vencido?',telefone:'5511999999999'});
         const receber=await a.responderConsulta({texto:'quanto tenho para receber?',telefone:'5511999999999'});
         const proximos=await a.responderConsulta({texto:'quem vence nos próximos 3 dias?',telefone:'5511999999999'});
+        const radar=await a.responderConsulta({texto:'o que preciso resolver hoje?',telefone:'5511999999999'});
         const contexto=await a.responderConsulta({texto:'ele está em dia?',telefone:'5511999999999'});
         const depois=await new Promise((ok,no)=>db.get('SELECT COUNT(*) total FROM cliente_pagamentos',[],(e,x)=>e?no(e):ok(x.total)));
-        process.stdout.write(JSON.stringify({resumo,cliente,vencimentos,vencidos,receber,proximos,contexto,antes,depois})); db.close();
+        process.stdout.write(JSON.stringify({resumo,cliente,vencimentos,vencidos,receber,proximos,radar,contexto,antes,depois})); db.close();
     })().catch(e=>{console.error(e);process.exit(1)})`);
     try {
         const resultado = JSON.parse(r.stdout);
@@ -59,6 +60,8 @@ test('assistente responde resumo e consulta sem alterar cliente ou pagamento', (
         assert.match(resultado.vencidos, /Vencido/);
         assert.match(resultado.receber, /R\$\s*35,00/);
         assert.match(resultado.proximos, /Proximo/);
+        assert.match(resultado.radar, /RADAR DE HOJE/);
+        assert.match(resultado.radar, /Clientes vencidos/);
         assert.match(resultado.contexto, /Nome: \*Ana\*/);
         assert.equal(resultado.antes, resultado.depois);
     } finally { removerAmbiente(r.ambiente); }

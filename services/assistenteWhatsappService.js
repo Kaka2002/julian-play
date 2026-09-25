@@ -1,5 +1,6 @@
 const { obterConfiguracoes } = require('./configuracoesPainel');
-const { buscarClientePorNomeOuTelefone, listarPagamentosFinanceiro } = require('./clientes');
+const { buscarClientePorNomeOuTelefone, listarClientes, listarPagamentosFinanceiro } = require('./clientes');
+const db = require('../database/sqlite');
 const { listarDespesasFinanceiras } = require('./despesasFinanceirasService');
 const { listarRendimentosFinanceiros } = require('./rendimentosFinanceirosService');
 const { registrarEventoSistema } = require('./eventosSistema');
@@ -28,7 +29,7 @@ function autorizado(config, telefone) {
     return numerosAutorizados(config).includes(telefoneNumerico(telefone));
 }
 function ajuda() {
-    return `🤖 *ASSISTENTE DE GESTÃO*\n\nConsultas exclusivas da gestão podem ser enviadas diretamente:\n• resumo do mês\n• clientes vencidos\n• quem vence nos próximos 3 dias?\n• quanto tenho para receber?\n• consultar cliente Nome ou telefone\n• comprovantes pendentes\n\nApós consultar um cliente, pergunte “ele está em dia?” ou “quando vence?”.\n\nUse “menu gestão” somente para abrir esta ajuda, pois “menu” continua sendo do robô comercial.\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
+    return `🤖 *ASSISTENTE DE GESTÃO*\n\nConsultas exclusivas da gestão podem ser enviadas diretamente:\n• o que preciso resolver hoje?\n• resumo do mês\n• clientes vencidos\n• quem vence nos próximos 3 dias?\n• quanto tenho para receber?\n• consultar cliente Nome ou telefone\n• comprovantes pendentes\n\nApós consultar um cliente, pergunte “ele está em dia?” ou “quando vence?”.\n\nUse “menu gestão” somente para abrir esta ajuda, pois “menu” continua sendo do robô comercial.\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
 }
 function dataBrasil(valor = '') {
     const data = new Date(valor);
@@ -43,6 +44,14 @@ function adicionarDias(data, dias) {
     return resultado.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
 }
 function valorCliente(cliente = {}) { return moedaNumero(cliente.valorPlano) + moedaNumero(cliente.assinaturaApp); }
+function listarClientesParaRadar() {
+    return db.ready.then(() => new Promise((resolve, reject) => {
+        db.all(`SELECT nome, status, plano, dataVencimento, vencimento
+            FROM clientes
+            WHERE anonimizadoEm IS NULL OR anonimizadoEm = ''
+            ORDER BY nome COLLATE NOCASE ASC`, (err, clientes) => err ?reject(err) :resolve(clientes || []));
+    }));
+}
 function registrarContextoCliente(telefone, cliente) {
     if (!cliente?.nome) return;
     contextosClientes.set(telefoneNumerico(telefone), { nome: cliente.nome, expiraEm: Date.now() + TEMPO_CONTEXTO_CLIENTE_MS });
@@ -73,6 +82,11 @@ function extrairDiasProximosVencimentos(pedido) {
 function ehPedidoTotalPendente(pedido) {
     return /\ba receber\b/.test(pedido) || /\b(total|quanto)\b.*\b(receber|pendente)\b/.test(pedido);
 }
+function ehPedidoRadarDiario(pedido) {
+    return pedido === 'o que preciso resolver hoje' || pedido === 'o que preciso resolver hoje?' ||
+        pedido === 'pendencias de hoje' || pedido === 'pendencias hoje' || pedido === 'radar de hoje' ||
+        pedido === 'resumo operacional de hoje';
+}
 function extrairTermoCliente(pedido) {
     let termo = '';
     const direto = pedido.match(/^(?:consultar|buscar|ver|dados|situacao|status) (?:do |da )?cliente\s+(.+)$/) || pedido.match(/^cliente\s+(.+)$/);
@@ -89,7 +103,7 @@ function extrairPedidoGestao(texto) {
     const pedido = normalizar(texto);
     if (pedido.startsWith('gestao ')) return pedido.slice('gestao '.length).trim();
     if (pedido.endsWith(' gestao')) return pedido.slice(0, -' gestao'.length).trim();
-    if (ehPedidoResumo(pedido) || ehPedidoVencimento(pedido) || ehPedidoCliente(pedido) || ehPedidoInadimplentes(pedido) || ehPedidoTotalPendente(pedido) || extrairDiasProximosVencimentos(pedido)) return pedido;
+    if (ehPedidoRadarDiario(pedido) || ehPedidoResumo(pedido) || ehPedidoVencimento(pedido) || ehPedidoCliente(pedido) || ehPedidoInadimplentes(pedido) || ehPedidoTotalPendente(pedido) || extrairDiasProximosVencimentos(pedido)) return pedido;
     if (pedido === 'comprovantes pendentes' || pedido === 'comprovantes') return pedido;
     if (/^confirmar (comprovante )?\d+$/.test(pedido)) return pedido;
     return '';
@@ -105,6 +119,29 @@ async function responderConsulta({ texto, telefone }) {
     let resposta = '';
 
     if (['ajuda', 'comandos', 'menu', 'assistente'].includes(pedido)) resposta = `${ajuda()}\n• comprovantes pendentes\n• confirmar comprovante <número>`;
+    else if (ehPedidoRadarDiario(pedido)) {
+        const hoje = hojeSaoPaulo();
+        const limite = adicionarDias(hoje, 3);
+        const [pagamentosHoje, cobrancas, clientes] = await Promise.all([
+            listarPagamentosFinanceiro({ dataInicio: hoje, dataFim: hoje, status: 'validos' }),
+            listarCobrancasManuais({ status: 'aguardando_conferencia' }),
+            listarClientesParaRadar()
+        ]);
+        const recebimentos = pagamentosHoje.reduce((soma, item) => soma + moedaNumero(item.valorTotal), 0);
+        const clientesComerciais = clientes.filter(cliente => !/teste/i.test(cliente.plano || ''));
+        const vencidos = clientesComerciais.filter(cliente => cliente.status === 'expirado');
+        const vencemHoje = clientesComerciais.filter(cliente => cliente.status === 'ativo' && chaveData(cliente.dataVencimento || cliente.vencimento) === hoje);
+        const proximos = clientesComerciais.filter(cliente => {
+            const vencimento = chaveData(cliente.dataVencimento || cliente.vencimento);
+            return cliente.status === 'ativo' && vencimento > hoje && vencimento <= limite;
+        });
+        const prioridades = [
+            ...cobrancas.slice(0, 3).map(cobranca => `• Conferir comprovante #${cobranca.id} — ${cobranca.clienteNome}`),
+            ...vencidos.slice(0, 3).map(cliente => `• Cliente vencido: ${cliente.nome}`),
+            ...vencemHoje.slice(0, 3).map(cliente => `• Vence hoje: ${cliente.nome}`)
+        ];
+        resposta = `📌 *RADAR DE HOJE — ${dataBrasil(hoje)}*\n\nRecebido hoje: *${moeda(recebimentos)}* (${pagamentosHoje.length} pagamento(s))\nComprovantes para conferir: *${cobrancas.length}*\nClientes vencidos: *${vencidos.length}*\nVencem hoje: *${vencemHoje.length}*\nVencem nos próximos 3 dias: *${proximos.length}*\n\n${prioridades.length ?`*Prioridades:*\n${prioridades.join('\n')}` :'✅ Nenhuma prioridade encontrada hoje.'}\n\nEste radar só organiza a consulta. Confirme os comprovantes e recebimentos no banco antes de qualquer ação.`;
+    }
     else if (pedido === 'comprovantes pendentes' || pedido === 'comprovantes') {
         const cobrancas = await listarCobrancasManuais({ status: 'aguardando_conferencia' });
         resposta = cobrancas.length
@@ -125,20 +162,17 @@ async function responderConsulta({ texto, telefone }) {
         resposta = resultado.duplicado ? '✅ Esse pagamento já estava confirmado.' : `✅ Pagamento #${id} confirmado e cliente renovado.`;
     }
     else if (ehPedidoInadimplentes(pedido)) {
-        const { listarClientes } = require('./clientes');
         const clientes = await listarClientes({ status: 'inadimplente' });
         const total = clientes.reduce((soma, cliente) => soma + valorCliente(cliente), 0);
         resposta = clientes.length
             ? `⏰ *CLIENTES VENCIDOS*\n\n${clientes.slice(0, 20).map(cliente => `• ${cliente.nome} — ${dataBrasil(cliente.dataVencimento || cliente.vencimento)} — ${moeda(valorCliente(cliente))}`).join('\n')}${clientes.length > 20 ?`\n\n+ ${clientes.length - 20} cliente(s)` :''}\n\nTotal mensal cadastrado: *${moeda(total)}*`
             : '⏰ Não há clientes vencidos no momento.';
     } else if (ehPedidoTotalPendente(pedido)) {
-        const { listarClientes } = require('./clientes');
         const clientes = await listarClientes({ status: 'inadimplente' });
         const total = clientes.reduce((soma, cliente) => soma + valorCliente(cliente), 0);
         resposta = `💰 *A RECEBER — CLIENTES VENCIDOS*\n\nClientes: *${clientes.length}*\nValor mensal cadastrado: *${moeda(total)}*\n\nEste total é uma projeção pelos valores atuais dos contratos vencidos; confirme cada recebimento no banco.`;
     } else if (extrairDiasProximosVencimentos(pedido)) {
         const dias = extrairDiasProximosVencimentos(pedido);
-        const { listarClientes } = require('./clientes');
         const hoje = hojeSaoPaulo();
         const limite = adicionarDias(hoje, dias);
         const clientes = (await listarClientes()).filter(cliente => {
@@ -164,7 +198,6 @@ async function responderConsulta({ texto, telefone }) {
         const data = new Date();
         data.setDate(data.getDate() + deslocamento);
         const chave = data.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-        const { listarClientes } = require('./clientes');
         const clientes = (await listarClientes()).filter(cliente => String(cliente.dataVencimento || cliente.vencimento || '').slice(0, 10) === chave);
         resposta = clientes.length
             ? `📅 *VENCIMENTOS ${deslocamento ?'DE AMANHÃ' :'DE HOJE'}*\n\n${clientes.slice(0, 20).map(cliente => `• ${cliente.nome} — ${cliente.plano || 'Plano não informado'}`).join('\n')}${clientes.length > 20 ?`\n\n+ ${clientes.length - 20} cliente(s)` :''}`

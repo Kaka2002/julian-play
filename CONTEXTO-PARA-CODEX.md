@@ -66,6 +66,12 @@
 - A tela Manutenção lista os comandos e lembretes atualizados. Não há cobrança automática, criação de pagamento, alteração de cliente, API externa ou custo adicional.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados.
 
+## Radar diário do Assistente na versão 1.3.59
+
+- A consulta `o que preciso resolver hoje?` organiza recebimentos confirmados do dia, comprovantes aguardando conferência, clientes vencidos, vencimentos de hoje e dos próximos três dias. Ela apresenta até três prioridades de cada grupo, somente para orientar a operação. A leitura dos clientes não atualiza status automaticamente.
+- O radar não envia cobranças, não confirma comprovantes, não cria pagamentos e não altera dados. Os valores recebidos e os comprovantes ainda exigem a conferência bancária humana antes de qualquer ação.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, testes do Assistente, suíte interna, verificação de diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
