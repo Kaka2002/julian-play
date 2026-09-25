@@ -47,6 +47,12 @@
 - A regra é permanente em `AGENTS.md` e possui teste de regressão. Mudanças futuras no WhatsApp devem validar `menu` e um comando da gestão em aparelho real antes da entrega.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados.
 
+## Entendimento local ampliado do Assistente na versão 1.3.56
+
+- Sem usar API, modelo externo ou chave adicional, o Assistente reconhece perguntas naturais equivalentes às consultas permitidas, como `quanto recebi este mês?`, `quais clientes vencem hoje?` e `situação do cliente Ana`.
+- O entendimento local só direciona para as consultas já existentes: resumo financeiro, vencimentos, cliente e comprovantes. Não cria cobranças, não confirma pagamentos sem as duas etapas já previstas e não altera o atendimento comercial, incluindo `menu`.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, custo externo ou ação manual de dados.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

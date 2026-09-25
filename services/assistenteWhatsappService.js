@@ -33,13 +33,29 @@ function dataBrasil(valor = '') {
     return Number.isNaN(data.getTime()) ?'não informado' :data.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
 function tokenConfirmacao(id) { return `CONFIRMAR ${Number(id)}`; }
+function ehPedidoResumo(pedido) {
+    return pedido.includes('resumo') || pedido.includes('como esta meu mes') || pedido.includes('como esta o mes') ||
+        /\b(faturamento|balanco)\b/.test(pedido) || /\b(financeiro|saldo)\b.*\bmes\b/.test(pedido) ||
+        /quanto.*\b(recebi|entrou|faturei|ganhei)\b/.test(pedido);
+}
+function ehPedidoVencimento(pedido) {
+    return pedido.includes('vencimento') || /\b(quem|quais clientes?)\b.*\bvence/.test(pedido) ||
+        /\bclientes?\b.*\bpara vencer\b/.test(pedido);
+}
+function extrairTermoCliente(pedido) {
+    let termo = '';
+    const direto = pedido.match(/^(?:consultar|buscar|ver|dados|situacao|status) (?:do |da )?cliente\s+(.+)$/) || pedido.match(/^cliente\s+(.+)$/);
+    const vencimento = pedido.match(/^(?:quando|qual dia) vence (?:o |a )?(?:cliente )?(.+)$/);
+    const situacao = pedido.match(/^cliente\s+(.+?)\s+(?:esta|ta)\s+(?:em dia|atrasado|ativo|inativo)$/);
+    termo = direto?.[1] || vencimento?.[1] || situacao?.[1] || '';
+    return termo.trim();
+}
+function ehPedidoCliente(pedido) { return Boolean(extrairTermoCliente(pedido)); }
 function extrairPedidoGestao(texto) {
     const pedido = normalizar(texto);
     if (pedido.startsWith('gestao ')) return pedido.slice('gestao '.length).trim();
     if (pedido.endsWith(' gestao')) return pedido.slice(0, -' gestao'.length).trim();
-    if (pedido.includes('resumo') || pedido.includes('como esta meu mes') || pedido.includes('como esta o mes')) return pedido;
-    if (pedido.includes('vencimento')) return pedido;
-    if (pedido.startsWith('consultar cliente ') || pedido.startsWith('cliente ')) return pedido;
+    if (ehPedidoResumo(pedido) || ehPedidoVencimento(pedido) || ehPedidoCliente(pedido)) return pedido;
     if (pedido === 'comprovantes pendentes' || pedido === 'comprovantes') return pedido;
     if (/^confirmar (comprovante )?\d+$/.test(pedido)) return pedido;
     return '';
@@ -72,7 +88,7 @@ async function responderConsulta({ texto, telefone }) {
         const resultado = await confirmarPagamentoManual(id, { identificadorManual: identificador, conferidoPor: `WhatsApp ${telefoneNumerico(telefone)}` });
         resposta = resultado.duplicado ? '✅ Esse pagamento já estava confirmado.' : `✅ Pagamento #${id} confirmado e cliente renovado.`;
     }
-    else if (pedido.includes('resumo') || pedido.includes('como esta meu mes') || pedido.includes('como esta o mes')) {
+    else if (ehPedidoResumo(pedido)) {
         const mes = mesAtual();
         const [pagamentos, despesas, rendimentos] = await Promise.all([
             listarPagamentosFinanceiro({ mes, status: 'validos' }),
@@ -83,7 +99,7 @@ async function responderConsulta({ texto, telefone }) {
         const gasto = despesas.reduce((soma, item) => soma + moedaNumero(item.valor), 0);
         const rendimento = rendimentos.reduce((soma, item) => soma + moedaNumero(item.valor), 0);
         resposta = `📊 *RESUMO DE ${mes}*\n\nRecebido: *${moeda(recebido)}* (${pagamentos.length} pagamento(s))\nRendimentos: *${moeda(rendimento)}*\nDespesas: *${moeda(gasto)}*\nSaldo: *${moeda(recebido + rendimento - gasto)}*`;
-    } else if (pedido.includes('vencimento')) {
+    } else if (ehPedidoVencimento(pedido)) {
         const deslocamento = pedido.includes('amanha') ?1 : 0;
         const data = new Date();
         data.setDate(data.getDate() + deslocamento);
@@ -93,8 +109,8 @@ async function responderConsulta({ texto, telefone }) {
         resposta = clientes.length
             ? `📅 *VENCIMENTOS ${deslocamento ?'DE AMANHÃ' :'DE HOJE'}*\n\n${clientes.slice(0, 20).map(cliente => `• ${cliente.nome} — ${cliente.plano || 'Plano não informado'}`).join('\n')}${clientes.length > 20 ?`\n\n+ ${clientes.length - 20} cliente(s)` :''}`
             : `📅 Nenhum vencimento encontrado ${deslocamento ?'amanhã' :'hoje'}.`;
-    } else if (pedido.startsWith('consultar cliente ') || pedido.startsWith('cliente ')) {
-        const termo = pedido.replace(/^(consultar )?cliente\s+/, '').trim();
+    } else if (ehPedidoCliente(pedido)) {
+        const termo = extrairTermoCliente(pedido);
         const cliente = termo ?await buscarClientePorNomeOuTelefone(termo) : null;
         resposta = cliente
             ? `🔎 *CLIENTE*\n\nNome: *${cliente.nome}*\nStatus: *${cliente.status || '-'}*\nPlano: *${cliente.plano || '-'}*\nVencimento: *${dataBrasil(cliente.dataVencimento || cliente.vencimento)}*`
@@ -132,4 +148,4 @@ async function obterTelefoneAssistenteAutorizado({ telefone, client } = {}) {
     return '';
 }
 
-module.exports = { responderConsulta, ehAssistenteAutorizado, obterTelefoneAssistenteAutorizado, autorizado, normalizar };
+module.exports = { responderConsulta, ehAssistenteAutorizado, obterTelefoneAssistenteAutorizado, autorizado, normalizar, ehPedidoResumo, ehPedidoVencimento, extrairTermoCliente };
