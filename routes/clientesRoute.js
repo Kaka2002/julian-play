@@ -120,6 +120,7 @@ const {
     buscarPlanoPorNome,
     prepararPlanoPixCliente: prepararPlanoPixPlanoAtual,
     enviarQRCodePIXParaDestino,
+    prepararPixEnvioManual,
     listarPlanosComerciais,
     montarPlanosPadraoComerciais
 } = require('../services/pixService');
@@ -5925,7 +5926,7 @@ function secaoPixPlanoCliente(cliente = {}) {
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">PIX do plano</h2>
-                <div class="subtitle">Envie manualmente ao cliente o QR Code PIX com o valor do plano atual.</div>
+                <div class="subtitle">Escolha o envio pelo robô conectado ou prepare o PIX para enviar pelo seu WhatsApp.</div>
             </div>
         </div>
         <div style="padding:28px;">
@@ -5933,8 +5934,9 @@ function secaoPixPlanoCliente(cliente = {}) {
                 Plano: <strong>${escapar(cliente.plano || '-')}</strong> &middot;
                 Valor: <strong>R$ ${escapar(cliente.valorPlano || '0,00')}</strong>
             </div>
-            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
-                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX do plano</button>
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return event.submitter?.value === 'manual' || confirm('Enviar PIX pelo robô conectado?');">
+                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX pelo robô</button>
+                <button class="button secondary" type="submit" name="modoEnvio" value="manual">Preparar PIX manual</button>
             </form>
         </div>
     </section>`;
@@ -6038,8 +6040,9 @@ function acoesRapidasCliente(cliente = {}, config = {}) {
             </div>
         </div>
         <div class="actions" style="padding:20px;gap:10px;flex-wrap:wrap;">
-            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return confirm('Enviar PIX do plano atual para este cliente?');">
-                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX</button>
+            <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-pix-plano" onsubmit="return event.submitter?.value === 'manual' || confirm('Enviar PIX pelo robô conectado?');">
+                <button class="button green" type="submit">${icon('financeiro')} Enviar PIX pelo robô</button>
+                <button class="button secondary" type="submit" name="modoEnvio" value="manual">Preparar PIX manual</button>
             </form>
             ${String(config.paypalAtivo) === '1' ?`<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-paypal-plano" onsubmit="return confirm('Gerar e enviar o link PayPal do plano atual para este cliente?');">
                 <button class="button green" type="submit">${icon('financeiro')} Enviar PayPal</button>
@@ -6095,13 +6098,14 @@ function telaEnviarModeloCliente({ cliente = {}, modelos = [] }) {
             </div>
             <span class="badge ${statusClasse(cliente.status)}">${escapar(rotuloStatus(cliente.status))}</span>
         </div>
-        <form method="post" action="/clientes/${clienteId}/enviar-modelo" onsubmit="return confirm('Enviar o modelo escolhido para ${nomeCliente}?');">
+        <form method="post" action="/clientes/${clienteId}/enviar-modelo" onsubmit="return event.submitter?.value === 'manual' || confirm('Enviar o modelo pelo robô conectado?');">
             <div class="model-send-body">
                 <div class="notice">As variáveis do modelo serão preenchidas automaticamente com os dados deste cliente antes do envio.</div>
                 ${modelos.length ?`<div class="model-choice-grid">${opcoes}</div>` : '<div class="empty">Nenhum modelo ativo encontrado. Cadastre ou ative um modelo em Modelos de Mensagem.</div>'}
                 <div class="model-send-actions">
                     <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>
-                    <button class="button green" type="submit" ${modelos.length ?'' : 'disabled'}>${icon('whats')} Enviar modelo escolhido</button>
+                    <button class="button green" type="submit" ${modelos.length ?'' : 'disabled'}>${icon('whats')} Enviar pelo robô</button>
+                <button class="button secondary" type="submit" name="modoEnvio" value="manual" ${modelos.length ?'' : 'disabled'}>Preparar envio manual</button>
                 </div>
             </div>
         </form>
@@ -9802,6 +9806,7 @@ router.use(criarClientesAcoesRoute({
     enviarCampanhaAmizadeManualPorId,
     enviarMensagemWhatsAppComFallback,
     enviarQRCodePIXParaDestino,
+    prepararPixEnvioManual,
     escapar,
     formatarTelefoneCampanha,
     formularioCliente,

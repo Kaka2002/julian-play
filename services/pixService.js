@@ -518,7 +518,16 @@ ${RODAPE_ATENDIMENTO}`, { sendSeen: false }),
     }
 }
 
+async function prepararPixEnvioManual(plano, options = {}) {
+    const planoPix = normalizarPlanoPix(plano);
+    if (planoPix.valorNumero <= 0) throw new Error('O plano precisa ter valor maior que zero.');
+    const cobranca = await criarCobrancaMercadoPago(planoPix, options);
+    const codigo = cobranca ? cobranca.qrCode : gerarPixCopiaECola(planoPix, await obterConfiguracaoPix());
+    return `Olá, ${options.nomeCliente || 'cliente'}!\n\nCobrança do plano ${planoPix.nome}\nValor: R$ ${planoPix.valor}\n\nPIX copia e cola:\n${codigo}\n\n${cobranca ? 'O pagamento será conferido pelo sistema.' : 'Após pagar, envie o comprovante para conferência.'}`;
+}
+
 module.exports = {
+    prepararPixEnvioManual,
     buscarPlano,
     buscarPlanoPorNome,
     prepararPlanoPixCliente,

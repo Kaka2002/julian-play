@@ -1,3 +1,4 @@
+const { telaEnvioManual } = require('../services/envioManualService');
 const express = require('express');
 
 // Telas e servicos sao injetados; nenhuma instalacao ou banco e aberto aqui.
@@ -61,6 +62,7 @@ function criarClientesAcoesRoute(deps = {}) {
         obterConfiguracoes,
         obterListasCliente,
         obterPlanosRenovacaoManual,
+        prepararPixEnvioManual,
         prepararPlanoPixCliente,
         prepararPlanoPixDoPlanoCliente,
         prepararPlanoPixPlanoAtual,
@@ -342,6 +344,17 @@ router.post('/clientes/:id/enviar-pix-plano', async (req, res) => {
 
         if (!cliente) {
             return res.redirect(montarUrlClienteMensagem(req.params.id, 'Cliente não encontrado.'));
+        }
+
+        if (req.body?.modoEnvio === 'manual') {
+            const planoBase = buscarPlanoPorNome(cliente.plano) || { nome: cliente.plano || 'Plano', valor: cliente.valorPlano || '0,00' };
+            const planoPix = prepararPlanoPixDoPlanoCliente(cliente, planoBase);
+            const mensagem = await prepararPixEnvioManual(planoPix, {
+                tipo: 'renovacao', nomeCliente: cliente.nome, clienteId: cliente.id,
+                plano: cliente.plano, tipoPlanoId: cliente.tipoPlanoId,
+                diasContrato: cliente.diasContrato, valorPlano: cliente.valorPlano, assinaturaApp: '0,00'
+            });
+            return renderizar(res, { titulo: 'Envio manual', conteudo: telaEnvioManual(cliente, mensagem), ativo: 'clientes' });
         }
 
         const status = getStatusWhatsApp();
@@ -970,7 +983,7 @@ router.post('/clientes/:id/enviar-modelo', async (req, res) => {
     const status = getStatusWhatsApp();
     const client = getClient();
 
-    if (!client || !status.conectado) {
+    if (req.body?.modoEnvio !== 'manual' && (!client || !status.conectado)) {
         return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('WhatsApp nao esta conectado.')}`);
     }
 
@@ -986,6 +999,19 @@ router.post('/clientes/:id/enviar-modelo', async (req, res) => {
 
         if (!String(mensagem || '').trim()) {
             return res.redirect(`/clientes/${encodeURIComponent(cliente.id)}/enviar-modelo?mensagem=${encodeURIComponent('Este modelo esta sem mensagem cadastrada.')}`);
+        }
+
+        if (req.body?.modoEnvio === 'manual') {
+            let texto = mensagem;
+            if (modeloManualEnviaPix(modelo)) {
+                const planoPix = await prepararPlanoPixPlanoAtual(cliente);
+                texto += '\n\n' + await prepararPixEnvioManual(planoPix, {
+                    tipo: 'renovacao', nomeCliente: cliente.nome, clienteId: cliente.id,
+                    plano: cliente.plano, tipoPlanoId: cliente.tipoPlanoId,
+                    diasContrato: cliente.diasContrato, valorPlano: planoPix.valor, assinaturaApp: '0,00'
+                });
+            }
+            return renderizar(res, { titulo: 'Envio manual', conteudo: telaEnvioManual(cliente, texto), ativo: 'clientes' });
         }
 
         const envioWhatsApp = await enviarMensagemWhatsAppComFallback(

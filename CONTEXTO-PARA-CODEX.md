@@ -1,3 +1,12 @@
+
+## Implementado: envio manual ou pelo robô na versão 1.3.46
+
+- A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
+- A preparação independe da conexão WhatsApp, abre uma prévia com cópia de texto e link para conversa com mensagem preenchida. Abrir/copiar não registra entrega, nota de envio ou renovação. O usuário confirma o envio no próprio WhatsApp.
+- PIX usa o provedor atual: Mercado Pago cria cobrança pelo serviço existente; PIX estático usa a configuração da instalação e requer conferência do comprovante. Cada preparação de PIX gera uma cobrança; não repetir a preparação para reenviar o mesmo texto. Não promete ausência de bloqueios.
+- Afeta administrador, comercial no servidor e instalação local; Painel Mestre inalterado. Preserva bancos, configurações, sessões, backups e isolamento DATA_DIR. Sem migração, seed ou mudança de valores iniciais. Aplicar deploy/atualização; nenhuma ação manual de dados.
+- Validação: sintaxe, testes de rotas e proteção de HTML, 173 testes internos e 11 testes de navegador aprovados; diff, geração oficial e teste de pacote limpo aprovados. Envio real depende de confirmação humana no aparelho; nenhum envio real é feito nos testes.
+
 # Contexto permanente do projeto Julian Play
 
 Este arquivo fica no repositório para sobreviver à exclusão de

@@ -2,6 +2,47 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const criarRoute = require('../routes/clientesAcoesRoute');
 
+test('PIX manual prepara sem consultar WhatsApp nem registrar envio', async () => {
+    let tela;
+    let opcoes;
+    const executar = preparar({
+        buscarClientePorId: async () => ({ id: 7, nome: 'Teste', telefone: '5511999999999', plano: 'Mensal', valorPlano: '30,00' }),
+        buscarPlanoPorNome: () => ({ nome: 'Mensal' }),
+        prepararPlanoPixDoPlanoCliente: () => ({ nome: 'Mensal', valor: '30,00' }),
+        prepararPixEnvioManual: async (_, opts) => { opcoes = opts; return 'PIX teste'; },
+        getStatusWhatsApp: () => assert.fail('Nao consultar conexao'),
+        adicionarNotaCliente: () => assert.fail('Nao registrar entrega'),
+        renderizar: async (_, dados) => { tela = dados.conteudo; }
+    });
+    await executar('post', '/clientes/:id/enviar-pix-plano', { body: { modoEnvio: 'manual' } });
+    assert.equal(opcoes.clienteId, 7);
+    assert.match(tela, /wa.me\/5511999999999\?text=PIX%20teste/);
+});
+
+test('previa manual escapa conteudo e nao cria link com telefone invalido', () => {
+    const { telaEnvioManual } = require('../services/envioManualService');
+    const html = telaEnvioManual({ id: 7, nome: '<img>', telefone: '123' }, '</textarea><script>alert(1)</script>');
+    assert.ok(!html.includes('https://wa.me/'));
+    assert.ok(!html.includes('</textarea><script>alert'));
+    assert.match(html, /&lt;img&gt;/);
+});
+
+test('modelo manual funciona desconectado sem enviar nem registrar nota', async () => {
+    let tela;
+    const executar = preparar({
+        buscarClientePorId: async () => ({ id: 7, nome: 'Teste' }),
+        buscarModeloPorId: async () => ({ id: 1, ativo: 1 }),
+        getStatusWhatsApp: () => ({ conectado: false }), getClient: () => null,
+        obterConfiguracoes: async () => ({}), telefoneCampanhaAmizade: () => '', formatarTelefoneCampanha: () => '',
+        montarMensagemModeloManual: async () => 'Aviso preenchido', modeloManualEnviaPix: () => false,
+        enviarMensagemWhatsAppComFallback: () => assert.fail('Nao enviar'),
+        adicionarNotaCliente: () => assert.fail('Nao registrar nota'),
+        renderizar: async (_, dados) => { tela = dados.conteudo; }
+    });
+    await executar('post', '/clientes/:id/enviar-modelo', { body: { modoEnvio: 'manual', modeloId: '1' } });
+    assert.match(tela, /Aviso preenchido/);
+});
+
 function preparar(deps = {}) {
     const router = criarRoute({
         montarUrlClienteMensagem: (id, mensagem) => `${id}:${mensagem}`,
