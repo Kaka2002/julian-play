@@ -97,6 +97,12 @@
 - Em `Modelos`, o operador escolhe qual texto será usado deixando-o como **Ativo**. Ativar um modelo de campanha desativa os demais automaticamente, portanto o disparo nunca mistura textos. O envio, a regra de elegibilidade, WhatsApp, Telegram e a revisão manual permanecem inalterados.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Não há migração, API externa, custo adicional ou alteração de dados operacionais. Validação: sintaxe, testes internos, diff e pacote oficial.
 
+## Relatório semanal do Assistente na versão 1.3.64
+
+- O WhatsApp autorizado para a gestão aceita `como foi a semana?`, `relatório semanal`, `resumo da semana`, `balanço da semana` e `fechamento da semana`. A resposta usa a semana atual, de segunda-feira até a data da consulta, e mostra recebimentos, rendimentos, despesas, saldo do período, comprovantes aguardando conferência, clientes vencidos e vencimentos dos próximos sete dias.
+- A consulta lê apenas o banco da própria instalação. Ela não envia cobranças, confirma pagamentos, altera clientes, cria pendências ou interfere no robô comercial, campanhas, Telegram ou filas. A tela Manutenção passa a exibir o comando como lembrete operacional.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, configurações, backups e DATA_DIR existentes são preservados; não há migração, API externa, custo adicional ou ação manual além de atualizar e usar o comando. Validação: sintaxe dos JavaScripts, teste do Assistente, suíte interna, verificação de diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
