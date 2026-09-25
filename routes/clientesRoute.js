@@ -7715,7 +7715,7 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = []) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
@@ -7737,6 +7737,9 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         campanhaStatus.proximoLoteEm ? `Proximo lote: ${formatarDataHoraCurta(campanhaStatus.proximoLoteEm)}` : '',
         campanhaStatus.erro ? `Erro: ${campanhaStatus.erro}` : ''
     ].filter(Boolean).join(' | ');
+    const pendenciasDoDia = Array.isArray(pendencias.itens) ?pendencias.itens.slice(0, 5) : [];
+    const rotulosPrioridade = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+    const classesPrioridade = { critica: 'red', alta: 'orange', media: 'info', baixa: 'muted' };
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -7750,6 +7753,17 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
+    </section>
+    <section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div><h2 class="panel-title">Prioridades do dia</h2><div class="subtitle">Ações que precisam de revisão nas áreas do sistema.</div></div>
+            <a class="button secondary" href="/pendencias">Abrir Central de Pendências ${icon('arrow')}</a>
+        </div>
+        ${pendenciasDoDia.length ?`<div class="pending-list">${pendenciasDoDia.map(item => `<article class="pending-item">
+            <div><span class="badge ${classesPrioridade[item.prioridade] || 'muted'}">${escapar(rotulosPrioridade[item.prioridade] || 'Aberta')}</span>
+                <h3>${escapar(item.titulo)}</h3><p>${escapar(item.detalhe || 'Revisar na área responsável.')}</p></div>
+            <a class="button secondary" href="${escapar(item.href || '/pendencias')}">Revisar</a>
+        </article>`).join('')}</div>` : '<div class="empty">Nenhuma prioridade aberta no momento.</div>'}
     </section>
     <section class="panel dashboard-campaign" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -9555,22 +9569,25 @@ router.get('/clientes', async (req, res) => {
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
-    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos] = await Promise.all([
+    const whatsapp = getStatusWhatsApp();
+    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos, sistema] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
         listarClientesAniversarioHoje(anoAtual),
         resumoAtendimentos(),
         resumoCrm(),
-        listarTiposPlanos()
+        listarTiposPlanos(),
+        obterStatusSistema(whatsapp)
     ]);
+    const pendencias = await listarPendenciasOperacionais({}, { operacional: { whatsapp, sistema } });
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
     const porPagina = quantidadeVencimentosDashboard(req.query.porPagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias),
         mensagem,
         ativo: 'painel'
     });

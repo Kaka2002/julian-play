@@ -72,6 +72,12 @@
 - O radar não envia cobranças, não confirma comprovantes, não cria pagamentos e não altera dados. Os valores recebidos e os comprovantes ainda exigem a conferência bancária humana antes de qualquer ação.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, testes do Assistente, suíte interna, verificação de diff e pacote oficial.
 
+## Prioridades do dia no Dashboard na versão 1.3.60
+
+- O Dashboard administrativo mostra até cinco pendências ordenadas por prioridade e oferece acesso direto à área responsável ou à Central de Pendências. A fonte é a central operacional existente, incluindo saúde do WhatsApp e do sistema.
+- O painel não conclui, exclui, envia mensagens nem altera cadastros: o botão somente abre a tela apropriada para revisão humana.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, teste do Dashboard, suíte interna, verificação de diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

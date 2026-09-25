@@ -14,6 +14,14 @@ test('resposta humanizada protege digitacao para LID e assistente de gestão', (
     assert.match(whatsapp, /simularRespostaHumanizada\(message, `\$\{telefoneAssistente\}@c\.us`\)/);
 });
 
+test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendências', () => {
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
+    assert.match(fonte, /<h2 class="panel-title">Prioridades do dia<\/h2>/);
+    assert.match(fonte, /href="\/pendencias">Abrir Central de Pendências/);
+    assert.match(fonte, /const pendencias = await listarPendenciasOperacionais\(\{\}, \{ operacional: \{ whatsapp, sistema \} \}\)/);
+    assert.match(fonte, /href="\$\{escapar\(item\.href \|\| '\/pendencias'\)\}">Revisar/);
+});
+
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);
