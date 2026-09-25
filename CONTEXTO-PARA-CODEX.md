@@ -11,6 +11,12 @@
 - Se uma consulta ou resposta do Assistente de gestão falhar, o processamento segue para o atendimento comercial normal. O assistente continua opcional e não pode suspender respostas, campanhas ou avisos automáticos.
 - Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Não altera bancos, configurações, sessões, backups ou DATA_DIR. Após atualização, retomar a sessão do WhatsApp somente se ela estiver desconectada.
 
+## Resposta para contatos LID na versão 1.3.50
+
+- Quando o WhatsApp Web identifica uma conversa pelo LID interno, o robô resolve primeiro o número real do contato e envia a resposta por `@c.us`. O LID permanece como alternativa quando a resolução não estiver disponível. Isso evita falhas dos getters internos do WhatsApp Web durante respostas automáticas.
+- A mesma resolução é aplicada ao número autorizado do Assistente de gestão. Assim, a autorização cadastrada com DDI, DDD e número continua válida mesmo quando a mensagem chegar como LID.
+- Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, configurações, sessões, backups e DATA_DIR são preservados. Não há migração, seed ou ação manual de dados.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

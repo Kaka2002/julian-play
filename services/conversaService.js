@@ -268,21 +268,33 @@ async function responderComDigitacao(message, texto, imagem = null) {
         }
 
         // O WhatsApp pode expor a conversa somente pelo identificador @lid.
-        // Nesse caso getChat() falha e adiciona uma espera desnecessaria antes
-        // do texto. O envio direto ja e o caminho funcional e preserva a fila.
+        // Resolvemos antes o telefone real: versões recentes do WhatsApp Web
+        // passaram a falhar ao enviar diretamente para alguns LIDs.
         if (String(destino || '').endsWith('@lid')) {
-            const enviada = await comTimeout(
-                enfileirarEnvio(
-                    () => message.client.sendMessage(destino, resposta),
-                    'Envio direto de resposta do robo'
-                ),
-                ENVIO_TIMEOUT_MS,
-                'Envio direto de mensagem'
-            );
+            const telefoneReal = await obterTelefoneClienteMensagem(message);
+            const destinos = [telefoneReal, destino].filter((valor, indice, lista) => valor && lista.indexOf(valor) === indice);
+            let ultimoErro = null;
 
-            console.log('Resposta enviada diretamente para conversa @lid:', enviada?.id?._serialized || 'sem id');
-            registrarMensagemDoRobo(enviada);
-            return;
+            for (const destinoResposta of destinos) {
+                try {
+                    const enviada = await comTimeout(
+                        enfileirarEnvio(
+                            () => message.client.sendMessage(destinoResposta, resposta),
+                            'Envio direto de resposta do robo'
+                        ),
+                        ENVIO_TIMEOUT_MS,
+                        'Envio direto de mensagem'
+                    );
+                    console.log('Resposta enviada diretamente para conversa:', enviada?.id?._serialized || 'sem id');
+                    registrarMensagemDoRobo(enviada);
+                    return;
+                } catch (erroEnvio) {
+                    ultimoErro = erroEnvio;
+                    console.log(`Falha ao responder para ${destinoResposta}; tentando o próximo destino: ${erroEnvio.message}`);
+                }
+            }
+
+            throw ultimoErro || new Error('Nao foi possivel responder ao contato identificado pelo WhatsApp.');
         }
 
         const chat = await comTimeout(message.getChat(), 5000, 'Busca do chat para resposta');
@@ -517,6 +529,14 @@ async function obterTelefoneClienteMensagem(message) {
     if (!destino) return '';
     if (String(destino).endsWith('@c.us')) return destino;
     if (!String(destino).endsWith('@lid')) return '';
+
+    try {
+        const contato = await comTimeout(message.getContact(), 5000, 'Busca do contato LID');
+        const numero = String(contato?.number || contato?.id?.user || '').replace(/\D/g, '');
+        if (/^\d{10,15}$/.test(numero)) return `${numero}@c.us`;
+    } catch (err) {
+        console.log('Nao foi possivel obter contato LID:', err.message);
+    }
 
     try {
         const telefoneReal = await comTimeout(

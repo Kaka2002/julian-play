@@ -482,8 +482,14 @@ async function processarMensagemEmFila(message, options = {}) {
     const textoMensagem = obterTextoMensagem(message);
     const texto = normalizar(textoMensagem);
 
+    const telefoneMensagem = obterTelefoneMensagem(message);
+    const telefoneAssistente = await obterTelefoneParaComprovante(message);
+    const destinoAssistente = String(telefoneAssistente || '').includes('@')
+        ? telefoneAssistente
+        : telefoneAssistente ? `${String(telefoneAssistente).replace(/\D/g, '')}@c.us` : telefoneMensagem;
+
     if (texto && !foiMensagemDoRobo(message) && await licencaPermiteUso()
-        && await ehAssistenteAutorizado(obterTelefoneMensagem(message))) {
+        && await ehAssistenteAutorizado(telefoneAssistente)) {
         try {
             const idAssistente = getMessageId(message);
             if (mensagensAssistenteProcessadas.has(idAssistente)) return;
@@ -493,14 +499,13 @@ async function processarMensagemEmFila(message, options = {}) {
             }
             const respostaAssistente = await responderAssistenteWhatsapp({
                 texto: textoMensagem,
-                telefone: obterTelefoneMensagem(message)
+                telefone: telefoneAssistente
             });
             if (respostaAssistente) {
-                const destino = obterTelefoneMensagem(message);
-                registrarEnvioDoRobo(destino, respostaAssistente);
-                const enviada = await client.sendMessage(destino, respostaAssistente, { sendSeen: false });
+                registrarEnvioDoRobo(destinoAssistente, respostaAssistente);
+                const enviada = await client.sendMessage(destinoAssistente, respostaAssistente, { sendSeen: false });
                 registrarMensagemDoRobo(enviada);
-                console.log(`Assistente administrativo respondeu: ${destino}`);
+                console.log(`Assistente administrativo respondeu: ${destinoAssistente}`);
                 return;
             }
         } catch (err) {
