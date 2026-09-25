@@ -9,6 +9,14 @@
 
 # Contexto permanente do projeto Julian Play
 
+## Assistente de gestão por WhatsApp na versão 1.3.47
+
+- O Assistente WhatsApp é opcional e começa desligado. Em `Manutenção > Configuração do robô`, a instalação informa os números autorizados com DDI, DDD e número; somente eles podem usar consultas administrativas.
+- Nesta primeira etapa, os comandos `ajuda`, `resumo do mês`, `vencimentos hoje`, `vencimentos amanhã` e `consultar cliente <nome ou telefone>` respondem pelo WhatsApp. As consultas usam somente o banco da própria instalação e registram evento operacional.
+- O assistente não cria pagamentos, cobranças, renovações, campanhas, notas ou alterações em clientes. Ele é interceptado antes do atendimento comercial, sem mudar seus gatilhos, filas, horários, respostas ou envios automáticos. Mensagens de números não autorizados continuam no fluxo existente.
+- Afeta painel administrador, clientes comerciais e instalações locais; Painel Mestre inalterado. Preserva bancos, configurações existentes, backups, DATA_DIR e sessões. Não há migração, seed ou ação manual de dados após deploy; é necessário ativar e cadastrar os números autorizados para usar o recurso.
+- Validação: sintaxe dos módulos alterados, testes específicos de autorização, consulta e não alteração de pagamentos, 175 testes internos e 11 testes de navegador aprovados, `git diff --check`, geração oficial e teste de instalação limpa aprovados. O manifesto permanece sem assinatura quando `LICENSE_PRIVATE_KEY` não está configurada.
+
 Este arquivo fica no repositório para sobreviver à exclusão de
 `C:\Users\carlo\.codex`. Uma nova sessão do Codex deve ler primeiro:
 

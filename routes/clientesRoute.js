@@ -9197,10 +9197,18 @@ function telaManutencao(status = {}, opcoes = {}) {
                     <option value="0" ${String(status.config?.roboFilaMensagensAtiva ?? '1') === '0' ?'selected' : ''}>Desligada</option>
                 </select>
             </label>
+            <label>Assistente de gestão pelo WhatsApp
+                <select name="assistenteWhatsappAtivo">
+                    <option value="0" ${String(status.config?.assistenteWhatsappAtivo || '0') === '0' ?'selected' : ''}>Desligado</option>
+                    <option value="1" ${String(status.config?.assistenteWhatsappAtivo || '0') === '1' ?'selected' : ''}>Ligado — somente consultas</option>
+                </select>
+            </label>
+            ${campo({ nome: 'assistenteWhatsappNumerosAutorizados', label: 'WhatsApps autorizados para o assistente', valor: status.config?.assistenteWhatsappNumerosAutorizados || '', tipo: 'tel', attrs: 'inputmode="numeric" placeholder="5511999999999, 5511888888888"' })}
             ${campo({ nome: 'roboFilaIntervaloMinimoSegundos', label: 'Intervalo mínimo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMinimoSegundos || '2', tipo: 'number', attrs: 'min="0" max="120" required' })}
             ${campo({ nome: 'roboFilaIntervaloMaximoSegundos', label: 'Intervalo máximo entre envios (segundos)', valor: status.config?.roboFilaIntervaloMaximoSegundos || '5', tipo: 'number', attrs: 'min="0" max="180" required' })}
             ${areaTexto({ nome: 'roboMensagemDesconhecida', label: 'Mensagem interna quando não houver palavra-chave', valor: status.config?.roboMensagemDesconhecida || 'Mensagem ignorada sem palavra-chave para iniciar atendimento.' })}
             <div class="notice full">Cada atividade pode ser ligada separadamente. Com as duas opções desligadas, o WhatsApp permanece conectado, mas o robô fica dormindo: não responde clientes nem envia campanhas, cobranças, avisos ou mensagens iniciadas pelo painel. A fila evita envios duplicados e deixa as respostas com ritmo mais natural.</div>
+            <div class="notice full">O Assistente de gestão começa desligado e aceita somente os números autorizados. Nesta fase ele responde resumo do mês, vencimentos e consulta de cliente. Não registra pagamentos, não gera cobranças e não altera os fluxos automáticos.</div>
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar configuração do robô</button>
                 <a class="button secondary" href="/modelos">${icon('modelos')} Editar modelos</a>

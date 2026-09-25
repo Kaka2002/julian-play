@@ -114,6 +114,8 @@ async function obterConfiguracoes() {
         roboFilaMensagensAtiva: '1',
         roboFilaIntervaloMinimoSegundos: '2',
         roboFilaIntervaloMaximoSegundos: '5',
+        assistenteWhatsappAtivo: '0',
+        assistenteWhatsappNumerosAutorizados: '',
         campanhaExigirConsentimento: '1',
         campanhaLimiteDiario: '100',
         campanhaLimiteSemanalCliente: '1',
@@ -219,9 +221,18 @@ async function salvarConfiguracoesRobo(dados = {}) {
     const filaMinimo = Math.max(0, Math.min(120, Number.parseInt(dados.roboFilaIntervaloMinimoSegundos || 2, 10) || 0));
     const filaMaximoBruto = Math.max(0, Math.min(180, Number.parseInt(dados.roboFilaIntervaloMaximoSegundos || 5, 10) || 0));
     const filaMaximo = Math.max(filaMinimo, filaMaximoBruto);
+    const assistenteAtivo = String(dados.assistenteWhatsappAtivo || '') === '1' ? '1' : '0';
+    const numerosAssistente = String(dados.assistenteWhatsappNumerosAutorizados || '')
+        .split(/[\s,;]+/).map(numero => numero.replace(/\D/g, '')).filter(Boolean);
 
     if (!nomeEmpresa) {
         throw new Error('Informe o nome da empresa que aparecera nas mensagens.');
+    }
+    if (assistenteAtivo === '1' && !numerosAssistente.length) {
+        throw new Error('Informe ao menos um WhatsApp autorizado para ativar o assistente.');
+    }
+    if (numerosAssistente.some(numero => !/^\d{10,15}$/.test(numero))) {
+        throw new Error('Informe os WhatsApps autorizados com DDI, DDD e número.');
     }
 
     await salvarConfiguracao('nomeEmpresaRobo', nomeEmpresa);
@@ -236,6 +247,8 @@ async function salvarConfiguracoesRobo(dados = {}) {
     await salvarConfiguracao('roboFilaMensagensAtiva', filaMensagensAtiva);
     await salvarConfiguracao('roboFilaIntervaloMinimoSegundos', String(filaMinimo));
     await salvarConfiguracao('roboFilaIntervaloMaximoSegundos', String(filaMaximo));
+    await salvarConfiguracao('assistenteWhatsappAtivo', assistenteAtivo);
+    await salvarConfiguracao('assistenteWhatsappNumerosAutorizados', numerosAssistente.join(', '));
 
     return obterConfiguracoes();
 }

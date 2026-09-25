@@ -1,0 +1,78 @@
+const { obterConfiguracoes } = require('./configuracoesPainel');
+const { buscarClientePorNomeOuTelefone, listarPagamentosFinanceiro } = require('./clientes');
+const { listarDespesasFinanceiras } = require('./despesasFinanceirasService');
+const { listarRendimentosFinanceiros } = require('./rendimentosFinanceirosService');
+const { registrarEventoSistema } = require('./eventosSistema');
+
+function normalizar(texto = '') {
+    return String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function telefoneNumerico(valor = '') { return String(valor).replace(/\D/g, ''); }
+function moedaNumero(valor) {
+    const texto = String(valor || '0').replace(/R\$\s*/gi, '').replace(/\s/g, '');
+    const numero = Number(texto.includes(',') ?texto.replace(/\./g, '').replace(',', '.') :texto);
+    return Number.isFinite(numero) ?numero : 0;
+}
+function moeda(valor) { return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+function mesAtual() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }).slice(0, 7); }
+function autorizado(config, telefone) {
+    if (String(config.assistenteWhatsappAtivo || '0') !== '1') return false;
+    const numeros = String(config.assistenteWhatsappNumerosAutorizados || '').split(/[\s,;]+/).map(telefoneNumerico).filter(Boolean);
+    return numeros.includes(telefoneNumerico(telefone));
+}
+function ajuda() {
+    return `🤖 *ASSISTENTE DE GESTÃO*\n\nConsultas disponíveis:\n• resumo do mês\n• vencimentos hoje\n• vencimentos amanhã\n• consultar cliente Nome ou telefone\n\nEste modo só consulta dados; não registra pagamentos, não gera cobranças e não altera clientes.`;
+}
+function dataBrasil(valor = '') {
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ?'não informado' :data.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+}
+
+async function responderConsulta({ texto, telefone }) {
+    const config = await obterConfiguracoes();
+    if (!autorizado(config, telefone)) return null;
+    const pedido = normalizar(texto);
+    let resposta = '';
+
+    if (['ajuda', 'comandos', 'menu', 'assistente'].includes(pedido)) resposta = ajuda();
+    else if (pedido.includes('resumo') || pedido.includes('como esta meu mes') || pedido.includes('como esta o mes')) {
+        const mes = mesAtual();
+        const [pagamentos, despesas, rendimentos] = await Promise.all([
+            listarPagamentosFinanceiro({ mes, status: 'validos' }),
+            listarDespesasFinanceiras({ mes, status: 'validas' }),
+            listarRendimentosFinanceiros({ mes, status: 'validos' })
+        ]);
+        const recebido = pagamentos.reduce((soma, item) => soma + moedaNumero(item.valorTotal), 0);
+        const gasto = despesas.reduce((soma, item) => soma + moedaNumero(item.valor), 0);
+        const rendimento = rendimentos.reduce((soma, item) => soma + moedaNumero(item.valor), 0);
+        resposta = `📊 *RESUMO DE ${mes}*\n\nRecebido: *${moeda(recebido)}* (${pagamentos.length} pagamento(s))\nRendimentos: *${moeda(rendimento)}*\nDespesas: *${moeda(gasto)}*\nSaldo: *${moeda(recebido + rendimento - gasto)}*`;
+    } else if (pedido.includes('vencimento')) {
+        const deslocamento = pedido.includes('amanha') ?1 : 0;
+        const data = new Date();
+        data.setDate(data.getDate() + deslocamento);
+        const chave = data.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        const { listarClientes } = require('./clientes');
+        const clientes = (await listarClientes()).filter(cliente => String(cliente.dataVencimento || cliente.vencimento || '').slice(0, 10) === chave);
+        resposta = clientes.length
+            ? `📅 *VENCIMENTOS ${deslocamento ?'DE AMANHÃ' :'DE HOJE'}*\n\n${clientes.slice(0, 20).map(cliente => `• ${cliente.nome} — ${cliente.plano || 'Plano não informado'}`).join('\n')}${clientes.length > 20 ?`\n\n+ ${clientes.length - 20} cliente(s)` :''}`
+            : `📅 Nenhum vencimento encontrado ${deslocamento ?'amanhã' :'hoje'}.`;
+    } else if (pedido.startsWith('consultar cliente ') || pedido.startsWith('cliente ')) {
+        const termo = pedido.replace(/^(consultar )?cliente\s+/, '').trim();
+        const cliente = termo ?await buscarClientePorNomeOuTelefone(termo) : null;
+        resposta = cliente
+            ? `🔎 *CLIENTE*\n\nNome: *${cliente.nome}*\nStatus: *${cliente.status || '-'}*\nPlano: *${cliente.plano || '-'}*\nVencimento: *${dataBrasil(cliente.dataVencimento || cliente.vencimento)}*`
+            : '🔎 Não encontrei esse cliente. Envie “consultar cliente” seguido do nome ou telefone.';
+    } else return ajuda();
+
+    await registrarEventoSistema('assistente_whatsapp_consulta', 'info', 'Consulta administrativa respondida pelo WhatsApp.', {
+        telefone: telefoneNumerico(telefone), comando: pedido.slice(0, 160)
+    });
+    return resposta;
+}
+
+async function ehAssistenteAutorizado(telefone) {
+    return autorizado(await obterConfiguracoes(), telefone);
+}
+
+module.exports = { responderConsulta, ehAssistenteAutorizado, autorizado, normalizar };

@@ -12,7 +12,8 @@ const {
     registrarTesteLiberadoPorMensagem,
     normalizar
 } = require('../services/conversaService');
-const { foiMensagemDoRobo, obterResumoEnviosDoRobo } = require('../services/mensagensPropriasService');
+const { foiMensagemDoRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
+const { responderConsulta: responderAssistenteWhatsapp, ehAssistenteAutorizado } = require('../services/assistenteWhatsappService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
 const { registrarComprovanteWhatsapp } = require('../services/pagamentoManualService');
@@ -70,6 +71,7 @@ let recuperacaoEmAndamento = false;
 const mensagensRecebidasContabilizadas = new Set();
 const filasMensagens = new Map();
 const mensagensProcessadas = new Set();
+const mensagensAssistenteProcessadas = new Set();
 const avisosForaHorario = new Set();
 
 const esperar = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -479,6 +481,33 @@ async function processarMensagemEmFila(message, options = {}) {
 
     const textoMensagem = obterTextoMensagem(message);
     const texto = normalizar(textoMensagem);
+
+    if (texto && !foiMensagemDoRobo(message) && await licencaPermiteUso()
+        && await ehAssistenteAutorizado(obterTelefoneMensagem(message))) {
+        try {
+            const idAssistente = getMessageId(message);
+            if (mensagensAssistenteProcessadas.has(idAssistente)) return;
+            mensagensAssistenteProcessadas.add(idAssistente);
+            if (mensagensAssistenteProcessadas.size > 500) {
+                mensagensAssistenteProcessadas.delete(mensagensAssistenteProcessadas.values().next().value);
+            }
+            const respostaAssistente = await responderAssistenteWhatsapp({
+                texto: textoMensagem,
+                telefone: obterTelefoneMensagem(message)
+            });
+            if (respostaAssistente) {
+                const destino = obterTelefoneMensagem(message);
+                registrarEnvioDoRobo(destino, respostaAssistente);
+                const enviada = await client.sendMessage(destino, respostaAssistente, { sendSeen: false });
+                registrarMensagemDoRobo(enviada);
+                console.log(`Assistente administrativo respondeu: ${destino}`);
+                return;
+            }
+        } catch (err) {
+            console.log(`Assistente administrativo falhou: ${err.message}`);
+            return;
+        }
+    }
 
     if (message.fromMe) {
         if (foiMensagemDoRobo(message)) {

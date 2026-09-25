@@ -1,4 +1,12 @@
 
+## Assistente de gestão por WhatsApp na versão 1.3.47
+
+- Implementado: modo opcional e desligado por padrão. A instalação cadastra os WhatsApps administrativos autorizados na Manutenção; somente esses números acionam o assistente.
+- Nesta primeira etapa, o assistente responde `ajuda`, resumo do mês, vencimentos de hoje/amanhã e consulta de cliente. As consultas são somente leitura, registradas em eventos e isoladas no banco/DATA_DIR da instalação.
+- Não gera cobrança, não baixa pagamento, não renova, não altera clientes e não modifica as campanhas, a fila, os horários ou as respostas automáticas existentes. Painel Mestre inalterado; administrador, comerciais e instalações locais recebem a opção.
+- Limitação: exige WhatsApp conectado, recurso habilitado e número autorizado. Ações administrativas ficam para etapa futura, com confirmação explícita.
+- Validação: sintaxe, testes dedicados de autorização, consultas e preservação de pagamentos; 175 testes internos, 11 testes de navegador, geração do pacote e teste de instalação limpa aprovados. O manifesto externo continua sem assinatura quando a chave privada Ed25519 não está configurada.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
