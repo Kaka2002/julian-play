@@ -23,6 +23,10 @@
 - A simulação de digitação tenta a conversa original e, se ela for um LID que não oferece chat, usa a conversa resolvida pelo telefone real antes de enviar a resposta. Uma falha nessa simulação continua sem bloquear a resposta comercial.
 - Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva bancos, configurações, sessões, backups e DATA_DIR; não há migração, seed ou ação manual de dados.
 
+## Conferência de comprovantes pelo Assistente na versão 1.3.52
+
+- O Assistente lista comprovantes aguardando conferência e exige prévia seguida de confirmação dentro de dez minutos para renovar. A pessoa responsável continua conferindo valor e transação no banco antes da ação; a renovação usa o serviço financeiro existente e fica auditada.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

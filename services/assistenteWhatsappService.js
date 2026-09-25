@@ -3,6 +3,8 @@ const { buscarClientePorNomeOuTelefone, listarPagamentosFinanceiro } = require('
 const { listarDespesasFinanceiras } = require('./despesasFinanceirasService');
 const { listarRendimentosFinanceiros } = require('./rendimentosFinanceirosService');
 const { registrarEventoSistema } = require('./eventosSistema');
+const { listarCobrancasManuais, confirmarPagamentoManual } = require('./pagamentoManualService');
+const confirmacoesPendentes = new Map();
 
 function normalizar(texto = '') {
     return String(texto).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' ');
@@ -30,6 +32,7 @@ function dataBrasil(valor = '') {
     const data = new Date(valor);
     return Number.isNaN(data.getTime()) ?'não informado' :data.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
+function tokenConfirmacao(id) { return `CONFIRMAR ${Number(id)}`; }
 
 async function responderConsulta({ texto, telefone }) {
     const config = await obterConfiguracoes();
@@ -37,7 +40,26 @@ async function responderConsulta({ texto, telefone }) {
     const pedido = normalizar(texto);
     let resposta = '';
 
-    if (['ajuda', 'comandos', 'menu', 'assistente'].includes(pedido)) resposta = ajuda();
+    if (['ajuda', 'comandos', 'menu', 'assistente'].includes(pedido)) resposta = `${ajuda()}\n• comprovantes pendentes\n• confirmar comprovante <número>`;
+    else if (pedido === 'comprovantes pendentes' || pedido === 'comprovantes') {
+        const cobrancas = await listarCobrancasManuais({ status: 'aguardando_conferencia' });
+        resposta = cobrancas.length
+            ? `🧾 *COMPROVANTES PENDENTES*\n\n${cobrancas.slice(0, 10).map(c => `• #${c.id} — ${c.clienteNome} — ${moeda(c.valorTotal)}\n  Plano: ${c.plano}`).join('\n')}\n\nApós conferir no banco, envie “confirmar comprovante <número>”.`
+            : '🧾 Não há comprovantes aguardando conferência.';
+    } else if (/^confirmar comprovante \d+$/.test(pedido)) {
+        const id = Number(pedido.match(/\d+$/)[0]);
+        const cobranca = (await listarCobrancasManuais({ status: 'aguardando_conferencia' })).find(item => Number(item.id) === id);
+        if (cobranca) confirmacoesPendentes.set(`${telefoneNumerico(telefone)}:${cobranca.id}`, Date.now() + 10 * 60 * 1000);
+        resposta = cobranca ? `⚠️ *CONFIRA ANTES NO BANCO*\n\n#${cobranca.id} — ${cobranca.clienteNome}\nValor: *${moeda(cobranca.valorTotal)}*\nPlano: ${cobranca.plano}\n\nApós confirmar valor e transação, envie exatamente:\n*${tokenConfirmacao(cobranca.id)}*` : 'Não encontrei esse comprovante aguardando conferência.';
+    } else if (/^confirmar \d+$/.test(pedido)) {
+        const id = Number(pedido.match(/\d+$/)[0]);
+        const chaveConfirmacao = `${telefoneNumerico(telefone)}:${id}`;
+        if (Number(confirmacoesPendentes.get(chaveConfirmacao) || 0) < Date.now()) return 'Peça primeiro a prévia com “confirmar comprovante <número>”.';
+        confirmacoesPendentes.delete(chaveConfirmacao);
+        const identificador = `ASSIST-WA-${id}-${Date.now()}`;
+        const resultado = await confirmarPagamentoManual(id, { identificadorManual: identificador, conferidoPor: `WhatsApp ${telefoneNumerico(telefone)}` });
+        resposta = resultado.duplicado ? '✅ Esse pagamento já estava confirmado.' : `✅ Pagamento #${id} confirmado e cliente renovado.`;
+    }
     else if (pedido.includes('resumo') || pedido.includes('como esta meu mes') || pedido.includes('como esta o mes')) {
         const mes = mesAtual();
         const [pagamentos, despesas, rendimentos] = await Promise.all([
