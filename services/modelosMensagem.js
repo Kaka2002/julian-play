@@ -135,9 +135,9 @@ const modelosLegadosSemAcento = {
 const modeloCampanhaAmizade = {
     chave: 'campanha_amizade_presente',
     plano: 'campanha',
-    titulo: 'Amizade que vale presente',
+    titulo: 'Indique e ganhe 3 meses',
     cor: 'green',
-    texto: '🎁 *NOVA REGRA DE INDICAÇÃO*\n\nOlá, *{{nome}}!*\n\nIndique *2 amigos*. Quando cada um completar *3 mensalidades pagas*, você recebe *3 meses de acesso grátis*.\n\nA liberação é conferida pela equipe antes do crédito. Para indicar, envie o contato dos amigos pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+    texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 3 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
 };
 
 const CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA = 'teste_expirado_assinatura';
@@ -284,19 +284,31 @@ async function garantirModeloCampanhaAmizade() {
 
     await executar(
         `UPDATE modelos_mensagem
-        SET texto = ?
+        SET titulo = ?, texto = ?
         WHERE chave = ?
             AND texto LIKE '%5511925716232%'`,
-        [modeloCampanhaAmizade.texto, modeloCampanhaAmizade.chave]
+        [modeloCampanhaAmizade.titulo, modeloCampanhaAmizade.texto, modeloCampanhaAmizade.chave]
     );
 
     await executar(
-        `UPDATE modelos_mensagem SET texto = ?
+        `UPDATE modelos_mensagem SET titulo = ?, texto = ?
         WHERE chave = ? AND texto = ?`,
         [
+            modeloCampanhaAmizade.titulo,
             modeloCampanhaAmizade.texto,
             modeloCampanhaAmizade.chave,
             'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+        ]
+    );
+
+    await executar(
+        `UPDATE modelos_mensagem SET titulo = ?, texto = ?
+        WHERE chave = ? AND texto = ?`,
+        [
+            modeloCampanhaAmizade.titulo,
+            modeloCampanhaAmizade.texto,
+            modeloCampanhaAmizade.chave,
+            '🎁 *NOVA REGRA DE INDICAÇÃO*\n\nOlá, *{{nome}}!*\n\nIndique *2 amigos*. Quando cada um completar *3 mensalidades pagas*, você recebe *3 meses de acesso grátis*.\n\nA liberação é conferida pela equipe antes do crédito. Para indicar, envie o contato dos amigos pelo WhatsApp: *{{telefoneWhatsApp}}*.'
         ]
     );
 }

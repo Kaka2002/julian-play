@@ -41,8 +41,8 @@ test('Programa de indicação exige revisão humana antes do bônus e atualiza o
     assert.match(indicacoes, /mesmo MAC do indicador/);
     assert.match(rotas, /Programa de indicação/);
     assert.match(rotas, /Liberar 3 meses/);
-    assert.match(modelos, /NOVA REGRA DE INDICAÇÃO/);
-    assert.match(modelos, /3 mensalidades pagas/);
+    assert.match(modelos, /INDIQUE E GANHE 3 MESES/);
+    assert.match(modelos, /3 meses ativos/);
 });
 
 test('Programa de indicação só libera três bônus após duas indicações com três pagamentos reais', () => {

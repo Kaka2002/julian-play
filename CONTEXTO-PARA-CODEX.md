@@ -91,6 +91,12 @@
 - A migração `2026-09-25-018-programa-indicacoes` cria a trilha de auditoria dos vínculos. O cadastro bloqueia indicação com o mesmo telefone ou MAC e preserva vínculos cancelados no histórico. Pagamentos de bônus não contam para a regra.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. A migração formal cria backup prévio, e bancos, sessões, configurações, backups e DATA_DIR existentes são preservados. Não há API externa, custo adicional ou mudança nos fluxos automáticos de WhatsApp/Telegram. Após atualizar, registrar as indicações já existentes uma única vez na nova tela. Validação: sintaxe, teste da regra, suíte interna, verificação de diff e pacote oficial.
 
+## Modelo da campanha de indicação na versão 1.3.63
+
+- O modelo usado pela campanha passa a se chamar **Indique e ganhe 3 meses** e usa o texto comercial aprovado: dois amigos, três meses ativos de cada um, três meses grátis, conferência humana, novos clientes e sem acúmulo de promoções.
+- Instalações que ainda mantêm o texto padrão anterior recebem a atualização do título e do conteúdo; modelos já personalizados pelo operador não são sobrescritos. O envio, a regra de elegibilidade, WhatsApp, Telegram e a revisão manual permanecem inalterados.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Não há migração, API externa, custo adicional ou alteração de dados operacionais. Validação: sintaxe, testes internos, diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
