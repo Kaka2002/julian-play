@@ -33,6 +33,13 @@
 - O Assistente de gestão responde somente quando o comando contiver `gestão` no início ou no fim: `gestão resumo do mês`, `vencimentos hoje gestão`, `gestão consultar cliente Ana` e `menu gestão`. A confirmação assistida de comprovante também exige `GESTÃO CONFIRMAR <número>`.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados. Validado com sintaxe, testes dedicados e verificação de diff.
 
+## Comandos exclusivos da gestão sem prefixo na versão 1.3.54
+
+- As consultas que não fazem parte do atendimento comercial podem ser enviadas diretamente pelo número autorizado: `resumo do mês`, `vencimentos hoje`, `vencimentos amanhã`, `consultar cliente <nome ou telefone>`, `comprovantes pendentes` e as confirmações assistidas de comprovante.
+- `menu` e demais palavras do robô comercial continuam exclusivas desse robô. Para consultar a ajuda administrativa, usar `menu gestão`; o prefixo ou sufixo `gestão` continua aceito para qualquer consulta caso a pessoa queira identificá-la explicitamente.
+- A tela `Manutenção > Configuração do robô` mantém a lista desses comandos e das duas etapas de confirmação de comprovante como lembrete operacional.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados. Validado com sintaxe, testes dedicados e verificação de diff.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

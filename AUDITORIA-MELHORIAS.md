@@ -22,6 +22,8 @@ código; itens operacionais externos não são marcados como implementados.
 
 ## Implementado
 
+- Comandos exclusivos do Assistente sem prefixo em 25/09/2026: a versão **1.3.54** aceita diretamente `resumo do mês`, vencimentos, consulta de cliente e conferência de comprovantes pelo WhatsApp autorizado, pois não são gatilhos do robô comercial. A tela Manutenção mantém essa lista como lembrete. `menu` continua comercial e `menu gestão` abre a ajuda administrativa. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões, backups e DATA_DIR são preservados. Validação: sintaxe, testes dedicados e `git diff --check`.
+
 - Separação entre robô comercial e Assistente de gestão em 25/09/2026: a versão **1.3.53** mantém as palavras-chave comerciais, inclusive `menu`, disponíveis para números também autorizados para gestão. O assistente administrativo só responde a comandos com `gestão` no início ou no fim, por exemplo `gestão resumo do mês` e `menu gestão`; a confirmação de comprovante usa `GESTÃO CONFIRMAR <número>`. Afeta administrador, comerciais no servidor e instalações locais; Painel Mestre, bancos, configurações, sessões, backups e DATA_DIR são preservados. Validação: sintaxe, testes dedicados e `git diff --check`.
 
 - Conferência assistida de comprovantes em 25/09/2026: a versão **1.3.52** permite listar comprovantes pendentes e confirmar uma renovação somente após prévia e confirmação explícita pelo WhatsApp autorizado. A conferência bancária continua humana; dados, sessões e histórico são preservados.
