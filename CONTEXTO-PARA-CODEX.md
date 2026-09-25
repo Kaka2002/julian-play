@@ -84,6 +84,13 @@
 - A paginação continua somente leitura e mantém os mesmos links de revisão humana para cada item.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, teste do Dashboard, suíte interna, verificação de diff e pacote oficial.
 
+## Programa de indicação com revisão manual na versão 1.3.62
+
+- A campanha **Amizade que vale presente** passa a apresentar a nova regra: o cliente indica duas pessoas, cada indicada completa três mensalidades pagas e, somente depois da revisão humana, o indicador recebe três meses de crédito. O texto aparece em `Modelos` e continua personalizável pela instalação.
+- A tela `Campanhas > Controlar indicações` registra o vínculo entre dois cadastros, acompanha pagamentos reais do indicado e mostra somente os benefícios prontos para revisão. O sistema nunca concede nem envia o benefício automaticamente. O botão de liberação credita três bônus sem enviar WhatsApp; o operador ainda define o vencimento e aplica o bônus na ficha do cliente quando necessário.
+- A migração `2026-09-25-018-programa-indicacoes` cria a trilha de auditoria dos vínculos. O cadastro bloqueia indicação com o mesmo telefone ou MAC e preserva vínculos cancelados no histórico. Pagamentos de bônus não contam para a regra.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. A migração formal cria backup prévio, e bancos, sessões, configurações, backups e DATA_DIR existentes são preservados. Não há API externa, custo adicional ou mudança nos fluxos automáticos de WhatsApp/Telegram. Após atualizar, registrar as indicações já existentes uma única vez na nova tela. Validação: sintaxe, teste da regra, suíte interna, verificação de diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

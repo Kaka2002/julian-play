@@ -20,7 +20,8 @@ const migrations = [
     require('./014-rendimentos-financeiros'),
     require('./015-importacoes-rendimentos-mercado-pago'),
     require('./016-conciliacao-saldo-financeiro'),
-    require('./017-movimentos-mercado-pago')
+    require('./017-movimentos-mercado-pago'),
+    require('./018-programa-indicacoes')
 ];
 
 function run(db, sql, params = []) {

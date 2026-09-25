@@ -137,7 +137,7 @@ const modeloCampanhaAmizade = {
     plano: 'campanha',
     titulo: 'Amizade que vale presente',
     cor: 'green',
-    texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+    texto: '🎁 *NOVA REGRA DE INDICAÇÃO*\n\nOlá, *{{nome}}!*\n\nIndique *2 amigos*. Quando cada um completar *3 mensalidades pagas*, você recebe *3 meses de acesso grátis*.\n\nA liberação é conferida pela equipe antes do crédito. Para indicar, envie o contato dos amigos pelo WhatsApp: *{{telefoneWhatsApp}}*.'
 };
 
 const CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA = 'teste_expirado_assinatura';
@@ -288,6 +288,16 @@ async function garantirModeloCampanhaAmizade() {
         WHERE chave = ?
             AND texto LIKE '%5511925716232%'`,
         [modeloCampanhaAmizade.texto, modeloCampanhaAmizade.chave]
+    );
+
+    await executar(
+        `UPDATE modelos_mensagem SET texto = ?
+        WHERE chave = ? AND texto = ?`,
+        [
+            modeloCampanhaAmizade.texto,
+            modeloCampanhaAmizade.chave,
+            'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+        ]
     );
 }
 

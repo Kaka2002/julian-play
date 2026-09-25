@@ -185,6 +185,7 @@ const {
     testarIntegracaoPainel,
     reagendarRenovacao
 } = require('../services/renovacaoPainelService');
+const { registrarIndicacao, listarIndicacoes, liberarBeneficioIndicacao, cancelarIndicacao } = require('../services/indicacoesService');
 
 const router = express.Router();
 const contextoAuditoria = new AsyncLocalStorage();
@@ -7796,12 +7797,13 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Campanha de indicação</h2>
-                <div class="subtitle">Dispare a arte "Amizade que vale presente" para clientes ativos, exceto testes.</div>
+                <div class="subtitle"><strong>Nova regra:</strong> indique 2 clientes; cada um completa 3 mensalidades pagas; depois revise e libere 3 meses de crédito.</div>
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
                 ${campanhaEmAndamento ? controlesCampanhaAmizadeHtml('/clientes') : ''}
             </div>
             <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                 <a class="button secondary" href="/campanhas">Ver campanhas</a>
+                <a class="button secondary" href="/indicacoes">Controlar indicações</a>
                 <form method="post" action="/clientes/disparar-amizade-presente-cliente" onsubmit="return confirm('Enviar a campanha somente para o cliente selecionado?');" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <select name="clienteId" required style="min-width:220px;">
                         <option value="">Enviar para 1 cliente...</option>
@@ -8640,6 +8642,40 @@ function telaModelos({ modelos, config }) {
     <section class="model-grid">
         ${modelos.length ?modelos.map(cardModelo).join('') : '<div class="empty">Nenhum modelo cadastrado.</div>'}
     </section>`;
+}
+
+function telaIndicacoes({ clientes = [], indicacoes = { itens: [], resumos: [] } }) {
+    const opcoesClientes = clientes
+        .filter(cliente => cliente.id && cliente.status !== 'cancelado')
+        .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome)}${cliente.telefone ?` · ${escapar(cliente.telefone)}` : ''}</option>`)
+        .join('');
+    const prontos = indicacoes.resumos.filter(item => item.prontoParaRevisao);
+    const linhas = indicacoes.itens.length ?indicacoes.itens.map(item => {
+        const pagamentos = Number(item.pagamentosValidos || 0);
+        const situacao = item.status === 'beneficio_liberado'
+            ? '<span class="badge green">Benefício liberado</span>'
+            : item.status === 'cancelada'
+                ? '<span class="badge muted">Cancelada</span>'
+                : pagamentos >= 3
+                    ? '<span class="badge green">Qualificada</span>'
+                    : `<span class="badge orange">${pagamentos}/3 pagamentos</span>`;
+        return `<tr><td data-label="Indicador"><strong>${escapar(item.indicadorNome)}</strong><br><span class="helper">${escapar(item.indicadorTelefone || '-')}</span></td>
+            <td data-label="Indicado"><strong>${escapar(item.indicadoNome)}</strong><br><span class="helper">${escapar(item.indicadoTelefone || '-')}</span></td>
+            <td data-label="Pagamentos">${escapar(pagamentos)} de 3</td><td data-label="Situação">${situacao}</td>
+            <td data-label="Ação">${item.status === 'ativa' ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação? Isso não apaga o histórico.');"><button class="button secondary" type="submit">Cancelar</button></form>` : escapar(item.motivoCancelamento || '-')}</td></tr>`;
+    }).join('') : '<tr><td colspan="5" class="empty">Nenhuma indicação registrada.</td></tr>';
+    return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Controle de indicação com conferência humana antes de qualquer crédito.</div></div><a class="button secondary" href="/clientes">Voltar ao painel</a></section>
+    <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">Nova regra da campanha</h2><div class="subtitle">Indique 2 clientes. Cada indicado deve completar 3 mensalidades pagas. Depois disso, a equipe revisa e libera 3 meses de crédito ao indicador.</div></div><span class="badge green">3 meses após revisão</span></div>
+        <div class="notice warn" style="margin:0 20px 20px;">O sistema não concede nada automaticamente. Ele considera apenas pagamentos reais no histórico, ignora bônus e bloqueia o mesmo telefone ou MAC entre indicador e indicado.</div>
+        <form class="fields" method="post" action="/indicacoes" style="padding:0 20px 20px;">
+            ${campo({ nome: 'indicadorClienteId', label: 'Quem indicou', valor: '', opcoes: [{ valor: '', texto: 'Selecione o cliente...' }, ...clientes.filter(cliente => cliente.id && cliente.status !== 'cancelado').map(cliente => ({ valor: String(cliente.id), texto: `${cliente.nome}${cliente.telefone ?` · ${cliente.telefone}` : ''}` }))] })}
+            ${campo({ nome: 'indicadoClienteId', label: 'Cliente indicado', valor: '', opcoes: [{ valor: '', texto: 'Selecione o cliente...' }, ...clientes.filter(cliente => cliente.id && cliente.status !== 'cancelado').map(cliente => ({ valor: String(cliente.id), texto: `${cliente.nome}${cliente.telefone ?` · ${cliente.telefone}` : ''}` }))] })}
+            <div class="actions full"><button class="button green" type="submit">${icon('plus')} Registrar indicação</button><a class="button secondary" href="/modelos">Ver texto da campanha</a></div>
+        </form></section>
+    <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">Aguardando revisão</h2><div class="subtitle">Somente os clientes que já cumprem a regra aparecem aqui.</div></div><span class="badge ${prontos.length ?'orange' :'green'}">${escapar(prontos.length)} pronto(s)</span></div>
+        ${prontos.length ?`<div style="padding:0 20px 20px;">${prontos.map(item => `<div class="client-row"><div><strong>${escapar(item.nome)}</strong><div class="helper">${escapar(item.qualificadas)} de 2 indicações qualificadas</div></div><div class="helper">Confirme os pagamentos antes de liberar.</div><form method="post" action="/indicacoes/${escapar(item.clienteId)}/liberar" onsubmit="return confirm('Confirmou dois indicados com três mensalidades reais cada? Serão creditados 3 meses de bônus, sem enviar mensagem automática.');"><button class="button green" type="submit">Liberar 3 meses</button></form></div>`).join('')}</div>` : '<div class="empty">Nenhum benefício pronto para revisão.</div>'}
+    </section>
+    <section class="clients-panel"><table class="clients-table"><thead><tr><th>Indicador</th><th>Indicado</th><th>Pagamentos reais</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${linhas}</tbody></table></section>`;
 }
 
 function formularioModelo(modelo = {}) {
@@ -9657,6 +9693,48 @@ async function renderizarPaginaCampanhas(req, res) {
         ativo: 'campanhas'
     });
 }
+
+async function renderizarPaginaIndicacoes(req, res) {
+    desativarCache(res);
+    const [clientes, indicacoes] = await Promise.all([listarClientes(), listarIndicacoes()]);
+    await renderizar(res, {
+        titulo: 'Programa de indicação',
+        conteudo: telaIndicacoes({ clientes, indicacoes }),
+        mensagem: req.query.mensagem || '',
+        ativo: 'campanhas'
+    });
+}
+
+router.get('/indicacoes', renderizarPaginaIndicacoes);
+
+router.post('/indicacoes', async (req, res) => {
+    try {
+        const indicacao = await registrarIndicacao(req.body);
+        await adicionarNotaCliente(indicacao.indicador.id, `Programa de indicação: ${indicacao.indicado.nome} foi registrado como indicado.`);
+        await adicionarNotaCliente(indicacao.indicado.id, `Programa de indicação: cadastro vinculado a ${indicacao.indicador.nome}.`);
+        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(indicacao.reativada ? 'Indicação reativada para acompanhamento.' : 'Indicação registrada. O sistema acompanhará os pagamentos reais.')}`);
+    } catch (err) {
+        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(err.message || 'Não foi possível registrar a indicação.')}`);
+    }
+});
+
+router.post('/indicacoes/:indicadorClienteId/liberar', async (req, res) => {
+    try {
+        const beneficio = await liberarBeneficioIndicacao(req.params.indicadorClienteId);
+        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(`${beneficio.meses} meses de bônus liberados para ${beneficio.cliente.nome}. Defina o vencimento e aplique o bônus na ficha do cliente quando for usar.`)}`);
+    } catch (err) {
+        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(err.message || 'Não foi possível liberar o benefício.')}`);
+    }
+});
+
+router.post('/indicacoes/:id/cancelar', async (req, res) => {
+    try {
+        await cancelarIndicacao(req.params.id, req.body.motivo);
+        return res.redirect('/indicacoes?mensagem=Indicação cancelada e preservada no histórico.');
+    } catch (err) {
+        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(err.message || 'Não foi possível cancelar a indicação.')}`);
+    }
+});
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
