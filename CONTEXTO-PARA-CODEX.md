@@ -78,6 +78,12 @@
 - O painel não conclui, exclui, envia mensagens nem altera cadastros: o botão somente abre a tela apropriada para revisão humana.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, teste do Dashboard, suíte interna, verificação de diff e pacote oficial.
 
+## Paginação das prioridades no Dashboard na versão 1.3.61
+
+- O bloco Prioridades do dia mostra exatamente três registros por página e possui paginação própria. A página das prioridades preserva a página e a quantidade escolhidas para os vencimentos, evitando que o Dashboard cresça verticalmente quando houver muitas pendências. Registros técnicos de falha da fila de mensagens não são exibidos nesse bloco, pois não representam uma ação administrativa do operador. A ordem do Dashboard é Campanha de indicação, Receita mensal, Clientes com Vencimento Próximo, aniversariantes quando houver e, por último, Prioridades do dia.
+- A paginação continua somente leitura e mantém os mesmos links de revisão humana para cada item.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, API externa, custo adicional ou ação manual de dados. Validação: sintaxe, teste do Dashboard, suíte interna, verificação de diff e pacote oficial.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

@@ -20,6 +20,13 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.match(fonte, /href="\/pendencias">Abrir Central de Pendências/);
     assert.match(fonte, /const pendencias = await listarPendenciasOperacionais\(\{\}, \{ operacional: \{ whatsapp, sistema \} \}\)/);
     assert.match(fonte, /href="\$\{escapar\(item\.href \|\| '\/pendencias'\)\}">Revisar/);
+    assert.match(fonte, /filter\(item => item\.tipo !== 'mensagem'\)/);
+    assert.match(fonte, /paginarItens\(prioridadesAdministrativas, paginaPrioridades, 3\)/);
+    assert.match(fonte, /parametroPagina: 'paginaPrioridades'/);
+    const dashboard = fonte.slice(fonte.indexOf('function dashboard('), fonte.indexOf('function tabelaClientes('));
+    assert.ok(dashboard.indexOf('dashboard-campaign') < dashboard.indexOf('${receitaMensalCard'));
+    assert.ok(dashboard.indexOf('${receitaMensalCard') < dashboard.indexOf('Clientes com Vencimento Próximo'));
+    assert.ok(dashboard.indexOf('Clientes com Vencimento Próximo') < dashboard.lastIndexOf('${prioridadesDoDiaHtml}'));
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

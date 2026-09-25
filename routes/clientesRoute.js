@@ -7715,7 +7715,7 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }, paginaPrioridades = 1) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
@@ -7737,9 +7737,47 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         campanhaStatus.proximoLoteEm ? `Proximo lote: ${formatarDataHoraCurta(campanhaStatus.proximoLoteEm)}` : '',
         campanhaStatus.erro ? `Erro: ${campanhaStatus.erro}` : ''
     ].filter(Boolean).join(' | ');
-    const pendenciasDoDia = Array.isArray(pendencias.itens) ?pendencias.itens.slice(0, 5) : [];
+    const prioridadesAdministrativas = (Array.isArray(pendencias.itens) ?pendencias.itens : [])
+        .filter(item => item.tipo !== 'mensagem');
+    const prioridadesPaginadas = paginarItens(prioridadesAdministrativas, paginaPrioridades, 3);
+    const pendenciasDoDia = prioridadesPaginadas.itens;
     const rotulosPrioridade = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
     const classesPrioridade = { critica: 'red', alta: 'orange', media: 'info', baixa: 'muted' };
+    const prioridadesDoDiaHtml = `<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div><h2 class="panel-title">Prioridades do dia</h2><div class="subtitle">Ações que precisam de revisão nas áreas do sistema.</div></div>
+            <a class="button secondary" href="/pendencias">Abrir Central de Pendências ${icon('arrow')}</a>
+        </div>
+        ${pendenciasDoDia.length ?`<div class="pending-list">${pendenciasDoDia.map(item => `<article class="pending-item">
+            <div><span class="badge ${classesPrioridade[item.prioridade] || 'muted'}">${escapar(rotulosPrioridade[item.prioridade] || 'Aberta')}</span>
+                <h3>${escapar(item.titulo)}</h3><p>${escapar(item.detalhe || 'Revisar na área responsável.')}</p></div>
+            <a class="button secondary" href="${escapar(item.href || '/pendencias')}">Revisar</a>
+        </article>`).join('')}</div>${paginacao({
+            base: '/clientes',
+            params: { pagina, porPagina, parametroPagina: 'paginaPrioridades' },
+            pagina: prioridadesPaginadas.pagina,
+            totalPaginas: prioridadesPaginadas.totalPaginas,
+            total: prioridadesPaginadas.total,
+            porPagina: prioridadesPaginadas.porPagina,
+            mostrarQuantidade: false
+        })}` : '<div class="empty">Nenhuma prioridade aberta no momento.</div>'}
+    </section>`;
+    const aniversariantesHtml = aniversariantes.length ?`<section class="panel" style="margin-bottom:24px;">
+        <div class="panel-head">
+            <div>
+                <h2 class="panel-title">Aniversariantes com bônus pendente</h2>
+                <div class="subtitle">Revise e salve o vencimento antes de aplicar e avisar o cliente.</div>
+            </div>
+            <span class="badge orange">${aniversariantes.length} pendente(s)</span>
+        </div>
+        ${aniversariantes.map(cliente => `<div class="client-row">
+            <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
+            <div><div class="client-name">${escapar(cliente.nome)}</div><div class="helper">${escapar(cliente.telefone || '')}</div></div>
+            <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
+            <span class="badge orange">Bônus aguardando aprovação</span>
+            <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
+        </div>`).join('')}
+    </section>` : '';
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -7753,17 +7791,6 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         ${metricCard({ label: 'Vencem este mês', valor: resumo.vencemMes, nota: 'Ainda este mês', tipo: 'orange', icone: 'alert' })}
         ${metricCard({ label: 'Atendimentos', valor: suporteAberto, nota: `${Number(resumoSuporte.urgentes || 0)} urgente(s)`, tipo: suporteAberto ?'orange' : 'green', icone: 'atendimento' })}
         ${metricCard({ label: 'CRM', valor: Number(resumoComercial.ativos || 0), nota: `${Number(resumoComercial.retornosHoje || 0)} retorno(s)`, tipo: resumoComercial.ativos ?'info' : 'green', icone: 'crm' })}
-    </section>
-    <section class="panel" style="margin-bottom:24px;">
-        <div class="panel-head">
-            <div><h2 class="panel-title">Prioridades do dia</h2><div class="subtitle">Ações que precisam de revisão nas áreas do sistema.</div></div>
-            <a class="button secondary" href="/pendencias">Abrir Central de Pendências ${icon('arrow')}</a>
-        </div>
-        ${pendenciasDoDia.length ?`<div class="pending-list">${pendenciasDoDia.map(item => `<article class="pending-item">
-            <div><span class="badge ${classesPrioridade[item.prioridade] || 'muted'}">${escapar(rotulosPrioridade[item.prioridade] || 'Aberta')}</span>
-                <h3>${escapar(item.titulo)}</h3><p>${escapar(item.detalhe || 'Revisar na área responsável.')}</p></div>
-            <a class="button secondary" href="${escapar(item.href || '/pendencias')}">Revisar</a>
-        </article>`).join('')}</div>` : '<div class="empty">Nenhuma prioridade aberta no momento.</div>'}
     </section>
     <section class="panel dashboard-campaign" style="margin-bottom:24px;">
         <div class="panel-head">
@@ -7789,22 +7816,6 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         </div>
     </section>
     ${receitaMensalCard(receita, receitaReal, planos)}
-    ${aniversariantes.length ? `<section class="panel" style="margin-bottom:24px;">
-        <div class="panel-head">
-            <div>
-                <h2 class="panel-title">Aniversariantes com bônus pendente</h2>
-                <div class="subtitle">Revise e salve o vencimento antes de aplicar e avisar o cliente.</div>
-            </div>
-            <span class="badge orange">${aniversariantes.length} pendente(s)</span>
-        </div>
-        ${aniversariantes.map(cliente => `<div class="client-row">
-            <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
-            <div><div class="client-name">${escapar(cliente.nome)}</div><div class="helper">${escapar(cliente.telefone || '')}</div></div>
-            <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
-            <span class="badge orange">Bônus aguardando aprovação</span>
-            <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
-        </div>`).join('')}
-    </section>` : ''}
     <section class="panel">
         <div class="panel-head">
             <div>
@@ -7829,6 +7840,8 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             mostrarQuantidade: false
         })}
     </section>
+    ${aniversariantesHtml}
+    ${prioridadesDoDiaHtml}
     ${ajustarPaginacaoVencimentosScript(proximosPaginados.total, proximosPaginados.porPagina)}
     ${autoAtualizarPaginaScript(DASHBOARD_AUTO_REFRESH_MS)}`;
 }
@@ -9583,11 +9596,12 @@ router.get('/clientes', async (req, res) => {
     const pendencias = await listarPendenciasOperacionais({}, { operacional: { whatsapp, sistema } });
     const mensagem = req.query.mensagem || '';
     const pagina = paginaAtual(req.query.pagina);
+    const paginaPrioridades = paginaAtual(req.query.paginaPrioridades);
     const porPagina = quantidadeVencimentosDashboard(req.query.porPagina);
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias, paginaPrioridades),
         mensagem,
         ativo: 'painel'
     });
