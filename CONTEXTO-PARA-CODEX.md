@@ -53,6 +53,12 @@
 - O entendimento local só direciona para as consultas já existentes: resumo financeiro, vencimentos, cliente e comprovantes. Não cria cobranças, não confirma pagamentos sem as duas etapas já previstas e não altera o atendimento comercial, incluindo `menu`.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed, custo externo ou ação manual de dados.
 
+## Preservação do robô comercial após resposta da gestão na versão 1.3.57
+
+- Mensagens enviadas pelo Assistente de gestão e reenviadas pelo WhatsApp Web sem ID completo são reconhecidas pelo texto recentemente registrado pelo robô. Elas não são classificadas como atendimento humano e não pausam a conversa comercial.
+- Assim, depois de uma consulta administrativa, `menu`, `boa tarde` e as demais palavras do robô comercial voltam a funcionar imediatamente para o mesmo número autorizado.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

@@ -13,7 +13,7 @@ const {
     simularRespostaHumanizada,
     normalizar
 } = require('../services/conversaService');
-const { foiMensagemDoRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
+const { foiMensagemDoRobo, foiTextoEnviadoPeloRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const { responderConsulta: responderAssistenteWhatsapp, obterTelefoneAssistenteAutorizado } = require('../services/assistenteWhatsappService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
@@ -482,11 +482,17 @@ async function processarMensagemEmFila(message, options = {}) {
 
     const textoMensagem = obterTextoMensagem(message);
     const texto = normalizar(textoMensagem);
+    const mensagemDoRobo = foiMensagemDoRobo(message) || (message.fromMe && foiTextoEnviadoPeloRobo(textoMensagem));
+
+    if (message.fromMe && mensagemDoRobo) {
+        console.log('Mensagem do robô ignorada sem registrar conteúdo.');
+        return;
+    }
 
     const telefoneMensagem = obterTelefoneMensagem(message);
     const telefoneAssistente = await obterTelefoneAssistenteAutorizado({ telefone: telefoneMensagem, client });
 
-    if (texto && !foiMensagemDoRobo(message) && await licencaPermiteUso()
+    if (texto && !message.fromMe && !mensagemDoRobo && await licencaPermiteUso()
         && telefoneAssistente) {
         try {
             const idAssistente = getMessageId(message);
@@ -515,11 +521,6 @@ async function processarMensagemEmFila(message, options = {}) {
     }
 
     if (message.fromMe) {
-        if (foiMensagemDoRobo(message)) {
-            console.log('Mensagem do robô ignorada sem registrar conteúdo.');
-            return;
-        }
-
         if (!texto) {
             console.log(`Mensagem própria vazia ignorada: ${obterTelefoneMensagem(message)} tipo=${obterTipoMensagem(message)}`);
             return;

@@ -1,6 +1,14 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
+const { registrarEnvioDoRobo, foiMensagemDoRobo, foiTextoEnviadoPeloRobo } = require('../services/mensagensPropriasService');
+
+test('resposta do assistente não pausa o robô quando o evento WhatsApp vier sem ID', () => {
+    const texto = '📊 *RESUMO DE TESTE*\n\nRecebido: R$ 10,00';
+    registrarEnvioDoRobo('contato-original@lid', texto);
+    assert.equal(foiMensagemDoRobo({ fromMe: true, to: 'destino-alterado@lid', body: texto }), false);
+    assert.equal(foiTextoEnviadoPeloRobo(texto), true);
+});
 
 test('assistente inicia desligado e só aceita números autorizados', () => {
     const r = executarIsolado(`(async()=>{
