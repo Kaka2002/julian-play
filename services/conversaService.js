@@ -221,21 +221,43 @@ function comTimeout(promessa, ms, descricao) {
     ]);
 }
 
-async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS) {
+async function enviarEstadoDigitacao(client, destino, estado) {
+    if (!client?.pupPage || !destino) return false;
+
+    await comTimeout(
+        client.pupPage.evaluate(async ({ chatId, state }) => {
+            await window.WWebJS.sendChatstate(state, chatId);
+            return true;
+        }, { chatId: destino, state: estado }),
+        5000,
+        `Estado ${estado === 'typing' ?'digitando' :'em pausa'}`
+    );
+    return true;
+}
+
+async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS, destinoPreferencial = '') {
     if (!DIGITACAO_ATIVA || tempo <= 0) return;
 
     try {
-        let chat;
-        try {
-            chat = await comTimeout(message.getChat(), 5000, 'Busca do chat');
-        } catch (erroChat) {
-            const telefoneReal = await obterTelefoneClienteMensagem(message);
-            if (!telefoneReal || typeof message?.client?.getChatById !== 'function') throw erroChat;
-            chat = await comTimeout(message.client.getChatById(telefoneReal), 5000, 'Busca do chat pelo telefone real');
+        const telefoneReal = await obterTelefoneClienteMensagem(message);
+        const destinos = [destinoPreferencial, telefoneReal, obterDestinoMensagem(message)]
+            .filter((destino, indice, lista) => destino && lista.indexOf(destino) === indice);
+        let destinoUsado = '';
+        let ultimoErro = null;
+
+        for (const destino of destinos) {
+            try {
+                await enviarEstadoDigitacao(message.client, destino, 'typing');
+                destinoUsado = destino;
+                break;
+            } catch (err) {
+                ultimoErro = err;
+            }
         }
-        await comTimeout(chat.sendStateTyping(), 5000, 'Estado digitando');
+
+        if (!destinoUsado) throw ultimoErro || new Error('Conversa não encontrada para digitação');
         await esperar(tempo);
-        await comTimeout(chat.clearState(), 5000, 'Limpeza do estado digitando');
+        await enviarEstadoDigitacao(message.client, destinoUsado, 'stop');
     } catch (err) {
         console.log('Nao foi possivel simular digitacao:', err.message);
     }
@@ -385,6 +407,11 @@ Caso queira retornar ao atendimento, digite *menu*.`;
         console.log('Atendimento encerrado por reserva:', enviada?.id?._serialized || 'sem id');
         registrarMensagemDoRobo(enviada);
     }
+}
+
+async function simularRespostaHumanizada(message, destinoPreferencial = '') {
+    const perfil = await obterPerfilRobo();
+    await simularDigitacao(message, tempoRespostaHumanizada(perfil), destinoPreferencial);
 }
 
 async function responderIndisponibilidade(message) {
@@ -538,9 +565,19 @@ async function obterTelefoneClienteMensagem(message) {
     if (!String(destino).endsWith('@lid')) return '';
 
     try {
+        if (typeof message?.client?.getContactLidAndPhone === 'function') {
+            const [contatoResolvido] = await comTimeout(
+                message.client.getContactLidAndPhone([destino]),
+                7000,
+                'Busca do telefone real do contato LID'
+            );
+            if (String(contatoResolvido?.pn || '').endsWith('@c.us')) return contatoResolvido.pn;
+        }
+
         const contato = await comTimeout(message.getContact(), 5000, 'Busca do contato LID');
+        const idContato = String(contato?.id?._serialized || '');
         const numero = String(contato?.number || contato?.id?.user || '').replace(/\D/g, '');
-        if (/^\d{10,15}$/.test(numero)) return `${numero}@c.us`;
+        if (idContato.endsWith('@c.us') && /^\d{10,15}$/.test(numero)) return `${numero}@c.us`;
     } catch (err) {
         console.log('Nao foi possivel obter contato LID:', err.message);
     }
@@ -1498,6 +1535,7 @@ module.exports = {
     responderEncerramentoRapido,
     responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
+    simularRespostaHumanizada,
     normalizar
 };
 

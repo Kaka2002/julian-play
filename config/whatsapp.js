@@ -10,6 +10,7 @@ const {
     responderEncerramentoRapido,
     responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
+    simularRespostaHumanizada,
     normalizar
 } = require('../services/conversaService');
 const { foiMensagemDoRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
@@ -499,6 +500,7 @@ async function processarMensagemEmFila(message, options = {}) {
                 telefone: telefoneAssistente
             });
             if (respostaAssistente) {
+                await simularRespostaHumanizada(message, `${telefoneAssistente}@c.us`);
                 registrarEnvioDoRobo(telefoneMensagem, respostaAssistente);
                 const enviada = await client.sendMessage(telefoneMensagem, respostaAssistente, { sendSeen: false });
                 registrarMensagemDoRobo(enviada);

@@ -40,6 +40,12 @@
 - A tela `Manutenção > Configuração do robô` mantém a lista desses comandos e das duas etapas de confirmação de comprovante como lembrete operacional.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados. Validado com sintaxe, testes dedicados e verificação de diff.
 
+## Indicador de digitação para LID na versão 1.3.55
+
+- Antes de responder, o robô envia o estado visual de “digitando…” diretamente ao identificador real da conversa. Quando a mensagem chega por LID, a resolução usa a associação LID/telefone do WhatsApp Web e não reutiliza o número interno do LID como se fosse telefone.
+- A mesma espera configurada em Manutenção é aplicada às respostas do Assistente de gestão. Se o WhatsApp recusar o estado visual, a resposta continua sendo enviada, sem bloquear atendimento, cobranças ou avisos.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.
