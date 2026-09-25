@@ -135,6 +135,14 @@ const modelosLegadosSemAcento = {
 const modeloCampanhaAmizade = {
     chave: 'campanha_amizade_presente',
     plano: 'campanha',
+    titulo: 'Amizade que vale presente',
+    cor: 'green',
+    texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+};
+
+const modeloCampanhaIndiqueTresMeses = {
+    chave: 'campanha_indique_ganhe_tres_meses',
+    plano: 'campanha',
     titulo: 'Indique e ganhe 3 meses',
     cor: 'green',
     texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 3 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
@@ -270,47 +278,13 @@ async function garantirModelosPadrao() {
 }
 
 async function garantirModeloCampanhaAmizade() {
-    await executar(
-        `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
-        VALUES (?, ?, ?, ?, ?, 1)`,
-        [
-            modeloCampanhaAmizade.chave,
-            modeloCampanhaAmizade.plano,
-            modeloCampanhaAmizade.titulo,
-            modeloCampanhaAmizade.texto,
-            modeloCampanhaAmizade.cor
-        ]
-    );
-
-    await executar(
-        `UPDATE modelos_mensagem
-        SET titulo = ?, texto = ?
-        WHERE chave = ?
-            AND texto LIKE '%5511925716232%'`,
-        [modeloCampanhaAmizade.titulo, modeloCampanhaAmizade.texto, modeloCampanhaAmizade.chave]
-    );
-
-    await executar(
-        `UPDATE modelos_mensagem SET titulo = ?, texto = ?
-        WHERE chave = ? AND texto = ?`,
-        [
-            modeloCampanhaAmizade.titulo,
-            modeloCampanhaAmizade.texto,
-            modeloCampanhaAmizade.chave,
-            'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
-        ]
-    );
-
-    await executar(
-        `UPDATE modelos_mensagem SET titulo = ?, texto = ?
-        WHERE chave = ? AND texto = ?`,
-        [
-            modeloCampanhaAmizade.titulo,
-            modeloCampanhaAmizade.texto,
-            modeloCampanhaAmizade.chave,
-            '🎁 *NOVA REGRA DE INDICAÇÃO*\n\nOlá, *{{nome}}!*\n\nIndique *2 amigos*. Quando cada um completar *3 mensalidades pagas*, você recebe *3 meses de acesso grátis*.\n\nA liberação é conferida pela equipe antes do crédito. Para indicar, envie o contato dos amigos pelo WhatsApp: *{{telefoneWhatsApp}}*.'
-        ]
-    );
+    for (const [modelo, ativo] of [[modeloCampanhaAmizade, 1], [modeloCampanhaIndiqueTresMeses, 0]]) {
+        await executar(
+            `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [modelo.chave, modelo.plano, modelo.titulo, modelo.texto, modelo.cor, ativo]
+        );
+    }
 }
 
 async function garantirModeloTesteExpiradoAssinatura() {
@@ -380,6 +354,11 @@ async function salvarModelo(dados = {}) {
     if (!titulo) throw new Error('Informe o titulo do modelo.');
     if (!texto) throw new Error('Informe o texto da mensagem.');
 
+    const ativo = dados.ativo === '0' ? 0 : 1;
+    if (plano === 'campanha' && ativo) {
+        await executar('UPDATE modelos_mensagem SET ativo = 0, atualizadoEm = CURRENT_TIMESTAMP WHERE plano = ? AND id != ?', [plano, id || -1]);
+    }
+
     if (id) {
         await executar(
             `UPDATE modelos_mensagem SET
@@ -390,7 +369,7 @@ async function salvarModelo(dados = {}) {
                 ativo = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
             WHERE id = ?`,
-            [plano, titulo, texto, cor, dados.ativo === '0' ? 0 : 1, id]
+            [plano, titulo, texto, cor, ativo, id]
         );
 
         return buscarModeloPorId(id);
@@ -400,7 +379,7 @@ async function salvarModelo(dados = {}) {
     const resultado = await executar(
         `INSERT INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
         VALUES (?, ?, ?, ?, ?, ?)`,
-        [chave, plano, titulo, texto, cor, dados.ativo === '0' ? 0 : 1]
+        [chave, plano, titulo, texto, cor, ativo]
     );
 
     return buscarModeloPorId(resultado.id);
@@ -474,7 +453,10 @@ async function obterModeloPorChave(chave) {
 }
 
 async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '') {
-    const modelo = await obterModeloPorChave(modeloCampanhaAmizade.chave);
+    await garantirModeloCampanhaAmizade();
+    const modelo = await buscarUm(`SELECT * FROM modelos_mensagem
+        WHERE plano = 'campanha' AND ativo = 1
+        ORDER BY datetime(atualizadoEm) DESC, id DESC LIMIT 1`);
     const variaveis = {
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',

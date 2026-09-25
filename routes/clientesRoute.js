@@ -8521,7 +8521,7 @@ function formularioPlano(plano = {}) {
             ${campo({ nome: 'valor', label: 'Valor opcional', valor: plano.valor })}
             ${campo({
                 nome: 'ativo',
-                label: 'Status',
+                label: modelo.plano === 'campanha' ? 'Usar nesta campanha' : 'Status',
                 valor: String(plano.ativo ?? 1),
                 opcoes: [
                     { valor: '1', texto: 'Ativo' },
@@ -8725,6 +8725,7 @@ function formularioModelo(modelo = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
+            ${modelo.plano === 'campanha' ?'<div class="notice full">Deixe <strong>Ativo</strong> somente no texto que deseja disparar. Ao ativar este modelo, os outros modelos de campanha serão desativados automaticamente.</div>' : ''}
             ${editorMensagemModelo(modelo.texto)}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar modelo</button>

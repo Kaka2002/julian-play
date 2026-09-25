@@ -43,6 +43,8 @@ test('Programa de indicação exige revisão humana antes do bônus e atualiza o
     assert.match(rotas, /Liberar 3 meses/);
     assert.match(modelos, /INDIQUE E GANHE 3 MESES/);
     assert.match(modelos, /3 meses ativos/);
+    assert.match(modelos, /campanha_indique_ganhe_tres_meses/);
+    assert.match(modelos, /UPDATE modelos_mensagem SET ativo = 0/);
 });
 
 test('Programa de indicação só libera três bônus após duas indicações com três pagamentos reais', () => {
