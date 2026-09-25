@@ -61,6 +61,7 @@ de clientes ou outros segredos.
 12. Ao documentar, informar quais dos quatro perfis sao afetados, quais dados
     sao preservados, quais testes foram executados e se existe acao manual
     necessaria depois do deploy.
+13. Preservar a resposta humanizada do WhatsApp: todo fluxo automático, inclusive o Assistente de gestão, deve manter o estado visual de “digitando…” durante a espera configurada. Para mensagens identificadas por LID, resolver o telefone real pela associação LID/telefone do WhatsApp Web; nunca usar o número interno do LID como telefone. Ao alterar esse fluxo, validar um comando comercial e um comando de gestão em aparelho real, além do teste de regressão.
 
 ## Validacao obrigatoria
 

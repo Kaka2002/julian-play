@@ -44,6 +44,7 @@
 
 - Antes de responder, o robô envia o estado visual de “digitando…” diretamente ao identificador real da conversa. Quando a mensagem chega por LID, a resolução usa a associação LID/telefone do WhatsApp Web e não reutiliza o número interno do LID como se fosse telefone.
 - A mesma espera configurada em Manutenção é aplicada às respostas do Assistente de gestão. Se o WhatsApp recusar o estado visual, a resposta continua sendo enviada, sem bloquear atendimento, cobranças ou avisos.
+- A regra é permanente em `AGENTS.md` e possui teste de regressão. Mudanças futuras no WhatsApp devem validar `menu` e um comando da gestão em aparelho real antes da entrega.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Bancos, sessões, backups, configurações e DATA_DIR são preservados; não há migração, seed ou ação manual de dados.
 
 ## Implementado: envio manual ou pelo robô na versão 1.3.46

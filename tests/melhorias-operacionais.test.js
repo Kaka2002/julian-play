@@ -5,6 +5,15 @@ const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 const repoRoot = path.join(__dirname, '..');
 
+test('resposta humanizada protege digitacao para LID e assistente de gestão', () => {
+    const conversa = fs.readFileSync(path.join(repoRoot, 'services', 'conversaService.js'), 'utf8');
+    const whatsapp = fs.readFileSync(path.join(repoRoot, 'config', 'whatsapp.js'), 'utf8');
+    assert.match(conversa, /getContactLidAndPhone/);
+    assert.match(conversa, /sendChatstate\(state, chatId\)/);
+    assert.match(conversa, /async function simularRespostaHumanizada/);
+    assert.match(whatsapp, /simularRespostaHumanizada\(message, `\$\{telefoneAssistente\}@c\.us`\)/);
+});
+
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);
