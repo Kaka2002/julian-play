@@ -11,6 +11,7 @@ backups/
 config/license-public-key.pem
 # Artefatos de entrega sao sempre gerados; somente fontes e scripts ficam no Git.
 entrega-cliente-local/**/*.zip
+entrega-cliente-local/**/*.manifest.json
 entrega-cliente-local/**/*.zip.sha256
 entrega-cliente-local/*.zip
 entrega-cliente-local/*.zip.sha256

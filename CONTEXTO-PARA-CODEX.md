@@ -1,4 +1,11 @@
 
+## Assinatura do manifesto do pacote na versão 1.3.48
+
+- O gerador do pacote agora aceita `LICENSE_PRIVATE_KEY_PATH` ou `licenseSigningPrivateKeyPath` no arquivo local ignorado `.julian-master-install.json`. O caminho aponta para um PEM Ed25519 armazenado fora do repositório; a chave não é copiada para o pacote, manifesto, Git ou documentação.
+- A instalação atual usa o arquivo protegido já existente em `C:\JulianPlayMaster\license-private-key.pem`. Sua chave pública corresponde à pública distribuída em `config/license-public-key.pem`; a chave não foi criada, substituída ou rotacionada.
+- O manifesto externo passa a registrar hash, tamanho, data e assinatura Ed25519. Ele é um artefato gerado e fica fora do Git, como o ZIP. A instalação e a atualização local verificam somente a chave pública distribuída. Painel Mestre, administrador, clientes comerciais e instalação local preservam bancos, configurações, sessões, backups e isolamento de dados; não há migração ou seed.
+- Validação: teste isolado gera e verifica assinatura a partir de um caminho protegido temporário. Ainda é necessário gerar o pacote oficial após o deploy para produzir o manifesto assinado.
+
 ## Implementado: envio manual ou pelo robô na versão 1.3.46
 
 - A ficha oferece Preparar PIX manual ao lado de Enviar PIX pelo robô. Modelos também oferecem preparação manual, incluindo PIX quando previsto pelo modelo. A escolha é por ação; não muda os agendamentos existentes. Para operação exclusivamente manual, desligar envios proativos em Manutenção.

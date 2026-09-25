@@ -6,9 +6,29 @@ const destino = `${pacote}.manifest.json`;
 const configPath = path.resolve('.julian-master-install.json');
 let config = {};
 try { config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (_) {}
-const chave = String(process.env.LICENSE_PRIVATE_KEY || config.licenseSigningPrivateKey || '').replace(/\\n/g, '\n').trim();
+function lerChavePrivada() {
+    const chaveDireta = String(process.env.LICENSE_PRIVATE_KEY || config.licenseSigningPrivateKey || '')
+        .replace(/\\n/g, '\n')
+        .trim();
+    if (chaveDireta) return chaveDireta;
+
+    const caminhoConfigurado = String(process.env.LICENSE_PRIVATE_KEY_PATH || config.licenseSigningPrivateKeyPath || '').trim();
+    if (!caminhoConfigurado) return '';
+
+    const caminho = path.isAbsolute(caminhoConfigurado)
+        ? caminhoConfigurado
+        : path.resolve(path.dirname(configPath), caminhoConfigurado);
+    try {
+        return fs.readFileSync(caminho, 'utf8').replace(/\\n/g, '\n').trim();
+    } catch (_) {
+        console.warn('Manifesto nao assinado: nao foi possivel ler LICENSE_PRIVATE_KEY_PATH.');
+        return '';
+    }
+}
+
+const chave = lerChavePrivada();
 if (!chave) {
-    console.warn('Manifesto nao assinado: configure LICENSE_PRIVATE_KEY no Painel Mestre.');
+    console.warn('Manifesto nao assinado: configure LICENSE_PRIVATE_KEY ou LICENSE_PRIVATE_KEY_PATH no Painel Mestre.');
     process.exit(0);
 }
 const dados = fs.readFileSync(pacote);
