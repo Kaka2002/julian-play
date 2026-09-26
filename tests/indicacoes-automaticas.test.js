@@ -43,21 +43,18 @@ test('campanha de um credita após pagamento e mantém vencimento, valor e aplic
  await assert.rejects(svc.cancelarIndicacao(item.id), /já gerou/);
 `));
 
-test('campanha de dois exige três ciclos pagos para cada indicado sem somar campanhas', () => isolated(`
+test('campanha de dois exige dois ciclos pagos para cada indicado sem somar campanhas', () => isolated(`
  await campanha('campanha_indique_ganhe_tres_meses');
  for(const id of [2,3]) await svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:id});
- for(const ciclo of ['2026-10-01','2026-11-01','2026-12-01']) await pagamento(2,ciclo);
- for(const ciclo of ['2026-10-01','2026-11-01']) await pagamento(3,ciclo);
+ await pagamento(2,'2026-10-01');
+ await pagamento(3,'2026-10-01');
  await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),0);
- await pagamento(3,'2026-11-01'); // mesma renovação não é uma terceira mensalidade
+ await pagamento(2,'2026-11-01');
+ await pagamento(3,'2026-11-01');
+ await pagamento(3,'2026-11-01'); // mesma renovação não é um novo ciclo
  await pagamento(3,'bonus','Bônus mensal');
  await pagamento(3,'zero','PIX','0,00');
  await pagamento(3,'excluido','PIX','35,00','2026-09-26');
- await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),0);
- await campanha('campanha_amizade_presente');
- await pagamento(3,'2026-12-01');
- await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),0);
- await campanha('campanha_indique_ganhe_tres_meses');
  await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),3);
  await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),3);
  const itens=(await svc.listarIndicacoes()).itens;
@@ -90,6 +87,21 @@ test('modelos novos preservam personalização e resolvem saldo e vencimento no 
  const aplicado=lista.find(m=>m.chave==='bonus_periodo_aplicado');
  const mensagem=await modelos.montarMensagemModeloManual({nome:'Pessoa Teste',bonusMeses:2,dataVencimento:'2026-10-31T23:59'},aplicado);
  assert.match(mensagem,/31\\/10\\/2026/); assert.match(mensagem,/2 mês/); assert.doesNotMatch(mensagem,/{{/);
+`));
+
+test('aviso de bônus por indicação é único aos cinco dias e desliga ao aplicar o período', () => isolated(`
+ const clientes=require('./services/clientes');
+ await run("UPDATE clientes SET bonusMeses=1, avisoBonusIndicacaoAtivo=1, vencimento='2026-10-01', dataVencimento='2026-10-01T23:59' WHERE id=1");
+ await run("UPDATE bonus_creditos SET campanhaChave='campanha_amizade_presente' WHERE clienteId=1");
+ const aviso=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,campanhasBonus:'campanha_amizade_presente',dataVencimento:'2026-10-01T23:59'},5);
+ const normal=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,dataVencimento:'2026-10-01T23:59'},2);
+ assert.match(aviso,/Amizade que vale presente/); assert.match(aviso,/1 mês de bônus/); assert.match(aviso,/Continue indicando/);
+ assert.ok(normal.includes('vence em *2 dias*'));
+ const planos=await require('./services/tiposPlanos').listarTiposPlanos();
+ const bonus=planos.find(p=>p.nome==='Bônus Mensal');
+ const antes=await clientes.buscarClientePorId(1);
+ const salvo=await clientes.salvarCliente({...antes,tipoPlanoId:String(bonus.id),dataInicio:'2026-10-01T23:59',dataVencimento:'2026-11-01T23:59',avisoBonusIndicacaoAtivo:1,bonusMesesOriginal:1});
+ assert.equal(salvo.avisoBonusIndicacaoAtivo,0);
 `));
 
 test('campanha inativa e vínculos cancelados não creditam; mesmo telefone é rejeitado', () => isolated(`

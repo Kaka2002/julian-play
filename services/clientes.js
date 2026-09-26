@@ -320,6 +320,7 @@ function montarCliente(dados = {}) {
         indicadoPor: limparTexto(dados.indicadoPor),
         tags: normalizarTags(dados.tags),
         bonusMeses: Math.max(0, Number.parseInt(dados.bonusMeses || 0, 10) || 0),
+        avisoBonusIndicacaoAtivo: dados.avisoBonusIndicacaoAtivo ? 1 : 0,
         whatsappMarketingConsentimento: dados.whatsappMarketingConsentimento ? 1 : 0,
         whatsappMarketingConsentidoEm: dados.whatsappMarketingConsentimento
             ? (limparTexto(dados.whatsappMarketingConsentidoEm) || new Date().toISOString())
@@ -926,6 +927,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             cliente.bonusMeses = Math.max(0, Number(existente.bonusMeses || 0) + cliente.bonusMeses - original);
         }
         const usoBonus = await prepararUsoPlanoBonusMensal(cliente, existente);
+        if (usoBonus.deveRegistrar) cliente.avisoBonusIndicacaoAtivo = 0;
 
         const sqlAtualizacao = `UPDATE clientes SET
                 nome = ?,
@@ -962,6 +964,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 indicadoPor = ?,
                 tags = ?,
                 bonusMeses = ${preservarCreditoAutomatico && !usoBonus.ativo ? 'MAX(0, COALESCE(bonusMeses, 0) + ?)' : '?'},
+                avisoBonusIndicacaoAtivo = ?,
                 whatsappMarketingConsentimento = ?,
                 whatsappMarketingConsentidoEm = ?,
                 whatsappOptOutEm = ?,
@@ -1003,6 +1006,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 cliente.indicadoPor,
                 cliente.tags,
                 preservarCreditoAutomatico && !usoBonus.ativo ? cliente.bonusMeses - Number(existente.bonusMeses || 0) : cliente.bonusMeses,
+                cliente.avisoBonusIndicacaoAtivo,
                 cliente.whatsappMarketingConsentimento,
                 cliente.whatsappMarketingConsentidoEm,
                 cliente.whatsappOptOutEm,
@@ -1038,9 +1042,9 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, indicadoPor, tags, bonusMeses,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, indicadoPor, tags, bonusMeses, avisoBonusIndicacaoAtivo,
             whatsappMarketingConsentimento, whatsappMarketingConsentidoEm, whatsappOptOutEm, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -1076,6 +1080,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             cliente.indicadoPor,
             cliente.tags,
             cliente.bonusMeses,
+            cliente.avisoBonusIndicacaoAtivo,
             cliente.whatsappMarketingConsentimento,
             cliente.whatsappMarketingConsentidoEm,
             cliente.whatsappOptOutEm,
@@ -1681,7 +1686,11 @@ function listarClientesParaAvisosProgramados() {
                 AND vencimento IS NOT NULL
                 AND vencimento != ''
         )
-        SELECT * FROM candidatos
+        SELECT candidatos.*, COALESCE((
+            SELECT GROUP_CONCAT(bonus.campanhaChave, '|') FROM bonus_creditos bonus
+            WHERE bonus.clienteId = candidatos.id AND bonus.saldo > 0
+        ), '') AS campanhasBonus
+        FROM candidatos
         WHERE diasAntes IN (0, 1, 2, 5)
             AND NOT EXISTS (
                 SELECT 1 FROM avisos_renovacao

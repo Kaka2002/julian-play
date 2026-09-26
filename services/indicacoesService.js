@@ -51,7 +51,7 @@ async function validarClientesDistintos(indicadorId, indicadoId) {
 
 const REGRAS = {
     campanha_amizade_presente: { titulo: 'Amizade que vale presente', indicados: 1, pagamentos: 1, meses: 1 },
-    campanha_indique_ganhe_tres_meses: { titulo: 'Indique e ganhe 3 meses', indicados: 2, pagamentos: 3, meses: 3 }
+    campanha_indique_ganhe_tres_meses: { titulo: 'Indique e ganhe 3 meses', indicados: 2, pagamentos: 2, meses: 3 }
 };
 
 async function obterCampanhaAtiva() {

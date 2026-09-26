@@ -23,7 +23,8 @@ const migrations = [
     require('./017-movimentos-mercado-pago'),
     require('./018-programa-indicacoes'),
     require('./019-bonus-campanhas'),
-    require('./020-historico-bonus')
+    require('./020-historico-bonus'),
+    require('./021-aviso-bonus-indicacao')
 ];
 
 function run(db, sql, params = []) {

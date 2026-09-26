@@ -98,6 +98,13 @@ const modelosPadrao = [
         titulo: 'Aniversário - Bônus de 1 Mês',
         cor: 'green',
         texto: 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, adicionamos ao seu cadastro um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
+    },
+    {
+        chave: 'aviso_bonus_indicacao',
+        plano: 'bonus',
+        titulo: 'Agradecimento por indicação com bônus',
+        cor: 'green',
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano vence em *5 dias*, no dia *{{vencimento}}*. Como agradecimento pela sua participação na *{{origemBonus}}*, você tem *{{periodoBonus}} de bônus* para usar sem cobrança. 🎁\n\nObrigado por indicar nossos serviços! Continue indicando amigos para aproveitar futuras campanhas. Entre em contato para combinarmos a ativação do seu bônus.'
     }
 ];
 
@@ -145,7 +152,7 @@ const modeloCampanhaIndiqueTresMeses = {
     plano: 'campanha',
     titulo: 'Indique e ganhe 3 meses',
     cor: 'green',
-    texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 3 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
+    texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 2 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
 };
 
 const CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA = 'teste_expirado_assinatura';
@@ -242,6 +249,11 @@ async function garantirModelosPadrao() {
         ['bonus_periodo_aplicado', 'bonus', 'Bônus aplicado — confirmação do período',
             'Olá, *{{nome}}!*\n\nSeu período de bônus foi aplicado sem cobrança. Seu acesso está válido até *{{vencimento}}*. 🎁\n\nSaldo de bônus disponível: *{{bonusDisponivel}} mês(es)*.', 'green']
     );
+    const avisoBonusIndicacao = modelosPadrao.find(modelo => modelo.chave === 'aviso_bonus_indicacao');
+    await executar(
+        'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
+        [avisoBonusIndicacao.chave, avisoBonusIndicacao.plano, avisoBonusIndicacao.titulo, avisoBonusIndicacao.texto, avisoBonusIndicacao.cor]
+    );
     if (seedJaProcessado) return;
 
     for (const modelo of modelosPadrao) {
@@ -298,6 +310,15 @@ async function garantirModeloCampanhaAmizade() {
             [modelo.chave, modelo.plano, modelo.titulo, modelo.texto, modelo.cor, ativo]
         );
     }
+    await executar(
+        `UPDATE modelos_mensagem SET texto = ?
+        WHERE chave = ? AND texto = ?`,
+        [
+            modeloCampanhaIndiqueTresMeses.texto,
+            modeloCampanhaIndiqueTresMeses.chave,
+            '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 3 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
+        ]
+    );
 }
 
 async function garantirModeloTesteExpiradoAssinatura() {
@@ -537,6 +558,25 @@ async function montarMensagemPorModelo(cliente, dias) {
 }
 
 async function montarMensagemAvisoProgramado(cliente, diasAntes) {
+    const saldoBonus = Math.max(0, Number.parseInt(cliente.bonusMeses, 10) || 0);
+    const usaAvisoBonus = Number(diasAntes) === 5
+        && Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1
+        && saldoBonus > 0;
+    if (usaAvisoBonus) {
+        const modelo = await obterModeloPorChave('aviso_bonus_indicacao');
+        const campanhas = String(cliente.campanhasBonus || '').split('|').filter(Boolean);
+        const origemBonus = campanhas.includes('campanha_amizade_presente')
+            ? 'campanha Amizade que vale presente'
+            : campanhas.includes('campanha_indique_ganhe_tres_meses')
+                ? 'campanha Indique e ganhe 3 meses'
+                : 'campanha de indicação';
+        return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'aviso_bonus_indicacao').texto, {
+            nome: primeiroNome(cliente.nome),
+            vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
+            periodoBonus: `${saldoBonus} ${saldoBonus === 1 ? 'mês' : 'meses'}`,
+            origemBonus
+        });
+    }
     const modelo = await obterModeloAvisoProgramado(diasAntes);
     const variaveis = {
         nome: primeiroNome(cliente.nome),
