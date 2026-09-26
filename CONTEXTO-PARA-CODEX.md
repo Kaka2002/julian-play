@@ -1979,3 +1979,9 @@ pm ci normalmente.
 - O Painel de Controle passa a mostrar também a Receita recebida neste mês, calculada pela soma integral dos pagamentos válidos do mês, incluindo a assinatura de aplicativo quando efetivamente cobrada, e informa a quantidade de pagamentos considerada.
 - A mudança afeta o painel administrador, clientes comerciais e instalações locais. Não altera bancos, pagamentos, configurações, sessões, cobranças ou backups; o Painel Mestre permanece inalterado.
 - Validação: sintaxe do roteador, teste específico de cálculo e exibição, suíte interna, `git diff --check`, geração do pacote e teste de instalação limpa aprovados.
+
+## Dashboard sem prioridades duplicadas — versão 1.3.65
+
+- Implementado: vencimentos de clientes e testes presentes na lista completa de próximos vencimentos são omitidos das prioridades antes da paginação. Outras pendências permanecem disponíveis; o bloco é ocultado quando vazio e a Central de Pendências continua acessível no cabeçalho e menu.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva bancos, configurações, sessões, backups e DATA_DIR. Sem migração ou ação manual de dados; requer atualização do aplicativo.
+- Validação: sintaxe JavaScript e diff aprovados; 181 testes internos aprovados; pacote oficial gerado com manifesto assinado. Publicação e reinício da produção pendentes.

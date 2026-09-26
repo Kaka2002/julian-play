@@ -462,3 +462,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: a projeção recorrente considera somente o valor proporcional dos planos ativos. A receita recebida no mês soma os pagamentos válidos, incluindo aplicativo apenas no pagamento ou renovação que o registrou, permitindo comparar projeção e valor real.
 - Validação concluída: testes de cálculo e interface, suíte interna, sintaxe, pacote local e teste de instalação limpa aprovados.
+
+## Dashboard sem prioridades duplicadas — versão 1.3.65
+
+- Implementado: vencimentos de clientes e testes presentes na lista completa de próximos vencimentos são omitidos das prioridades antes da paginação. Outras pendências permanecem disponíveis; o bloco é ocultado quando vazio e a Central de Pendências continua acessível no cabeçalho e menu.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva bancos, configurações, sessões, backups e DATA_DIR. Sem migração ou ação manual de dados; requer atualização do aplicativo.
+- Validação: sintaxe JavaScript e diff aprovados; 181 testes internos aprovados; pacote oficial gerado com manifesto assinado. Publicação e reinício da produção pendentes.

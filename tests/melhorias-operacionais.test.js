@@ -21,6 +21,10 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.match(fonte, /const pendencias = await listarPendenciasOperacionais\(\{\}, \{ operacional: \{ whatsapp, sistema \} \}\)/);
     assert.match(fonte, /href="\$\{escapar\(item\.href \|\| '\/pendencias'\)\}">Revisar/);
     assert.match(fonte, /filter\(item => item\.tipo !== 'mensagem'\)/);
+    assert.match(fonte, /clientesComVencimentoEmDestaque = new Set\(proximos\.map/);
+    assert.match(fonte, /\['cliente_vencendo', 'teste_vencendo'\]\.includes\(item\.tipo\)/);
+    assert.match(fonte, /clientesComVencimentoEmDestaque\.has\(String\(item\.clienteId\)\)/);
+    assert.match(fonte, /const prioridadesDoDiaHtml = prioridadesAdministrativas\.length \?/);
     assert.match(fonte, /paginarItens\(prioridadesAdministrativas, paginaPrioridades, 3\)/);
     assert.match(fonte, /parametroPagina: 'paginaPrioridades'/);
     const dashboard = fonte.slice(fonte.indexOf('function dashboard('), fonte.indexOf('function tabelaClientes('));

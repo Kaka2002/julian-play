@@ -7738,13 +7738,16 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         campanhaStatus.proximoLoteEm ? `Proximo lote: ${formatarDataHoraCurta(campanhaStatus.proximoLoteEm)}` : '',
         campanhaStatus.erro ? `Erro: ${campanhaStatus.erro}` : ''
     ].filter(Boolean).join(' | ');
+    const clientesComVencimentoEmDestaque = new Set(proximos.map(cliente => String(cliente.id)));
     const prioridadesAdministrativas = (Array.isArray(pendencias.itens) ?pendencias.itens : [])
-        .filter(item => item.tipo !== 'mensagem');
+        .filter(item => item.tipo !== 'mensagem')
+        .filter(item => !(['cliente_vencendo', 'teste_vencendo'].includes(item.tipo)
+            && clientesComVencimentoEmDestaque.has(String(item.clienteId))));
     const prioridadesPaginadas = paginarItens(prioridadesAdministrativas, paginaPrioridades, 3);
     const pendenciasDoDia = prioridadesPaginadas.itens;
     const rotulosPrioridade = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
     const classesPrioridade = { critica: 'red', alta: 'orange', media: 'info', baixa: 'muted' };
-    const prioridadesDoDiaHtml = `<section class="panel" style="margin-bottom:24px;">
+    const prioridadesDoDiaHtml = prioridadesAdministrativas.length ?`<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div><h2 class="panel-title">Prioridades do dia</h2><div class="subtitle">Ações que precisam de revisão nas áreas do sistema.</div></div>
             <a class="button secondary" href="/pendencias">Abrir Central de Pendências ${icon('arrow')}</a>
@@ -7762,7 +7765,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             porPagina: prioridadesPaginadas.porPagina,
             mostrarQuantidade: false
         })}` : '<div class="empty">Nenhuma prioridade aberta no momento.</div>'}
-    </section>`;
+    </section>` : '';
     const aniversariantesHtml = aniversariantes.length ?`<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
@@ -7782,6 +7785,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
+        <a class="button secondary" href="/pendencias">Central de Pendências ${icon('arrow')}</a>
     </section>
     <section class="metrics dashboard-metrics">
         ${metricCard({ label: 'Total de Clientes', valor: resumo.total, tipo: 'blue', icone: 'clientes' })}
