@@ -6361,9 +6361,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${cliente.id ? '<div class="helper full"><a href="#historico-bonus">Ver origem e histórico de bônus / identificar saldo antigo</a></div>' : ''}
             <label class="toggle-line full">
                 <input type="checkbox" name="avisoBonusIndicacaoAtivo" value="1" ${Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1 ?'checked' : ''}>
-                <span>Agradecer e avisar o bônus de indicação 5 dias antes do vencimento</span>
+                <span>Agradecer e avisar o bônus de indicação até a atualização do vencimento</span>
             </label>
-            <div class="helper full">Com saldo disponível, envia uma única mensagem de agradecimento com a campanha e o período de bônus. Ao aplicar o bônus, esta opção é desligada automaticamente.</div>
+            <div class="helper full">Com saldo disponível, os avisos de 5, 2, 1 dia, vencimento e 1 hora antes usam a mensagem de agradecimento com campanha e período. Ao salvar nova data de início ou vencimento, esta opção é desligada automaticamente.</div>
             <label class="toggle-line full">
                 <input type="checkbox" name="whatsappMarketingConsentimento" value="1" ${Number(cliente.whatsappMarketingConsentimento || 0) === 1 ?'checked' : ''}>
                 <span>Cliente autorizou receber campanhas pelo WhatsApp</span>

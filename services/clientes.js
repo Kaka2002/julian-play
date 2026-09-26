@@ -927,7 +927,9 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             cliente.bonusMeses = Math.max(0, Number(existente.bonusMeses || 0) + cliente.bonusMeses - original);
         }
         const usoBonus = await prepararUsoPlanoBonusMensal(cliente, existente);
-        if (usoBonus.deveRegistrar) cliente.avisoBonusIndicacaoAtivo = 0;
+        const periodoAtualizado = String(cliente.dataInicio || '') !== String(existente.dataInicio || '')
+            || String(cliente.dataVencimento || '') !== String(existente.dataVencimento || '');
+        if (usoBonus.deveRegistrar || periodoAtualizado) cliente.avisoBonusIndicacaoAtivo = 0;
 
         const sqlAtualizacao = `UPDATE clientes SET
                 nome = ?,

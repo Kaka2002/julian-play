@@ -94,9 +94,10 @@ test('aviso de bônus por indicação é único aos cinco dias e desliga ao apli
  await run("UPDATE clientes SET bonusMeses=1, avisoBonusIndicacaoAtivo=1, vencimento='2026-10-01', dataVencimento='2026-10-01T23:59' WHERE id=1");
  await run("UPDATE bonus_creditos SET campanhaChave='campanha_amizade_presente' WHERE clienteId=1");
  const aviso=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,campanhasBonus:'campanha_amizade_presente',dataVencimento:'2026-10-01T23:59'},5);
- const normal=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,dataVencimento:'2026-10-01T23:59'},2);
+ const segundoAviso=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,campanhasBonus:'campanha_amizade_presente',dataVencimento:'2026-10-01T23:59'},2);
+ const avisoUmaHora=await modelos.montarMensagemAvisoProgramado({nome:'Cliente 1',bonusMeses:1,avisoBonusIndicacaoAtivo:1,campanhasBonus:'campanha_amizade_presente',dataVencimento:'2026-10-01T23:59'},-60);
  assert.match(aviso,/Amizade que vale presente/); assert.match(aviso,/1 mês de bônus/); assert.match(aviso,/Continue indicando/);
- assert.ok(normal.includes('vence em *2 dias*'));
+ assert.match(segundoAviso,/Amizade que vale presente/); assert.match(segundoAviso,/2 dias/); assert.match(avisoUmaHora,/aproximadamente 1 hora/);
  const planos=await require('./services/tiposPlanos').listarTiposPlanos();
  const bonus=planos.find(p=>p.nome==='Bônus Mensal');
  const antes=await clientes.buscarClientePorId(1);

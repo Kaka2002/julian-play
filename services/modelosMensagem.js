@@ -104,7 +104,7 @@ const modelosPadrao = [
         plano: 'bonus',
         titulo: 'Agradecimento por indicação com bônus',
         cor: 'green',
-        texto: 'Olá, *{{nome}}!*\n\nSeu plano vence em *5 dias*, no dia *{{vencimento}}*. Como agradecimento pela sua participação na *{{origemBonus}}*, você tem *{{periodoBonus}} de bônus* para usar sem cobrança. 🎁\n\nObrigado por indicar nossos serviços! Continue indicando amigos para aproveitar futuras campanhas. Entre em contato para combinarmos a ativação do seu bônus.'
+        texto: 'Olá, *{{nome}}!*\n\nSeu plano vence em *{{prazoAviso}}*, no dia *{{vencimento}}*. Como agradecimento pela sua participação na *{{origemBonus}}*, você tem *{{periodoBonus}} de bônus* para usar sem cobrança. 🎁\n\nObrigado por indicar nossos serviços! Continue indicando amigos para aproveitar futuras campanhas. Entre em contato para combinarmos a ativação do seu bônus.'
     }
 ];
 
@@ -559,7 +559,7 @@ async function montarMensagemPorModelo(cliente, dias) {
 
 async function montarMensagemAvisoProgramado(cliente, diasAntes) {
     const saldoBonus = Math.max(0, Number.parseInt(cliente.bonusMeses, 10) || 0);
-    const usaAvisoBonus = Number(diasAntes) === 5
+    const usaAvisoBonus = [5, 2, 1, 0, -60].includes(Number(diasAntes))
         && Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1
         && saldoBonus > 0;
     if (usaAvisoBonus) {
@@ -573,6 +573,9 @@ async function montarMensagemAvisoProgramado(cliente, diasAntes) {
         return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'aviso_bonus_indicacao').texto, {
             nome: primeiroNome(cliente.nome),
             vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
+            prazoAviso: Number(diasAntes) === -60
+                ? 'aproximadamente 1 hora'
+                : `${Math.abs(Number(diasAntes))} ${Math.abs(Number(diasAntes)) === 1 ? 'dia' : 'dias'}`,
             periodoBonus: `${saldoBonus} ${saldoBonus === 1 ? 'mês' : 'meses'}`,
             origemBonus
         });

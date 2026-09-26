@@ -492,6 +492,6 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 ## Aviso de agradecimento por bônus de indicação — versão 1.3.68
 
-- Implementado: a ficha possui uma caixa inicialmente desmarcada para programar um único agradecimento automático cinco dias antes do vencimento. Com saldo de bônus, o texto editável informa campanha e período, agradece a indicação e incentiva novos encaminhamentos. Sem marcação ou sem saldo, a renovação mantém a mensagem normal.
-- Ao consumir o bônus pelo plano interno, a caixa é desligada automaticamente. Enquanto houver bônus programado, o aviso não inclui PIX. A nova regra da campanha ativa exige duas indicações com duas mensalidades pagas de cada indicado para liberar três meses.
+- Implementado: a ficha possui uma caixa inicialmente desmarcada para programar avisos automáticos de bônus. Com saldo de bônus, os avisos de 5, 2, 1 dia, no vencimento e uma hora antes usam texto editável que informa campanha e período, agradece a indicação e incentiva novos encaminhamentos. Eles seguem até o operador aplicar o bônus e atualizar o vencimento. Sem marcação ou sem saldo, a renovação mantém a mensagem normal.
+- Ao consumir o bônus pelo plano interno ou alterar a data de início ou vencimento, a caixa é desligada automaticamente. Enquanto houver bônus programado, o aviso não inclui PIX. A nova regra da campanha ativa exige duas indicações com duas mensalidades pagas de cada indicado para liberar três meses.
 - Migração 021 preserva todos os dados e inicia a opção desligada. Afeta administrador, comerciais no servidor e instalação local; Painel Mestre inalterado. Validação: sintaxe e testes dedicados de campanhas, bônus e ações de cliente aprovados.
