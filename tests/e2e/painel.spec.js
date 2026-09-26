@@ -189,3 +189,27 @@ test('indicações mostram regra ativa e modelos de bônus podem ser editados', 
     await expect(page.locator('select[name=plano]')).toHaveValue('bonus');
     await expect(page.getByLabel('Título', { exact: true })).toHaveValue('Indicação — bônus de 1 mês(es) liberado');
 });
+
+test('identifica saldo antigo e oferece bônus de três meses preservando preço', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/clientes/2/editar');
+    const historico = page.locator('#historico-bonus');
+    await expect(historico.getByRole('heading', { name: 'Origem e histórico de bônus' })).toBeVisible();
+    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus — 3 meses' });
+    await expect(page.locator('#valorPlano')).toHaveValue('35,00');
+    await expect(page.locator('#diasContrato')).toHaveValue('90');
+    await expect(page.locator('#dataVencimento')).toHaveValue('2099-04-01T23:59');
+    const form = historico.locator('form');
+    await form.locator('select[name="campanhaChave"]').selectOption('campanha_indique_ganhe_tres_meses');
+    await form.locator('input[name="indicado"]').fill('Indicado de teste');
+    await form.getByRole('button', { name: 'Identificar sem adicionar saldo' }).click();
+    await expect(page.locator('input[name="bonusMeses"]')).toHaveValue('3');
+    await expect(historico.getByRole('cell', { name: /Campanha — 2 indicados/ })).toBeVisible();
+    await expect(historico.locator('form')).toHaveCount(0);
+    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus — 3 meses' });
+    await page.getByRole('button', { name: 'Salvar cliente', exact: true }).click();
+    await page.goto('/clientes/2/editar');
+    await expect(page.locator('input[name="bonusMeses"]')).toHaveValue('0');
+    await expect(page.locator('#valorPlano')).toHaveValue('35,00');
+    await expect(page.locator('#historico-bonus').getByText('Bônus utilizado: 3 mês(es)', { exact: true })).toBeVisible();
+});

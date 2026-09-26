@@ -80,6 +80,7 @@ test('ficha carrega historicos e elegibilidade de exclusao do mesmo cliente', as
     const executar = preparar({
         buscarClientePorId: async () => ({ id: 7 }), obterListasCliente: async () => ({}),
         listarNotasCliente: lista, listarPagamentosCliente: lista, listarAtendimentosCliente: lista,
+        listarHistoricoBonus: async id => { ids.push(id); return { creditos: [], baixas: [] }; },
         listarAuditoriaCliente: lista, listarInteracoesCliente: async cliente => lista(cliente.id),
         buscarAlertasCadastroCliente: async () => [], obterConfiguracoes: async () => ({}),
         verificarExclusaoDefinitivaCliente: async id => { ids.push(id); return { permitida: false }; },
@@ -87,7 +88,8 @@ test('ficha carrega historicos e elegibilidade de exclusao do mesmo cliente', as
         renderizar: async () => {}
     });
     await executar('get', '/clientes/:id/editar', { query: { linha: '2' } });
-    assert.deepEqual(ids, [7, 7, 7, 7, 7, 7]);
+    assert.deepEqual(ids, [7, 7, 7, 7, 7, 7, 7]);
+    assert.deepEqual(tela.historicoBonus.creditos, []);
     assert.equal(tela.exclusaoDefinitiva.permitida, false);
     assert.equal(tela.paginaLinha, '2');
 });

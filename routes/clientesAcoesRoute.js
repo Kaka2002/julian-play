@@ -13,6 +13,8 @@ function criarClientesAcoesRoute(deps = {}) {
         agendarEncerramentoTeste,
         aguardarComTimeout,
         aplicarBonusCliente,
+        listarHistoricoBonus,
+        identificarOrigemBonus,
         atualizarPagamentoCliente,
         avisoRenovacaoProgramadoExiste,
         buscarAlertasCadastroCliente,
@@ -116,6 +118,15 @@ router.get('/clientes/:id/enviar-modelo', async (req, res) => {
     });
 });
 
+router.post('/clientes/:id/bonus/identificar', async (req, res) => {
+    try {
+        await identificarOrigemBonus(req.params.id, req.body, req.usuarioPainel || 'operador');
+        return res.redirect('/clientes/' + encodeURIComponent(req.params.id) + '/editar?mensagem=' + encodeURIComponent('Origem identificada. O saldo não foi aumentado.') + '#historico-bonus');
+    } catch (err) {
+        return res.redirect('/clientes/' + encodeURIComponent(req.params.id) + '/editar?mensagem=' + encodeURIComponent(err.message) + '#historico-bonus');
+    }
+});
+
 router.get('/clientes/:id/editar', async (req, res) => {
     const cliente = await buscarClientePorId(req.params.id);
 
@@ -123,7 +134,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, exclusaoDefinitiva, config] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, exclusaoDefinitiva, config, historicoBonus] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
@@ -132,7 +143,8 @@ router.get('/clientes/:id/editar', async (req, res) => {
         listarInteracoesCliente(cliente, 60),
         listarAuditoriaCliente(cliente.id, 100),
         verificarExclusaoDefinitivaCliente(cliente.id),
-        obterConfiguracoes()
+        obterConfiguracoes(),
+        listarHistoricoBonus(cliente.id)
     ]);
 
     await renderizar(res, {
@@ -146,6 +158,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             auditoria,
             exclusaoDefinitiva,
             config,
+            historicoBonus,
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha,
             historicoPorPagina: req.query.historicoPorPagina,

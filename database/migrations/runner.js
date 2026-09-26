@@ -22,7 +22,8 @@ const migrations = [
     require('./016-conciliacao-saldo-financeiro'),
     require('./017-movimentos-mercado-pago'),
     require('./018-programa-indicacoes'),
-    require('./019-bonus-campanhas')
+    require('./019-bonus-campanhas'),
+    require('./020-historico-bonus')
 ];
 
 function run(db, sql, params = []) {

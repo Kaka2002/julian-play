@@ -2,7 +2,7 @@ const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
 const { normalizarAniversario } = require('../utils/aniversario');
 const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes, estaProtegido } = require('./credenciaisClienteService');
-const { buscarTipoPlanoPorId, ehPlanoBonusMensal, NOME_PLANO_BONUS_MENSAL } = require('./tiposPlanos');
+const { buscarTipoPlanoPorId, ehPlanoBonusMensal, mesesPlanoBonus } = require('./tiposPlanos');
 const { registrarAlteracoesCliente, registrarEventoCliente } = require('./clienteAuditoriaService');
 let credenciaisProntas = null;
 function garantirCredenciaisProntas() {
@@ -812,14 +812,15 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
         throw new Error('Informe o vencimento do ciclo antes de usar o Bônus Mensal.');
     }
 
-    cliente.plano = NOME_PLANO_BONUS_MENSAL;
-    cliente.diasContrato = 30;
+    const meses = mesesPlanoBonus(tipoPlano);
+    cliente.plano = tipoPlano.nome;
+    cliente.diasContrato = meses * 30;
     cliente.valorPlano = existente.valorPlano;
     cliente.assinaturaApp = existente.assinaturaApp;
     cliente.status = 'ativo';
 
     const pagamentoExistente = await buscarUm(
-        `SELECT id FROM cliente_pagamentos
+        `SELECT id, diasContrato FROM cliente_pagamentos
          WHERE clienteId = ?
            AND formaPagamento = ?
            AND vencimentoNovo = ?
@@ -829,21 +830,23 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
     );
 
     if (pagamentoExistente) {
+        if (Number(pagamentoExistente.diasContrato) !== meses * 30) throw new Error('Este vencimento já possui outro período de bônus registrado. Confira as datas.');
         // Reabrir e salvar o mesmo contrato não pode descontar o bônus outra vez.
         cliente.bonusMeses = Math.max(0, Number.parseInt(existente.bonusMeses || 0, 10) || 0);
         return { ativo: true, deveRegistrar: false };
     }
 
     const saldoAnterior = Math.max(0, Number.parseInt(existente.bonusMeses || 0, 10) || 0);
-    if (saldoAnterior < 1) {
-        throw new Error('Este cliente não possui bônus disponível para usar o plano Bônus Mensal.');
+    if (saldoAnterior < meses) {
+        throw new Error(`Este cliente não possui bônus disponível suficiente. Necessário: ${meses} mês(es).`);
     }
 
-    cliente.bonusMeses = saldoAnterior - 1;
+    cliente.bonusMeses = saldoAnterior - meses;
     return {
         ativo: true,
         deveRegistrar: true,
         saldoAnterior,
+        meses,
         saldoRestante: cliente.bonusMeses,
         vencimentoNovo
     };
@@ -853,8 +856,8 @@ function dadosPagamentoBonusMensal(cliente, usoBonus) {
     return [
         cliente.id,
         cliente.tipoPlanoId,
-        NOME_PLANO_BONUS_MENSAL,
-        30,
+        cliente.plano,
+        usoBonus.meses * 30,
         '0,00',
         '0,00',
         '0,00',
@@ -862,18 +865,9 @@ function dadosPagamentoBonusMensal(cliente, usoBonus) {
         agoraLocalInput(),
         '',
         usoBonus.vencimentoNovo,
-        `Bônus mensal utilizado. Saldo de bônus: ${usoBonus.saldoAnterior} → ${usoBonus.saldoRestante}.`,
+        `Bônus mensal utilizado (${usoBonus.meses} mês(es)). Saldo de bônus: ${usoBonus.saldoAnterior} → ${usoBonus.saldoRestante}.`,
         0
     ];
-}
-
-function inserirPagamentoBonusMensal(sql, cliente, usoBonus) {
-    return new Promise((resolve, reject) => {
-        db.run(sql, dadosPagamentoBonusMensal(cliente, usoBonus), function onRun(err) {
-            if (err) return reject(err);
-            resolve({ id: this.lastID, changes: this.changes });
-        });
-    });
 }
 
 async function atualizarClienteComUsoBonusMensal(sqlAtualizacao, paramsAtualizacao, cliente, usoBonus) {
@@ -885,30 +879,13 @@ async function atualizarClienteComUsoBonusMensal(sqlAtualizacao, paramsAtualizac
             vencimentoNovo, observacoes, mensagemEnviada
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    return new Promise((resolve, reject) => {
-        const cancelar = (erro) => db.run('ROLLBACK', () => reject(erro));
-
-        db.serialize(() => {
-            db.run('BEGIN IMMEDIATE', (erroInicio) => {
-                if (erroInicio) return reject(erroInicio);
-
-                db.run(sqlAtualizacao, paramsAtualizacao, function onAtualizar(erroAtualizacao) {
-                    if (erroAtualizacao) return cancelar(erroAtualizacao);
-                    if (!this.changes) {
-                        return cancelar(new Error('O bônus não foi utilizado porque o saldo do cliente foi alterado. Atualize a página e tente novamente.'));
-                    }
-
-                    inserirPagamentoBonusMensal(sqlPagamento, cliente, usoBonus)
-                        .then((pagamento) => {
-                            db.run('COMMIT', (erroCommit) => {
-                                if (erroCommit) return cancelar(erroCommit);
-                                resolve({ changes: 1, pagamento });
-                            });
-                        })
-                        .catch(cancelar);
-                });
-            });
-        });
+    return require('./bonusService').comTransacaoBonus(async ({ run, get }) => {
+        const resultado = await run(sqlAtualizacao, paramsAtualizacao);
+        if (!resultado.changes) throw new Error('O saldo foi alterado. Atualize a ficha antes de usar o bônus.');
+        const operacao = await get('SELECT MAX(id) AS id FROM bonus_operacoes WHERE clienteId = ?', [cliente.id]);
+        const pagamento = await run(sqlPagamento, dadosPagamentoBonusMensal(cliente, usoBonus));
+        await run("UPDATE bonus_operacoes SET tipo = 'uso', pagamentoId = ? WHERE id = ? AND clienteId = ?", [pagamento.id, operacao.id, cliente.id]);
+        return { changes: 1, pagamento };
     });
 }
 
@@ -916,7 +893,7 @@ async function registrarNotaUsoPlanoBonusMensal(cliente, usoBonus, pagamento) {
     if (!usoBonus?.deveRegistrar || !pagamento?.id) return;
     await adicionarNotaCliente(
         cliente.id,
-        `Bônus mensal utilizado: 30 dias sem cobrança. Saldo restante: ${usoBonus.saldoRestante}. Registro ${pagamento.id} enviado ao Financeiro.`
+        `Bônus mensal utilizado: ${usoBonus.meses} mês(es) sem cobrança. Saldo restante: ${usoBonus.saldoRestante}. Registro ${pagamento.id} enviado ao Financeiro.`
     );
 }
 
@@ -1133,13 +1110,12 @@ async function aplicarBonusCliente(id, quantidade = 1) {
 
     const saldoRestante = saldo - meses;
 
-    await executar(
-        `UPDATE clientes SET
-            bonusMeses = ?,
-            atualizadoEm = CURRENT_TIMESTAMP
-        WHERE id = ?`,
-        [saldoRestante, id]
-    );
+    await require('./bonusService').comTransacaoBonus(async ({ run, get }) => {
+        const resultado = await run('UPDATE clientes SET bonusMeses = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND bonusMeses = ?', [saldoRestante, id, saldo]);
+        if (!resultado.changes) throw new Error('O saldo foi alterado. Atualize a ficha.');
+        const operacao = await get('SELECT MAX(id) AS id FROM bonus_operacoes WHERE clienteId = ?', [id]);
+        await run("UPDATE bonus_operacoes SET tipo = 'uso' WHERE id = ? AND clienteId = ?", [operacao.id, id]);
+    });
 
     await adicionarNotaCliente(
         id,

@@ -3,7 +3,7 @@ function menuPlanos(planos = [], nomeEmpresa = 'Nossa empresa') {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .trim()
-        .toLowerCase() !== 'bonus mensal');
+        .toLowerCase().match(/^bonus (mensal|trimestral)$/) === null);
     const linhasPlanos = planosComerciais.length
         ? planosComerciais.map((plano, index) => {
             const valor = plano.valorConfigurado === false ? 'Valor a consultar' : `R$ ${plano.valor}`;

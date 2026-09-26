@@ -1,6 +1,7 @@
 const db = require('../database/sqlite');
 
 const NOME_PLANO_BONUS_MENSAL = 'Bônus Mensal';
+const NOME_PLANO_BONUS_TRIMESTRAL = 'Bônus Trimestral';
 
 const planosPadrao = [
     ['Teste Grátis', 0, '0,00'],
@@ -80,13 +81,16 @@ async function garantirPlanosPadrao() {
         'INSERT OR IGNORE INTO tipos_planos (nome, dias, valor, ativo) VALUES (?, ?, ?, 1)',
         [NOME_PLANO_BONUS_MENSAL, 30, '0,00']
     );
+    await executar('INSERT OR IGNORE INTO tipos_planos (nome, dias, valor, ativo) VALUES (?, ?, ?, 1)', [NOME_PLANO_BONUS_TRIMESTRAL, 90, '0,00']);
 }
 
-function ehPlanoBonusMensal(plano = {}) {
-    return limparTexto(plano.nome).localeCompare(NOME_PLANO_BONUS_MENSAL, 'pt-BR', {
-        sensitivity: 'base'
-    }) === 0;
+function mesesPlanoBonus(plano = {}) {
+    const nome = limparTexto(plano.nome).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    return nome === 'bonus mensal' ? 1 : nome === 'bonus trimestral' ? 3 : 0;
 }
+
+// Nome mantido por compatibilidade; ambos os planos são benefícios sem cobrança.
+function ehPlanoBonusMensal(plano = {}) { return mesesPlanoBonus(plano) > 0; }
 
 async function listarTiposPlanos() {
     await garantirPlanosPadrao();
@@ -135,6 +139,8 @@ function removerTipoPlano(id) {
 }
 
 module.exports = {
+    mesesPlanoBonus,
+    NOME_PLANO_BONUS_TRIMESTRAL,
     NOME_PLANO_BONUS_MENSAL,
     ehPlanoBonusMensal,
     listarTiposPlanos,

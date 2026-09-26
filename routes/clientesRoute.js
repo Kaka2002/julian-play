@@ -99,7 +99,8 @@ const {
     buscarTipoPlanoPorId,
     salvarTipoPlano,
     removerTipoPlano,
-    ehPlanoBonusMensal
+    ehPlanoBonusMensal,
+    mesesPlanoBonus
 } = require('../services/tiposPlanos');
 const {
     listarApps,
@@ -5861,6 +5862,36 @@ function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
     </section>`;
 }
 
+function secaoHistoricoBonus(cliente, historico = {}) {
+    if (!cliente.id) return '';
+    const { ORIGENS } = require('../services/bonusService');
+    const creditos = historico.creditos || [];
+    const baixas = historico.baixas || [];
+    const linhas = creditos.map(c => `<tr>
+        <td data-label="Origem">${escapar(ORIGENS[c.campanhaChave] || c.campanhaChave)}<div class="helper">Crédito #${escapar(c.id)}${c.origem === 'saldo_anterior' ? ' · saldo anterior à atualização' : ''}</div></td>
+        <td data-label="Indicado">${escapar(c.indicados || c.indicado || 'Não informado')}</td>
+        <td data-label="Registro">${escapar(formatarDataHoraCurta(c.criadoEm))}${c.identificadoEm ?`<div class="helper">Origem identificada em ${escapar(formatarDataHoraCurta(c.identificadoEm))}</div>` : ''}</td>
+        <td data-label="Recebidos">${escapar(c.meses)}</td>
+        <td data-label="Utilizados">${escapar(baixas.filter(b => b.creditoId === c.id && b.tipo === 'uso').reduce((n, b) => n + b.meses, 0))}</td>
+        <td data-label="Ajustes">${escapar(baixas.filter(b => b.creditoId === c.id && b.tipo !== 'uso').reduce((n, b) => n + b.meses, 0))}</td>
+        <td data-label="Saldo">${escapar(c.saldo)}</td></tr>`).join('');
+    const identificar = creditos.filter(c => c.campanhaChave === 'nao_identificada' && c.saldo > 0).map(c => `
+        <form class="fields" method="post" action="/clientes/${escapar(cliente.id)}/bonus/identificar" style="padding:20px;">
+            <div class="full"><strong>Identificar saldo existente — crédito #${escapar(c.id)}</strong><div class="helper">Apenas informa a origem. Não aumenta o saldo nem altera o vencimento.</div></div>
+            <input type="hidden" name="creditoId" value="${escapar(c.id)}"><input type="hidden" name="chave" value="${require('crypto').randomUUID()}">
+            <label>Origem do bônus<select name="campanhaChave" required><option value="">Selecione...</option>${Object.entries(ORIGENS).filter(([chave]) => chave !== 'nao_identificada').map(([chave, nome]) => `<option value="${chave}">${escapar(nome)}</option>`).join('')}</select></label>
+            <label>Meses a identificar<input type="number" name="meses" min="1" max="${escapar(c.saldo)}" step="1" value="${escapar(c.saldo)}" required></label>
+            <label>Cliente indicado (opcional)<input name="indicado" maxlength="160" placeholder="Nome do indicado que originou o bônus"></label>
+            <div class="actions full"><button class="button secondary" type="submit">Identificar sem adicionar saldo</button></div>
+        </form>`).join('');
+    const movimentos = baixas.map(b => `<div class="pending-item"><div><strong>${b.tipo === 'uso' ? 'Bônus utilizado' : 'Ajuste de saldo'}: ${escapar(b.meses)} mês(es)</strong>
+        <div class="helper">${escapar(ORIGENS[b.campanhaChave] || b.campanhaChave)} · crédito #${escapar(b.creditoId)} · ${escapar(formatarDataHoraCurta(b.criadoEm))}${b.vencimento ?` · vencimento ${escapar(formatarDataHoraCurta(b.vencimento))}` : ''}${b.pagamentoId ?` · registro financeiro #${escapar(b.pagamentoId)}` : ''}</div></div></div>`).join('');
+    const anteriores = (historico.anteriores || []).map(c => `<div class="pending-item">${escapar(ORIGENS[c.campanhaChave] || c.campanhaChave)}: ${escapar(c.meses)} mês(es) liberado(s) em ${escapar(formatarDataHoraCurta(c.criadoEm))}. Uso anterior sem vínculo por crédito; este registro não soma ao saldo.</div>`).join('');
+    return `<section class="panel" id="historico-bonus" style="margin-top:24px;"><div class="panel-head"><div><h2 class="panel-title">Origem e histórico de bônus</h2><div class="subtitle">Quantidade em meses. O uso consome os créditos mais antigos primeiro. Saldos anteriores sem comprovação precisam de identificação.</div></div></div>
+        <div class="clients-panel"><table class="clients-table"><thead><tr><th>Origem</th><th>Indicado</th><th>Registro</th><th>Recebidos</th><th>Utilizados</th><th>Ajustes</th><th>Saldo</th></tr></thead><tbody>${linhas || '<tr><td colspan="7" class="empty">Nenhum crédito registrado.</td></tr>'}</tbody></table></div>
+        ${identificar}${movimentos}${anteriores}</section>`;
+}
+
 function secaoBonusCliente(cliente = {}) {
     if (!cliente.id) return '';
 
@@ -6281,12 +6312,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
     const saldoBonusDisponivel = Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0);
-    const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtual)
-        && String(plano.nome || '').trim().toLocaleLowerCase('pt-BR') === 'bônus mensal');
-    const planosDisponiveis = planos.filter(plano => {
-        const ehBonusMensal = String(plano.nome || '').trim().toLocaleLowerCase('pt-BR') === 'bônus mensal';
-        return !ehBonusMensal || saldoBonusDisponivel > 0 || planoAtualEhBonus;
-    });
+    const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtual) && ehPlanoBonusMensal(plano));
+    const planosDisponiveis = planos.filter(plano => !ehPlanoBonusMensal(plano)
+        || saldoBonusDisponivel >= mesesPlanoBonus(plano) || String(plano.id) === String(planoAtual));
     const topoCliente = cliente.id
         ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
             ${acoesRapidasCliente(cliente, opcoesFormulario.config)}
@@ -6330,6 +6358,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
             <input type="hidden" name="bonusMesesOriginal" value="${escapar(cliente.bonusMeses || 0)}">
+            ${cliente.id ? '<div class="helper full"><a href="#historico-bonus">Ver origem e histórico de bônus / identificar saldo antigo</a></div>' : ''}
             <label class="toggle-line full">
                 <input type="checkbox" name="whatsappMarketingConsentimento" value="1" ${Number(cliente.whatsappMarketingConsentimento || 0) === 1 ?'checked' : ''}>
                 <span>Cliente autorizou receber campanhas pelo WhatsApp</span>
@@ -6347,12 +6376,12 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: '', texto: 'Selecione...' },
                     ...planosDisponiveis.map(plano => ({
                         valor: plano.id,
-                        texto: plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
+                        texto: ehPlanoBonusMensal(plano) ? `Bônus — ${mesesPlanoBonus(plano)} ${mesesPlanoBonus(plano) === 1 ? 'mês' : 'meses'}` : plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
                     }))
                 ]
             })}
             <div class="helper full">${saldoBonusDisponivel > 0
-                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Ao salvar o plano <strong>Bônus Mensal</strong>, será usado 1 bônus, registrado um ciclo de 30 dias sem cobrança no Financeiro. O valor contratado será preservado. Confira o vencimento antes de salvar; o aviso é manual em Modelos.`
+                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Escolha <strong>Bônus — 1 mês</strong> ou <strong>Bônus — 3 meses</strong> para consumir o período correspondente, sem cobrança no Financeiro. O valor contratado será preservado. Confira o vencimento antes de salvar; o aviso é manual em Modelos.`
                 : planoAtualEhBonus
                     ?'Este ciclo de Bônus Mensal já foi registrado. Para iniciar outro ciclo, conceda um novo bônus antes de salvar uma nova data de vencimento.'
                     :'O plano Bônus Mensal aparece somente quando o cliente possui bônus disponível.'}</div>
@@ -6439,7 +6468,8 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             id: String(plano.id),
             nome: plano.nome,
             dias: plano.dias,
-            valor: plano.valor || ''
+            valor: plano.valor || '',
+            mesesBonus: mesesPlanoBonus(plano)
         })))};
         const tipoPlano = document.getElementById('tipoPlanoId');
         const diasContrato = document.getElementById('diasContrato');
@@ -6447,6 +6477,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         const planoLegado = document.getElementById('planoLegado');
         const dataInicio = document.getElementById('dataInicio');
         const dataVencimento = document.getElementById('dataVencimento');
+        const vencimentoAntesDoBonus = dataVencimento.value;
         const recalcular = document.getElementById('recalcularVencimento');
         const statusCliente = document.getElementById('statusCliente');
         const horasTeste = document.getElementById('horasTeste');
@@ -6484,7 +6515,14 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             const plano = planos.find(item => item.id === tipoPlano.value);
             if (!plano) return;
             diasContrato.value = plano.dias || '';
-            if (plano.nome !== 'Bônus Mensal') valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
+            if (plano.mesesBonus) {
+                const vencimentoAtual = new Date(vencimentoAntesDoBonus);
+                const agora = new Date();
+                const base = !Number.isNaN(vencimentoAtual.getTime()) && vencimentoAtual > agora ? vencimentoAtual : agora;
+                dataInicio.value = new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                statusCliente.value = 'ativo';
+            }
+            if (!plano.mesesBonus) valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 statusCliente.value = 'teste';
@@ -6758,6 +6796,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         secaoConfirmacaoAssinatura(cliente),
         secaoPixPlanoCliente(cliente),
         secaoRenovacaoCliente(cliente, listas, pagamentos),
+        secaoHistoricoBonus(cliente, opcoesFormulario.historicoBonus),
         secaoBonusCliente(cliente),
         cliente.id && clienteEhTeste(cliente) ?secaoTesteLiberado(cliente, listas) : '',
         cliente.id ?secaoHistoricoUnificado(cliente, {}, paginacaoHistoricoUnificado) : '',
@@ -9898,6 +9937,8 @@ router.get('/clientes/exportar.csv', async (req, res) => {
 });
 
 router.use(criarClientesAcoesRoute({
+    listarHistoricoBonus: require('../services/bonusService').listarHistoricoBonus,
+    identificarOrigemBonus: require('../services/bonusService').identificarOrigemBonus,
     CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA,
     CODIGO_TESTE_EXPIRADO_PLANOS_MANUAL,
     adicionarNotaCliente,

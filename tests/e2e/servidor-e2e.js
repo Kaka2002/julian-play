@@ -29,6 +29,12 @@ async function executar() {
         ['Cliente E2E Vencido', '5511999990000', 'Mensal', '2026-07-20 23:59', '2026-07-20 23:59', 'ativo'],
         err => err ? reject(err) : resolve()
     ));
+    const planos = await require('../../services/tiposPlanos').listarTiposPlanos();
+    await require('../../services/clientes').salvarCliente({
+        nome: 'Cliente E2E Bonus', telefone: '5511999990001', status: 'ativo',
+        tipoPlanoId: planos.find(p => p.nome === 'Mensal').id, plano: 'Mensal', diasContrato: 30,
+        valorPlano: '35,00', bonusMeses: 3, dataInicio: '2098-12-01T23:59', dataVencimento: '2099-01-01T23:59'
+    });
     require('../../bot');
 }
 
