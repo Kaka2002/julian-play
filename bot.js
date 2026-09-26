@@ -274,6 +274,7 @@ const server = app.listen(PORT, async () => {
     // A prontidao do banco continua sendo verificada pela rota /ready.
     if (typeof process.send === 'function') process.send('ready');
     await bancoAplicacao.ready;
+    require('./services/indicacoesService').iniciarCreditosIndicacoes();
     if (whatsappDesativado) {
         console.log('WhatsApp e agendadores desativados neste processo.');
     } else {

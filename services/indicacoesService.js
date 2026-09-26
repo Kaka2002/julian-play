@@ -49,70 +49,155 @@ async function validarClientesDistintos(indicadorId, indicadoId) {
     return { indicador, indicado };
 }
 
+const REGRAS = {
+    campanha_amizade_presente: { titulo: 'Amizade que vale presente', indicados: 1, pagamentos: 1, meses: 1 },
+    campanha_indique_ganhe_tres_meses: { titulo: 'Indique e ganhe 3 meses', indicados: 2, pagamentos: 3, meses: 3 }
+};
+
+async function obterCampanhaAtiva() {
+    await require('./modelosMensagem').listarModelos();
+    const ativas = await buscarTodos("SELECT chave FROM modelos_mensagem WHERE plano = 'campanha' AND ativo = 1");
+    const chave = ativas.length === 1 ? ativas[0].chave : '';
+    return REGRAS[chave] ? { chave, ...REGRAS[chave] } : null;
+}
+
 async function registrarIndicacao(dados = {}) {
     const indicadorId = idValido(dados.indicadorClienteId, 'quem indicou');
     const indicadoId = idValido(dados.indicadoClienteId, 'o cliente indicado');
     const clientes = await validarClientesDistintos(indicadorId, indicadoId);
-    const existente = await buscarUm('SELECT id, status FROM programa_indicacoes WHERE indicadorClienteId = ? AND indicadoClienteId = ?', [indicadorId, indicadoId]);
-    if (existente?.status === 'ativa') throw new Error('Esta indicação já está registrada e ativa.');
-    if (existente) {
-        await executar(`UPDATE programa_indicacoes SET status = 'ativa', motivoCancelamento = '', beneficioLiberadoEm = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`, [existente.id]);
-        return { id: existente.id, ...clientes, reativada: true };
+    const campanha = await obterCampanhaAtiva();
+    if (!campanha) throw new Error('Ative um dos dois modelos de campanha de indicação em Modelos.');
+    // Um indicado não pode ser reaproveitado em outra campanha ou por outro indicador.
+    const existente = await buscarUm("SELECT id FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada'", [indicadoId]);
+    if (existente) throw new Error('Este indicado já participa de uma indicação ou já gerou benefício.');
+    const anterior = await buscarUm('SELECT id FROM programa_indicacoes WHERE indicadorClienteId = ? AND indicadoClienteId = ?', [indicadorId, indicadoId]);
+    let id;
+    if (anterior) {
+        const resultado = await executar(`UPDATE programa_indicacoes SET status = 'ativa', campanhaChave = ?, beneficioMeses = ?,
+            motivoCancelamento = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'cancelada'
+            AND NOT EXISTS (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
+        [campanha.chave, campanha.meses, anterior.id, indicadoId]);
+        if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
+        id = anterior.id;
+    } else {
+        const resultado = await executar(`INSERT INTO programa_indicacoes
+            (indicadorClienteId, indicadoClienteId, campanhaChave, beneficioMeses)
+            SELECT ?, ?, ?, ? WHERE NOT EXISTS
+                (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
+        [indicadorId, indicadoId, campanha.chave, campanha.meses, indicadoId]);
+        if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
+        id = resultado.id;
     }
-    const resultado = await executar('INSERT INTO programa_indicacoes (indicadorClienteId, indicadoClienteId) VALUES (?, ?)', [indicadorId, indicadoId]);
-    return { id: resultado.id, ...clientes, reativada: false };
+    await processarCreditosIndicacoes();
+    return { id, ...clientes, reativada: Boolean(anterior) };
 }
 
-const pagamentosValidosSql = `(SELECT COUNT(*) FROM cliente_pagamentos pagamento
+const pagamentosValidosSql = `(SELECT COUNT(DISTINCT COALESCE(NULLIF(pagamento.vencimentoNovo, ''), 'pagamento:' || pagamento.id))
+    FROM cliente_pagamentos pagamento
     WHERE pagamento.clienteId = indicado.id
         AND (pagamento.excluidoEm IS NULL OR pagamento.excluidoEm = '')
-        AND lower(COALESCE(pagamento.formaPagamento, '')) <> 'bônus mensal'
-        AND lower(COALESCE(pagamento.formaPagamento, '')) <> 'bonus mensal')`;
+        AND lower(COALESCE(pagamento.formaPagamento, '')) NOT LIKE '%bônus%'
+        AND lower(COALESCE(pagamento.formaPagamento, '')) NOT LIKE '%bonus%'
+        AND lower(COALESCE(pagamento.plano, '')) NOT LIKE '%teste%'
+        AND CAST(CASE WHEN instr(COALESCE(pagamento.valorTotal, '0'), ',') > 0 THEN REPLACE(REPLACE(pagamento.valorTotal, '.', ''), ',', '.') ELSE pagamento.valorTotal END AS REAL) > 0)`;
+
+const consultaIndicacoes = `SELECT indicacao.*, indicador.nome AS indicadorNome, indicador.telefone AS indicadorTelefone,
+    indicado.nome AS indicadoNome, indicado.telefone AS indicadoTelefone,
+    ${pagamentosValidosSql} AS pagamentosValidos
+    FROM programa_indicacoes indicacao
+    JOIN clientes indicador ON indicador.id = indicacao.indicadorClienteId
+    JOIN clientes indicado ON indicado.id = indicacao.indicadoClienteId
+    ORDER BY indicacao.id`;
 
 async function listarIndicacoes() {
-    const itens = await buscarTodos(`SELECT indicacao.*, indicador.nome AS indicadorNome, indicador.telefone AS indicadorTelefone,
-            indicado.nome AS indicadoNome, indicado.telefone AS indicadoTelefone,
-            ${pagamentosValidosSql} AS pagamentosValidos
-        FROM programa_indicacoes indicacao
-        INNER JOIN clientes indicador ON indicador.id = indicacao.indicadorClienteId
-        INNER JOIN clientes indicado ON indicado.id = indicacao.indicadoClienteId
-        ORDER BY CASE indicacao.status WHEN 'ativa' THEN 0 WHEN 'beneficio_liberado' THEN 1 ELSE 2 END,
-            datetime(indicacao.atualizadoEm) DESC, indicacao.id DESC`);
-    const porIndicador = new Map();
-    for (const item of itens) {
-        if (item.status !== 'ativa') continue;
-        const chave = Number(item.indicadorClienteId);
-        const atual = porIndicador.get(chave) || { clienteId: chave, nome: item.indicadorNome, telefone: item.indicadorTelefone, indicacoes: 0, qualificadas: 0, prontoParaRevisao: false };
-        atual.indicacoes += 1;
-        if (Number(item.pagamentosValidos || 0) >= 3) atual.qualificadas += 1;
-        porIndicador.set(chave, atual);
-    }
-    for (const resumo of porIndicador.values()) resumo.prontoParaRevisao = resumo.qualificadas >= 2;
-    return { itens, resumos: [...porIndicador.values()].sort((a, b) => Number(b.prontoParaRevisao) - Number(a.prontoParaRevisao) || b.qualificadas - a.qualificadas || a.nome.localeCompare(b.nome, 'pt-BR')) };
+    const campanha = await obterCampanhaAtiva();
+    const itens = (await buscarTodos(consultaIndicacoes)).map(item => ({
+        ...item, regra: REGRAS[item.campanhaChave], campanhaAtiva: item.campanhaChave === campanha?.chave
+    }));
+    return { itens, campanha, resumos: [] };
 }
 
-async function liberarBeneficioIndicacao(indicadorClienteId) {
-    const id = idValido(indicadorClienteId, 'o cliente indicador');
-    const { itens, resumos } = await listarIndicacoes();
-    const resumo = resumos.find(item => item.clienteId === id);
-    if (!resumo || !resumo.prontoParaRevisao) throw new Error('Este cliente ainda não possui duas indicações com três pagamentos válidos cada.');
-    const cliente = await buscarUm('SELECT id, nome FROM clientes WHERE id = ?', [id]);
-    if (!cliente) throw new Error('Cliente indicador não encontrado.');
-    const qualificadas = itens.filter(item => Number(item.indicadorClienteId) === id
-        && item.status === 'ativa' && Number(item.pagamentosValidos || 0) >= 3).slice(0, 2);
-    if (qualificadas.length < 2) throw new Error('As indicações mudaram durante a revisão. Atualize a página e tente novamente.');
-    const resultado = await executar(`UPDATE programa_indicacoes SET status = 'beneficio_liberado', beneficioLiberadoEm = CURRENT_TIMESTAMP, atualizadoEm = CURRENT_TIMESTAMP
-        WHERE id IN (?, ?) AND status = 'ativa'`, qualificadas.map(item => item.id));
-    if (resultado.changes < 2) throw new Error('As indicações mudaram durante a revisão. Atualize a página e tente novamente.');
-    await executar('UPDATE clientes SET bonusMeses = COALESCE(bonusMeses, 0) + 3, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?', [id]);
-    await executar('INSERT INTO cliente_notas (clienteId, texto) VALUES (?, ?)', [id, 'Programa de indicação: 3 meses de bônus liberados após revisão manual de 2 indicados com 3 pagamentos válidos cada.']);
-    return { cliente, meses: 3 };
+let processamento = null;
+function processarCreditosIndicacoes() {
+    if (processamento) return processamento;
+    processamento = creditarElegiveis().finally(() => { processamento = null; });
+    return processamento;
+}
+
+async function creditarElegiveis() {
+    await db.ready;
+    await require('./modelosMensagem').listarModelos();
+    // Conexão exclusiva: nenhuma operação de outra rota entra nesta transação.
+    const sqlite3 = require('sqlite3');
+    const conexao = await new Promise((resolve, reject) => {
+        const banco = new sqlite3.Database(db.dbPath, erro => erro ? reject(erro) : resolve(banco));
+    });
+    conexao.configure('busyTimeout', 5000);
+    const run = (sql, params = []) => new Promise((resolve, reject) => conexao.run(sql, params, function(err) {
+        err ? reject(err) : resolve({ id: this.lastID, changes: this.changes });
+    }));
+    const all = (sql, params = []) => new Promise((resolve, reject) => conexao.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
+    let transacao = false;
+    try {
+        await run('BEGIN IMMEDIATE');
+        transacao = true;
+        const ativas = await all("SELECT chave FROM modelos_mensagem WHERE plano = 'campanha' AND ativo = 1");
+        const chave = ativas.length === 1 ? ativas[0].chave : '';
+        const regra = REGRAS[chave];
+        const creditos = [];
+        if (regra) {
+            const itens = await all(consultaIndicacoes);
+            const grupos = new Map();
+            for (const item of itens) {
+                if (item.status !== 'ativa' || item.campanhaChave !== chave || item.pagamentosValidos < regra.pagamentos) continue;
+                // Protege também vínculos legados duplicados para o mesmo indicado.
+                if (itens.some(outro => outro.indicadoClienteId === item.indicadoClienteId && outro.status === 'beneficio_liberado')) continue;
+                const grupo = grupos.get(item.indicadorClienteId) || [];
+                if (!grupo.some(outro => outro.indicadoClienteId === item.indicadoClienteId)) grupo.push(item);
+                grupos.set(item.indicadorClienteId, grupo);
+            }
+            const usados = new Set();
+            for (const [clienteId, grupo] of grupos) {
+                const disponiveis = grupo.filter(item => !usados.has(item.indicadoClienteId));
+                while (disponiveis.length >= regra.indicados) {
+                    const lote = disponiveis.splice(0, regra.indicados);
+                    const credito = await run('INSERT INTO indicacao_creditos (indicadorClienteId, campanhaChave, meses) VALUES (?, ?, ?)', [clienteId, chave, regra.meses]);
+                    for (const item of lote) {
+                        await run(`UPDATE programa_indicacoes SET status = 'beneficio_liberado', creditoId = ?, beneficioMeses = ?,
+                            beneficioLiberadoEm = CURRENT_TIMESTAMP, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`, [credito.id, regra.meses, item.id]);
+                        usados.add(item.indicadoClienteId);
+                    }
+                    await run('UPDATE clientes SET bonusMeses = COALESCE(bonusMeses, 0) + ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?', [regra.meses, clienteId]);
+                    await run('INSERT INTO cliente_notas (clienteId, texto) VALUES (?, ?)', [clienteId,
+                        `Campanha ${regra.titulo}: ${regra.meses} mês(es) de bônus creditado(s) automaticamente após ${regra.indicados} indicação(ões) com ${regra.pagamentos} mensalidade(s) paga(s). Crédito ${credito.id}. Aplicação e aviso permanecem manuais.`]);
+                    creditos.push({ clienteId, meses: regra.meses, creditoId: credito.id });
+                }
+            }
+        }
+        await run('COMMIT');
+        transacao = false;
+        return creditos;
+    } catch (erro) {
+        if (transacao) await run('ROLLBACK');
+        throw erro;
+    } finally {
+        await new Promise(resolve => conexao.close(resolve));
+    }
 }
 
 async function cancelarIndicacao(indicacaoId, motivo = '') {
     const id = idValido(indicacaoId, 'a indicação');
     const resultado = await executar(`UPDATE programa_indicacoes SET status = 'cancelada', motivoCancelamento = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'ativa'`, [String(motivo || '').trim().slice(0, 300), id]);
-    if (!resultado.changes) throw new Error('A indicação não está ativa ou não foi encontrada.');
+    if (!resultado.changes) throw new Error('A indicação não está ativa ou já gerou um crédito.');
 }
 
-module.exports = { registrarIndicacao, listarIndicacoes, liberarBeneficioIndicacao, cancelarIndicacao };
+let agendador = null;
+function iniciarCreditosIndicacoes() {
+    if (agendador) return;
+    const verificar = () => processarCreditosIndicacoes().catch(erro => console.error('Falha no crédito de indicações:', erro.message));
+    verificar();
+    agendador = setInterval(verificar, 60000);
+    agendador.unref();
+}
+
+module.exports = { registrarIndicacao, listarIndicacoes, cancelarIndicacao, obterCampanhaAtiva, processarCreditosIndicacoes, iniciarCreditosIndicacoes };

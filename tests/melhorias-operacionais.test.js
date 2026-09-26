@@ -33,53 +33,6 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.ok(dashboard.indexOf('Clientes com Vencimento Próximo') < dashboard.lastIndexOf('${prioridadesDoDiaHtml}'));
 });
 
-test('Programa de indicação exige revisão humana antes do bônus e atualiza o modelo da campanha', () => {
-    const indicacoes = fs.readFileSync(path.join(repoRoot, 'services', 'indicacoesService.js'), 'utf8');
-    const modelos = fs.readFileSync(path.join(repoRoot, 'services', 'modelosMensagem.js'), 'utf8');
-    const rotas = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
-    const migracao = fs.readFileSync(path.join(repoRoot, 'database', 'migrations', '018-programa-indicacoes.js'), 'utf8');
-    assert.match(migracao, /CREATE TABLE IF NOT EXISTS programa_indicacoes/);
-    assert.match(indicacoes, /pagamentosValidos.*>= 3/);
-    assert.match(indicacoes, /bonusMeses = COALESCE\(bonusMeses, 0\) \+ 3/);
-    assert.match(indicacoes, /mesmo telefone do indicador/);
-    assert.match(indicacoes, /mesmo MAC do indicador/);
-    assert.match(rotas, /Programa de indicação/);
-    assert.match(rotas, /Liberar 3 meses/);
-    assert.match(modelos, /INDIQUE E GANHE 3 MESES/);
-    assert.match(modelos, /3 meses ativos/);
-    assert.match(modelos, /campanha_indique_ganhe_tres_meses/);
-    assert.match(modelos, /UPDATE modelos_mensagem SET ativo = 0/);
-});
-
-test('Programa de indicação só libera três bônus após duas indicações com três pagamentos reais', () => {
-    const codigo = `
-        const db = require('./database/sqlite');
-        const indicacoes = require('./services/indicacoesService');
-        const run = (sql, params = []) => new Promise((resolve, reject) => db.run(sql, params, function(err) { err ? reject(err) : resolve(this); }));
-        const get = (sql, params = []) => new Promise((resolve, reject) => db.get(sql, params, (err, row) => err ? reject(err) : resolve(row)));
-        (async () => {
-            await db.ready;
-            await run("INSERT INTO clientes (nome, telefone, status) VALUES ('Indicador', '5511999000001', 'ativo')");
-            await run("INSERT INTO clientes (nome, telefone, status) VALUES ('Indicado A', '5511999000002', 'ativo')");
-            await run("INSERT INTO clientes (nome, telefone, status) VALUES ('Indicado B', '5511999000003', 'ativo')");
-            await indicacoes.registrarIndicacao({ indicadorClienteId: 1, indicadoClienteId: 2 });
-            await indicacoes.registrarIndicacao({ indicadorClienteId: 1, indicadoClienteId: 3 });
-            for (const clienteId of [2, 3]) for (let i = 0; i < 3; i += 1) {
-                await run("INSERT INTO cliente_pagamentos (clienteId, plano, formaPagamento, valorTotal) VALUES (?, 'Mensal', 'PIX', '35,00')", [clienteId]);
-            }
-            const antes = await indicacoes.listarIndicacoes();
-            if (!antes.resumos[0]?.prontoParaRevisao) throw new Error('beneficio deveria aguardar revisao');
-            await indicacoes.liberarBeneficioIndicacao(1);
-            const indicador = await get('SELECT bonusMeses FROM clientes WHERE id = 1');
-            const depois = await indicacoes.listarIndicacoes();
-            if (Number(indicador.bonusMeses) !== 3 || depois.itens.filter(item => item.status === 'beneficio_liberado').length !== 2) throw new Error('beneficio incorreto');
-            console.log('ok');
-        })().catch(err => { console.error(err); process.exit(1); });
-    `;
-    const { ambiente, stdout } = executarIsolado(codigo);
-    try { assert.equal(stdout, 'ok'); } finally { removerAmbiente(ambiente); }
-});
-
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);
@@ -474,6 +427,7 @@ test('Bônus Mensal consome um crédito uma única vez e registra no Financeiro'
         const base={nome:'Cliente Bônus',telefone:'5511999998011',tipoPlanoId:String(mensal.id),plano:'Mensal',diasContrato:30,valorPlano:'35,00',dataInicio:'2026-08-01T00:00',dataVencimento:'2026-09-01T23:59',bonusMeses:2,status:'ativo'};
         const criado=await c.salvarCliente(base);
         const primeiro=await c.salvarCliente({...criado,tipoPlanoId:String(bonus.id),dataInicio:'2026-09-02T00:00',dataVencimento:'2026-10-02T23:59'});
+        if(primeiro.valorPlano !== '35,00') throw new Error('valor contratado alterado pelo bônus');
         const repetido=await c.salvarCliente({...primeiro,tipoPlanoId:String(bonus.id),dataInicio:'2026-09-02T00:00',dataVencimento:'2026-10-02T23:59'});
         const segundo=await c.salvarCliente({...repetido,tipoPlanoId:String(bonus.id),dataInicio:'2026-10-03T00:00',dataVencimento:'2026-11-03T23:59'});
         let semSaldo=false;

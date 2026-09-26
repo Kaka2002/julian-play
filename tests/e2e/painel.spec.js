@@ -174,3 +174,18 @@ test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {
     const carregou = await page.locator('img[alt="Logo atual"]').evaluate(img => img.naturalWidth > 0);
     expect(carregou).toBe(true);
 });
+
+test('indicações mostram regra ativa e modelos de bônus podem ser editados', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/indicacoes');
+    await expect(page.getByRole('heading', { name: 'Programa de indicação' })).toBeVisible();
+    await expect(page.getByText('1 indicado(s), 1 mensalidade(s) paga(s) por indicado: 1 mês(es) de bônus.', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Quem indicou')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Liberar 3 meses' })).toHaveCount(0);
+    await page.goto('/modelos');
+    const card = page.locator('.model-card').filter({ hasText: 'Indicação — bônus de 1 mês(es) liberado' });
+    await expect(card).toBeVisible();
+    await card.getByRole('link', { name: 'Editar modelo' }).click();
+    await expect(page.locator('select[name=plano]')).toHaveValue('bonus');
+    await expect(page.getByLabel('Título', { exact: true })).toHaveValue('Indicação — bônus de 1 mês(es) liberado');
+});

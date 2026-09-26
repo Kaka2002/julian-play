@@ -185,7 +185,7 @@ const {
     testarIntegracaoPainel,
     reagendarRenovacao
 } = require('../services/renovacaoPainelService');
-const { registrarIndicacao, listarIndicacoes, liberarBeneficioIndicacao, cancelarIndicacao } = require('../services/indicacoesService');
+const { registrarIndicacao, listarIndicacoes, processarCreditosIndicacoes, cancelarIndicacao } = require('../services/indicacoesService');
 
 const router = express.Router();
 const contextoAuditoria = new AsyncLocalStorage();
@@ -6329,6 +6329,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             })}
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
+            <input type="hidden" name="bonusMesesOriginal" value="${escapar(cliente.bonusMeses || 0)}">
             <label class="toggle-line full">
                 <input type="checkbox" name="whatsappMarketingConsentimento" value="1" ${Number(cliente.whatsappMarketingConsentimento || 0) === 1 ?'checked' : ''}>
                 <span>Cliente autorizou receber campanhas pelo WhatsApp</span>
@@ -6351,7 +6352,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             <div class="helper full">${saldoBonusDisponivel > 0
-                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Ao salvar o plano <strong>Bônus Mensal</strong>, será usado 1 bônus, aplicado um ciclo de 30 dias por R$ 0,00 e criado um histórico no Financeiro.`
+                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Ao salvar o plano <strong>Bônus Mensal</strong>, será usado 1 bônus, registrado um ciclo de 30 dias sem cobrança no Financeiro. O valor contratado será preservado. Confira o vencimento antes de salvar; o aviso é manual em Modelos.`
                 : planoAtualEhBonus
                     ?'Este ciclo de Bônus Mensal já foi registrado. Para iniciar outro ciclo, conceda um novo bônus antes de salvar uma nova data de vencimento.'
                     :'O plano Bônus Mensal aparece somente quando o cliente possui bônus disponível.'}</div>
@@ -6483,7 +6484,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             const plano = planos.find(item => item.id === tipoPlano.value);
             if (!plano) return;
             diasContrato.value = plano.dias || '';
-            valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
+            if (plano.nome !== 'Bônus Mensal') valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 statusCliente.value = 'teste';
@@ -7801,7 +7802,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Campanha de indicação</h2>
-                <div class="subtitle"><strong>Nova regra:</strong> indique 2 clientes; cada um completa 3 mensalidades pagas; depois revise e libere 3 meses de crédito.</div>
+                <div class="subtitle">O bônus segue a campanha ativa em Modelos. Acompanhe indicações e créditos automáticos em Controlar indicações.</div>
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
                 ${campanhaEmAndamento ? controlesCampanhaAmizadeHtml('/clientes') : ''}
             </div>
@@ -8547,6 +8548,7 @@ function variaveisDisponiveis(clicavel = false) {
         ['{{vencimento}}', 'Data de vencimento'],
         ['{{dias}}', 'Dias restantes ou vencidos'],
         ['{{valor}}', 'Valor do plano'],
+        ['{{bonusDisponivel}}', 'Saldo de bônus em meses'],
         ['{{planos}}', 'Lista de planos e valores; usada no modelo de teste grátis encerrado'],
         ['{{telefoneWhatsApp}}', 'WhatsApp da instalação usado em campanhas']
     ];
@@ -8648,38 +8650,36 @@ function telaModelos({ modelos, config }) {
     </section>`;
 }
 
-function telaIndicacoes({ clientes = [], indicacoes = { itens: [], resumos: [] } }) {
-    const opcoesClientes = clientes
-        .filter(cliente => cliente.id && cliente.status !== 'cancelado')
-        .map(cliente => `<option value="${escapar(cliente.id)}">${escapar(cliente.nome)}${cliente.telefone ?` · ${escapar(cliente.telefone)}` : ''}</option>`)
-        .join('');
-    const prontos = indicacoes.resumos.filter(item => item.prontoParaRevisao);
-    const linhas = indicacoes.itens.length ?indicacoes.itens.map(item => {
-        const pagamentos = Number(item.pagamentosValidos || 0);
-        const situacao = item.status === 'beneficio_liberado'
-            ? '<span class="badge green">Benefício liberado</span>'
-            : item.status === 'cancelada'
-                ? '<span class="badge muted">Cancelada</span>'
-                : pagamentos >= 3
-                    ? '<span class="badge green">Qualificada</span>'
-                    : `<span class="badge orange">${pagamentos}/3 pagamentos</span>`;
-        return `<tr><td data-label="Indicador"><strong>${escapar(item.indicadorNome)}</strong><br><span class="helper">${escapar(item.indicadorTelefone || '-')}</span></td>
-            <td data-label="Indicado"><strong>${escapar(item.indicadoNome)}</strong><br><span class="helper">${escapar(item.indicadoTelefone || '-')}</span></td>
-            <td data-label="Pagamentos">${escapar(pagamentos)} de 3</td><td data-label="Situação">${situacao}</td>
-            <td data-label="Ação">${item.status === 'ativa' ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação? Isso não apaga o histórico.');"><button class="button secondary" type="submit">Cancelar</button></form>` : escapar(item.motivoCancelamento || '-')}</td></tr>`;
-    }).join('') : '<tr><td colspan="5" class="empty">Nenhuma indicação registrada.</td></tr>';
-    return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Controle de indicação com conferência humana antes de qualquer crédito.</div></div><a class="button secondary" href="/clientes">Voltar ao painel</a></section>
-    <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">Nova regra da campanha</h2><div class="subtitle">Indique 2 clientes. Cada indicado deve completar 3 mensalidades pagas. Depois disso, a equipe revisa e libera 3 meses de crédito ao indicador.</div></div><span class="badge green">3 meses após revisão</span></div>
-        <div class="notice warn" style="margin:0 20px 20px;">O sistema não concede nada automaticamente. Ele considera apenas pagamentos reais no histórico, ignora bônus e bloqueia o mesmo telefone ou MAC entre indicador e indicado.</div>
-        <form class="fields" method="post" action="/indicacoes" style="padding:0 20px 20px;">
-            ${campo({ nome: 'indicadorClienteId', label: 'Quem indicou', valor: '', opcoes: [{ valor: '', texto: 'Selecione o cliente...' }, ...clientes.filter(cliente => cliente.id && cliente.status !== 'cancelado').map(cliente => ({ valor: String(cliente.id), texto: `${cliente.nome}${cliente.telefone ?` · ${cliente.telefone}` : ''}` }))] })}
-            ${campo({ nome: 'indicadoClienteId', label: 'Cliente indicado', valor: '', opcoes: [{ valor: '', texto: 'Selecione o cliente...' }, ...clientes.filter(cliente => cliente.id && cliente.status !== 'cancelado').map(cliente => ({ valor: String(cliente.id), texto: `${cliente.nome}${cliente.telefone ?` · ${cliente.telefone}` : ''}` }))] })}
-            <div class="actions full"><button class="button green" type="submit">${icon('plus')} Registrar indicação</button><a class="button secondary" href="/modelos">Ver texto da campanha</a></div>
-        </form></section>
-    <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">Aguardando revisão</h2><div class="subtitle">Somente os clientes que já cumprem a regra aparecem aqui.</div></div><span class="badge ${prontos.length ?'orange' :'green'}">${escapar(prontos.length)} pronto(s)</span></div>
-        ${prontos.length ?`<div style="padding:0 20px 20px;">${prontos.map(item => `<div class="client-row"><div><strong>${escapar(item.nome)}</strong><div class="helper">${escapar(item.qualificadas)} de 2 indicações qualificadas</div></div><div class="helper">Confirme os pagamentos antes de liberar.</div><form method="post" action="/indicacoes/${escapar(item.clienteId)}/liberar" onsubmit="return confirm('Confirmou dois indicados com três mensalidades reais cada? Serão creditados 3 meses de bônus, sem enviar mensagem automática.');"><button class="button green" type="submit">Liberar 3 meses</button></form></div>`).join('')}</div>` : '<div class="empty">Nenhum benefício pronto para revisão.</div>'}
-    </section>
-    <section class="clients-panel"><table class="clients-table"><thead><tr><th>Indicador</th><th>Indicado</th><th>Pagamentos reais</th><th>Situação</th><th>Ação</th></tr></thead><tbody>${linhas}</tbody></table></section>`;
+function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: null } }) {
+    const campanha = indicacoes.campanha;
+    const opcoes = [{ valor: '', texto: 'Selecione o cliente...' }, ...clientes.filter(c => c.id && c.status !== 'cancelado')
+        .map(c => ({ valor: String(c.id), texto: c.nome }))];
+    const linhas = indicacoes.itens.map(item => {
+        const regra = item.regra;
+        const liberado = item.status === 'beneficio_liberado';
+        const situacao = liberado ? `${item.beneficioMeses} mês(es) creditado(s)`
+            : item.status === 'cancelada' ? 'Cancelada'
+                : !item.campanhaAtiva ? 'Aguardando ativação desta campanha'
+                    : Number(item.pagamentosValidos) >= regra.pagamentos ? 'Mensalidades cumpridas; aguardando grupo da campanha'
+                        : 'Aguardando mensalidades';
+        return `<tr><td data-label="Indicador">${escapar(item.indicadorNome)}</td>
+            <td data-label="Indicado">${escapar(item.indicadoNome)}</td>
+            <td data-label="Campanha">${escapar(regra?.titulo || item.campanhaChave)}</td>
+            <td data-label="Mensalidades">${escapar(item.pagamentosValidos)} / ${escapar(regra?.pagamentos || 3)}</td>
+            <td data-label="Situação">${escapar(situacao)}${item.creditoId ?`<div class="helper">Crédito #${escapar(item.creditoId)} · ${escapar(item.beneficioLiberadoEm)}</div>` : ''}</td>
+            <td data-label="Ações"><a class="button secondary" href="/clientes/${escapar(item.indicadorClienteId)}/editar">Usar bônus</a>
+                ${item.status === 'ativa' ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação?');"><button class="button secondary" type="submit">Cancelar</button></form>` : ''}</td></tr>`;
+    }).join('');
+    return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Crédito automático, uso do bônus e aviso ao cliente manuais.</div></div><a class="button secondary" href="/modelos">Campanhas e mensagens</a></section>
+        <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${escapar(campanha?.titulo || 'Nenhuma campanha de indicação ativa')}</h2>
+        <div class="subtitle">${campanha ?`${campanha.indicados} indicado(s), ${campanha.pagamentos} mensalidade(s) paga(s) por indicado: ${campanha.meses} mês(es) de bônus.` : 'Ative uma das duas campanhas em Modelos para registrar e liberar indicações.'}</div></div></div>
+        <div class="notice" style="margin:0 20px 20px;">O saldo é atualizado automaticamente em até um minuto. Vencimento e mensagens continuam sob seu controle. Cada indicação fica vinculada à campanha ativa no registro; trocar a campanha pausa os vínculos anteriores. Pagamentos de bônus, testes, excluídos ou sem valor não contam. Uma indicação não pode gerar bônus novamente.</div>
+        ${campanha ?`<form class="fields" method="post" action="/indicacoes" style="padding:0 20px 20px;">
+            ${campo({ nome: 'indicadorClienteId', label: 'Quem indicou', valor: '', opcoes })}
+            ${campo({ nome: 'indicadoClienteId', label: 'Cliente indicado', valor: '', opcoes })}
+            <div class="actions full"><button class="button green" type="submit">Registrar indicação</button></div></form>` : ''}</section>
+        <section class="clients-panel"><table class="clients-table"><thead><tr><th>Indicador</th><th>Indicado</th><th>Campanha</th><th>Mensalidades</th><th>Situação</th><th>Ações</th></tr></thead>
+        <tbody>${linhas || '<tr><td colspan="6" class="empty">Nenhuma indicação registrada.</td></tr>'}</tbody></table></section>`;
 }
 
 function formularioModelo(modelo = {}) {
@@ -8705,6 +8705,7 @@ function formularioModelo(modelo = {}) {
                     { valor: 'semestral', texto: 'Semestral' },
                     { valor: 'anual', texto: 'Anual' },
                     { valor: 'aniversario', texto: 'Aniversário' },
+                    { valor: 'bonus', texto: 'Bônus (aviso manual)' },
                     { valor: 'cobranca', texto: 'Cobrança' }
                 ]
             })}
@@ -9701,6 +9702,7 @@ async function renderizarPaginaCampanhas(req, res) {
 
 async function renderizarPaginaIndicacoes(req, res) {
     desativarCache(res);
+    await processarCreditosIndicacoes();
     const [clientes, indicacoes] = await Promise.all([listarClientes(), listarIndicacoes()]);
     await renderizar(res, {
         titulo: 'Programa de indicação',
@@ -9720,15 +9722,6 @@ router.post('/indicacoes', async (req, res) => {
         return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(indicacao.reativada ? 'Indicação reativada para acompanhamento.' : 'Indicação registrada. O sistema acompanhará os pagamentos reais.')}`);
     } catch (err) {
         return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(err.message || 'Não foi possível registrar a indicação.')}`);
-    }
-});
-
-router.post('/indicacoes/:indicadorClienteId/liberar', async (req, res) => {
-    try {
-        const beneficio = await liberarBeneficioIndicacao(req.params.indicadorClienteId);
-        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(`${beneficio.meses} meses de bônus liberados para ${beneficio.cliente.nome}. Defina o vencimento e aplique o bônus na ficha do cliente quando for usar.`)}`);
-    } catch (err) {
-        return res.redirect(`/indicacoes?mensagem=${encodeURIComponent(err.message || 'Não foi possível liberar o benefício.')}`);
     }
 });
 

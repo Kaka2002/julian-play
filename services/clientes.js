@@ -814,8 +814,8 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
 
     cliente.plano = NOME_PLANO_BONUS_MENSAL;
     cliente.diasContrato = 30;
-    cliente.valorPlano = '0,00';
-    cliente.assinaturaApp = '0,00';
+    cliente.valorPlano = existente.valorPlano;
+    cliente.assinaturaApp = existente.assinaturaApp;
     cliente.status = 'ativo';
 
     const pagamentoExistente = await buscarUm(
@@ -943,6 +943,11 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             }
         }
 
+        const preservarCreditoAutomatico = existente && dados.bonusMesesOriginal !== undefined;
+        if (preservarCreditoAutomatico) {
+            const original = Math.max(0, Number.parseInt(dados.bonusMesesOriginal, 10) || 0);
+            cliente.bonusMeses = Math.max(0, Number(existente.bonusMeses || 0) + cliente.bonusMeses - original);
+        }
         const usoBonus = await prepararUsoPlanoBonusMensal(cliente, existente);
 
         const sqlAtualizacao = `UPDATE clientes SET
@@ -979,13 +984,13 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 origem = ?,
                 indicadoPor = ?,
                 tags = ?,
-                bonusMeses = ?,
+                bonusMeses = ${preservarCreditoAutomatico && !usoBonus.ativo ? 'MAX(0, COALESCE(bonusMeses, 0) + ?)' : '?'},
                 whatsappMarketingConsentimento = ?,
                 whatsappMarketingConsentidoEm = ?,
                 whatsappOptOutEm = ?,
                 status = ?,
                 atualizadoEm = CURRENT_TIMESTAMP
-            WHERE id = ?${usoBonus.deveRegistrar ? ' AND COALESCE(bonusMeses, 0) >= 1' : ''}`;
+            WHERE id = ?${usoBonus.deveRegistrar ? ` AND COALESCE(bonusMeses, 0) = ${usoBonus.saldoAnterior}` : ''}`;
         const paramsAtualizacao = [
                 cliente.nome,
                 cliente.telefone,
@@ -1020,7 +1025,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 cliente.origem,
                 cliente.indicadoPor,
                 cliente.tags,
-                cliente.bonusMeses,
+                preservarCreditoAutomatico && !usoBonus.ativo ? cliente.bonusMeses - Number(existente.bonusMeses || 0) : cliente.bonusMeses,
                 cliente.whatsappMarketingConsentimento,
                 cliente.whatsappMarketingConsentidoEm,
                 cliente.whatsappOptOutEm,

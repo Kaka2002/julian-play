@@ -229,7 +229,20 @@ async function seedModelosJaProcessado() {
 }
 
 async function garantirModelosPadrao() {
-    if (await seedModelosJaProcessado()) return;
+    const seedJaProcessado = await seedModelosJaProcessado();
+    for (const meses of [1, 3]) {
+        await executar(
+            'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
+            ['indicacao_bonus_' + meses, 'bonus', 'Indicação — bônus de ' + meses + ' mês(es) liberado',
+                'Olá, *{{nome}}!*\n\nSua indicação cumpriu os requisitos da campanha e você ganhou *' + meses + ' mês(es) de acesso grátis*!  🎁\n\nO bônus já está disponível no seu cadastro. Vamos combinar quando utilizá-lo. Obrigado por indicar nossos serviços!', 'green']
+        );
+    }
+    await executar(
+        'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
+        ['bonus_periodo_aplicado', 'bonus', 'Bônus aplicado — confirmação do período',
+            'Olá, *{{nome}}!*\n\nSeu período de bônus foi aplicado sem cobrança. Seu acesso está válido até *{{vencimento}}*. 🎁\n\nSaldo de bônus disponível: *{{bonusDisponivel}} mês(es)*.', 'green']
+    );
+    if (seedJaProcessado) return;
 
     for (const modelo of modelosPadrao) {
         await executar(
@@ -463,6 +476,7 @@ async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '') {
         vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: '',
         valor: cliente.valorPlano || cliente.valor || '',
+        bonusDisponivel: Math.max(0, Number.parseInt(cliente.bonusMeses, 10) || 0),
         telefoneWhatsApp: telefoneWhatsApp || 'o WhatsApp da instalação'
     };
 
@@ -575,6 +589,7 @@ function montarVariaveisCliente(cliente = {}, opcoes = {}) {
         plano: cliente.plano || 'assinatura',
         vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: diasInformados,
+        bonusDisponivel: Math.max(0, Number.parseInt(cliente.bonusMeses, 10) || 0),
         valor: cliente.valorPlano || cliente.valor || '',
         telefoneWhatsApp: opcoes.telefoneWhatsApp || 'o WhatsApp da instalação'
     };
