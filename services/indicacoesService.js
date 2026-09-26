@@ -102,7 +102,7 @@ const pagamentosValidosSql = `(SELECT COUNT(DISTINCT COALESCE(NULLIF(pagamento.v
         AND CAST(CASE WHEN instr(COALESCE(pagamento.valorTotal, '0'), ',') > 0 THEN REPLACE(REPLACE(pagamento.valorTotal, '.', ''), ',', '.') ELSE pagamento.valorTotal END AS REAL) > 0)`;
 
 const consultaIndicacoes = `SELECT indicacao.*, indicador.nome AS indicadorNome, indicador.telefone AS indicadorTelefone,
-    indicado.nome AS indicadoNome, indicado.telefone AS indicadoTelefone,
+    indicado.nome AS indicadoNome, indicado.telefone AS indicadoTelefone, indicado.dataVencimento AS indicadoDataVencimento,
     ${pagamentosValidosSql} AS pagamentosValidos
     FROM programa_indicacoes indicacao
     JOIN clientes indicador ON indicador.id = indicacao.indicadorClienteId
@@ -115,6 +115,48 @@ async function listarIndicacoes() {
         ...item, regra: REGRAS[item.campanhaChave], campanhaAtiva: item.campanhaChave === campanha?.chave
     }));
     return { itens, campanha, resumos: [] };
+}
+
+function adicionarMeses(dataTexto, meses) {
+    const data = new Date(String(dataTexto || '').length <= 10 ? `${dataTexto}T12:00:00` : dataTexto);
+    if (Number.isNaN(data.getTime())) return '';
+    data.setMonth(data.getMonth() + Math.max(0, Number(meses || 0)));
+    return data.toISOString().slice(0, 10);
+}
+
+async function listarResumoIndicacoesPainel() {
+    const { itens } = await listarIndicacoes();
+    const grupos = new Map();
+    for (const item of itens.filter(item => item.status === 'ativa' && item.regra)) {
+        const chave = `${item.indicadorClienteId}:${item.campanhaChave}`;
+        const grupo = grupos.get(chave) || { indicadorId: item.indicadorClienteId, indicadorNome: item.indicadorNome, campanha: item.regra, itens: [] };
+        grupo.itens.push(item);
+        grupos.set(chave, grupo);
+    }
+    return [...grupos.values()].map(grupo => {
+        const { campanha, itens: indicados } = grupo;
+        const prontos = indicados.filter(item => Number(item.pagamentosValidos) >= campanha.pagamentos);
+        const faltamIndicados = Math.max(0, campanha.indicados - prontos.length);
+        const pendencias = indicados.map(item => {
+            const faltamPagamentos = Math.max(0, campanha.pagamentos - Number(item.pagamentosValidos || 0));
+            return {
+                nome: item.indicadoNome,
+                pagos: Number(item.pagamentosValidos || 0),
+                faltamPagamentos,
+                previsao: faltamPagamentos ? adicionarMeses(item.indicadoDataVencimento, faltamPagamentos - 1) : ''
+            };
+        });
+        const previsoes = pendencias.filter(item => item.faltamPagamentos > 0 && item.previsao).map(item => item.previsao).sort();
+        return {
+            ...grupo,
+            registrados: indicados.length,
+            prontos: prontos.length,
+            faltamIndicados,
+            pendencias,
+            previsaoLiberacao: faltamIndicados ? '' : (previsoes.at(-1) || ''),
+            prontoParaCredito: faltamIndicados === 0 && pendencias.every(item => item.faltamPagamentos === 0)
+        };
+    }).sort((a, b) => a.prontoParaCredito === b.prontoParaCredito ? String(a.indicadorNome).localeCompare(String(b.indicadorNome), 'pt-BR') : a.prontoParaCredito ? -1 : 1);
 }
 
 let processamento = null;
@@ -200,4 +242,4 @@ function iniciarCreditosIndicacoes() {
     agendador.unref();
 }
 
-module.exports = { registrarIndicacao, listarIndicacoes, cancelarIndicacao, obterCampanhaAtiva, processarCreditosIndicacoes, iniciarCreditosIndicacoes };
+module.exports = { registrarIndicacao, listarIndicacoes, listarResumoIndicacoesPainel, cancelarIndicacao, obterCampanhaAtiva, processarCreditosIndicacoes, iniciarCreditosIndicacoes };

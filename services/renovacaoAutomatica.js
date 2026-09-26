@@ -173,7 +173,7 @@ async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } =
             if (enviado) {
                 enviados += 1;
                 await registrarAvisoRenovacaoProgramado(cliente.id, cliente.vencimento, diasAntes);
-                const bonusPendente = Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1
+                const bonusPendente = (cliente.statusAvisoBonus === 'programado' || Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1)
                     && Number(cliente.bonusMeses || 0) > 0;
                 if (!bonusPendente) await enviarPixAposAvisoVencimento(client, destino, cliente);
             } else {

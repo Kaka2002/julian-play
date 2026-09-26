@@ -2014,3 +2014,10 @@ pm ci normalmente.
 - Ao aplicar um período pelo plano Bônus — 1 mês ou Bônus — 3 meses, ou ao salvar nova data de início ou vencimento, a opção é desmarcada automaticamente no mesmo salvamento. Sem saldo ou com a opção desmarcada, os avisos e PIX seguem o comportamento anterior.
 - A campanha ativa Indique e ganhe 3 meses passa a exigir duas indicações com duas mensalidades pagas por indicado, mantendo o benefício de três meses. Modelos personalizados são preservados; o texto padrão anterior é atualizado somente se não tiver sido personalizado.
 - A migração 021 acrescenta apenas a opção desligada, preservando clientes, créditos, vencimentos, financeiro, modelos, sessões, backups e DATA_DIR. Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Validação: sintaxe, testes de bônus, campanhas e ações de cliente.
+
+## Controle de ciclo do aviso de bônus — versão 1.3.69
+
+- A ficha substitui a caixa por três estados visíveis: Não programado, Aviso de bônus programado e Bônus aplicado. Somente o estado programado autoriza o texto especial nos avisos de 5, 2, 1 dia, vencimento e uma hora antes.
+- Ao aplicar o bônus ou alterar a data de início ou vencimento de um ciclo programado, o estado muda para Bônus aplicado e os avisos daquele ciclo deixam de ser enviados. Um novo bônus exige seleção explícita de Aviso de bônus programado.
+- A migração 022 preserva agendamentos já marcados como Programado e deixa todos os demais como Não programado. Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Créditos, financeiro, modelos, sessões, backups e DATA_DIR são preservados.
+- O Dashboard mostra grupos de indicação em acompanhamento: indicador, campanha, indicados registrados, metas de mensalidades, pendências por indicado e previsão baseada no próximo vencimento cadastrado. A previsão é informativa; o crédito continua dependendo de pagamentos reais registrados.

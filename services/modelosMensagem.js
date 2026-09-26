@@ -560,7 +560,7 @@ async function montarMensagemPorModelo(cliente, dias) {
 async function montarMensagemAvisoProgramado(cliente, diasAntes) {
     const saldoBonus = Math.max(0, Number.parseInt(cliente.bonusMeses, 10) || 0);
     const usaAvisoBonus = [5, 2, 1, 0, -60].includes(Number(diasAntes))
-        && Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1
+        && (cliente.statusAvisoBonus === 'programado' || Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1)
         && saldoBonus > 0;
     if (usaAvisoBonus) {
         const modelo = await obterModeloPorChave('aviso_bonus_indicacao');

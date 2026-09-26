@@ -186,7 +186,7 @@ const {
     testarIntegracaoPainel,
     reagendarRenovacao
 } = require('../services/renovacaoPainelService');
-const { registrarIndicacao, listarIndicacoes, processarCreditosIndicacoes, cancelarIndicacao } = require('../services/indicacoesService');
+const { registrarIndicacao, listarIndicacoes, listarResumoIndicacoesPainel, processarCreditosIndicacoes, cancelarIndicacao } = require('../services/indicacoesService');
 
 const router = express.Router();
 const contextoAuditoria = new AsyncLocalStorage();
@@ -6359,11 +6359,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
             <input type="hidden" name="bonusMesesOriginal" value="${escapar(cliente.bonusMeses || 0)}">
             ${cliente.id ? '<div class="helper full"><a href="#historico-bonus">Ver origem e histórico de bônus / identificar saldo antigo</a></div>' : ''}
-            <label class="toggle-line full">
-                <input type="checkbox" name="avisoBonusIndicacaoAtivo" value="1" ${Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1 ?'checked' : ''}>
-                <span>Agradecer e avisar o bônus de indicação até a atualização do vencimento</span>
-            </label>
-            <div class="helper full">Com saldo disponível, os avisos de 5, 2, 1 dia, vencimento e 1 hora antes usam a mensagem de agradecimento com campanha e período. Ao salvar nova data de início ou vencimento, esta opção é desligada automaticamente.</div>
+            ${campo({
+                nome: 'statusAvisoBonus',
+                label: 'Controle do aviso de bônus',
+                valor: cliente.statusAvisoBonus || (Number(cliente.avisoBonusIndicacaoAtivo || 0) === 1 ? 'programado' : 'nao_programado'),
+                opcoes: [
+                    { valor: 'nao_programado', texto: 'Não programado' },
+                    { valor: 'programado', texto: 'Aviso de bônus programado' },
+                    { valor: 'aplicado', texto: 'Bônus aplicado' }
+                ]
+            })}
+            <div class="helper full">No estado programado e com saldo disponível, os avisos de 5, 2, 1 dia, vencimento e 1 hora antes usam a mensagem de agradecimento com campanha e período. Ao salvar nova data de início ou vencimento, o estado passa para Bônus aplicado.</div>
             <label class="toggle-line full">
                 <input type="checkbox" name="whatsappMarketingConsentimento" value="1" ${Number(cliente.whatsappMarketingConsentimento || 0) === 1 ?'checked' : ''}>
                 <span>Cliente autorizou receber campanhas pelo WhatsApp</span>
@@ -7761,7 +7767,7 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }, paginaPrioridades = 1) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }, paginaPrioridades = 1, indicacoesResumo = []) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
@@ -7827,6 +7833,16 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
         </div>`).join('')}
     </section>` : '';
+    const acompanhamentoIndicacoesHtml = indicacoesResumo.length ?`<div class="pending-list" style="border-top:1px solid var(--border);">
+        ${indicacoesResumo.map(grupo => `<article class="pending-item">
+            <div><span class="badge ${grupo.prontoParaCredito ? 'green' : 'info'}">${grupo.prontoParaCredito ? 'Pronto para crédito' : 'Em acompanhamento'}</span>
+                <h3>${escapar(grupo.indicadorNome)} · ${escapar(grupo.campanha.titulo)}</h3>
+                <p>${escapar(`${grupo.registrados} indicado(s) registrado(s); ${grupo.prontos}/${grupo.campanha.indicados} atingiram ${grupo.campanha.pagamentos} mensalidade(s).`)}
+                ${grupo.faltamIndicados ?` Falta(m) ${escapar(grupo.faltamIndicados)} indicado(s) qualificado(s).` : grupo.prontoParaCredito ?' A liberação será processada automaticamente.' : grupo.previsaoLiberacao ?` Previsão: após ${escapar(formatarDataHoraCurta(grupo.previsaoLiberacao))}.` : ''}</p>
+                ${grupo.pendencias.map(item => `<div class="helper">${escapar(item.nome)}: ${escapar(item.pagos)}/${escapar(grupo.campanha.pagamentos)} mensalidade(s) · ${item.faltamPagamentos ?`faltam ${escapar(item.faltamPagamentos)}${item.previsao ? ` · previsão ${escapar(formatarDataHoraCurta(item.previsao))}` : ''}` : 'meta atingida'}</div>`).join('')}
+            </div><a class="button secondary" href="/indicacoes">Ver detalhes</a>
+        </article>`).join('')}
+    </div>` : '<div class="helper" style="padding:0 20px 20px;">Nenhuma indicação em acompanhamento.</div>';
     return `<section class="page-title">
         <h1>Painel de Controle</h1>
         <div class="subtitle">Visão geral dos seus clientes</div>
@@ -7865,6 +7881,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
                 </form>
             </div>
         </div>
+        ${acompanhamentoIndicacoesHtml}
     </section>
     ${receitaMensalCard(receita, receitaReal, planos)}
     <section class="panel">
@@ -9669,7 +9686,7 @@ router.get('/clientes', async (req, res) => {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
     const whatsapp = getStatusWhatsApp();
-    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos, sistema] = await Promise.all([
+    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos, sistema, indicacoesResumo] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
@@ -9677,7 +9694,8 @@ router.get('/clientes', async (req, res) => {
         resumoAtendimentos(),
         resumoCrm(),
         listarTiposPlanos(),
-        obterStatusSistema(whatsapp)
+        obterStatusSistema(whatsapp),
+        listarResumoIndicacoesPainel()
     ]);
     const pendencias = await listarPendenciasOperacionais({}, { operacional: { whatsapp, sistema } });
     const mensagem = req.query.mensagem || '';
@@ -9687,7 +9705,7 @@ router.get('/clientes', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias, paginaPrioridades),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias, paginaPrioridades, indicacoesResumo),
         mensagem,
         ativo: 'painel'
     });

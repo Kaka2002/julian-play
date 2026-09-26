@@ -495,3 +495,10 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Implementado: a ficha possui uma caixa inicialmente desmarcada para programar avisos automáticos de bônus. Com saldo de bônus, os avisos de 5, 2, 1 dia, no vencimento e uma hora antes usam texto editável que informa campanha e período, agradece a indicação e incentiva novos encaminhamentos. Eles seguem até o operador aplicar o bônus e atualizar o vencimento. Sem marcação ou sem saldo, a renovação mantém a mensagem normal.
 - Ao consumir o bônus pelo plano interno ou alterar a data de início ou vencimento, a caixa é desligada automaticamente. Enquanto houver bônus programado, o aviso não inclui PIX. A nova regra da campanha ativa exige duas indicações com duas mensalidades pagas de cada indicado para liberar três meses.
 - Migração 021 preserva todos os dados e inicia a opção desligada. Afeta administrador, comerciais no servidor e instalação local; Painel Mestre inalterado. Validação: sintaxe e testes dedicados de campanhas, bônus e ações de cliente aprovados.
+
+## Controle de ciclo do aviso de bônus — versão 1.3.69
+
+- Implementado: a seleção Controle do aviso de bônus mostra Não programado, Aviso de bônus programado e Bônus aplicado. Apenas o estado programado aciona os avisos especiais, facilitando a conferência antes de qualquer envio.
+- Ao aplicar o bônus ou salvar nova data de início ou vencimento de um ciclo programado, o status muda automaticamente para Bônus aplicado. Um novo ciclo precisa ser programado pelo operador.
+- Migração 022 converte marcações existentes para Programado e preserva os demais dados. Afeta administrador, comerciais no servidor e instalação local; Painel Mestre inalterado.
+- Dashboard: acompanhamento agrupado por quem indicou, com campanha, progresso dos indicados, pendências de mensalidades e previsão informativa de liberação a partir do vencimento cadastrado. O crédito permanece automático somente após os pagamentos reais.

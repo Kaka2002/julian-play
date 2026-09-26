@@ -320,7 +320,10 @@ function montarCliente(dados = {}) {
         indicadoPor: limparTexto(dados.indicadoPor),
         tags: normalizarTags(dados.tags),
         bonusMeses: Math.max(0, Number.parseInt(dados.bonusMeses || 0, 10) || 0),
-        avisoBonusIndicacaoAtivo: dados.avisoBonusIndicacaoAtivo ? 1 : 0,
+        statusAvisoBonus: ['nao_programado', 'programado', 'aplicado'].includes(String(dados.statusAvisoBonus || ''))
+            ? String(dados.statusAvisoBonus)
+            : (dados.avisoBonusIndicacaoAtivo ? 'programado' : 'nao_programado'),
+        avisoBonusIndicacaoAtivo: 0,
         whatsappMarketingConsentimento: dados.whatsappMarketingConsentimento ? 1 : 0,
         whatsappMarketingConsentidoEm: dados.whatsappMarketingConsentimento
             ? (limparTexto(dados.whatsappMarketingConsentidoEm) || new Date().toISOString())
@@ -926,10 +929,16 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             const original = Math.max(0, Number.parseInt(dados.bonusMesesOriginal, 10) || 0);
             cliente.bonusMeses = Math.max(0, Number(existente.bonusMeses || 0) + cliente.bonusMeses - original);
         }
+        cliente.avisoBonusIndicacaoAtivo = cliente.statusAvisoBonus === 'programado' ? 1 : 0;
         const usoBonus = await prepararUsoPlanoBonusMensal(cliente, existente);
         const periodoAtualizado = String(cliente.dataInicio || '') !== String(existente.dataInicio || '')
             || String(cliente.dataVencimento || '') !== String(existente.dataVencimento || '');
-        if (usoBonus.deveRegistrar || periodoAtualizado) cliente.avisoBonusIndicacaoAtivo = 0;
+        const avisoEstavaProgramado = existente.statusAvisoBonus === 'programado'
+            || Number(existente.avisoBonusIndicacaoAtivo || 0) === 1;
+        if (usoBonus.deveRegistrar || (periodoAtualizado && avisoEstavaProgramado)) {
+            cliente.statusAvisoBonus = 'aplicado';
+            cliente.avisoBonusIndicacaoAtivo = 0;
+        }
 
         const sqlAtualizacao = `UPDATE clientes SET
                 nome = ?,
@@ -966,6 +975,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 indicadoPor = ?,
                 tags = ?,
                 bonusMeses = ${preservarCreditoAutomatico && !usoBonus.ativo ? 'MAX(0, COALESCE(bonusMeses, 0) + ?)' : '?'},
+                statusAvisoBonus = ?,
                 avisoBonusIndicacaoAtivo = ?,
                 whatsappMarketingConsentimento = ?,
                 whatsappMarketingConsentidoEm = ?,
@@ -1008,6 +1018,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
                 cliente.indicadoPor,
                 cliente.tags,
                 preservarCreditoAutomatico && !usoBonus.ativo ? cliente.bonusMeses - Number(existente.bonusMeses || 0) : cliente.bonusMeses,
+                cliente.statusAvisoBonus,
                 cliente.avisoBonusIndicacaoAtivo,
                 cliente.whatsappMarketingConsentimento,
                 cliente.whatsappMarketingConsentidoEm,
@@ -1044,9 +1055,9 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             nascimento, tipoPlanoId, diasContrato, valorPlano, assinaturaApp,
             validadeApp, dataValidadeApp, horasTeste, dataInicio, dataVencimento, appsInstalados,
             dispositivosSelecionados, paineisSelecionados, conexoesPainel, appInstalado,
-            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, indicadoPor, tags, bonusMeses, avisoBonusIndicacaoAtivo,
+            usuarioApp, senhaApp, enderecoMac, idAplicativo, acessosApp, observacoes, origem, indicadoPor, tags, bonusMeses, statusAvisoBonus, avisoBonusIndicacaoAtivo,
             whatsappMarketingConsentimento, whatsappMarketingConsentidoEm, whatsappOptOutEm, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             cliente.nome,
             cliente.telefone,
@@ -1082,6 +1093,7 @@ async function salvarCliente(dados, contextoAuditoria = {}) {
             cliente.indicadoPor,
             cliente.tags,
             cliente.bonusMeses,
+            cliente.statusAvisoBonus,
             cliente.avisoBonusIndicacaoAtivo,
             cliente.whatsappMarketingConsentimento,
             cliente.whatsappMarketingConsentidoEm,
