@@ -512,3 +512,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: cartão de resumo do bônus na ficha do cliente, com saldo, origem, indicado, estado do aviso, vencimento e próxima ação. O cronograma lista os cinco avisos do ciclo atual e informa se cada um está pendente ou enviado, incluindo o horário registrado.
 - A visualização é somente leitura: não envia mensagens, não cria cobrança e não consome crédito. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração; créditos, pagamentos, histórico, sessões e configurações existentes são preservados.
+
+## Aplicação guiada de bônus no vencimento — versão 1.3.72
+
+- Implementado: no vencimento de um bônus programado, o resumo exibe o atalho Aplicar 1 mês de bônus. A ficha abre com o plano interno e as datas calculadas, aguardando revisão e o salvamento explícito do operador.
+- O atalho não altera dados sozinho. Saldo, financeiro, WhatsApp e histórico só mudam pelo fluxo já existente de Salvar cliente e confirmação manual. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.

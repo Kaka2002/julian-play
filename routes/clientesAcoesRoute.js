@@ -162,6 +162,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             config,
             historicoBonus,
             avisosBonus,
+            aplicarBonusGuiado: req.query.aplicarBonus === '1',
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha,
             historicoPorPagina: req.query.historicoPorPagina,

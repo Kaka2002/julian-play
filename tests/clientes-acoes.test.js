@@ -94,6 +94,7 @@ test('ficha carrega historicos e elegibilidade de exclusao do mesmo cliente', as
     assert.deepEqual(tela.avisosBonus, []);
     assert.equal(tela.exclusaoDefinitiva.permitida, false);
     assert.equal(tela.paginaLinha, '2');
+    assert.equal(tela.aplicarBonusGuiado, false);
 });
 
 test('renovacao duplicada e bloqueada dentro da instancia e isolada entre instancias', async () => {

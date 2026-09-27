@@ -6097,6 +6097,14 @@ function resumoBonusProgramado(cliente = {}, historico = {}, avisos = []) {
             : saldo > 0
                 ? 'Programe o aviso quando decidir usar o bônus'
                 : 'Sem saldo disponível';
+    const dataVencimento = vencimento ?new Date(vencimento) : null;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const vencimentoChegou = dataVencimento && !Number.isNaN(dataVencimento.getTime())
+        && new Date(dataVencimento.getFullYear(), dataVencimento.getMonth(), dataVencimento.getDate()) <= hoje;
+    const acaoGuiada = status === 'programado' && saldo > 0 && vencimentoChegou
+        ? `<div class="actions" style="padding:0 20px 20px;"><a class="button primary" href="/clientes/${escapar(cliente.id)}/editar?aplicarBonus=1#tipoPlanoId">${icon('refresh')} Aplicar 1 mês de bônus</a></div>`
+        : '';
     const linhas = etapas.map(etapa => {
         const aviso = porCodigo.get(etapa.codigo);
         return `<div class="pending-item"><div><strong>${etapa.texto}</strong><div class="helper">${aviso ?`Enviado em ${formatarDataHoraCurta(aviso.enviadoEm)}` : 'Pendente'}</div></div><span class="badge ${aviso ?'green' : 'blue'}">${aviso ?'Enviado' : 'Pendente'}</span></div>`;
@@ -6110,6 +6118,7 @@ function resumoBonusProgramado(cliente = {}, historico = {}, avisos = []) {
             <div class="pending-item"><div><strong>Cronograma de avisos</strong><div class="helper">Os registros abaixo se referem ao vencimento atual.</div></div></div>
             ${linhas}
         </div>
+        ${acaoGuiada}
     </section>`;
 }
 
@@ -6378,13 +6387,26 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     const dispositivosSelecionados = lerListaSalva(cliente.dispositivosSelecionados);
     const paineisSelecionados = lerListaSalva(cliente.paineisSelecionados);
     const tagsSelecionadas = normalizarTagsTela(cliente.tags);
-    const planoAtual = cliente.tipoPlanoId || planos.find(plano => {
+    const planoAtualOriginal = cliente.tipoPlanoId || planos.find(plano => {
         return String(plano.nome || '').toLowerCase() === String(cliente.plano || '').toLowerCase();
     })?.id || '';
     const saldoBonusDisponivel = Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0);
-    const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtual) && ehPlanoBonusMensal(plano));
+    const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtualOriginal) && ehPlanoBonusMensal(plano));
     const planosDisponiveis = planos.filter(plano => !ehPlanoBonusMensal(plano)
-        || saldoBonusDisponivel >= mesesPlanoBonus(plano) || String(plano.id) === String(planoAtual));
+        || saldoBonusDisponivel >= mesesPlanoBonus(plano) || String(plano.id) === String(planoAtualOriginal));
+    const planoBonusUmMes = planosDisponiveis.find(plano => ehPlanoBonusMensal(plano) && mesesPlanoBonus(plano) === 1);
+    const vencimentoParaGuia = cliente.dataVencimento || cliente.vencimento || '';
+    const dataVencimentoParaGuia = vencimentoParaGuia ?new Date(vencimentoParaGuia) : null;
+    const hojeParaGuia = new Date();
+    hojeParaGuia.setHours(0, 0, 0, 0);
+    const vencimentoChegouParaGuia = dataVencimentoParaGuia && !Number.isNaN(dataVencimentoParaGuia.getTime())
+        && new Date(dataVencimentoParaGuia.getFullYear(), dataVencimentoParaGuia.getMonth(), dataVencimentoParaGuia.getDate()) <= hojeParaGuia;
+    const aplicarBonusGuiado = Boolean(opcoesFormulario.aplicarBonusGuiado)
+        && String(cliente.statusAvisoBonus || '') === 'programado'
+        && saldoBonusDisponivel > 0
+        && vencimentoChegouParaGuia
+        && planoBonusUmMes;
+    const planoAtual = aplicarBonusGuiado ?planoBonusUmMes.id : planoAtualOriginal;
     const topoCliente = cliente.id
         ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
             ${resumoBonusProgramado(cliente, opcoesFormulario.historicoBonus, opcoesFormulario.avisosBonus)}
@@ -6397,6 +6419,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
     ${alertaClienteHtml(alertas)}
+    ${aplicarBonusGuiado ?'<div class="notice success">Bônus — 1 mês foi preparado com início no vencimento atual e término calculado. Confira as datas e clique em Salvar cliente para aplicar. Nenhum saldo foi consumido ainda.</div>' : ''}
     <section class="panel">
         <form class="fields client-form" method="post" action="/clientes/salvar">
             ${cliente.id ?`<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
@@ -6667,6 +6690,11 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
 
         if (!dataVencimento.value && dataInicio.value && diasContrato.value) {
             calcularVencimento();
+        }
+
+        if (${aplicarBonusGuiado ?'true' : 'false'}) {
+            atualizarPlano();
+            tipoPlano?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function atualizarHorasTeste() {

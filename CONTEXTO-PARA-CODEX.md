@@ -2033,3 +2033,9 @@ pm ci normalmente.
 - A ficha do cliente passa a exibir, abaixo dos cartões principais, o **Resumo do bônus** quando há saldo, aviso programado ou ciclo de bônus aplicado. Ele mostra saldo, origem conhecida, indicado quando registrado, status, vencimento e a próxima ação operacional.
 - O mesmo quadro traz o cronograma de 5, 2 e 1 dia antes, no vencimento e uma hora antes. Cada etapa mostra Pendente ou Enviado com o horário real já registrado para o vencimento atual; avisos de ciclos anteriores não aparecem como se fossem do ciclo atual.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Usa somente `avisos_renovacao` e histórico de créditos existentes, sem migração, cobrança, envio, consumo de saldo ou alteração de dados. Validação: sintaxe, testes de ficha do cliente/bônus, diff e pacote local.
+
+## Aplicação guiada de bônus no vencimento — versão 1.3.72
+
+- Quando o cliente possui saldo, está com **Aviso de bônus programado** e chega à data de vencimento, o Resumo do bônus mostra **Aplicar 1 mês de bônus**. O atalho abre a ficha já preparada com Bônus — 1 mês, início no vencimento atual e término calculado pelo mesmo fluxo da seleção manual.
+- O atalho não grava, não envia WhatsApp, não cria PIX nem consome saldo. O operador revisa as datas e confirma em Salvar cliente; depois usa a confirmação manual do bônus se desejar comunicar o cliente.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva dados, créditos, pagamentos, sessões, backups e DATA_DIR; não requer migração. Validação: sintaxe, testes de clientes/bônus, diff e pacote local.
