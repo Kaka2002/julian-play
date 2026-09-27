@@ -766,6 +766,15 @@ async function listarClientes(filtros = {}) {
         params.push(`%${limparTexto(filtros.tag)}%`);
     }
 
+    const bonus = limparTexto(filtros.bonus);
+    if (bonus === 'disponivel') {
+        where.push('COALESCE(bonusMeses, 0) > 0');
+    } else if (bonus === 'programado') {
+        where.push("COALESCE(bonusMeses, 0) > 0 AND statusAvisoBonus = 'programado'");
+    } else if (bonus === 'aplicado') {
+        where.push("statusAvisoBonus = 'aplicado'");
+    }
+
     const limite = Number(filtros.limite || 0);
     const limiteSql = limite > 0 ? 'LIMIT ?' : '';
     if (limite > 0) params.push(limite);

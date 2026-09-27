@@ -2050,3 +2050,9 @@ pm ci normalmente.
 - O card de Campanha de indicação ganhou uma faixa compacta de Bônus para acompanhar. Ela lista até três clientes com saldo e Aviso de bônus programado, mostrando meses disponíveis e prazo de vencimento; cada item abre diretamente o resumo do bônus na ficha. Havendo mais de três, o Dashboard mostra somente o botão Ver todos.
 - A faixa usa apenas clientes já carregados pelo Dashboard e é exibida somente quando há acompanhamento pendente, preservando o visual enxuto e sem paginação ou expansão vertical relevante. Não envia avisos, não altera saldo, datas, financeiro ou histórico.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Sem migração; dados, sessões, backups e DATA_DIR preservados. Validação: sintaxe, testes operacionais/clientes/bônus, diff e pacote local.
+
+## Filtros e resumo mensal de bônus — versão 1.3.75
+
+- A lista de Clientes ganhou o filtro Bônus: disponível, programado ou aplicado. A opção mantém os demais filtros, a paginação e a exportação CSV; Bônus disponível procura saldo maior que zero, Programado exige saldo e aviso programado, e Aplicado mostra ciclos já marcados como aplicados.
+- A faixa compacta Bônus para acompanhar no Dashboard agora informa quantos ciclos de bônus foram aplicados no mês, usando somente pagamentos válidos já registrados. Ela continua no card existente, sem criar navegação vertical ou executar ações automáticas.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva banco, créditos, pagamentos, configurações, sessões, backups e DATA_DIR. Sem migração e sem ação manual obrigatória. Validação: sintaxe, testes de clientes e bônus, diff e pacote local.

@@ -527,3 +527,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: faixa compacta no card de campanha do Dashboard, com até três clientes em aviso de bônus programado, saldo, prazo e link direto para a ficha. Mais registros não ampliam a lista: ficam disponíveis pelo botão Ver todos.
 - A visualização não executa automação, mensagem, cobrança ou alteração de dados. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.
+
+## Filtros e resumo mensal de bônus — versão 1.3.75
+
+- Implementado: filtro de bônus na lista de clientes para localizar saldo disponível, aviso programado ou ciclo aplicado, preservando busca, demais filtros, paginação e exportação.
+- Implementado: indicador compacto de ciclos de bônus aplicados no mês dentro da faixa existente de acompanhamento no Dashboard. Não envia mensagens, não consome saldo nem altera financeiro.
+- Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.

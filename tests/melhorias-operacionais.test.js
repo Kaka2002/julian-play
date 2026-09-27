@@ -34,6 +34,12 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.match(dashboard, /const bonusProgramados = clientes/);
     assert.match(dashboard, /dashboard-bonus-track/);
     assert.match(dashboard, /bonusProgramados\.slice\(0, 3\)/);
+    assert.match(dashboard, /bonusAplicadosMes/);
+    assert.match(dashboard, /aplicado\(s\) neste mês/);
+    assert.match(fonte, /name="bonus" onchange="this\.form\.submit\(\)" aria-label="Filtrar clientes por bônus"/);
+    assert.match(fonte, /\['disponivel', 'Bônus disponível'\]/);
+    assert.match(fonte, /\['programado', 'Bônus programado'\]/);
+    assert.match(fonte, /\['aplicado', 'Bônus aplicado'\]/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

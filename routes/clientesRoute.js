@@ -463,12 +463,14 @@ function montarUrlComFiltros(base, params = {}) {
 }
 
 function filtrosClientesQuery(query = {}) {
+    const bonus = String(query.bonus || '');
     return {
         busca: query.busca || '',
         status: query.status || '',
         origem: query.origem || '',
         tag: query.tag || '',
         renovacao: ['hoje', 'tres_dias', 'teste_vencido'].includes(String(query.renovacao || '')) ? String(query.renovacao) : '',
+        bonus: ['disponivel', 'programado', 'aplicado'].includes(bonus) ? bonus : '',
         porPagina: quantidadePorPagina(query.porPagina)
     };
 }
@@ -1804,6 +1806,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .dashboard-bonus-items a { display:flex; align-items:baseline; gap:5px; min-width:0; padding:4px 8px; border-radius:8px; background:var(--green-soft); color:#12623f; font-weight:700; text-decoration:none; white-space:nowrap; }
         .dashboard-bonus-items a span { overflow:hidden; text-overflow:ellipsis; }
         .dashboard-bonus-items a small { color:#317457; font-weight:600; }
+        .dashboard-bonus-month { color:var(--muted); font-weight:600; white-space:nowrap; }
         }
 
         .commercial-mode main {
@@ -7907,9 +7910,11 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
     const bonusProgramados = clientes
         .filter(cliente => Number(cliente.bonusMeses || 0) > 0 && String(cliente.statusAvisoBonus || '') === 'programado')
         .sort((a, b) => new Date(a.dataVencimento || a.vencimento || 0) - new Date(b.dataVencimento || b.vencimento || 0));
-    const acompanhamentoBonusDashboardHtml = bonusProgramados.length ?`<div class="dashboard-bonus-track">
-        <strong>${icon('planos')} Bônus para acompanhar (${bonusProgramados.length})</strong>
-        <div class="dashboard-bonus-items">${bonusProgramados.slice(0, 3).map(cliente => `<a href="/clientes/${escapar(cliente.id)}/editar#resumo-bonus"><span>${escapar(cliente.nome || 'Cliente')}</span><small>${escapar(cliente.bonusMeses)} ${Number(cliente.bonusMeses) === 1 ?'mês' : 'meses'} · ${escapar(textoVencimento(cliente))}</small></a>`).join('')}</div>
+    const bonusAplicadosMes = pagamentosMes.filter(pagamento => /bônus\s+(mensal|trimestral)/i.test(String(pagamento.plano || ''))).length;
+    const acompanhamentoBonusDashboardHtml = (bonusProgramados.length || bonusAplicadosMes) ?`<div class="dashboard-bonus-track">
+        <strong>${icon('planos')} ${bonusProgramados.length ?`Bônus para acompanhar (${bonusProgramados.length})` :'Bônus neste mês'}</strong>
+        <div class="dashboard-bonus-items">${bonusProgramados.length ?bonusProgramados.slice(0, 3).map(cliente => `<a href="/clientes/${escapar(cliente.id)}/editar#resumo-bonus"><span>${escapar(cliente.nome || 'Cliente')}</span><small>${escapar(cliente.bonusMeses)} ${Number(cliente.bonusMeses) === 1 ?'mês' : 'meses'} · ${escapar(textoVencimento(cliente))}</small></a>`).join('') : '<span class="helper">Nenhum bônus aguardando aplicação.</span>'}</div>
+        <small class="dashboard-bonus-month">${bonusAplicadosMes} aplicado(s) neste mês</small>
         ${bonusProgramados.length > 3 ?`<a class="button secondary" href="/clientes/todos">Ver todos</a>` : ''}
     </div>` : '';
     const rotulosPrioridade = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
@@ -8220,9 +8225,9 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
     </script>`;
 }
 
-function listaClientes({ clientes, busca, status, origem, tag, renovacao, porPagina, paginacaoClientes }) {
+function listaClientes({ clientes, busca, status, origem, tag, renovacao, bonus, porPagina, paginacaoClientes }) {
     const totalClientes = paginacaoClientes?.total ?? clientes.length;
-    const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag, renovacao });
+    const urlExportar = montarUrlComFiltros('/clientes/exportar.csv', { busca, status, origem, tag, renovacao, bonus });
 
     return `<section class="page-title">
         <h1>Clientes</h1>
@@ -8266,6 +8271,14 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, porPag
                 ['teste_vencido', 'Teste vencido']
             ].map(([valor, texto]) => `<option value="${valor}" ${valor === renovacao ? 'selected' : ''}>${texto}</option>`).join('')}
         </select>
+        <select name="bonus" onchange="this.form.submit()" aria-label="Filtrar clientes por bônus">
+            ${[
+                ['', 'Todos os bônus'],
+                ['disponivel', 'Bônus disponível'],
+                ['programado', 'Bônus programado'],
+                ['aplicado', 'Bônus aplicado']
+            ].map(([valor, texto]) => `<option value="${valor}" ${valor === bonus ? 'selected' : ''}>${texto}</option>`).join('')}
+        </select>
     </form>
     <div class="toolbar">
         <span></span>
@@ -8282,7 +8295,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, porPag
         ${tabelaClientes(clientes)}
         ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',
-            params: { busca, status, origem, tag, renovacao, porPagina },
+            params: { busca, status, origem, tag, renovacao, bonus, porPagina },
             pagina: paginacaoClientes.pagina,
             totalPaginas: paginacaoClientes.totalPaginas,
             total: paginacaoClientes.total,
@@ -9915,9 +9928,9 @@ router.post('/indicacoes/:id/cancelar', async (req, res) => {
 
 router.get('/clientes/todos', async (req, res) => {
     desativarCache(res);
-    const { busca, status, origem, tag, renovacao, porPagina } = filtrosClientesQuery(req.query);
+    const { busca, status, origem, tag, renovacao, bonus, porPagina } = filtrosClientesQuery(req.query);
     const pagina = paginaAtual(req.query.pagina);
-    const todosClientes = await listarClientes({ busca, status, origem, tag, renovacao });
+    const todosClientes = await listarClientes({ busca, status, origem, tag, renovacao, bonus });
     const paginacaoClientes = paginarItens(todosClientes, pagina, porPagina || CLIENTES_POR_PAGINA);
     const mensagem = req.query.mensagem || '';
 
@@ -9930,6 +9943,7 @@ router.get('/clientes/todos', async (req, res) => {
             origem,
             tag,
             renovacao,
+            bonus,
             porPagina,
             paginacaoClientes
         }),
