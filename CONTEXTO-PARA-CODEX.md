@@ -2027,3 +2027,9 @@ pm ci normalmente.
 - Depois de salvar um ciclo com **Bônus — 1 mês** ou **Bônus — 3 meses**, a seção de confirmação passa a se identificar como **Confirmação do bônus**. O envio manual pelo WhatsApp informa que o período foi aplicado por indicação, sem cobrança, apresenta plano, início e vencimento e esclarece que não é necessário pagar ou renovar naquele ciclo.
 - Planos comuns conservam a confirmação de assinatura existente. O envio continua uma ação explícita do operador, não cria cobrança para o ciclo de bônus e aproveita o registro financeiro de R$ 0,00 já criado ao salvar o plano de bônus.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva clientes, créditos, pagamentos, modelos, sessões, backups e DATA_DIR; não requer migração. Validação: sintaxe dos roteadores, testes de clientes/bônus, verificação de diff e pacote local.
+
+## Acompanhamento visual do bônus — versão 1.3.71
+
+- A ficha do cliente passa a exibir, abaixo dos cartões principais, o **Resumo do bônus** quando há saldo, aviso programado ou ciclo de bônus aplicado. Ele mostra saldo, origem conhecida, indicado quando registrado, status, vencimento e a próxima ação operacional.
+- O mesmo quadro traz o cronograma de 5, 2 e 1 dia antes, no vencimento e uma hora antes. Cada etapa mostra Pendente ou Enviado com o horário real já registrado para o vencimento atual; avisos de ciclos anteriores não aparecem como se fossem do ciclo atual.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Usa somente `avisos_renovacao` e histórico de créditos existentes, sem migração, cobrança, envio, consumo de saldo ou alteração de dados. Validação: sintaxe, testes de ficha do cliente/bônus, diff e pacote local.

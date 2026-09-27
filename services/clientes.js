@@ -1918,6 +1918,19 @@ async function avisoRenovacaoProgramadoExiste(id, vencimento, diasAntes) {
     return Boolean(aviso);
 }
 
+function listarAvisosRenovacaoCliente(clienteId, vencimento) {
+    const id = Number.parseInt(clienteId, 10);
+    if (!id || !limparTexto(vencimento)) return Promise.resolve([]);
+
+    return buscarTodos(
+        `SELECT diasAntes, enviadoEm
+        FROM avisos_renovacao
+        WHERE clienteId = ? AND vencimento = ?
+        ORDER BY diasAntes DESC, datetime(enviadoEm) DESC`,
+        [id, limparTexto(vencimento)]
+    );
+}
+
 function registrarAvisoAniversario(id, ano) {
     return registrarBonusAniversario(id, ano);
 }
@@ -1973,6 +1986,7 @@ module.exports = {
     registrarAvisoRenovacao,
     registrarAvisoRenovacaoProgramado,
     avisoRenovacaoProgramadoExiste,
+    listarAvisosRenovacaoCliente,
     registrarAvisoAniversario,
     registrarBonusAniversario,
     registrarOptOutWhatsapp,

@@ -507,3 +507,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: após salvar Bônus — 1 mês ou Bônus — 3 meses, a confirmação manual do cliente muda de nome e envia um texto próprio: benefício por indicação, período sem cobrança, início, vencimento e orientação de que não há pagamento ou renovação naquele ciclo.
 - Planos pagos mantêm a confirmação de assinatura atual. A confirmação do bônus é enviada somente quando o operador clicar no botão; não cria cobrança nem altera o saldo já consumido ao salvar o ciclo. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração; dados e configurações existentes preservados.
+
+## Acompanhamento visual do bônus — versão 1.3.71
+
+- Implementado: cartão de resumo do bônus na ficha do cliente, com saldo, origem, indicado, estado do aviso, vencimento e próxima ação. O cronograma lista os cinco avisos do ciclo atual e informa se cada um está pendente ou enviado, incluindo o horário registrado.
+- A visualização é somente leitura: não envia mensagens, não cria cobrança e não consome crédito. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração; créditos, pagamentos, histórico, sessões e configurações existentes são preservados.

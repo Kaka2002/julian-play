@@ -44,6 +44,7 @@ function criarClientesAcoesRoute(deps = {}) {
         listarAtendimentosCliente,
         listarAuditoriaCliente,
         listarInteracoesCliente,
+        listarAvisosRenovacaoCliente,
         listarModelos,
         listarNotasCliente,
         listarPagamentosCliente,
@@ -134,7 +135,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
         return res.redirect('/clientes?mensagem=Cliente não encontrado');
     }
 
-    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, exclusaoDefinitiva, config, historicoBonus] = await Promise.all([
+    const [listas, notas, pagamentos, alertas, atendimentos, interacoesRobo, auditoria, exclusaoDefinitiva, config, historicoBonus, avisosBonus] = await Promise.all([
         obterListasCliente(),
         listarNotasCliente(cliente.id),
         listarPagamentosCliente(cliente.id),
@@ -144,7 +145,8 @@ router.get('/clientes/:id/editar', async (req, res) => {
         listarAuditoriaCliente(cliente.id, 100),
         verificarExclusaoDefinitivaCliente(cliente.id),
         obterConfiguracoes(),
-        listarHistoricoBonus(cliente.id)
+        listarHistoricoBonus(cliente.id),
+        listarAvisosRenovacaoCliente(cliente.id, cliente.dataVencimento || cliente.vencimento)
     ]);
 
     await renderizar(res, {
@@ -159,6 +161,7 @@ router.get('/clientes/:id/editar', async (req, res) => {
             exclusaoDefinitiva,
             config,
             historicoBonus,
+            avisosBonus,
             paginaHistorico: req.query.historico || req.query.pagina,
             paginaLinha: req.query.linha,
             historicoPorPagina: req.query.historicoPorPagina,

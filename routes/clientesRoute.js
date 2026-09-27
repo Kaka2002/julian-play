@@ -43,7 +43,8 @@ const {
     buscarAlertasCadastroCliente,
     listarClientesVencidosParaCobranca,
     registrarAvisoRenovacaoProgramado,
-    avisoRenovacaoProgramadoExiste
+    avisoRenovacaoProgramadoExiste,
+    listarAvisosRenovacaoCliente
 } = require('../services/clientes');
 const {
     verificarRenovacoes,
@@ -6065,6 +6066,53 @@ function resumoClienteOperacional(cliente = {}, pagamentos = [], atendimentos = 
     </section>`;
 }
 
+function resumoBonusProgramado(cliente = {}, historico = {}, avisos = []) {
+    const saldo = Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0);
+    const status = String(cliente.statusAvisoBonus || 'nao_programado');
+    const planoBonus = /b[oô]nus/i.test(String(cliente.plano || ''));
+    if (!cliente.id || (!saldo && !planoBonus && status !== 'aplicado')) return '';
+
+    const { ORIGENS } = require('../services/bonusService');
+    const credito = (historico.creditos || []).find(item => Number(item.saldo || 0) > 0);
+    const origem = credito ?(ORIGENS[credito.campanhaChave] || credito.campanhaChave) : 'Saldo de bônus';
+    const indicado = credito?.indicado || credito?.indicados || '';
+    const vencimento = cliente.dataVencimento || cliente.vencimento || '';
+    const porCodigo = new Map((avisos || []).map(aviso => [Number(aviso.diasAntes), aviso]));
+    const etapas = [
+        { codigo: 5, texto: '5 dias antes' },
+        { codigo: 2, texto: '2 dias antes' },
+        { codigo: 1, texto: '1 dia antes' },
+        { codigo: 0, texto: 'No vencimento' },
+        { codigo: -60, texto: '1 hora antes' }
+    ];
+    const statusTexto = status === 'programado'
+        ? 'Aviso de bônus programado'
+        : status === 'aplicado'
+            ? 'Bônus aplicado'
+            : 'Não programado';
+    const proximaAcao = status === 'programado' && saldo > 0
+        ? `Aplicar Bônus — ${Math.min(saldo, 3)} ${Math.min(saldo, 3) === 1 ?'mês' : 'meses'} no vencimento`
+        : status === 'aplicado'
+            ? 'Ciclo de bônus já aplicado'
+            : saldo > 0
+                ? 'Programe o aviso quando decidir usar o bônus'
+                : 'Sem saldo disponível';
+    const linhas = etapas.map(etapa => {
+        const aviso = porCodigo.get(etapa.codigo);
+        return `<div class="pending-item"><div><strong>${etapa.texto}</strong><div class="helper">${aviso ?`Enviado em ${formatarDataHoraCurta(aviso.enviadoEm)}` : 'Pendente'}</div></div><span class="badge ${aviso ?'green' : 'blue'}">${aviso ?'Enviado' : 'Pendente'}</span></div>`;
+    }).join('');
+
+    return `<section class="panel" id="resumo-bonus" style="margin-bottom:24px;">
+        <div class="panel-head"><div><h2 class="panel-title">Resumo do bônus</h2><div class="subtitle">Acompanhe o saldo, a origem e os avisos deste ciclo.</div></div><span class="badge ${status === 'programado' ?'green' : 'blue'}">${escapar(statusTexto)}</span></div>
+        <div class="pending-list" style="padding:0 20px 20px;">
+            <div class="pending-item"><div><strong>${escapar(saldo)} ${saldo === 1 ?'mês disponível' : 'meses disponíveis'}</strong><div class="helper">Origem: ${escapar(origem)}${indicado ?` · indicado: ${escapar(indicado)}` : ''}</div></div><span class="badge green">Bônus</span></div>
+            <div class="pending-item"><div><strong>Próxima ação</strong><div class="helper">${escapar(proximaAcao)}${vencimento ?` · vencimento atual: ${escapar(formatarDataHoraCurta(vencimento))}` : ''}</div></div></div>
+            <div class="pending-item"><div><strong>Cronograma de avisos</strong><div class="helper">Os registros abaixo se referem ao vencimento atual.</div></div></div>
+            ${linhas}
+        </div>
+    </section>`;
+}
+
 function rotuloCurto(valor = '', limite = 18) {
     const texto = String(valor || '').trim();
     if (texto.length <= limite) return texto || '-';
@@ -6339,6 +6387,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         || saldoBonusDisponivel >= mesesPlanoBonus(plano) || String(plano.id) === String(planoAtual));
     const topoCliente = cliente.id
         ? `${resumoClienteOperacional(cliente, pagamentos, atendimentos, interacoesRobo)}
+            ${resumoBonusProgramado(cliente, opcoesFormulario.historicoBonus, opcoesFormulario.avisosBonus)}
             ${acoesRapidasCliente(cliente, opcoesFormulario.config)}
             ${recomendacoesCliente(cliente, pagamentos, atendimentos)}`
         : '';
@@ -10020,6 +10069,7 @@ router.use(criarClientesAcoesRoute({
     listarAtendimentosCliente,
     listarAuditoriaCliente,
     listarInteracoesCliente,
+    listarAvisosRenovacaoCliente,
     listarModelos,
     listarNotasCliente,
     listarPagamentosCliente,
