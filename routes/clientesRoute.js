@@ -5390,6 +5390,22 @@ Obrigado pela preferência.`;
 function montarMensagemAssinaturaConfirmada(cliente = {}) {
     const inicio = formatarDataHoraMensagem(cliente.dataInicio);
     const vencimento = formatarDataHoraMensagem(cliente.dataVencimento || cliente.vencimento);
+    const planoBonus = /b[oô]nus/i.test(String(cliente.plano || ''));
+
+    if (planoBonus) {
+        return `🎁 *PERÍODO DE BÔNUS CONFIRMADO*
+--------------------
+Olá, *${cliente.nome || 'cliente'}*!
+
+Seu período de bônus por indicação foi aplicado *sem cobrança*.
+
+*Plano:* ${cliente.plano || 'Bônus'}
+${inicio ? `*Início:* ${inicio}\n` : ''}*Válido até:* ${vencimento || '-'}
+
+Não é necessário realizar pagamento ou renovação neste período.
+
+Obrigado por indicar nossos serviços.`;
+    }
 
     return `*ASSINATURA ATIVADA*
 --------------------
@@ -5931,12 +5947,18 @@ function secaoConfirmacaoAssinatura(cliente = {}) {
     if (!cliente.id || clienteEhTeste(cliente)) return '';
 
     const vencimento = formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento) || 'Não informado';
+    const planoBonus = /b[oô]nus/i.test(String(cliente.plano || ''));
+    const titulo = planoBonus ?'Confirmação do bônus' : 'Confirmação da assinatura';
+    const descricao = planoBonus
+        ? 'Envie manualmente ao cliente a confirmação do período de bônus, sem cobrança.'
+        : 'Envie manualmente ao cliente a confirmação do plano cadastrado.';
+    const textoBotao = planoBonus ?'Enviar confirmação do bônus' : 'Enviar confirmação da assinatura';
 
     return `<section class="panel" id="confirmacao-assinatura" style="margin-top:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Confirmação da assinatura</h2>
-                <div class="subtitle">Envie manualmente ao cliente a confirmação do plano cadastrado.</div>
+                <h2 class="panel-title">${titulo}</h2>
+                <div class="subtitle">${descricao}</div>
             </div>
         </div>
         <div style="padding:28px;">
@@ -5945,7 +5967,7 @@ function secaoConfirmacaoAssinatura(cliente = {}) {
                 Válido até: <strong>${escapar(vencimento)}</strong>
             </div>
             <form method="post" action="/clientes/${escapar(cliente.id)}/enviar-confirmacao-assinatura">
-                <button class="button green" type="submit">${icon('whats')} Enviar confirmação da assinatura</button>
+                <button class="button green" type="submit">${icon('whats')} ${textoBotao}</button>
             </form>
         </div>
     </section>`;

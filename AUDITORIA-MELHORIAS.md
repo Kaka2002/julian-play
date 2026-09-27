@@ -502,3 +502,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Ao aplicar o bônus ou salvar nova data de início ou vencimento de um ciclo programado, o status muda automaticamente para Bônus aplicado. Um novo ciclo precisa ser programado pelo operador.
 - Migração 022 converte marcações existentes para Programado e preserva os demais dados. Afeta administrador, comerciais no servidor e instalação local; Painel Mestre inalterado.
 - Dashboard: acompanhamento agrupado por quem indicou, com campanha, progresso dos indicados, pendências de mensalidades e previsão informativa de liberação a partir do vencimento cadastrado. O crédito permanece automático somente após os pagamentos reais.
+
+## Confirmação de período de bônus — versão 1.3.70
+
+- Implementado: após salvar Bônus — 1 mês ou Bônus — 3 meses, a confirmação manual do cliente muda de nome e envia um texto próprio: benefício por indicação, período sem cobrança, início, vencimento e orientação de que não há pagamento ou renovação naquele ciclo.
+- Planos pagos mantêm a confirmação de assinatura atual. A confirmação do bônus é enviada somente quando o operador clicar no botão; não cria cobrança nem altera o saldo já consumido ao salvar o ciclo. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração; dados e configurações existentes preservados.

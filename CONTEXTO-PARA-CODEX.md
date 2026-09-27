@@ -2021,3 +2021,9 @@ pm ci normalmente.
 - Ao aplicar o bônus ou alterar a data de início ou vencimento de um ciclo programado, o estado muda para Bônus aplicado e os avisos daquele ciclo deixam de ser enviados. Um novo bônus exige seleção explícita de Aviso de bônus programado.
 - A migração 022 preserva agendamentos já marcados como Programado e deixa todos os demais como Não programado. Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Créditos, financeiro, modelos, sessões, backups e DATA_DIR são preservados.
 - O Dashboard mostra grupos de indicação em acompanhamento: indicador, campanha, indicados registrados, metas de mensalidades, pendências por indicado e previsão baseada no próximo vencimento cadastrado. A previsão é informativa; o crédito continua dependendo de pagamentos reais registrados.
+
+## Confirmação de período de bônus — versão 1.3.70
+
+- Depois de salvar um ciclo com **Bônus — 1 mês** ou **Bônus — 3 meses**, a seção de confirmação passa a se identificar como **Confirmação do bônus**. O envio manual pelo WhatsApp informa que o período foi aplicado por indicação, sem cobrança, apresenta plano, início e vencimento e esclarece que não é necessário pagar ou renovar naquele ciclo.
+- Planos comuns conservam a confirmação de assinatura existente. O envio continua uma ação explícita do operador, não cria cobrança para o ciclo de bônus e aproveita o registro financeiro de R$ 0,00 já criado ao salvar o plano de bônus.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva clientes, créditos, pagamentos, modelos, sessões, backups e DATA_DIR; não requer migração. Validação: sintaxe dos roteadores, testes de clientes/bônus, verificação de diff e pacote local.
