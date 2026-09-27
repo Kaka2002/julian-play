@@ -6110,8 +6110,9 @@ function resumoBonusProgramado(cliente = {}, historico = {}, avisos = []) {
         return `<div class="pending-item"><div><strong>${etapa.texto}</strong><div class="helper">${aviso ?`Enviado em ${formatarDataHoraCurta(aviso.enviadoEm)}` : 'Pendente'}</div></div><span class="badge ${aviso ?'green' : 'blue'}">${aviso ?'Enviado' : 'Pendente'}</span></div>`;
     }).join('');
 
-    return `<section class="panel" id="resumo-bonus" style="margin-bottom:24px;">
-        <div class="panel-head"><div><h2 class="panel-title">Resumo do bônus</h2><div class="subtitle">Acompanhe o saldo, a origem e os avisos deste ciclo.</div></div><span class="badge ${status === 'programado' ?'green' : 'blue'}">${escapar(statusTexto)}</span></div>
+    return `<section class="panel" id="resumo-bonus" style="width:100%;max-width:1560px;margin:0 auto 24px;">
+        <div class="panel-head"><div><h2 class="panel-title">Resumo do bônus</h2><div class="subtitle">${escapar(saldo)} ${saldo === 1 ?'mês disponível' : 'meses disponíveis'} · ${escapar(statusTexto)}</div></div><button class="button secondary" type="button" id="alternar-resumo-bonus" aria-expanded="false" aria-controls="detalhes-resumo-bonus">Ver detalhes</button></div>
+        <div id="detalhes-resumo-bonus" hidden>
         <div class="pending-list" style="padding:0 20px 20px;">
             <div class="pending-item"><div><strong>${escapar(saldo)} ${saldo === 1 ?'mês disponível' : 'meses disponíveis'}</strong><div class="helper">Origem: ${escapar(origem)}${indicado ?` · indicado: ${escapar(indicado)}` : ''}</div></div><span class="badge green">Bônus</span></div>
             <div class="pending-item"><div><strong>Próxima ação</strong><div class="helper">${escapar(proximaAcao)}${vencimento ?` · vencimento atual: ${escapar(formatarDataHoraCurta(vencimento))}` : ''}</div></div></div>
@@ -6119,6 +6120,8 @@ function resumoBonusProgramado(cliente = {}, historico = {}, avisos = []) {
             ${linhas}
         </div>
         ${acaoGuiada}
+        </div>
+        <script>(function(){const botao=document.getElementById('alternar-resumo-bonus'),detalhes=document.getElementById('detalhes-resumo-bonus');if(!botao||!detalhes)return;botao.addEventListener('click',()=>{const aberto=detalhes.hidden;detalhes.hidden=!aberto;botao.setAttribute('aria-expanded',String(aberto));botao.textContent=aberto?'Ocultar detalhes':'Ver detalhes';});})();</script>
     </section>`;
 }
 

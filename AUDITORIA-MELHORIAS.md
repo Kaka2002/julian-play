@@ -517,3 +517,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: no vencimento de um bônus programado, o resumo exibe o atalho Aplicar 1 mês de bônus. A ficha abre com o plano interno e as datas calculadas, aguardando revisão e o salvamento explícito do operador.
 - O atalho não altera dados sozinho. Saldo, financeiro, WhatsApp e histórico só mudam pelo fluxo já existente de Salvar cliente e confirmação manual. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.
+
+## Resumo de bônus recolhível — versão 1.3.73
+
+- Implementado: o resumo inicia com saldo e status em uma única linha. Ver detalhes expande origem, próxima ação e cronograma; Ocultar detalhes reduz novamente o bloco.
+- A mudança é visual e local à tela, sem envio, cobrança, alteração de saldo ou migração. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Dados existentes preservados.

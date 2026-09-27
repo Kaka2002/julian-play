@@ -2039,3 +2039,8 @@ pm ci normalmente.
 - Quando o cliente possui saldo, está com **Aviso de bônus programado** e chega à data de vencimento, o Resumo do bônus mostra **Aplicar 1 mês de bônus**. O atalho abre a ficha já preparada com Bônus — 1 mês, início no vencimento atual e término calculado pelo mesmo fluxo da seleção manual.
 - O atalho não grava, não envia WhatsApp, não cria PIX nem consome saldo. O operador revisa as datas e confirma em Salvar cliente; depois usa a confirmação manual do bônus se desejar comunicar o cliente.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva dados, créditos, pagamentos, sessões, backups e DATA_DIR; não requer migração. Validação: sintaxe, testes de clientes/bônus, diff e pacote local.
+
+## Resumo de bônus recolhível — versão 1.3.73
+
+- O Resumo do bônus inicia compacto para reduzir a navegação vertical da ficha. Ele mostra saldo e estado do aviso; o botão Ver detalhes abre origem, próxima ação, cronograma e o atalho de aplicação quando aplicável. Ocultar detalhes retorna o bloco ao estado compacto.
+- A interação acontece somente no navegador: não altera aviso, saldo, vencimento, financeiro ou histórico. Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Sem migração; dados existentes preservados. Validação: sintaxe, testes de clientes/bônus, diff e pacote local.
