@@ -1796,8 +1796,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .dashboard-page .due-date,
             .dashboard-page .helper { font-size: 13px; }
             .dashboard-page .badge { min-height: 23px; padding: 0 9px; font-size: 12px; }
-            .dashboard-page .pagination { gap: 5px; padding: 7px 12px; }
-            .dashboard-page .page-link { min-width: 30px; min-height: 28px; padding: 0 8px; font-size: 14px; }
+        .dashboard-page .pagination { gap: 5px; padding: 7px 12px; }
+        .dashboard-page .page-link { min-width: 30px; min-height: 28px; padding: 0 8px; font-size: 14px; }
+        .dashboard-bonus-track { display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 18px; border-top:1px solid var(--line); font-size:14px; }
+        .dashboard-bonus-track > strong { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+        .dashboard-bonus-items { display:flex; align-items:center; gap:7px; min-width:0; flex:1; overflow:hidden; }
+        .dashboard-bonus-items a { display:flex; align-items:baseline; gap:5px; min-width:0; padding:4px 8px; border-radius:8px; background:var(--green-soft); color:#12623f; font-weight:700; text-decoration:none; white-space:nowrap; }
+        .dashboard-bonus-items a span { overflow:hidden; text-overflow:ellipsis; }
+        .dashboard-bonus-items a small { color:#317457; font-weight:600; }
         }
 
         .commercial-mode main {
@@ -7898,6 +7904,14 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             && clientesComVencimentoEmDestaque.has(String(item.clienteId))));
     const prioridadesPaginadas = paginarItens(prioridadesAdministrativas, paginaPrioridades, 3);
     const pendenciasDoDia = prioridadesPaginadas.itens;
+    const bonusProgramados = clientes
+        .filter(cliente => Number(cliente.bonusMeses || 0) > 0 && String(cliente.statusAvisoBonus || '') === 'programado')
+        .sort((a, b) => new Date(a.dataVencimento || a.vencimento || 0) - new Date(b.dataVencimento || b.vencimento || 0));
+    const acompanhamentoBonusDashboardHtml = bonusProgramados.length ?`<div class="dashboard-bonus-track">
+        <strong>${icon('planos')} Bônus para acompanhar (${bonusProgramados.length})</strong>
+        <div class="dashboard-bonus-items">${bonusProgramados.slice(0, 3).map(cliente => `<a href="/clientes/${escapar(cliente.id)}/editar#resumo-bonus"><span>${escapar(cliente.nome || 'Cliente')}</span><small>${escapar(cliente.bonusMeses)} ${Number(cliente.bonusMeses) === 1 ?'mês' : 'meses'} · ${escapar(textoVencimento(cliente))}</small></a>`).join('')}</div>
+        ${bonusProgramados.length > 3 ?`<a class="button secondary" href="/clientes/todos">Ver todos</a>` : ''}
+    </div>` : '';
     const rotulosPrioridade = { critica: 'Crítica', alta: 'Alta', media: 'Média', baixa: 'Baixa' };
     const classesPrioridade = { critica: 'red', alta: 'orange', media: 'info', baixa: 'muted' };
     const prioridadesDoDiaHtml = prioridadesAdministrativas.length ?`<section class="panel" style="margin-bottom:24px;">
@@ -7984,6 +7998,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             </div>
         </div>
         ${acompanhamentoIndicacoesHtml}
+        ${acompanhamentoBonusDashboardHtml}
     </section>
     ${receitaMensalCard(receita, receitaReal, planos)}
     <section class="panel">

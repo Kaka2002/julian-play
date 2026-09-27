@@ -31,6 +31,9 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.ok(dashboard.indexOf('dashboard-campaign') < dashboard.indexOf('${receitaMensalCard'));
     assert.ok(dashboard.indexOf('${receitaMensalCard') < dashboard.indexOf('Clientes com Vencimento Próximo'));
     assert.ok(dashboard.indexOf('Clientes com Vencimento Próximo') < dashboard.lastIndexOf('${prioridadesDoDiaHtml}'));
+    assert.match(dashboard, /const bonusProgramados = clientes/);
+    assert.match(dashboard, /dashboard-bonus-track/);
+    assert.match(dashboard, /bonusProgramados\.slice\(0, 3\)/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

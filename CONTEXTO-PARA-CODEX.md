@@ -2044,3 +2044,9 @@ pm ci normalmente.
 
 - O Resumo do bônus inicia compacto para reduzir a navegação vertical da ficha. Ele mostra saldo e estado do aviso; o botão Ver detalhes abre origem, próxima ação, cronograma e o atalho de aplicação quando aplicável. Ocultar detalhes retorna o bloco ao estado compacto.
 - A interação acontece somente no navegador: não altera aviso, saldo, vencimento, financeiro ou histórico. Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Sem migração; dados existentes preservados. Validação: sintaxe, testes de clientes/bônus, diff e pacote local.
+
+## Bônus para acompanhar no Dashboard — versão 1.3.74
+
+- O card de Campanha de indicação ganhou uma faixa compacta de Bônus para acompanhar. Ela lista até três clientes com saldo e Aviso de bônus programado, mostrando meses disponíveis e prazo de vencimento; cada item abre diretamente o resumo do bônus na ficha. Havendo mais de três, o Dashboard mostra somente o botão Ver todos.
+- A faixa usa apenas clientes já carregados pelo Dashboard e é exibida somente quando há acompanhamento pendente, preservando o visual enxuto e sem paginação ou expansão vertical relevante. Não envia avisos, não altera saldo, datas, financeiro ou histórico.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Sem migração; dados, sessões, backups e DATA_DIR preservados. Validação: sintaxe, testes operacionais/clientes/bônus, diff e pacote local.

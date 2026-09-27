@@ -522,3 +522,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado: o resumo inicia com saldo e status em uma única linha. Ver detalhes expande origem, próxima ação e cronograma; Ocultar detalhes reduz novamente o bloco.
 - A mudança é visual e local à tela, sem envio, cobrança, alteração de saldo ou migração. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Dados existentes preservados.
+
+## Bônus para acompanhar no Dashboard — versão 1.3.74
+
+- Implementado: faixa compacta no card de campanha do Dashboard, com até três clientes em aviso de bônus programado, saldo, prazo e link direto para a ficha. Mais registros não ampliam a lista: ficam disponíveis pelo botão Ver todos.
+- A visualização não executa automação, mensagem, cobrança ou alteração de dados. Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.
