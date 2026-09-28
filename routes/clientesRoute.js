@@ -1007,6 +1007,22 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         html[data-tema="noturno"] tr:nth-child(even) td { background: rgba(255, 255, 255, .018); }
         html[data-tema="noturno"] .notice { background: #123528; border-color: #247a57; color: #baf5d7; }
         html[data-tema="noturno"] .notice.warn { background: #432f17; border-color: #9b6a21; color: #ffe0a1; }
+        html[data-tema="noturno"] .app-chip,
+        html[data-tema="noturno"] .device-chip,
+        html[data-tema="noturno"] .selected-chip,
+        html[data-tema="noturno"] .page-link {
+            background: #202c3d;
+            border-color: #40516b;
+            color: #f4f7ff;
+        }
+        html[data-tema="noturno"] .installed-chip { background: #153d32; border-color: #2e9674; color: #baf5d7; }
+        html[data-tema="noturno"] .tag-chip { background: #202d4d; color: #bfcfff; }
+        html[data-tema="noturno"] .tag-chip.warn { background: #4c351c; color: #ffe0a1; }
+        html[data-tema="noturno"] .badge.ok { background: #153d32; color: #baf5d7; }
+        html[data-tema="noturno"] .badge.info { background: #202d4d; color: #bfcfff; }
+        html[data-tema="noturno"] .badge.warn { background: #4c351c; color: #ffe0a1; }
+        html[data-tema="noturno"] .badge.error { background: #49242b; color: #ffc5ca; }
+        html[data-tema="noturno"] .badge.muted { background: #293545; color: #d5deec; }
 
         body::before {
             content: "";
@@ -1149,8 +1165,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             gap: 3px;
             color: rgba(255, 255, 255, .78);
             font-weight: 700;
-            overflow: hidden;
-            flex-wrap: wrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex-wrap: nowrap;
             scrollbar-width: none;
             -ms-overflow-style: none;
         }
@@ -1163,10 +1180,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             min-height: 38px;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 0 7px;
+            gap: 3px;
+            padding: 0 4px;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 12px;
             white-space: nowrap;
             flex: 0 1 auto;
             transition: background .18s ease, color .18s ease, transform .18s ease;
@@ -1191,8 +1208,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             flex: 0 0 38px;
             justify-content: center;
             padding: 0;
+            border: 0;
+            background: transparent;
+            box-shadow: none;
             color: rgba(255, 255, 255, .9);
         }
+
+        .theme-toggle:hover { background: transparent; color: #fff; }
+        .theme-toggle:focus-visible { outline: 2px solid rgba(255, 255, 255, .75); outline-offset: -3px; }
         .theme-toggle .theme-icon-light { display: none; }
         html[data-tema="noturno"] .theme-toggle .theme-icon-dark { display: none; }
         html[data-tema="noturno"] .theme-toggle .theme-icon-light { display: inline-flex; }
@@ -1253,7 +1276,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .topbar { gap: 8px; }
             .brand { flex-basis: 190px; }
             nav { gap: 1px; }
-            .navlink { gap: 3px; padding: 0 4px; font-size: 12px; }
         }
 
         main {

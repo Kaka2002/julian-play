@@ -50,6 +50,11 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /atualizarTema\(document\.documentElement\.dataset\.tema !== 'noturno'\)/);
     assert.match(fonte, /Alternar modo noturno/);
     assert.match(fonte, /Alternar modo claro/);
+    assert.match(fonte, /flex-wrap: nowrap;/);
+    assert.match(fonte, /overflow-x: auto;/);
+    assert.match(fonte, /\.theme-toggle \{[\s\S]*background: transparent;/);
+    assert.match(fonte, /html\[data-tema="noturno"\] \.app-chip,[\s\S]*\.device-chip,[\s\S]*\.selected-chip/);
+    assert.match(fonte, /html\[data-tema="noturno"\] \.installed-chip \{ background: #153d32;/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
