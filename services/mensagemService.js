@@ -42,6 +42,23 @@ function erroEsperadoWhatsApp(err) {
     );
 }
 
+async function sinalizarDigitacao(client, destino) {
+    if (!client?.pupPage || !destino) return;
+
+    try {
+        await Promise.race([
+            client.pupPage.evaluate(async chatId => {
+                if (!window.WWebJS?.sendChatstate) return false;
+                await window.WWebJS.sendChatstate('typing', chatId);
+                return true;
+            }, destino),
+            delay(5000)
+        ]);
+    } catch (_) {
+        // A indicação visual não pode impedir o envio já programado.
+    }
+}
+
 async function enviarMensagem(client, to, texto) {
     const chave = chaveEnvio(to, texto);
     const envioRecente = obterEnvioRecente(chave);
@@ -54,6 +71,7 @@ async function enviarMensagem(client, to, texto) {
     reservarEnvio(chave);
 
     try {
+        await sinalizarDigitacao(client, to);
         await delay(1000);
         registrarEnvioDoRobo(to, texto);
         const enviada = await enfileirarEnvio(

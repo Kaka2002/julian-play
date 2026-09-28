@@ -2056,3 +2056,9 @@ pm ci normalmente.
 - A lista de Clientes ganhou o filtro Bônus: disponível, programado ou aplicado. A opção mantém os demais filtros, a paginação e a exportação CSV; Bônus disponível procura saldo maior que zero, Programado exige saldo e aviso programado, e Aplicado mostra ciclos já marcados como aplicados.
 - A faixa compacta Bônus para acompanhar no Dashboard agora informa quantos ciclos de bônus foram aplicados no mês, usando somente pagamentos válidos já registrados. Ela continua no card existente, sem criar navegação vertical ou executar ações automáticas.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva banco, créditos, pagamentos, configurações, sessões, backups e DATA_DIR. Sem migração e sem ação manual obrigatória. Validação: sintaxe, testes de clientes e bônus, diff e pacote local.
+
+## Modelo automático ao encerrar teste grátis — versão 1.3.76
+
+- Ao vencer um cliente cadastrado como teste grátis, o agendador automático passa a enviar o modelo editável **Teste grátis encerrado — convite para assinatura**, configurado em Modelos, com o nome do cliente e os planos comerciais vigentes. O robô mantém o estado visual de “digitando…” durante a espera antes do envio automático.
+- O aviso próximo do vencimento continua com a mensagem preventiva já existente. A mensagem de encerramento é registrada por cliente, vencimento e tipo de aviso; por isso não se repete no mesmo ciclo. Se o WhatsApp estiver desconectado, o envio aguarda uma verificação posterior, sem marcar o aviso como enviado.
+- Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva banco, modelos personalizados, clientes, pagamentos, sessões, backups e DATA_DIR. Sem migração; após atualizar, revise e mantenha ativo o modelo em Modelos. Validação: sintaxe, testes de modelos/clientes, diff e pacote local.

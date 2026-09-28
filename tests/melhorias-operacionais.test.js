@@ -271,6 +271,11 @@ test('modelo de teste expirado convida para assinatura e inclui planos dinamicos
         assert.match(retorno.mensagem, /Mensal — R\$ 35,00/);
         assert.match(retorno.mensagem, /Trimestral — R\$ 96,00/);
         assert.match(retorno.mensagem, /responda \*atendente\*/i);
+        const renovacao = fs.readFileSync(path.join(repoRoot, 'services', 'renovacaoAutomatica.js'), 'utf8');
+        const mensagens = fs.readFileSync(path.join(repoRoot, 'services', 'mensagemService.js'), 'utf8');
+        assert.match(renovacao, /await montarMensagemTesteExpiradoAssinatura\(cliente, menuRenovacao\(planos\)\)/);
+        assert.match(mensagens, /function sinalizarDigitacao/);
+        assert.match(mensagens, /await sinalizarDigitacao\(client, to\)/);
     } finally {
         removerAmbiente(resultado.ambiente);
     }

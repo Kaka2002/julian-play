@@ -533,3 +533,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Implementado: filtro de bônus na lista de clientes para localizar saldo disponível, aviso programado ou ciclo aplicado, preservando busca, demais filtros, paginação e exportação.
 - Implementado: indicador compacto de ciclos de bônus aplicados no mês dentro da faixa existente de acompanhamento no Dashboard. Não envia mensagens, não consome saldo nem altera financeiro.
 - Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.
+
+## Modelo automático ao encerrar teste grátis — versão 1.3.76
+
+- Implementado: o aviso automático de término de teste usa o modelo editável de convite para assinatura, incluindo os planos comerciais atuais e mantendo o estado visual de “digitando…” antes do envio.
+- O registro de aviso existente evita repetição por ciclo. Não cria cobrança, não altera o cadastro e não envia se o WhatsApp estiver desconectado.
+- Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.

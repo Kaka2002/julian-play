@@ -9,7 +9,8 @@ const {
     normalizarTelefone
 } = require('./clientes');
 const {
-    montarMensagemAvisoProgramado
+    montarMensagemAvisoProgramado,
+    montarMensagemTesteExpiradoAssinatura
 } = require('./modelosMensagem');
 const menuRenovacao = require('../menus/renovacao');
 const { prepararRenovacaoTesteGratis } = require('./conversaService');
@@ -124,26 +125,6 @@ ${menuRenovacao(planos)}
 Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
 }
 
-function montarMensagemTesteExpiradoComPlanos(cliente, planos = []) {
-    return `⚠️ *TESTE GRÁTIS EXPIRADO*
-━━━━━━━━━━━━━━━━━━━━
-Olá, *${nomeCliente(cliente)}*! Seu teste grátis expirou.
-
-Para reativar seu acesso, escolha um plano fixo:
-
-${menuRenovacao(planos)}
-
-Digite apenas o número do plano que deseja ativar, ou digite *sair* para encerrar o atendimento.`;
-}
-
-function montarMensagemTesteExpirado(cliente) {
-    return `⚠️ *TESTE GRÁTIS EXPIRADO*
-━━━━━━━━━━━━━━━━━━━━
-Olá, *${nomeCliente(cliente)}*! Seu teste grátis expirou.
-
-Para ativar um plano, digite *menu* e escolha uma das opções disponíveis.`;
-}
-
 async function verificarRenovacoes({ getClient, getStatusWhatsApp, diasAviso } = {}) {
     if (executando) {
         return { enviados: 0, ignorados: 0, erro: 'Verificação já está em andamento.' };
@@ -249,7 +230,7 @@ async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = 
         const agoraRelogio = obterAgoraSaoPaulo();
         const dentroHorario = estaNoHorarioDeTeste(agoraRelogio);
         const agoraIso = formatarDataHoraSaoPaulo();
-        const planos = dentroHorario ? await obterPlanosRenovacao() : [];
+        const planos = await obterPlanosRenovacao();
         const clientes = [];
 
         if (dentroHorario) {
@@ -302,9 +283,7 @@ async function verificarTestesGratisVencendo({ getClient, getStatusWhatsApp } = 
 
             const mensagem = tipo === 'vencendo'
                 ? montarMensagemTesteVencendo(cliente, planos)
-                : tipo === 'expirado_planos'
-                    ? montarMensagemTesteExpiradoComPlanos(cliente, planos)
-                    : montarMensagemTesteExpirado(cliente);
+                : await montarMensagemTesteExpiradoAssinatura(cliente, menuRenovacao(planos));
             const enviado = await enviarMensagem(client, destino, mensagem);
 
             if (enviado) {
