@@ -974,18 +974,22 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         html[data-tema="noturno"] { color-scheme: dark; }
         html[data-tema="noturno"] body {
-            --bg: #0d1420;
-            --panel: #161f2d;
-            --ink: #edf3ff;
-            --muted: #aebbd0;
-            --line: #2c3a50;
-            --blue-soft: #202d4d;
-            --green-soft: #153d32;
-            --red-soft: #49242b;
-            --orange-soft: #4c351c;
+            --bg: #101b2b;
+            --panel: #18263a;
+            --ink: #edf5ff;
+            --muted: #b4c2d8;
+            --line: #30445f;
+            --blue-soft: #23375b;
+            --green-soft: #173f37;
+            --red-soft: #4b2833;
+            --orange-soft: #4e3a22;
             --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 24px rgba(0, 0, 0, .2);
             --shadow-card: 0 1px 2px rgba(0, 0, 0, .42), 0 18px 42px rgba(0, 0, 0, .25);
-            background: radial-gradient(circle at 12% 12%, rgba(17, 200, 214, .10), transparent 26%), radial-gradient(circle at 88% 10%, rgba(246, 178, 26, .08), transparent 22%), linear-gradient(180deg, #0d1420 0%, #111b2a 100%);
+            background:
+                radial-gradient(ellipse at 8% 10%, rgba(44, 176, 198, .18), transparent 34%),
+                radial-gradient(ellipse at 92% 8%, rgba(94, 107, 220, .16), transparent 30%),
+                radial-gradient(ellipse at 50% 100%, rgba(21, 116, 139, .11), transparent 42%),
+                linear-gradient(145deg, #101b2b 0%, #13273a 48%, #18243d 100%);
         }
         html[data-tema="noturno"] body::before {
             opacity: .38;

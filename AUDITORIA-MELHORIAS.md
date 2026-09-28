@@ -546,3 +546,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - A mudança é somente visual e não grava dados do cliente nem altera configurações da instalação. Afeta Painel Mestre, administrador, comerciais e instalações locais; sem migração.
 - Corrigido: controles claros, etiquetas e paginação agora usam fundo escuro e texto legível no modo noturno; o contraste do modo claro foi preservado.
 - Corrigido: marca d’água do modo noturno ganhou brilho e mistura de tela para destacar a identidade visual sem fundo escuro aparente.
+- Melhorado: fundo do modo noturno recebeu degradê azul-petróleo e luzes suaves para leitura mais confortável, mantendo o contraste dos componentes.
