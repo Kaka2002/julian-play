@@ -539,3 +539,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Implementado: o aviso automático de término de teste usa o modelo editável de convite para assinatura, incluindo os planos comerciais atuais e mantendo o estado visual de “digitando…” antes do envio.
 - O registro de aviso existente evita repetição por ciclo. Não cria cobrança, não altera o cadastro e não envia se o WhatsApp estiver desconectado.
 - Afeta administrador, comerciais e instalações locais; Painel Mestre inalterado. Sem migração e com dados existentes preservados.
+
+## Modo noturno do painel — versão 1.3.77
+
+- Implementado: botão no cabeçalho para alternar todo o painel entre modo noturno e claro, preservando a preferência no navegador.
+- A mudança é somente visual e não grava dados do cliente nem altera configurações da instalação. Afeta Painel Mestre, administrador, comerciais e instalações locais; sem migração.

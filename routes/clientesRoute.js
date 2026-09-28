@@ -887,6 +887,8 @@ function icon(nome) {
         eye: '<svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>',
         'eye-off': '<svg viewBox="0 0 24 24"><path d="m3 3 18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a18.4 18.4 0 0 1-3.2 4.5"/><path d="M6.6 6.6C3.8 8.5 2 12 2 12s3.5 8 10 8a10.7 10.7 0 0 0 4.1-.8"/></svg>',
         'eye-closed': '<svg viewBox="0 0 24 24"><path d="M4 11.5c2.3 3.3 5 5 8 5s5.7-1.7 8-5"/><path d="m6.8 15.3-1.4 2.1M10 16.2l-.5 2.3M14 16.2l.5 2.3m2.7-3.2 1.4 2.1"/></svg>',
+        moon: '<svg viewBox="0 0 24 24"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.7 6.7 0 0 0 21 12.8Z"/></svg>',
+        sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>',
         plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
         edit: '<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
         trash: '<svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
@@ -929,6 +931,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <title>${escapar(titulo)} - ${escapar(nomeSistema)}</title>
+    <script>try { if (localStorage.getItem('julianPlayTema') === 'noturno') document.documentElement.dataset.tema = 'noturno'; } catch (_) {}</script>
     <style>
         :root {
             color-scheme: light;
@@ -968,6 +971,42 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             color: var(--ink);
             font-family: var(--font-inter);
         }
+
+        html[data-tema="noturno"] { color-scheme: dark; }
+        html[data-tema="noturno"] body {
+            --bg: #0d1420;
+            --panel: #161f2d;
+            --ink: #edf3ff;
+            --muted: #aebbd0;
+            --line: #2c3a50;
+            --blue-soft: #202d4d;
+            --green-soft: #153d32;
+            --red-soft: #49242b;
+            --orange-soft: #4c351c;
+            --shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 24px rgba(0, 0, 0, .2);
+            --shadow-card: 0 1px 2px rgba(0, 0, 0, .42), 0 18px 42px rgba(0, 0, 0, .25);
+            background: radial-gradient(circle at 12% 12%, rgba(17, 200, 214, .10), transparent 26%), radial-gradient(circle at 88% 10%, rgba(246, 178, 26, .08), transparent 22%), linear-gradient(180deg, #0d1420 0%, #111b2a 100%);
+        }
+        html[data-tema="noturno"] body::before { opacity: .12; filter: saturate(.9) contrast(1.1) brightness(.75); }
+        html[data-tema="noturno"] .metric,
+        html[data-tema="noturno"] .panel,
+        html[data-tema="noturno"] .clients-panel,
+        html[data-tema="noturno"] .clients-table,
+        html[data-tema="noturno"] .device-card,
+        html[data-tema="noturno"] .emoji-picker,
+        html[data-tema="noturno"] .button.secondary { background: var(--panel); border-color: var(--line); color: var(--ink); }
+        html[data-tema="noturno"] .panel-head { background: linear-gradient(180deg, rgba(28, 40, 58, .95), rgba(22, 31, 45, .75)); border-color: var(--line); }
+        html[data-tema="noturno"] input,
+        html[data-tema="noturno"] select,
+        html[data-tema="noturno"] textarea { background: #101927; border-color: var(--line); color: var(--ink); }
+        html[data-tema="noturno"] input::placeholder,
+        html[data-tema="noturno"] textarea::placeholder { color: #8290a8; }
+        html[data-tema="noturno"] table,
+        html[data-tema="noturno"] th,
+        html[data-tema="noturno"] td { background-color: transparent; border-color: var(--line); }
+        html[data-tema="noturno"] tr:nth-child(even) td { background: rgba(255, 255, 255, .018); }
+        html[data-tema="noturno"] .notice { background: #123528; border-color: #247a57; color: #baf5d7; }
+        html[data-tema="noturno"] .notice.warn { background: #432f17; border-color: #9b6a21; color: #ffe0a1; }
 
         body::before {
             content: "";
@@ -1148,6 +1187,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             pointer-events: none;
         }
 
+        .theme-toggle { color: rgba(255, 255, 255, .9); }
+        .theme-toggle .theme-icon-light { display: none; }
+        html[data-tema="noturno"] .theme-toggle .theme-icon-dark { display: none; }
+        html[data-tema="noturno"] .theme-toggle .theme-icon-light { display: inline-flex; }
+
         .money-visibility-toggle {
             display: inline-flex;
             align-items: center;
@@ -1205,6 +1249,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .brand { flex-basis: 190px; }
             nav { gap: 1px; }
             .navlink { gap: 3px; padding: 0 4px; font-size: 12px; }
+            .theme-label { display: none; }
         }
 
         main {
@@ -3114,6 +3159,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink" href="/licenca">${icon('licenca')} Licença</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
+                <button class="navlink theme-toggle" type="button" aria-pressed="false" title="Ativar modo noturno"><span class="theme-icon-dark">${icon('moon')}</span><span class="theme-icon-light">${icon('sun')}</span><span class="theme-label">Modo noturno</span></button>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
         </div>
@@ -3127,6 +3173,21 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
     <button class="back-to-top" type="button" aria-label="Voltar ao topo da página" title="Voltar ao topo">↑</button>
     <script>
         (() => {
+            const botaoTema = document.querySelector('.theme-toggle');
+            if (botaoTema) {
+                const atualizarTema = (noturno) => {
+                    document.documentElement.dataset.tema = noturno ? 'noturno' : '';
+                    if (!noturno) delete document.documentElement.dataset.tema;
+                    botaoTema.setAttribute('aria-pressed', String(noturno));
+                    botaoTema.setAttribute('title', noturno ? 'Ativar modo claro' : 'Ativar modo noturno');
+                    const rotulo = botaoTema.querySelector('.theme-label');
+                    if (rotulo) rotulo.textContent = noturno ? 'Modo claro' : 'Modo noturno';
+                    try { window.localStorage.setItem('julianPlayTema', noturno ? 'noturno' : 'claro'); } catch (_) {}
+                };
+                atualizarTema(document.documentElement.dataset.tema === 'noturno');
+                botaoTema.addEventListener('click', () => atualizarTema(document.documentElement.dataset.tema !== 'noturno'));
+            }
+
             const botaoTopo = document.querySelector('.back-to-top');
             if (botaoTopo) {
                 const atualizarBotaoTopo = () => {

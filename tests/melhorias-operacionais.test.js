@@ -42,6 +42,16 @@ test('Dashboard oferece prioridades do dia e acesso direto à Central de Pendên
     assert.match(fonte, /\['aplicado', 'Bônus aplicado'\]/);
 });
 
+test('painel alterna entre modo claro e noturno sem gravar configuração do cliente', () => {
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(fonte, /class="navlink theme-toggle"/);
+    assert.match(fonte, /julianPlayTema/);
+    assert.match(fonte, /data-tema="noturno"/);
+    assert.match(fonte, /atualizarTema\(document\.documentElement\.dataset\.tema !== 'noturno'\)/);
+    assert.match(fonte, /Modo noturno/);
+    assert.match(fonte, /Modo claro/);
+});
+
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);

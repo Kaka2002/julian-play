@@ -2062,3 +2062,9 @@ pm ci normalmente.
 - Ao vencer um cliente cadastrado como teste grátis, o agendador automático passa a enviar o modelo editável **Teste grátis encerrado — convite para assinatura**, configurado em Modelos, com o nome do cliente e os planos comerciais vigentes. O robô mantém o estado visual de “digitando…” durante a espera antes do envio automático.
 - O aviso próximo do vencimento continua com a mensagem preventiva já existente. A mensagem de encerramento é registrada por cliente, vencimento e tipo de aviso; por isso não se repete no mesmo ciclo. Se o WhatsApp estiver desconectado, o envio aguarda uma verificação posterior, sem marcar o aviso como enviado.
 - Afeta administrador, cliente comercial no servidor e instalação local; Painel Mestre inalterado. Preserva banco, modelos personalizados, clientes, pagamentos, sessões, backups e DATA_DIR. Sem migração; após atualizar, revise e mantenha ativo o modelo em Modelos. Validação: sintaxe, testes de modelos/clientes, diff e pacote local.
+
+## Modo noturno do painel — versão 1.3.77
+
+- O cabeçalho passa a oferecer o botão **Modo noturno**, que alterna toda a interface entre claro e escuro. O mesmo botão passa a indicar **Modo claro** para retornar ao tema anterior.
+- A preferência fica somente no navegador que a escolheu, usando armazenamento local; é aplicada antes da página aparecer e persiste entre telas e recargas. Ela não é gravada no banco e não altera clientes, configurações, sessões, backups ou DATA_DIR.
+- Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.
