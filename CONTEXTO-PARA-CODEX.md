@@ -2068,4 +2068,5 @@ pm ci normalmente.
 - O cabeçalho passa a oferecer um ícone compacto de lua, com texto de apoio, que alterna toda a interface entre claro e escuro. Quando ativo, o mesmo ícone passa a indicar o retorno ao modo claro. A navegação permanece em uma única faixa, com rolagem horizontal discreta se não houver espaço suficiente.
 - A preferência fica somente no navegador que a escolheu, usando armazenamento local; é aplicada antes da página aparecer e persiste entre telas e recargas. Ela não é gravada no banco e não altera clientes, configurações, sessões, backups ou DATA_DIR.
 - Etiquetas, campos de seleção, páginas da tabela e estados de status preservam contraste no modo noturno; o modo claro conserva os textos escuros em seus fundos claros.
+- A marca d’água usa mistura de tela e brilho ajustado no modo noturno, destacando a logo sem exibir o retângulo escuro da imagem de origem. O modo claro permanece inalterado.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.

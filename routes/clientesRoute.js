@@ -987,7 +987,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             --shadow-card: 0 1px 2px rgba(0, 0, 0, .42), 0 18px 42px rgba(0, 0, 0, .25);
             background: radial-gradient(circle at 12% 12%, rgba(17, 200, 214, .10), transparent 26%), radial-gradient(circle at 88% 10%, rgba(246, 178, 26, .08), transparent 22%), linear-gradient(180deg, #0d1420 0%, #111b2a 100%);
         }
-        html[data-tema="noturno"] body::before { opacity: .12; filter: saturate(.9) contrast(1.1) brightness(.75); }
+        html[data-tema="noturno"] body::before {
+            opacity: .38;
+            filter: saturate(1.3) contrast(1.15) brightness(1.25);
+            mix-blend-mode: screen;
+        }
         html[data-tema="noturno"] .metric,
         html[data-tema="noturno"] .panel,
         html[data-tema="noturno"] .clients-panel,
