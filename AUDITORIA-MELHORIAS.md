@@ -542,5 +542,5 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 ## Modo noturno do painel — versão 1.3.77
 
-- Implementado: botão no cabeçalho para alternar todo o painel entre modo noturno e claro, preservando a preferência no navegador.
+- Implementado: ícone compacto no cabeçalho para alternar todo o painel entre modo noturno e claro, preservando a preferência no navegador sem criar segunda linha no menu.
 - A mudança é somente visual e não grava dados do cliente nem altera configurações da instalação. Afeta Painel Mestre, administrador, comerciais e instalações locais; sem migração.

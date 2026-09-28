@@ -48,8 +48,8 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /julianPlayTema/);
     assert.match(fonte, /data-tema="noturno"/);
     assert.match(fonte, /atualizarTema\(document\.documentElement\.dataset\.tema !== 'noturno'\)/);
-    assert.match(fonte, /Modo noturno/);
-    assert.match(fonte, /Modo claro/);
+    assert.match(fonte, /Alternar modo noturno/);
+    assert.match(fonte, /Alternar modo claro/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

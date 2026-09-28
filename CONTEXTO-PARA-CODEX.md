@@ -2065,6 +2065,6 @@ pm ci normalmente.
 
 ## Modo noturno do painel — versão 1.3.77
 
-- O cabeçalho passa a oferecer o botão **Modo noturno**, que alterna toda a interface entre claro e escuro. O mesmo botão passa a indicar **Modo claro** para retornar ao tema anterior.
+- O cabeçalho passa a oferecer um ícone compacto de lua, com texto de apoio, que alterna toda a interface entre claro e escuro. Quando ativo, o mesmo ícone passa a indicar o retorno ao modo claro; ele não ocupa uma segunda linha no menu.
 - A preferência fica somente no navegador que a escolheu, usando armazenamento local; é aplicada antes da página aparecer e persiste entre telas e recargas. Ela não é gravada no banco e não altera clientes, configurações, sessões, backups ou DATA_DIR.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.

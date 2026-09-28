@@ -1187,7 +1187,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             pointer-events: none;
         }
 
-        .theme-toggle { color: rgba(255, 255, 255, .9); }
+        .theme-toggle {
+            flex: 0 0 38px;
+            justify-content: center;
+            padding: 0;
+            color: rgba(255, 255, 255, .9);
+        }
         .theme-toggle .theme-icon-light { display: none; }
         html[data-tema="noturno"] .theme-toggle .theme-icon-dark { display: none; }
         html[data-tema="noturno"] .theme-toggle .theme-icon-light { display: inline-flex; }
@@ -1249,7 +1254,6 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             .brand { flex-basis: 190px; }
             nav { gap: 1px; }
             .navlink { gap: 3px; padding: 0 4px; font-size: 12px; }
-            .theme-label { display: none; }
         }
 
         main {
@@ -3159,7 +3163,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 <a class="navlink" href="/licenca">${icon('licenca')} Licença</a>
                 <a class="navlink ${ativo === 'manutencao' ?'active' : ''}" href="/manutencao">${icon('manutencao')} Manutenção</a>
                 <a class="navlink ${ativo === 'pendencias' ?'active' : ''}" href="/pendencias">${icon('alert')} Pendências</a>
-                <button class="navlink theme-toggle" type="button" aria-pressed="false" title="Ativar modo noturno"><span class="theme-icon-dark">${icon('moon')}</span><span class="theme-icon-light">${icon('sun')}</span><span class="theme-label">Modo noturno</span></button>
+                <button class="navlink theme-toggle" type="button" aria-label="Alternar modo noturno" aria-pressed="false" title="Ativar modo noturno"><span class="theme-icon-dark">${icon('moon')}</span><span class="theme-icon-light">${icon('sun')}</span></button>
                 <a class="navlink" href="/logout" title="Sair do painel">${icon('sair')}</a>
             </nav>
         </div>
@@ -3180,8 +3184,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                     if (!noturno) delete document.documentElement.dataset.tema;
                     botaoTema.setAttribute('aria-pressed', String(noturno));
                     botaoTema.setAttribute('title', noturno ? 'Ativar modo claro' : 'Ativar modo noturno');
-                    const rotulo = botaoTema.querySelector('.theme-label');
-                    if (rotulo) rotulo.textContent = noturno ? 'Modo claro' : 'Modo noturno';
+                    botaoTema.setAttribute('aria-label', noturno ? 'Alternar modo claro' : 'Alternar modo noturno');
                     try { window.localStorage.setItem('julianPlayTema', noturno ? 'noturno' : 'claro'); } catch (_) {}
                 };
                 atualizarTema(document.documentElement.dataset.tema === 'noturno');
