@@ -1031,6 +1031,27 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         html[data-tema="noturno"] .badge.warn { background: #4c351c; color: #ffe0a1; }
         html[data-tema="noturno"] .badge.error { background: #49242b; color: #ffc5ca; }
         html[data-tema="noturno"] .badge.muted { background: #293545; color: #d5deec; }
+        html[data-tema="noturno"] .revenue-real,
+        html[data-tema="noturno"] .model-card,
+        html[data-tema="noturno"] .model-choice,
+        html[data-tema="noturno"] .app-access-row,
+        html[data-tema="noturno"] .phone-field,
+        html[data-tema="noturno"] .clients-table { background: #1b2a3e; border-color: #39506b; color: var(--ink); }
+        html[data-tema="noturno"] .revenue-real,
+        html[data-tema="noturno"] .model-choice,
+        html[data-tema="noturno"] .app-access-row { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035); }
+        html[data-tema="noturno"] .revenue-bar { background: #35475e; }
+        html[data-tema="noturno"] .phone-country,
+        html[data-tema="noturno"] .model-preview,
+        html[data-tema="noturno"] .note-item,
+        html[data-tema="noturno"] .app-access-list { background: #142236; border-color: #344a64; color: var(--ink); }
+        html[data-tema="noturno"] .model-choice { background: linear-gradient(180deg, #1d2c41, #18263a); }
+        html[data-tema="noturno"] .model-choice:has(input:checked) { background: linear-gradient(180deg, #213754, #1a2b45); border-color: #557eee; }
+        html[data-tema="noturno"] .model-choice-plan { background: #213a60; color: #c8d7ff; }
+        html[data-tema="noturno"] .model-choice-preview { border-color: #39506b; color: #c3d0e1; }
+        html[data-tema="noturno"] .var-token { background: #26374c; border-color: #465c77; color: #dce7f8; }
+        html[data-tema="noturno"] .dashboard-bonus-items a { background: #153d32; color: #c0f2d7; }
+        html[data-tema="noturno"] .dashboard-bonus-items a small { color: #96d7b8; }
 
         body::before {
             content: "";

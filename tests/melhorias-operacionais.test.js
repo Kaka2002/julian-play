@@ -55,6 +55,9 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /\.theme-toggle \{[\s\S]*background: transparent;/);
     assert.match(fonte, /html\[data-tema="noturno"\] \.app-chip,[\s\S]*\.device-chip,[\s\S]*\.selected-chip/);
     assert.match(fonte, /html\[data-tema="noturno"\] \.installed-chip \{ background: #153d32;/);
+    assert.match(fonte, /html\[data-tema="noturno"\] \.revenue-real,[\s\S]*\.clients-table \{ background: #1b2a3e;/);
+    assert.match(fonte, /html\[data-tema="noturno"\] \.revenue-bar \{ background: #35475e;/);
+    assert.match(fonte, /html\[data-tema="noturno"\] \.model-choice \{ background: linear-gradient\(180deg, #1d2c41, #18263a\);/);
     assert.match(fonte, /html\[data-tema="noturno"\] body::before \{[\s\S]*mix-blend-mode: screen;/);
     assert.match(fonte, /linear-gradient\(145deg, #101b2b 0%, #13273a 48%, #18243d 100%\)/);
     assert.match(fonte, /function bandeiraPaisTelefone\(cliente = \{\}\)/);

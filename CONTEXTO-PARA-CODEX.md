@@ -2072,4 +2072,5 @@ pm ci normalmente.
 - O fundo noturno combina degradê azul-petróleo com pontos de luz suaves em ciano e índigo para reduzir a aparência pesada durante uso prolongado, sem comprometer o contraste dos textos e controles.
 - As 16 bandeiras suportadas no seletor de país acompanham o pacote em `assets/flags`. O seletor e as listas usam essas imagens locais, sem depender de emoji, fonte instalada ou carregamento externo.
 - Na edição de cliente, o país/DDD ocupa uma coluna menor e mostra a bandeira local com o formato `Brasil - BR (+55)`. O telefone recebe o espaço restante; aniversário e origem também usam colunas proporcionais menores em telas largas e passam a duas colunas em telas menores.
+- Cartões de receita, tabelas, formulários destacados, listas de acesso, prévias de modelos e barras de progresso recebem no modo noturno fundos azul-acinzentados e textos claros. Isso remove os blocos brancos intensos sem afetar o modo claro ou dados da instalação.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.
