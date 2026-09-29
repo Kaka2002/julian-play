@@ -548,3 +548,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: marca d’água do modo noturno ganhou brilho e mistura de tela para destacar a identidade visual sem fundo escuro aparente.
 - Melhorado: fundo do modo noturno recebeu degradê azul-petróleo e luzes suaves para leitura mais confortável, mantendo o contraste dos componentes.
 - Corrigido: bandeiras de país são distribuídas no pacote como imagens locais e exibidas no seletor e nas listas sem depender de emoji, fonte instalada ou serviço externo.
+- Melhorado: formulário de cliente redistribui país/DDD, telefone, aniversário e origem, priorizando a leitura integral do número e reduzindo campos que não precisam ocupar a largura total.

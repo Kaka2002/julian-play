@@ -2325,6 +2325,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             grid-template-columns: repeat(2, minmax(240px, 1fr));
         }
 
+        .cliente-editor-form {
+            grid-template-columns: minmax(260px, 1.2fr) minmax(300px, 1.2fr) minmax(120px, .4fr) minmax(170px, .65fr);
+        }
+
         .client-alert-list {
             display: grid;
             gap: 10px;
@@ -2542,7 +2546,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .phone-field {
             display: grid;
-            grid-template-columns: minmax(220px, 280px) minmax(120px, 1fr);
+            grid-template-columns: minmax(150px, 180px) minmax(110px, 1fr);
             align-items: center;
             margin-top: 7px;
             border: 1px solid var(--line);
@@ -2553,7 +2557,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .phone-country {
             display: grid;
-            grid-template-columns: 36px minmax(0, 1fr);
+            grid-template-columns: 32px minmax(0, 1fr);
             align-items: center;
             min-height: 42px;
             border-right: 1px solid var(--line);
@@ -2574,7 +2578,8 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             color: var(--ink);
             background: transparent;
             font-weight: 700;
-            padding: 0 10px 0 2px;
+            padding: 0 7px 0 1px;
+            font-size: 13px;
         }
 
         .phone-field input,
@@ -2582,6 +2587,10 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             margin-top: 0;
             border: 0;
             border-radius: 0;
+        }
+
+        @media (max-width: 1180px) {
+            .cliente-editor-form { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
         }
 
         .inline-field input {
@@ -3329,16 +3338,16 @@ async function obterListasCliente() {
     return { planos, apps, dispositivos, paineis };
 }
 
-function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = '' }) {
+function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = '', classe = '' }) {
     if (opcoes.length) {
-        return `<label>${label}
+        return `<label class="${escapar(classe)}">${label}
             <select name="${nome}" ${attrs}>
                 ${opcoes.map(opcao => `<option value="${escapar(opcao.valor)}" ${String(opcao.valor) === String(valor) ?'selected' : ''}>${escapar(opcao.texto)}</option>`).join('')}
             </select>
         </label>`;
     }
 
-    return `<label>${label}
+    return `<label class="${escapar(classe)}">${label}
         <input type="${tipo}" name="${nome}" value="${escapar(valor)}" ${attrs}>
     </label>`;
 }
@@ -3662,11 +3671,11 @@ function campoWhatsAppComPais(valor = '', ddiSalvo = '', paisSalvo = '') {
     const opcoes = PAISES_TELEFONE.map(item => {
         const flag = urlBandeira(item.codigo);
         const selecionado = item.codigo === paisSelecionado.codigo ? ' selected' : '';
-        return `<option value="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}" data-flag="${escapar(flag)}"${selecionado}>${escapar(item.pais)} (+${escapar(item.ddi)})</option>`;
+        return `<option value="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}" data-flag="${escapar(flag)}"${selecionado}>${escapar(item.pais)} - ${escapar(item.codigo)} (+${escapar(item.ddi)})</option>`;
     }).join('');
     const bandeiraSelecionada = urlBandeira(paisSelecionado.codigo);
 
-    return `<label>WhatsApp *
+    return `<label class="cliente-telefone">WhatsApp *
         <div class="phone-field">
             <div class="phone-country">
                 <img class="country-flag" src="${escapar(bandeiraSelecionada)}" alt="" width="24" height="18">
@@ -6527,7 +6536,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     ${alertaClienteHtml(alertas)}
     ${aplicarBonusGuiado ?'<div class="notice success">Bônus — 1 mês foi preparado com início no vencimento atual e término calculado. Confira as datas e clique em Salvar cliente para aplicar. Nenhum saldo foi consumido ainda.</div>' : ''}
     <section class="panel">
-        <form class="fields client-form" method="post" action="/clientes/salvar">
+        <form class="fields client-form cliente-editor-form" method="post" action="/clientes/salvar">
             ${cliente.id ?`<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
             <div class="form-section full">Dados pessoais</div>
             ${campo({ nome: 'nome', label: 'Nome completo *', valor: cliente.nome, tipo: 'text', attrs: 'id="nomeCliente" required placeholder="Nome do cliente" style="text-transform: capitalize;"' })}
@@ -6537,12 +6546,14 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 label: 'Aniversário (dia/mês)',
                 valor: formatarAniversario(cliente.nascimento),
                 tipo: 'text',
+                classe: 'cliente-aniversario',
                 attrs: 'inputmode="numeric" maxlength="5" pattern="(?:0[1-9]|[12][0-9]|3[01])/(?:0[1-9]|1[0-2])" placeholder="DD/MM" title="Informe somente dia e mês no formato DD/MM" autocomplete="off" data-lpignore="true" oninput="const n=this.value.replace(/[^0-9]/g,\'\').slice(0,4);this.value=n.length>2?n.slice(0,2)+\'/\'+n.slice(2):n"'
             })}
             ${campo({
                 nome: 'origem',
                 label: 'Origem do Cliente',
                 valor: cliente.origem || '',
+                classe: 'cliente-origem',
                 opcoes: [
                     { valor: '', texto: 'Selecione...' },
                     ...ORIGENS_CLIENTE.map(origem => ({ valor: origem, texto: origem }))

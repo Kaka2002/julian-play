@@ -60,6 +60,9 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /function bandeiraPaisTelefone\(cliente = \{\}\)/);
     assert.doesNotMatch(fonte, /flagcdn\.com/);
     assert.match(fonte, /\/assets\/flags\/\$\{String\(codigo \|\| 'BR'\)\.toLowerCase\(\)\}\.png/);
+    assert.match(fonte, /cliente-editor-form/);
+    assert.match(fonte, /\$\{escapar\(item\.pais\)\} - \$\{escapar\(item\.codigo\)\} \(\+\$\{escapar\(item\.ddi\)\}\)/);
+    assert.match(fonte, /grid-template-columns: minmax\(150px, 180px\) minmax\(110px, 1fr\)/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
