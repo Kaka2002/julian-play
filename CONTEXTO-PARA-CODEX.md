@@ -2073,4 +2073,5 @@ pm ci normalmente.
 - As 16 bandeiras suportadas no seletor de país acompanham o pacote em `assets/flags`. O seletor e as listas usam essas imagens locais, sem depender de emoji, fonte instalada ou carregamento externo.
 - Na edição de cliente, o país/DDD ocupa uma coluna menor e mostra a bandeira local com o formato `Brasil - BR (+55)`. O telefone recebe o espaço restante; aniversário e origem também usam colunas proporcionais menores em telas largas e passam a duas colunas em telas menores.
 - Cartões de receita, tabelas, formulários destacados, listas de acesso, prévias de modelos e barras de progresso recebem no modo noturno fundos azul-acinzentados e textos claros. Isso remove os blocos brancos intensos sem afetar o modo claro ou dados da instalação.
+- A área protegida de exclusão passa a usar um vinho-azulado escuro no modo noturno, com títulos, rótulos e campos de confirmação legíveis; o vermelho fica restrito às ações destrutivas.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.

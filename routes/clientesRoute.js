@@ -1052,6 +1052,9 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         html[data-tema="noturno"] .var-token { background: #26374c; border-color: #465c77; color: #dce7f8; }
         html[data-tema="noturno"] .dashboard-bonus-items a { background: #153d32; color: #c0f2d7; }
         html[data-tema="noturno"] .dashboard-bonus-items a small { color: #96d7b8; }
+        html[data-tema="noturno"] .danger-zone { background: #2d2530; border-color: #70424e; color: #e4edf9; }
+        html[data-tema="noturno"] .danger-zone h3 { color: #ff9ca6; }
+        html[data-tema="noturno"] .danger-zone label { color: #c4d1e3; }
 
         body::before {
             content: "";
