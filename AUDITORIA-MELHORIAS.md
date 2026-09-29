@@ -547,3 +547,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: controles claros, etiquetas e paginação agora usam fundo escuro e texto legível no modo noturno; o contraste do modo claro foi preservado.
 - Corrigido: marca d’água do modo noturno ganhou brilho e mistura de tela para destacar a identidade visual sem fundo escuro aparente.
 - Melhorado: fundo do modo noturno recebeu degradê azul-petróleo e luzes suaves para leitura mais confortável, mantendo o contraste dos componentes.
+- Corrigido: bandeiras de país deixaram de depender de imagem externa e são exibidas localmente no seletor e nas listas de clientes.

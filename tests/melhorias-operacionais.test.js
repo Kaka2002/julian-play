@@ -57,6 +57,8 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /html\[data-tema="noturno"\] \.installed-chip \{ background: #153d32;/);
     assert.match(fonte, /html\[data-tema="noturno"\] body::before \{[\s\S]*mix-blend-mode: screen;/);
     assert.match(fonte, /linear-gradient\(145deg, #101b2b 0%, #13273a 48%, #18243d 100%\)/);
+    assert.match(fonte, /function bandeiraPaisTelefone\(cliente = \{\}\)/);
+    assert.doesNotMatch(fonte, /flagcdn\.com/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
