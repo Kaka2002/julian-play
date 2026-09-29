@@ -3328,18 +3328,52 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 limpar.textContent = '×';
                 contenedor.appendChild(limpar);
 
-                let espera;
-                let valorCarregado = campo.value;
                 const atualizarLimpar = () => contenedor.dataset.hasValue = String(Boolean(campo.value));
-                const enviarPesquisa = () => {
-                    if (campo.value === valorCarregado) return;
-                    form.requestSubmit ?form.requestSubmit() :form.submit();
+                const normalizarPesquisa = (valor) => String(valor || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                const itensPesquisa = () => {
+                    const caminho = new URL(form.action || window.location.href, window.location.origin).pathname;
+                    if (caminho === '/pendencias') return [...document.querySelectorAll('.pending-list .pending-item')];
+                    if (caminho === '/crm') return [...document.querySelectorAll('.crm-table tbody tr')];
+                    if (caminho === '/atendimentos') return [...form.closest('.panel')?.querySelectorAll('tbody tr') || []];
+                    return [...document.querySelectorAll('.clients-table tbody tr')];
+                };
+                const filtrarResultadosVisiveis = () => {
+                    const termo = normalizarPesquisa(campo.value.trim());
+                    itensPesquisa().forEach((item) => {
+                        item.hidden = Boolean(termo) && !normalizarPesquisa(item.textContent).includes(termo);
+                    });
+                };
+                let requisicaoAtual = 0;
+                let controladorBusca;
+                const atualizarTodosClientes = async () => {
+                    const caminho = new URL(form.action || window.location.href, window.location.origin).pathname;
+                    if (caminho !== '/clientes/todos') return;
+                    controladorBusca?.abort();
+                    controladorBusca = new AbortController();
+                    const numeroRequisicao = ++requisicaoAtual;
+                    const url = new URL(form.action, window.location.origin);
+                    new FormData(form).forEach((valor, nome) => url.searchParams.set(nome, String(valor)));
+                    url.searchParams.set('busca', campo.value);
+                    url.searchParams.set('pagina', '1');
+                    url.searchParams.set('porPagina', campo.value.trim() ?'100' :String(form.elements.porPagina?.value || '5'));
+                    try {
+                        const resposta = await fetch(url, { signal: controladorBusca.signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                        if (!resposta.ok || numeroRequisicao !== requisicaoAtual) return;
+                        const pagina = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+                        const atual = document.getElementById('clientes-resultados');
+                        const atualizado = pagina.getElementById('clientes-resultados');
+                        if (!atual || !atualizado || numeroRequisicao !== requisicaoAtual) return;
+                        atual.innerHTML = atualizado.innerHTML;
+                        window.history.replaceState({}, '', url);
+                    } catch (erro) {
+                        if (erro.name !== 'AbortError') console.warn('Não foi possível atualizar a pesquisa agora.', erro);
+                    }
                 };
 
                 campo.addEventListener('input', () => {
                     atualizarLimpar();
-                    window.clearTimeout(espera);
-                    espera = window.setTimeout(enviarPesquisa, 320);
+                    filtrarResultadosVisiveis();
+                    atualizarTodosClientes();
                 });
                 campo.addEventListener('keydown', (event) => {
                     if (event.key !== 'Escape' || !campo.value) return;
@@ -3348,11 +3382,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 });
                 limpar.addEventListener('click', () => {
                     if (!campo.value) return;
-                    window.clearTimeout(espera);
                     campo.value = '';
                     atualizarLimpar();
                     campo.focus();
-                    enviarPesquisa();
+                    filtrarResultadosVisiveis();
+                    atualizarTodosClientes();
                 });
                 atualizarLimpar();
             });
@@ -8510,7 +8544,7 @@ function listaClientes({ clientes, busca, status, origem, tag, renovacao, bonus,
             <a class="button" href="/clientes/novo">${icon('plus')} Novo Cliente</a>
         </div>
     </div>
-    <section class="clients-panel">
+    <section class="clients-panel" id="clientes-resultados">
         ${tabelaClientes(clientes)}
         ${paginacaoClientes ?paginacao({
             base: '/clientes/todos',

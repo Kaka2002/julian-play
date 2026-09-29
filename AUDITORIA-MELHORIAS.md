@@ -552,3 +552,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: no modo noturno, cartões de receita, tabelas, campos destacados, prévias e listas deixam de usar branco intenso; adotam tons azul-acinzentados com texto claro e barras de progresso visíveis.
 - Corrigido: a zona protegida de exclusão de cliente usa fundo escuro e contraste próprio no modo noturno, sem suavizar a identificação das ações destrutivas.
 - Melhorado: pesquisas de Clientes, Financeiro, CRM, Atendimentos e Pendências filtram automaticamente durante a digitação e mostram um X para limpar, restaurando a lista conforme os filtros ativos.
+- Corrigido: a pesquisa não recarrega mais a página durante a digitação. O filtro visual é imediato e preserva o cursor; em Clientes, os resultados completos são atualizados em segundo plano, sem substituir o campo de busca.
