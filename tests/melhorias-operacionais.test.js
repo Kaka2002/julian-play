@@ -67,6 +67,10 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /cliente-editor-form/);
     assert.match(fonte, /\$\{escapar\(item\.pais\)\} - \$\{escapar\(item\.codigo\)\} \(\+\$\{escapar\(item\.ddi\)\}\)/);
     assert.match(fonte, /grid-template-columns: minmax\(150px, 180px\) minmax\(110px, 1fr\)/);
+    assert.match(fonte, /form\[method="get"\] input\[name="busca"\]/);
+    assert.match(fonte, /instant-search-clear/);
+    assert.match(fonte, /setTimeout\(enviarPesquisa, 320\)/);
+    assert.match(fonte, /campo\.value = '';/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

@@ -2775,6 +2775,46 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             padding-left: 46px;
         }
 
+        .instant-search-field {
+            position: relative;
+            min-width: 0;
+        }
+
+        .instant-search-field input[name="busca"] {
+            padding-right: 42px;
+        }
+
+        .instant-search-clear {
+            position: absolute;
+            top: 50%;
+            right: 8px;
+            z-index: 1;
+            width: 28px;
+            min-height: 28px;
+            padding: 0;
+            transform: translateY(-50%);
+            border: 0;
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            font-size: 22px;
+            line-height: 1;
+            box-shadow: none;
+            cursor: pointer;
+        }
+
+        .instant-search-clear:hover,
+        .instant-search-clear:focus-visible { background: var(--blue-soft); color: var(--blue); outline: none; }
+        .instant-search-field:not([data-has-value="true"]) .instant-search-clear { display: none; }
+        .atendimentos-filters .instant-search-field,
+        .crm-filters .instant-search-field { flex: 2 1 220px; min-width: 0; }
+        .atendimentos-filters .instant-search-field input,
+        .crm-filters .instant-search-field input { width: 100%; }
+        @media (max-width: 640px) {
+            .atendimentos-filters .instant-search-field,
+            .crm-filters .instant-search-field { flex-basis: 100%; width: 100%; }
+        }
+
         .client-tags {
             display: flex;
             gap: 5px;
@@ -3266,6 +3306,56 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 botaoTopo.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
                 atualizarBotaoTopo();
             }
+
+            document.querySelectorAll('form[method="get"] input[name="busca"]').forEach((campo) => {
+                const form = campo.form;
+                if (!form) return;
+                let contenedor = campo.closest('.clients-search');
+                if (contenedor) {
+                    contenedor.classList.add('instant-search-field');
+                } else {
+                    contenedor = document.createElement('div');
+                    contenedor.className = 'instant-search-field';
+                    campo.parentNode.insertBefore(contenedor, campo);
+                    contenedor.appendChild(campo);
+                }
+
+                const limpar = document.createElement('button');
+                limpar.type = 'button';
+                limpar.className = 'instant-search-clear';
+                limpar.setAttribute('aria-label', 'Limpar pesquisa');
+                limpar.title = 'Limpar pesquisa';
+                limpar.textContent = '×';
+                contenedor.appendChild(limpar);
+
+                let espera;
+                let valorCarregado = campo.value;
+                const atualizarLimpar = () => contenedor.dataset.hasValue = String(Boolean(campo.value));
+                const enviarPesquisa = () => {
+                    if (campo.value === valorCarregado) return;
+                    form.requestSubmit ?form.requestSubmit() :form.submit();
+                };
+
+                campo.addEventListener('input', () => {
+                    atualizarLimpar();
+                    window.clearTimeout(espera);
+                    espera = window.setTimeout(enviarPesquisa, 320);
+                });
+                campo.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Escape' || !campo.value) return;
+                    event.preventDefault();
+                    limpar.click();
+                });
+                limpar.addEventListener('click', () => {
+                    if (!campo.value) return;
+                    window.clearTimeout(espera);
+                    campo.value = '';
+                    atualizarLimpar();
+                    campo.focus();
+                    enviarPesquisa();
+                });
+                atualizarLimpar();
+            });
 
             const botaoValores = document.querySelector('.money-visibility-toggle');
             if (!botaoValores) return;

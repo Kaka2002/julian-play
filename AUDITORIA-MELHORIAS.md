@@ -551,3 +551,4 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Melhorado: formulário de cliente redistribui país/DDD, telefone, aniversário e origem, priorizando a leitura integral do número e reduzindo campos que não precisam ocupar a largura total.
 - Corrigido: no modo noturno, cartões de receita, tabelas, campos destacados, prévias e listas deixam de usar branco intenso; adotam tons azul-acinzentados com texto claro e barras de progresso visíveis.
 - Corrigido: a zona protegida de exclusão de cliente usa fundo escuro e contraste próprio no modo noturno, sem suavizar a identificação das ações destrutivas.
+- Melhorado: pesquisas de Clientes, Financeiro, CRM, Atendimentos e Pendências filtram automaticamente durante a digitação e mostram um X para limpar, restaurando a lista conforme os filtros ativos.
