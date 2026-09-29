@@ -288,9 +288,9 @@ function bandeiraPaisTelefone(cliente = {}) {
 
 function imagemBandeiraPaisTelefone(cliente = {}) {
     const pais = paisTelefoneDoCliente(cliente);
-    const bandeira = bandeiraPaisTelefone(cliente);
+    const codigo = String(pais.codigo || 'BR').toLowerCase();
 
-    return `<span class="country-flag-inline" role="img" aria-label="${escapar(pais.pais)}" title="${escapar(pais.pais)}">${escapar(bandeira)}</span>`;
+    return `<img class="country-flag-inline" src="/assets/flags/${escapar(codigo)}.png" alt="${escapar(pais.pais)}" title="${escapar(pais.pais)}">`;
 }
 const TAGS_CLIENTE = [
     'VIP',
@@ -2562,12 +2562,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
 
         .phone-country .country-flag {
             margin-left: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 25px;
-            font-size: 19px;
-            line-height: 1;
+            width: 24px;
+            height: 18px;
+            object-fit: cover;
+            border-radius: 2px;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, .14);
         }
 
         .phone-field .phone-prefix {
@@ -2824,15 +2823,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         }
 
         .country-flag-inline {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 21px;
-            min-height: 18px;
+            display: inline-block;
+            width: 18px;
+            height: 13px;
             margin-right: 7px;
-            font-size: 16px;
-            line-height: 1;
-            vertical-align: -2px;
+            border-radius: 2px;
+            object-fit: cover;
+            box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.10);
+            vertical-align: -1px;
         }
 
         .app-chip {
@@ -3660,18 +3658,19 @@ function campoWhatsAppComPais(valor = '', ddiSalvo = '', paisSalvo = '') {
         || PAISES_TELEFONE[0];
     ddi = paisSelecionado.ddi;
 
+    const urlBandeira = (codigo) => `/assets/flags/${String(codigo || 'BR').toLowerCase()}.png`;
     const opcoes = PAISES_TELEFONE.map(item => {
-        const flag = bandeiraPaisTelefone({ paisTelefone: item.codigo, ddiTelefone: item.ddi });
+        const flag = urlBandeira(item.codigo);
         const selecionado = item.codigo === paisSelecionado.codigo ? ' selected' : '';
-        return `<option value="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}" data-flag="${escapar(flag)}"${selecionado}>${escapar(flag)} ${escapar(item.pais)} (+${escapar(item.ddi)})</option>`;
+        return `<option value="${escapar(item.codigo)}" data-ddi="${escapar(item.ddi)}" data-placeholder="${escapar(item.exemplo)}" data-flag="${escapar(flag)}"${selecionado}>${escapar(item.pais)} (+${escapar(item.ddi)})</option>`;
     }).join('');
-    const bandeiraSelecionada = bandeiraPaisTelefone({ paisTelefone: paisSelecionado.codigo, ddiTelefone: paisSelecionado.ddi });
+    const bandeiraSelecionada = urlBandeira(paisSelecionado.codigo);
 
     return `<label>WhatsApp *
         <div class="phone-field">
             <div class="phone-country">
-                <span class="country-flag" role="img" aria-label="Bandeira do país">${escapar(bandeiraSelecionada)}</span>
-                <select class="phone-prefix" name="paisTelefone" aria-label="País do WhatsApp" onchange="const s=this, opt=s.options[s.selectedIndex], box=s.closest('.phone-field'); box.querySelector('input[name=ddiTelefone]').value=opt.dataset.ddi||'55'; box.querySelector('input[name=telefone]').placeholder=opt.dataset.placeholder||'11999999999'; box.querySelector('.country-flag').textContent=opt.dataset.flag||'🇧🇷';">
+                <img class="country-flag" src="${escapar(bandeiraSelecionada)}" alt="" width="24" height="18">
+                <select class="phone-prefix" name="paisTelefone" aria-label="País do WhatsApp" onchange="const s=this, opt=s.options[s.selectedIndex], box=s.closest('.phone-field'); box.querySelector('input[name=ddiTelefone]').value=opt.dataset.ddi||'55'; box.querySelector('input[name=telefone]').placeholder=opt.dataset.placeholder||'11999999999'; box.querySelector('.country-flag').src=opt.dataset.flag||'/assets/flags/br.png';">
                     ${opcoes}
                 </select>
             </div>

@@ -59,6 +59,7 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /linear-gradient\(145deg, #101b2b 0%, #13273a 48%, #18243d 100%\)/);
     assert.match(fonte, /function bandeiraPaisTelefone\(cliente = \{\}\)/);
     assert.doesNotMatch(fonte, /flagcdn\.com/);
+    assert.match(fonte, /\/assets\/flags\/\$\{String\(codigo \|\| 'BR'\)\.toLowerCase\(\)\}\.png/);
 });
 
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {

@@ -2070,5 +2070,5 @@ pm ci normalmente.
 - Etiquetas, campos de seleção, páginas da tabela e estados de status preservam contraste no modo noturno; o modo claro conserva os textos escuros em seus fundos claros.
 - A marca d’água usa mistura de tela e brilho ajustado no modo noturno, destacando a logo sem exibir o retângulo escuro da imagem de origem. O modo claro permanece inalterado.
 - O fundo noturno combina degradê azul-petróleo com pontos de luz suaves em ciano e índigo para reduzir a aparência pesada durante uso prolongado, sem comprometer o contraste dos textos e controles.
-- Bandeiras no seletor de país e nas listas de clientes usam caracteres Unicode gerados localmente, sem carregar imagens do serviço externo de bandeiras. Assim, continuam visíveis mesmo quando não há acesso a esse serviço.
+- As 16 bandeiras suportadas no seletor de país acompanham o pacote em `assets/flags`. O seletor e as listas usam essas imagens locais, sem depender de emoji, fonte instalada ou carregamento externo.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.
