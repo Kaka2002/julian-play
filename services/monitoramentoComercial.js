@@ -19,6 +19,7 @@ const { avaliarSaudeOperacional } = require('./saudeOperacionalService');
 const INTERVALO_MS = Number(process.env.MONITOR_INTERVALO_MS || 60000);
 const ALERTA_SAUDE_INTERVALO_MS = Math.max(1, Number(process.env.ALERTA_SAUDE_INTERVALO_HORAS || 6)) * 60 * 60 * 1000;
 const SAUDE_NORMALIZADA_ESTAVEL_MS = Math.max(5, Number(process.env.SAUDE_NORMALIZADA_MINUTOS || 30)) * 60 * 1000;
+const HORA_SINCRONISMO_RENDIMENTOS_MP = '10:00';
 
 let agendador = null;
 let executando = false;
@@ -185,6 +186,12 @@ function agoraSaoPaulo() {
         hora: `${partes.hour}:${partes.minute}`,
         iso: `${partes.year}-${partes.month}-${partes.day}T${partes.hour}:${partes.minute}:${partes.second}`
     };
+}
+
+function deveSincronizarRendimentosMercadoPago(config = {}, agora = {}) {
+    return Boolean(String(config.mercadoPagoAccessToken || '').trim())
+        && String(agora.hora || '') >= HORA_SINCRONISMO_RENDIMENTOS_MP
+        && String(config.ultimoSincronismoRendimentosMP || '') !== String(agora.data || '');
 }
 
 function montarPayloadWebhook(evento = {}) {
@@ -540,7 +547,7 @@ async function executarMonitoramento(controles = {}) {
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
         const diaAtual = agora.data;
-        if (config.mercadoPagoAccessToken && config.ultimoSincronismoRendimentosMP !== diaAtual) {
+        if (deveSincronizarRendimentosMercadoPago(config, agora)) {
             try {
                 const { importarRendimentosMercadoPago } = require('./mercadoPagoService');
                 await importarRendimentosMercadoPago();
@@ -582,6 +589,7 @@ module.exports = {
     iniciarMonitoramentoComercial,
     executarMonitoramento,
     agoraSaoPaulo,
+    deveSincronizarRendimentosMercadoPago,
     enviarWebhook,
     testarWebhookAlertas
 };

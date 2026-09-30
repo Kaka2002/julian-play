@@ -21,3 +21,10 @@ test('migração cria histórico local de créditos e débitos do Mercado Pago',
   assert.match(migracao, /credito TEXT NOT NULL/);
   assert.match(migracao, /debito TEXT NOT NULL/);
 });
+
+test('sincronismo automático de rendimentos roda às 10h e não repete no mesmo dia', () => {
+  const fonte = fs.readFileSync(path.join(raiz, 'services', 'monitoramentoComercial.js'), 'utf8');
+  assert.match(fonte, /HORA_SINCRONISMO_RENDIMENTOS_MP = '10:00'/);
+  assert.match(fonte, /agora\.hora \|\| ''\) >= HORA_SINCRONISMO_RENDIMENTOS_MP/);
+  assert.match(fonte, /ultimoSincronismoRendimentosMP.*!==.*agora\.data/);
+});
