@@ -2730,6 +2730,11 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
         .copy-field-button { position:absolute; right:7px; bottom:7px; display:inline-grid; place-items:center; width:30px; height:30px; padding:0; border:0; border-radius:7px; background:transparent; color:#5570d8; cursor:pointer; }
         .copy-field-button:hover,.copy-field-button:focus-visible { background:var(--blue-soft); color:var(--blue); outline:none; }
         .copy-field-button svg { width:17px; height:17px; }
+        .password-toggle-field { position:relative; display:block; min-width:0; }
+        .password-toggle-field > input { width:100%; padding-right:42px; }
+        .password-toggle-button { position:absolute; right:7px; top:50%; transform:translateY(-50%); display:inline-grid; place-items:center; width:30px; height:30px; padding:0; border:0; border-radius:7px; background:transparent; color:var(--muted); cursor:pointer; }
+        .password-toggle-button:hover,.password-toggle-button:focus-visible { background:var(--blue-soft); color:var(--blue); outline:none; }
+        .password-toggle-button svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 
         .toggle-line {
             min-height: 42px;
@@ -3391,6 +3396,22 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 atualizarLimpar();
             });
 
+            const iconeOlhoAberto = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+            const iconeOlhoFechado = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18"></path><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"></path><path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c6.5 0 10 8 10 8a18.5 18.5 0 0 1-3.1 4.2"></path><path d="M6.2 6.2C3.6 8.1 2 12 2 12s3.5 7 10 7a10.8 10.8 0 0 0 3.8-.7"></path></svg>';
+            document.addEventListener('click', (event) => {
+                const botao = event.target.closest('.password-toggle-button');
+                if (!botao) return;
+                const campo = botao.closest('.password-toggle-field')?.querySelector('input[data-password-toggle]');
+                if (!campo) return;
+                const mostrar = campo.type === 'password';
+                campo.type = mostrar ?'text' : 'password';
+                const texto = mostrar ?'Ocultar senha' : 'Mostrar senha';
+                botao.title = texto;
+                botao.setAttribute('aria-label', texto);
+                botao.innerHTML = mostrar ?iconeOlhoFechado : iconeOlhoAberto;
+                campo.focus({ preventScroll: true });
+            });
+
             const botaoValores = document.querySelector('.money-visibility-toggle');
             if (!botaoValores) return;
 
@@ -3495,9 +3516,19 @@ function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = ''
         </label>`;
     }
 
+    const confirmarSenha = tipo === 'password' && nome === 'senhaConfirmacao';
+    const input = `<input type="${tipo}" name="${nome}" value="${escapar(valor)}" ${confirmarSenha ?'data-password-toggle' : ''} ${attrs}>`;
     return `<label class="${escapar(classe)}">${label}
-        <input type="${tipo}" name="${nome}" value="${escapar(valor)}" ${attrs}>
+        ${confirmarSenha ?`<span class="password-toggle-field">${input}${botaoAlternarSenha()}</span>` : input}
     </label>`;
+}
+
+function botaoAlternarSenha() {
+    return `<button class="password-toggle-button" type="button" title="Mostrar senha" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>`;
+}
+
+function campoSenhaConfirmacao(attrs = '') {
+    return `<span class="password-toggle-field"><input type="password" name="senhaConfirmacao" data-password-toggle ${attrs}>${botaoAlternarSenha()}</span>`;
 }
 
 function areaTexto({ nome, label, valor = '' }) {
@@ -9894,7 +9925,7 @@ function telaManutencao(status = {}, opcoes = {}) {
                 <button class="button" type="submit">${icon('planos')} Gerar backup agora</button>
             </form>
             <form method="post" action="/manutencao/backups/testar-restauracao" autocomplete="off" data-form-type="other">
-                <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual">
+                ${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"`)}
                 <button class="button secondary" type="submit">Testar restauração agora</button>
             </form>
         </div>
@@ -9913,7 +9944,7 @@ function telaManutencao(status = {}, opcoes = {}) {
             </tbody>
         </table>
         <form method="post" action="/manutencao/banco/otimizar" autocomplete="off" data-form-type="other" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:18px 20px;" onsubmit="return confirm('O sistema criará e validará um backup antes de compactar o banco. Durante alguns instantes, outras gravações podem aguardar. Deseja continuar?');">
-            <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:220px;">
+            ${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:220px;"`)}
             <button class="button secondary" type="submit">Otimizar banco com backup</button>
             <span class="subtitle">Remove somente conteúdo de envios já confirmados e sessões revogadas/expiradas há mais de 90 dias; preserva clientes, financeiro, campanhas e configurações.</span>
         </form>
@@ -9965,15 +9996,15 @@ function telaManutencao(status = {}, opcoes = {}) {
                     ${manutencaoRestrita ?'' : `<td>
                         <form method="post" action="/manutencao/restaurar" autocomplete="off" data-form-type="other" onsubmit="return confirm('Restaurar este backup?O sistema criará uma cópia do banco atual antes de restaurar. Depois reinicie o PM2.');">
                             <input type="hidden" name="backup" value="${escapar(backup.nome)}">
-                            <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:180px;">
+                            ${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:180px;"`)}
                             <button class="button secondary" type="submit">${icon('refresh')} Restaurar</button>
                         </form>
                         <div class="subtitle" style="margin-top:8px;">Integridade: ${escapar(backup.integridade)} · teste: ${escapar(backup.restauracaoTeste)}${backup.hashSha256 ?` · SHA-256 ${escapar(backup.hashSha256.slice(0,12))}…`:''}</div>
                         <form method="post" action="/manutencao/backups/exportar" autocomplete="off" data-form-type="other" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} minlength="10" required placeholder="Senha exclusiva do kit"><input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"><button class="button secondary" type="submit">Exportar kit de recuperação</button>
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input type="password" name="senhaExportacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} minlength="10" required placeholder="Senha exclusiva do kit">${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"`)}<button class="button secondary" type="submit">Exportar kit de recuperação</button>
                         </form>
                         <form method="post" action="/manutencao/backups/copiar" autocomplete="off" data-form-type="other" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
-                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="D:\Backups ou unidade de rede"><input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"><button class="button secondary" type="submit">Copiar externamente</button>
+                            <input type="hidden" name="backup" value="${escapar(backup.nome)}"><input name="pastaExterna" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="D:\Backups ou unidade de rede">${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual"`)}<button class="button secondary" type="submit">Copiar externamente</button>
                         </form>
                     </td>`}
                 </tr>`).join('')}
@@ -9993,7 +10024,7 @@ function telaManutencao(status = {}, opcoes = {}) {
         </div>
         <form method="post" action="/manutencao/eventos/limpar" autocomplete="off" data-form-type="other" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 20px 18px;" onsubmit="return confirm('Um backup será criado e validado antes da limpeza. Eventos protegidos serão preservados. Deseja continuar?');">
             <select name="diasRetencao" aria-label="Prazo de retenção dos eventos"><option value="365" selected>Manter 365 dias</option><option value="180">Manter 180 dias</option></select>
-            <input type="password" name="senhaConfirmacao" ${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:220px;">
+            ${campoSenhaConfirmacao(`${ATRIBUTOS_CAMPO_SEMPRE_VAZIO} required placeholder="Senha atual" style="max-width:220px;"`)}
             <button class="button secondary" type="submit">Limpar eventos operacionais antigos</button>
         </form>`}
         ${eventos.length ?`<table>

@@ -553,6 +553,7 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: a zona protegida de exclusão de cliente usa fundo escuro e contraste próprio no modo noturno, sem suavizar a identificação das ações destrutivas.
 - Melhorado: pesquisas de Clientes, Financeiro, CRM, Atendimentos e Pendências filtram automaticamente durante a digitação e mostram um X para limpar, restaurando a lista conforme os filtros ativos.
 - Corrigido: a pesquisa não recarrega mais a página durante a digitação. O filtro visual é imediato e preserva o cursor; em Clientes, os resultados completos são atualizados em segundo plano, sem substituir o campo de busca.
+- Melhorado: todos os campos de confirmação de senha da Manutenção começam mascarados e exibem um ícone de olho para mostrar ou ocultar o conteúdo localmente. O recurso não grava, copia nem transmite a senha.
 
 ## Implementado: configuração inicial do relatório Mercado Pago — versão 1.3.77
 

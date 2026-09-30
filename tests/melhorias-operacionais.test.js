@@ -76,6 +76,18 @@ test('painel alterna entre modo claro e noturno sem gravar configuração do cli
     assert.match(fonte, /campo\.value = '';/);
 });
 
+test('manutenção permite alternar a visualização somente das senhas de confirmação', () => {
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    assert.match(fonte, /function campoSenhaConfirmacao\(attrs = ''\)/);
+    assert.match(fonte, /data-password-toggle/);
+    assert.match(fonte, /password-toggle-button/);
+    assert.match(fonte, /campo\.type = mostrar \?'text' : 'password'/);
+    assert.match(fonte, /Mostrar senha/);
+    assert.match(fonte, /Ocultar senha/);
+    assert.match(fonte, /action="\/manutencao\/backups\/testar-restauracao"[\s\S]*campoSenhaConfirmacao/);
+    assert.match(fonte, /action="\/manutencao\/backups\/exportar"[\s\S]*campoSenhaConfirmacao/);
+});
+
 test('Atendimentos usa filtros responsivos sem alterar envio da busca e status', () => {
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes/clientesRoute.js'), 'utf8');
     assert.match(fonte, /class="atendimentos-filters" method="get" action="\/atendimentos"/);

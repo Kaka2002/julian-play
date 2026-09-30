@@ -2075,6 +2075,7 @@ pm ci normalmente.
 - Cartões de receita, tabelas, formulários destacados, listas de acesso, prévias de modelos e barras de progresso recebem no modo noturno fundos azul-acinzentados e textos claros. Isso remove os blocos brancos intensos sem afetar o modo claro ou dados da instalação.
 - A área protegida de exclusão passa a usar um vinho-azulado escuro no modo noturno, com títulos, rótulos e campos de confirmação legíveis; o vermelho fica restrito às ações destrutivas.
 - Campos de pesquisa em listas com filtro passam a filtrar visualmente a cada letra, sem recarregar a página ou tirar o cursor do campo. Um X no fim do campo limpa o texto e restaura a lista respeitando os demais filtros já escolhidos. Em Clientes, a busca consulta a página em segundo plano e mostra até 100 resultados correspondentes; a ação usa apenas filtros GET existentes, sem alterar registros.
+- Os campos de confirmação de senha na Manutenção agora exibem um ícone de olho para mostrar ou ocultar a senha somente no navegador. A senha continua mascarada inicialmente; a interação não envia nem grava dados adicionais.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.
 
 ## Configuração automática do relatório Mercado Pago — versão 1.3.77
