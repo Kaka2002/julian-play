@@ -110,7 +110,9 @@ async function garantirRelatorioMercadoPago(accessToken) {
         include_withdrawal_at_end: true,
         execute_after_withdrawal: false,
         display_timezone: 'GMT-03',
-        frequency: { hour: 3, type: 'daily', value: 1 },
+        // No relatório diário, o Mercado Pago aceita somente a hora e o tipo.
+        // "value" é reservado para a posição semanal ou mensal e gera "Invalid frequency" em daily.
+        frequency: { hour: 3, type: 'daily' },
         columns: COLUNAS_RELATORIO_FINANCEIRO.map(key => ({ key }))
     };
     if (!configuracao) {

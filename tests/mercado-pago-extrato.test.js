@@ -9,6 +9,8 @@ test('sincronização Mercado Pago configura relatório diário e guarda extrato
   assert.match(fonte, /release_report\/config/);
   assert.match(fonte, /release_report\/schedule/);
   assert.match(fonte, /configuration not found for user/i);
+  assert.match(fonte, /frequency: \{ hour: 3, type: 'daily' \}/);
+  assert.doesNotMatch(fonte, /frequency: \{ hour: 3, type: 'daily', value: 1 \}/);
   assert.match(fonte, /movimentos_mercado_pago/);
   assert.match(fonte, /asset_management_gain/);
 });
