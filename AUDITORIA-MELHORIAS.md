@@ -553,3 +553,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: a zona protegida de exclusão de cliente usa fundo escuro e contraste próprio no modo noturno, sem suavizar a identificação das ações destrutivas.
 - Melhorado: pesquisas de Clientes, Financeiro, CRM, Atendimentos e Pendências filtram automaticamente durante a digitação e mostram um X para limpar, restaurando a lista conforme os filtros ativos.
 - Corrigido: a pesquisa não recarrega mais a página durante a digitação. O filtro visual é imediato e preserva o cursor; em Clientes, os resultados completos são atualizados em segundo plano, sem substituir o campo de busca.
+
+## Implementado: configuração inicial do relatório Mercado Pago — versão 1.3.77
+
+- A sincronização de rendimentos trata a resposta `Configuration not found for user` como relatório ainda não criado, além do retorno HTTP 404 já suportado. Com Access Token de produção válido, o painel cria e agenda o relatório diário automaticamente; depois usa o primeiro arquivo processado para importar somente rendimentos elegíveis, com a deduplicação existente.
+- Afeta painel administrador, clientes comerciais no servidor e instalação local; Painel Mestre inalterado. Access Token, bancos, configurações, rendimentos, sessões, backups e `DATA_DIR` são preservados. Sem migração. A ação manual após a atualização é confirmar o Access Token em Manutenção e clicar em Sincronizar Mercado Pago; o primeiro arquivo pode depender da próxima geração diária do provedor.

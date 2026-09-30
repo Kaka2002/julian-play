@@ -8,6 +8,7 @@ test('sincronização Mercado Pago configura relatório diário e guarda extrato
   const fonte = fs.readFileSync(path.join(raiz, 'services', 'mercadoPagoService.js'), 'utf8');
   assert.match(fonte, /release_report\/config/);
   assert.match(fonte, /release_report\/schedule/);
+  assert.match(fonte, /configuration not found for user/i);
   assert.match(fonte, /movimentos_mercado_pago/);
   assert.match(fonte, /asset_management_gain/);
 });

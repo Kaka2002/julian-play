@@ -88,6 +88,10 @@ function valorRelatorio(item) {
 
 const COLUNAS_RELATORIO_FINANCEIRO = ['DATE', 'SOURCE_ID', 'EXTERNAL_REFERENCE', 'RECORD_TYPE', 'DESCRIPTION', 'NET_CREDIT_AMOUNT', 'NET_DEBIT_AMOUNT', 'GROSS_AMOUNT', 'MP_FEE_AMOUNT', 'PAYMENT_METHOD'];
 
+function configuracaoRelatorioAusente(erro) {
+    return /(?:\b404\b|configuration not found for user|configura[çc][aã]o.*(?:n[aã]o encontrada|not found))/i.test(String(erro?.message || ''));
+}
+
 function dataRelatorio(item) {
     const bruto = String(item.DATE || item.DATE_CREATED || item.RELEASE_DATE || '').trim();
     const data = new Date(bruto);
@@ -97,7 +101,9 @@ function dataRelatorio(item) {
 async function garantirRelatorioMercadoPago(accessToken) {
     let configuracao = null;
     try { configuracao = await requisicaoMercadoPago('/v1/account/release_report/config', accessToken); } catch (erro) {
-        if (!/404/.test(erro.message)) throw erro;
+        // Algumas contas retornam 400 com esta mensagem enquanto ainda não possuem relatório configurado.
+        // Isso equivale à ausência de configuração e deve iniciar a criação automática abaixo.
+        if (!configuracaoRelatorioAusente(erro)) throw erro;
     }
     const configuracaoDesejada = {
         file_name_prefix: configuracao?.file_name_prefix || 'julian-play-financeiro',

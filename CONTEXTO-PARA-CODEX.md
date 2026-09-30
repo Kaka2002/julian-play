@@ -2076,3 +2076,8 @@ pm ci normalmente.
 - A área protegida de exclusão passa a usar um vinho-azulado escuro no modo noturno, com títulos, rótulos e campos de confirmação legíveis; o vermelho fica restrito às ações destrutivas.
 - Campos de pesquisa em listas com filtro passam a filtrar visualmente a cada letra, sem recarregar a página ou tirar o cursor do campo. Um X no fim do campo limpa o texto e restaura a lista respeitando os demais filtros já escolhidos. Em Clientes, a busca consulta a página em segundo plano e mostra até 100 resultados correspondentes; a ação usa apenas filtros GET existentes, sem alterar registros.
 - Afeta Painel Mestre, administrador, cliente comercial no servidor e instalação local. Sem migração ou ação manual obrigatória. Validação: sintaxe, testes operacionais, diff e pacote local.
+
+## Configuração automática do relatório Mercado Pago — versão 1.3.77
+
+- Corrigido: ao sincronizar rendimentos, a resposta `Configuration not found for user` do Mercado Pago passa a ser reconhecida como ausência inicial do relatório, mesmo quando a API a devolve sem HTTP 404. O sistema cria e agenda o relatório diário antes de consultar o arquivo disponível.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token já armazenado, bancos, rendimentos existentes, configurações, sessões, backups e isolamento por `DATA_DIR`. Nenhuma migração é necessária. Após atualizar, conferir em Manutenção se o provedor Mercado Pago possui um Access Token de produção válido e clicar em Sincronizar Mercado Pago; a primeira geração pode ficar disponível somente após a próxima execução diária do Mercado Pago.
