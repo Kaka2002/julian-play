@@ -41,6 +41,7 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   assert.match(mercadoPago, /ehRendimentoMercadoPago/);
   assert.match(mercadoPago, /relatorioManualRendimentosMPPendente/);
   assert.match(mercadoPago, /relatorioManualFoiProcessado/);
+  assert.match(mercadoPago, /application\/x-www-form-urlencoded/);
   assert.match(mercadoPago, /pendente: true/);
   assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente\) \{/);
   assert.match(monitoramento, /salvarConfiguracao\('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2'\)/);

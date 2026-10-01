@@ -568,3 +568,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: um relatório diário agendado já existente não encerra mais a busca por um rendimento lançado depois da sua geração. A primeira sincronização solicita o arquivo do intervalo atual e mantém a rotina pendente até aquele arquivo ser processado.
 - A solicitação pendente é registrada por dia, arquivo e horário somente para controle interno; valores continuam deduplicados pelo identificador externo. Administrador, clientes comerciais no servidor e instalações locais são afetados; Painel Mestre inalterado. Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR` são preservados. Sem migração.
 - Ação após deploy: clicar uma vez em Sincronizar Mercado Pago. Validação: sintaxe JavaScript, testes internos, diff e pacote local.
+
+## Correção: compatibilidade na solicitação de relatório Mercado Pago — versão 1.3.79
+
+- Corrigido: a criação manual do relatório repete os mesmos parâmetros UTC em formulário codificado somente se a API rejeitar o JSON com `Must specify begin_date parameter`. A tarefa retornada também é registrada para aguardar exatamente a geração solicitada.
+- Afeta administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.

@@ -2091,3 +2091,9 @@ pm ci normalmente.
 - Corrigido: a primeira sincronização diária solicita um relatório específico do intervalo atual mesmo que exista um relatório agendado com a data do dia. Isso evita que um arquivo gerado antes de um rendimento recente seja tratado como atualizado.
 - O sistema registra somente a identificação e o horário da solicitação do arquivo, acompanha o arquivo manual até seu estado `processed` e só conclui a rotina diária depois de importá-lo. A deduplicação por identificador externo continua impedindo valores repetidos em acionamentos manuais e automáticos.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR`. Sem migração. Após o deploy, clique uma vez em **Sincronizar Mercado Pago**; a tela confirmará que o relatório do dia foi solicitado e a rotina continuará até a importação. Validação: sintaxe JavaScript, testes internos, diff e pacote local.
+
+## Compatibilidade de solicitação do relatório Mercado Pago — versão 1.3.79
+
+- Corrigido: quando a API Mercado Pago responder que `begin_date` está ausente mesmo após receber o corpo JSON documentado, a solicitação é repetida com os mesmos valores UTC em formulário codificado. A segunda tentativa ocorre exclusivamente para esse erro de compatibilidade; demais erros permanecem visíveis ao operador.
+- A tarefa retornada pelo Mercado Pago passa a ser guardada junto da solicitação pendente. O sistema acompanha o arquivo ou a tarefa correspondente até `processed`, sem concluir por engano com relatório anterior.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR` são preservados. Sem migração. Validação: sintaxe, testes internos, diff e pacote local.
