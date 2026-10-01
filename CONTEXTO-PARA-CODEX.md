@@ -2102,3 +2102,8 @@ pm ci normalmente.
 
 - Corrigido: a criação do relatório preserva o corpo `application/json` exigido pelo Mercado Pago e espelha `begin_date` e `end_date` UTC também na URL. Isso atende contas que validam esses campos como parâmetros sem provocar o HTTP 415 do formato de formulário.
 - A tarefa retornada continua sendo acompanhada até o arquivo ficar processado, com deduplicação por identificador externo. Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.
+
+## Validação da solicitação compatível Mercado Pago — versão 1.3.81
+
+- Corrigido: o teste de regressão acompanha a chamada atual do relatório, que envia parâmetros UTC na URL e corpo JSON. Isso impede que o deploy seja recusado por uma expectativa do teste referente à implementação anterior.
+- Não altera o comportamento de produção além da identificação da versão. Afeta somente a validação de entrega; Painel Mestre, administrador, clientes comerciais e instalações locais preservam Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR`. Sem migração. Validação: suíte interna completa, sintaxe, diff e pacote local.

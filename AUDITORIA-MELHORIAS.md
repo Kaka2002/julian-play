@@ -578,3 +578,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Corrigido: a solicitação manual conserva JSON e envia as datas UTC também como parâmetros da URL, evitando a rejeição HTTP 415 do formulário e permitindo que contas que leem parâmetros reconheçam `begin_date` e `end_date`.
 - Afeta administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.
+
+## Correção: validação de entrega Mercado Pago — versão 1.3.81
+
+- Corrigido: teste interno atualizado para validar a chamada atual do relatório Mercado Pago com parâmetros UTC na URL e JSON. O deploy volta a aceitar a versão compatível 1.3.80.
+- Não muda dados ou comportamento funcional; sem migração. Validação: suíte interna completa, sintaxe, diff e pacote local.

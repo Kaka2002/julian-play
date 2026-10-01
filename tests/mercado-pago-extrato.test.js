@@ -36,7 +36,7 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   assert.match(mercadoPago, /function intervaloRelatorioDoDia/);
   assert.match(mercadoPago, /begin_date: new Date\(`\$\{data\}T00:00:00-03:00`\)\.toISOString\(\)/);
   assert.match(mercadoPago, /ultimaSolicitacaoRelatorioRendimentosMP/);
-  assert.match(mercadoPago, /requisicaoMercadoPago\('\/v1\/account\/release_report', accessToken/);
+  assert.match(mercadoPago, /requisicaoMercadoPago\(`\/v1\/account\/release_report\?\$\{parametros\}`, accessToken/);
   assert.match(mercadoPago, /for \(const relatorio of relatoriosProcessados\)/);
   assert.match(mercadoPago, /ehRendimentoMercadoPago/);
   assert.match(mercadoPago, /relatorioManualRendimentosMPPendente/);
