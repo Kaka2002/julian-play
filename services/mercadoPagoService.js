@@ -163,9 +163,11 @@ function relatorioManualPendente(config = {}) {
 function relatorioManualFoiProcessado(relatorios = [], pendente = null) {
     if (!pendente?.dia) return true;
     return relatorios.some(relatorio => {
-        if (relatorio.status !== 'processed' || !relatorio.file_name) return false;
+        if (!relatorioDisponivel(relatorio) || !relatorio.file_name) return false;
         if (pendente.arquivo) return relatorio.file_name === pendente.arquivo;
-        if (pendente.tarefa) return String(relatorio.id || relatorio.report_id || '') === pendente.tarefa;
+        // O identificador da tarefa é diferente do identificador do relatório
+        // retornado na listagem. Por isso, a confirmação é feita pelo período
+        // solicitado e pelo momento de geração do arquivo, não pelo ID da tarefa.
         const geradoEm = new Date(relatorio.generation_date || relatorio.last_modified || 0).getTime();
         const solicitadoEm = new Date(pendente.solicitadoEm || 0).getTime();
         return relatorioIncluiDia(relatorio, pendente.dia)
@@ -173,6 +175,12 @@ function relatorioManualFoiProcessado(relatorios = [], pendente = null) {
             && Number.isFinite(solicitadoEm)
             && geradoEm >= solicitadoEm;
     });
+}
+
+function relatorioDisponivel(relatorio = {}) {
+    // A listagem de relatórios da conta usa "enabled" quando o arquivo já
+    // pode ser baixado; outras contas retornam "processed" para o mesmo estado.
+    return ['processed', 'enabled'].includes(String(relatorio.status || '').toLowerCase());
 }
 
 function ehRendimentoMercadoPago(item = {}) {
@@ -234,7 +242,7 @@ async function importarRendimentosMercadoPago() {
     const solicitadoHoje = solicitacao.solicitado;
     const relatorioPendente = solicitacao.pendente;
     const relatoriosProcessados = relatorios
-        .filter(item => item.status === 'processed' && item.file_name)
+        .filter(item => relatorioDisponivel(item) && item.file_name)
         .sort((a, b) => new Date(b.generation_date || b.last_modified || 0) - new Date(a.generation_date || a.last_modified || 0));
     if (!relatoriosProcessados.length) {
         return { arquivo: '', importados: 0, movimentosImportados: 0, pendente: true, solicitadoHoje };

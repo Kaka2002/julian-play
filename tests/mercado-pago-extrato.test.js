@@ -42,6 +42,9 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   assert.match(mercadoPago, /ehRendimentoMercadoPago/);
   assert.match(mercadoPago, /relatorioManualRendimentosMPPendente/);
   assert.match(mercadoPago, /relatorioManualFoiProcessado/);
+  assert.match(mercadoPago, /function relatorioDisponivel/);
+  assert.match(mercadoPago, /\['processed', 'enabled'\]/);
+  assert.doesNotMatch(mercadoPago, /if \(pendente\.tarefa\) return/);
   assert.match(mercadoPago, /replace\(\/\\\.\\d\{3\}Z\$\/\, 'Z'\)/);
   assert.match(mercadoPago, /pendente: true/);
   assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente\) \{/);
