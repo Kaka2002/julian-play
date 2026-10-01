@@ -2107,3 +2107,9 @@ pm ci normalmente.
 
 - Corrigido: o teste de regressão acompanha a chamada atual do relatório, que envia parâmetros UTC na URL e corpo JSON. Isso impede que o deploy seja recusado por uma expectativa do teste referente à implementação anterior.
 - Não altera o comportamento de produção além da identificação da versão. Afeta somente a validação de entrega; Painel Mestre, administrador, clientes comerciais e instalações locais preservam Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR`. Sem migração. Validação: suíte interna completa, sintaxe, diff e pacote local.
+
+## Datas UTC compatíveis no relatório Mercado Pago — versão 1.3.82
+
+- Corrigido: a geração manual usa UTC sem milissegundos (`AAAA-MM-DDTHH:mm:ssZ`), formato que o endpoint do Mercado Pago aceitou em verificação controlada com resposta HTTP 202 e tarefa pendente. A API devolvia a mensagem enganosa de `begin_date` ausente quando recebia milissegundos.
+- A tarefa de relatório de hoje já foi aceita pelo Mercado Pago e ficará disponível após o processamento do provedor. A importação mantém deduplicação por identificador externo, inclusive se houver mais de uma geração manual do mesmo intervalo.
+- Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: solicitação controlada HTTP 202, sintaxe, testes internos, diff e pacote local.

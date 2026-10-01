@@ -583,3 +583,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Corrigido: teste interno atualizado para validar a chamada atual do relatório Mercado Pago com parâmetros UTC na URL e JSON. O deploy volta a aceitar a versão compatível 1.3.80.
 - Não muda dados ou comportamento funcional; sem migração. Validação: suíte interna completa, sintaxe, diff e pacote local.
+
+## Correção: UTC sem milissegundos no relatório Mercado Pago — versão 1.3.82
+
+- Corrigido: o relatório manual envia datas UTC até os segundos, formato aceito pelo Mercado Pago em teste controlado com HTTP 202. A API retornava `Must specify begin_date parameter` ao receber milissegundos.
+- A tarefa de hoje foi aceita e permanece em processamento no Mercado Pago. Valores continuam deduplicados por identificador externo. Sem migração; Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR` preservados. Validação: solicitação controlada HTTP 202, sintaxe, testes internos, diff e pacote local.

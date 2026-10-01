@@ -34,14 +34,15 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   const mercadoPago = fs.readFileSync(path.join(raiz, 'services', 'mercadoPagoService.js'), 'utf8');
   const monitoramento = fs.readFileSync(path.join(raiz, 'services', 'monitoramentoComercial.js'), 'utf8');
   assert.match(mercadoPago, /function intervaloRelatorioDoDia/);
-  assert.match(mercadoPago, /begin_date: new Date\(`\$\{data\}T00:00:00-03:00`\)\.toISOString\(\)/);
+  assert.match(mercadoPago, /function dataUtcSemMilissegundos/);
+  assert.match(mercadoPago, /begin_date: dataUtcSemMilissegundos\(`\$\{data\}T00:00:00-03:00`\)/);
   assert.match(mercadoPago, /ultimaSolicitacaoRelatorioRendimentosMP/);
-  assert.match(mercadoPago, /requisicaoMercadoPago\(`\/v1\/account\/release_report\?\$\{parametros\}`, accessToken/);
+  assert.match(mercadoPago, /requisicaoMercadoPago\('\/v1\/account\/release_report', accessToken/);
   assert.match(mercadoPago, /for \(const relatorio of relatoriosProcessados\)/);
   assert.match(mercadoPago, /ehRendimentoMercadoPago/);
   assert.match(mercadoPago, /relatorioManualRendimentosMPPendente/);
   assert.match(mercadoPago, /relatorioManualFoiProcessado/);
-  assert.match(mercadoPago, /new URLSearchParams\(intervalo\)\.toString\(\)/);
+  assert.match(mercadoPago, /replace\(\/\\\.\\d\{3\}Z\$\/\, 'Z'\)/);
   assert.match(mercadoPago, /pendente: true/);
   assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente\) \{/);
   assert.match(monitoramento, /salvarConfiguracao\('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2'\)/);

@@ -110,9 +110,16 @@ function diaSaoPaulo() {
 
 function intervaloRelatorioDoDia(data = diaSaoPaulo()) {
     return {
-        begin_date: new Date(`${data}T00:00:00-03:00`).toISOString(),
-        end_date: new Date().toISOString()
+        // A API Mercado Pago aceita o UTC do exemplo oficial somente até os
+        // segundos. Com milissegundos ela responde, de modo enganoso, que a
+        // data obrigatória não foi enviada.
+        begin_date: dataUtcSemMilissegundos(`${data}T00:00:00-03:00`),
+        end_date: dataUtcSemMilissegundos(new Date())
     };
+}
+
+function dataUtcSemMilissegundos(valor) {
+    return new Date(valor).toISOString().replace(/\.\d{3}Z$/, 'Z');
 }
 
 function relatorioIncluiDia(relatorio = {}, data = diaSaoPaulo()) {
@@ -129,11 +136,7 @@ async function solicitarRelatorioDoDia(accessToken, config, relatorios = []) {
     // sempre solicita seu próprio arquivo e acompanha esse arquivo específico.
     if (pendente?.dia === hoje) return { solicitado: false, pendente };
     const intervalo = intervaloRelatorioDoDia(hoje);
-    // A API documenta JSON, mas algumas contas validam estas datas como
-    // parâmetros. Mantemos JSON (evita HTTP 415) e espelhamos a URL para
-    // compatibilidade sem mudar os valores UTC enviados.
-    const parametros = new URLSearchParams(intervalo).toString();
-    const resposta = await requisicaoMercadoPago(`/v1/account/release_report?${parametros}`, accessToken, {
+    const resposta = await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
         method: 'POST',
         body: JSON.stringify(intervalo)
     });
