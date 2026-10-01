@@ -2097,3 +2097,8 @@ pm ci normalmente.
 - Corrigido: quando a API Mercado Pago responder que `begin_date` está ausente mesmo após receber o corpo JSON documentado, a solicitação é repetida com os mesmos valores UTC em formulário codificado. A segunda tentativa ocorre exclusivamente para esse erro de compatibilidade; demais erros permanecem visíveis ao operador.
 - A tarefa retornada pelo Mercado Pago passa a ser guardada junto da solicitação pendente. O sistema acompanha o arquivo ou a tarefa correspondente até `processed`, sem concluir por engano com relatório anterior.
 - Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR` são preservados. Sem migração. Validação: sintaxe, testes internos, diff e pacote local.
+
+## Compatibilidade JSON do relatório Mercado Pago — versão 1.3.80
+
+- Corrigido: a criação do relatório preserva o corpo `application/json` exigido pelo Mercado Pago e espelha `begin_date` e `end_date` UTC também na URL. Isso atende contas que validam esses campos como parâmetros sem provocar o HTTP 415 do formato de formulário.
+- A tarefa retornada continua sendo acompanhada até o arquivo ficar processado, com deduplicação por identificador externo. Afeta painel administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.

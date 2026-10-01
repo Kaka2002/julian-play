@@ -573,3 +573,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Corrigido: a criação manual do relatório repete os mesmos parâmetros UTC em formulário codificado somente se a API rejeitar o JSON com `Must specify begin_date parameter`. A tarefa retornada também é registrada para aguardar exatamente a geração solicitada.
 - Afeta administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.
+
+## Correção: parâmetros do relatório Mercado Pago — versão 1.3.80
+
+- Corrigido: a solicitação manual conserva JSON e envia as datas UTC também como parâmetros da URL, evitando a rejeição HTTP 415 do formulário e permitindo que contas que leem parâmetros reconheçam `begin_date` e `end_date`.
+- Afeta administrador, clientes comerciais no servidor e instalações locais; Painel Mestre inalterado. Preserva Access Token, banco, rendimentos, configurações, sessões, backups e `DATA_DIR`; sem migração. Validação: sintaxe, testes internos, diff e pacote local.

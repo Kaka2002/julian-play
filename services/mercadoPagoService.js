@@ -129,23 +129,14 @@ async function solicitarRelatorioDoDia(accessToken, config, relatorios = []) {
     // sempre solicita seu próprio arquivo e acompanha esse arquivo específico.
     if (pendente?.dia === hoje) return { solicitado: false, pendente };
     const intervalo = intervaloRelatorioDoDia(hoje);
-    let resposta;
-    try {
-        resposta = await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
-            method: 'POST',
-            body: JSON.stringify(intervalo)
-        });
-    } catch (erro) {
-        // Algumas contas Mercado Pago rejeitam indevidamente o JSON embora a
-        // documentação do endpoint o indique. Só nesse erro, repetimos com
-        // formulário para que os dois parâmetros obrigatórios sejam lidos.
-        if (!/must specify begin_date|invalid_begin_date/i.test(String(erro?.message || ''))) throw erro;
-        resposta = await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(intervalo).toString()
-        });
-    }
+    // A API documenta JSON, mas algumas contas validam estas datas como
+    // parâmetros. Mantemos JSON (evita HTTP 415) e espelhamos a URL para
+    // compatibilidade sem mudar os valores UTC enviados.
+    const parametros = new URLSearchParams(intervalo).toString();
+    const resposta = await requisicaoMercadoPago(`/v1/account/release_report?${parametros}`, accessToken, {
+        method: 'POST',
+        body: JSON.stringify(intervalo)
+    });
     await salvarConfiguracao('ultimaSolicitacaoRelatorioRendimentosMP', hoje);
     const solicitacao = {
         dia: hoje,
