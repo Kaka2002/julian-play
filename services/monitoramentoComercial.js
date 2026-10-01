@@ -191,7 +191,10 @@ function agoraSaoPaulo() {
 function deveSincronizarRendimentosMercadoPago(config = {}, agora = {}) {
     return Boolean(String(config.mercadoPagoAccessToken || '').trim())
         && String(agora.hora || '') >= HORA_SINCRONISMO_RENDIMENTOS_MP
-        && String(config.ultimoSincronismoRendimentosMP || '') !== String(agora.data || '');
+        && (
+            String(config.ultimoSincronismoRendimentosMP || '') !== String(agora.data || '')
+            || String(config.versaoSincronismoRendimentosMP || '') !== 'relatorio-do-dia-v2'
+        );
 }
 
 function montarPayloadWebhook(evento = {}) {
@@ -550,8 +553,11 @@ async function executarMonitoramento(controles = {}) {
         if (deveSincronizarRendimentosMercadoPago(config, agora)) {
             try {
                 const { importarRendimentosMercadoPago } = require('./mercadoPagoService');
-                await importarRendimentosMercadoPago();
-                await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
+                const resultadoRendimentos = await importarRendimentosMercadoPago();
+                if (!resultadoRendimentos.pendente) {
+                    await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
+                    await salvarConfiguracao('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2');
+                }
             } catch (erroRendimentos) {
                 await registrarEventoSistema('rendimento_mercado_pago', 'alerta', `Sincronização diária de rendimentos Mercado Pago pendente: ${erroRendimentos.message}`, { data: diaAtual });
             }

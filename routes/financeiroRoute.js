@@ -164,7 +164,12 @@ function criarFinanceiroRoute(deps = {}) {
         const filtros = filtrosDespesas(req.body);
         try {
             const resultado = await importarRendimentosMercadoPago();
-            return res.redirect(urlRendimentos(filtros, resultado.importados ?`${resultado.importados} rendimento(s) importado(s) do Mercado Pago.` :'Nenhum rendimento novo encontrado no relatório Mercado Pago.'));
+            const mensagem = resultado.importados
+                ?`${resultado.importados} rendimento(s) importado(s) do Mercado Pago.`
+                :resultado.pendente
+                    ?'O relatório do dia foi solicitado ao Mercado Pago. O sistema continuará consultando automaticamente até ele ficar pronto.'
+                    :'Nenhum rendimento novo encontrado nos relatórios Mercado Pago.';
+            return res.redirect(urlRendimentos(filtros, mensagem));
         } catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
     });
     router.post('/financeiro/rendimentos/conciliacao-saldo', async (req, res, next) => {
