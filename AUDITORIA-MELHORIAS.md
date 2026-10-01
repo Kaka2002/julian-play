@@ -562,3 +562,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigido: a configuração diária do relatório não envia `value`, pois a API aplica esse atributo apenas às agendas semanal e mensal. A cobertura de teste verifica o formato para impedir a regressão de `Invalid frequency`.
 - Implementado: o monitoramento sincroniza rendimentos Mercado Pago diariamente a partir das 10:00 em `America/Sao_Paulo`. Uma execução manual não bloqueia a rotina e a rotina não duplica valores porque o serviço preserva a deduplicação por identificador externo. Se o processo estiver parado às 10:00, a primeira verificação posterior do dia executa uma única sincronização.
 - Corrigido: quando o relatório agendado ainda não contém os movimentos do dia, o sistema solicita uma geração específica para o intervalo atual e acompanha o processamento até a disponibilidade. O dia só é marcado como sincronizado após o relatório estar pronto; a importação percorre os relatórios processados e preserva a deduplicação por identificador externo.
+
+## Correção: relatório manual atual de rendimentos Mercado Pago — versão 1.3.78
+
+- Corrigido: um relatório diário agendado já existente não encerra mais a busca por um rendimento lançado depois da sua geração. A primeira sincronização solicita o arquivo do intervalo atual e mantém a rotina pendente até aquele arquivo ser processado.
+- A solicitação pendente é registrada por dia, arquivo e horário somente para controle interno; valores continuam deduplicados pelo identificador externo. Administrador, clientes comerciais no servidor e instalações locais são afetados; Painel Mestre inalterado. Access Token, bancos, rendimentos, configurações, sessões, backups e `DATA_DIR` são preservados. Sem migração.
+- Ação após deploy: clicar uma vez em Sincronizar Mercado Pago. Validação: sintaxe JavaScript, testes internos, diff e pacote local.

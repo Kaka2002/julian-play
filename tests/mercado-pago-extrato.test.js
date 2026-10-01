@@ -39,6 +39,8 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   assert.match(mercadoPago, /requisicaoMercadoPago\('\/v1\/account\/release_report', accessToken/);
   assert.match(mercadoPago, /for \(const relatorio of relatoriosProcessados\)/);
   assert.match(mercadoPago, /ehRendimentoMercadoPago/);
+  assert.match(mercadoPago, /relatorioManualRendimentosMPPendente/);
+  assert.match(mercadoPago, /relatorioManualFoiProcessado/);
   assert.match(mercadoPago, /pendente: true/);
   assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente\) \{/);
   assert.match(monitoramento, /salvarConfiguracao\('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2'\)/);

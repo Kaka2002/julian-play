@@ -123,15 +123,46 @@ function relatorioIncluiDia(relatorio = {}, data = diaSaoPaulo()) {
 
 async function solicitarRelatorioDoDia(accessToken, config, relatorios = []) {
     const hoje = diaSaoPaulo();
-    const jaSolicitado = String(config.ultimaSolicitacaoRelatorioRendimentosMP || '') === hoje;
-    const existeRelatorioDoDia = relatorios.some(relatorio => relatorioIncluiDia(relatorio, hoje));
-    if (jaSolicitado || existeRelatorioDoDia) return false;
-    await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
+    const pendente = relatorioManualPendente(config);
+    // Um relatório agendado pode ter o intervalo do dia, mas ter sido gerado
+    // antes de um rendimento recente. Por isso, a primeira consulta do dia
+    // sempre solicita seu próprio arquivo e acompanha esse arquivo específico.
+    if (pendente?.dia === hoje) return { solicitado: false, pendente };
+    const resposta = await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
         method: 'POST',
         body: JSON.stringify(intervaloRelatorioDoDia(hoje))
     });
     await salvarConfiguracao('ultimaSolicitacaoRelatorioRendimentosMP', hoje);
-    return true;
+    const solicitacao = {
+        dia: hoje,
+        arquivo: String(resposta?.file_name || resposta?.fileName || ''),
+        solicitadoEm: new Date().toISOString()
+    };
+    await salvarConfiguracao('relatorioManualRendimentosMPPendente', JSON.stringify(solicitacao));
+    return { solicitado: true, pendente: solicitacao };
+}
+
+function relatorioManualPendente(config = {}) {
+    try {
+        const pendente = JSON.parse(String(config.relatorioManualRendimentosMPPendente || ''));
+        return pendente && typeof pendente === 'object' ? pendente : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function relatorioManualFoiProcessado(relatorios = [], pendente = null) {
+    if (!pendente?.dia) return true;
+    return relatorios.some(relatorio => {
+        if (relatorio.status !== 'processed' || !relatorio.file_name) return false;
+        if (pendente.arquivo) return relatorio.file_name === pendente.arquivo;
+        const geradoEm = new Date(relatorio.generation_date || relatorio.last_modified || 0).getTime();
+        const solicitadoEm = new Date(pendente.solicitadoEm || 0).getTime();
+        return relatorioIncluiDia(relatorio, pendente.dia)
+            && Number.isFinite(geradoEm)
+            && Number.isFinite(solicitadoEm)
+            && geradoEm >= solicitadoEm;
+    });
 }
 
 function ehRendimentoMercadoPago(item = {}) {
@@ -189,7 +220,9 @@ async function importarRendimentosMercadoPago() {
     await garantirRelatorioMercadoPago(accessToken);
     const lista = await requisicaoMercadoPago('/v1/account/release_report/list', accessToken);
     const relatorios = Array.isArray(lista) ?lista : [];
-    const solicitadoHoje = await solicitarRelatorioDoDia(accessToken, config, relatorios);
+    const solicitacao = await solicitarRelatorioDoDia(accessToken, config, relatorios);
+    const solicitadoHoje = solicitacao.solicitado;
+    const relatorioPendente = solicitacao.pendente;
     const relatoriosProcessados = relatorios
         .filter(item => item.status === 'processed' && item.file_name)
         .sort((a, b) => new Date(b.generation_date || b.last_modified || 0) - new Date(a.generation_date || a.last_modified || 0));
@@ -222,7 +255,11 @@ async function importarRendimentosMercadoPago() {
         }
     }
     const hoje = diaSaoPaulo();
-    const pendente = solicitadoHoje || !relatoriosProcessados.some(relatorio => relatorioIncluiDia(relatorio, hoje));
+    const manualProcessado = relatorioManualFoiProcessado(relatorios, relatorioPendente);
+    const pendente = solicitadoHoje || !manualProcessado;
+    if (manualProcessado && relatorioPendente?.dia) {
+        await salvarConfiguracao('relatorioManualRendimentosMPPendente', '');
+    }
     const arquivo = relatoriosProcessados[0]?.file_name || '';
     await registrarEventoSistema('rendimento_mercado_pago', 'info', 'Extrato e rendimentos Mercado Pago sincronizados.', { arquivo, importados, movimentosImportados, pendente });
     return { arquivo, importados, movimentosImportados, pendente, solicitadoHoje };
