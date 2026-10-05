@@ -23,6 +23,7 @@ const HORA_SINCRONISMO_RENDIMENTOS_MP = '10:00';
 
 let agendador = null;
 let executando = false;
+let verificarRendimentosNaInicializacao = true;
 let desconectadoDesde = null;
 let alertaDesconexaoEnviado = false;
 let ultimoAlertaBackupDesatualizado = '';
@@ -188,13 +189,15 @@ function agoraSaoPaulo() {
     };
 }
 
-function deveSincronizarRendimentosMercadoPago(config = {}, agora = {}) {
+function deveSincronizarRendimentosMercadoPago(config = {}, agora = {}, inicializacao = false) {
     return Boolean(String(config.mercadoPagoAccessToken || '').trim())
-        && String(agora.hora || '') >= HORA_SINCRONISMO_RENDIMENTOS_MP
-        && (
+        && (inicializacao || Boolean(String(config.relatorioManualRendimentosMPPendente || '').trim()) || (
+            String(agora.hora || '') >= HORA_SINCRONISMO_RENDIMENTOS_MP
+            && (
             String(config.ultimoSincronismoRendimentosMP || '') !== String(agora.data || '')
             || String(config.versaoSincronismoRendimentosMP || '') !== 'relatorio-do-dia-v2'
-        );
+            )
+        ));
 }
 
 function montarPayloadWebhook(evento = {}) {
@@ -550,11 +553,13 @@ async function executarMonitoramento(controles = {}) {
         await verificarBackup(config, agora);
         await verificarWhatsAppInteligente(config, agora, statusWhatsApp, controles);
         const diaAtual = agora.data;
-        if (deveSincronizarRendimentosMercadoPago(config, agora)) {
+        if (deveSincronizarRendimentosMercadoPago(config, agora, verificarRendimentosNaInicializacao)) {
             try {
                 const { importarRendimentosMercadoPago } = require('./mercadoPagoService');
-                const resultadoRendimentos = await importarRendimentosMercadoPago();
-                if (!resultadoRendimentos.pendente) {
+                const somenteDisponiveis = verificarRendimentosNaInicializacao && agora.hora < HORA_SINCRONISMO_RENDIMENTOS_MP;
+                const resultadoRendimentos = await importarRendimentosMercadoPago({ somenteDisponiveis });
+                verificarRendimentosNaInicializacao = false;
+                if (!resultadoRendimentos.pendente && !somenteDisponiveis) {
                     await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
                     await salvarConfiguracao('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2');
                 }

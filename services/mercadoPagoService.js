@@ -231,14 +231,16 @@ function movimentosDoRelatorio(linhas, arquivo) {
     }).filter(item => item.tipo !== 'subtotal' && item.tipo !== 'total' && item.tipo !== 'available_balance' && (item.credito || item.debito));
 }
 
-async function importarRendimentosMercadoPago() {
+async function importarRendimentosMercadoPago(opcoes = {}) {
     const config = await obterConfiguracoes();
     const accessToken = String(config.mercadoPagoAccessToken || '').trim();
     if (!accessToken) throw new Error('Configure primeiro o Access Token do Mercado Pago em Manutenção.');
-    await garantirRelatorioMercadoPago(accessToken);
+    if (!opcoes.somenteDisponiveis) await garantirRelatorioMercadoPago(accessToken);
     const lista = await requisicaoMercadoPago('/v1/account/release_report/list', accessToken);
     const relatorios = Array.isArray(lista) ?lista : [];
-    const solicitacao = await solicitarRelatorioDoDia(accessToken, config, relatorios);
+    const solicitacao = opcoes.somenteDisponiveis
+        ? { solicitado: false, pendente: relatorioManualPendente(config) }
+        : await solicitarRelatorioDoDia(accessToken, config, relatorios);
     const solicitadoHoje = solicitacao.solicitado;
     const relatorioPendente = solicitacao.pendente;
     const relatoriosProcessados = relatorios

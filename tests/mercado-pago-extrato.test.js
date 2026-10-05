@@ -47,6 +47,25 @@ test('sincronismo solicita o relatório do próprio dia e espera o processamento
   assert.doesNotMatch(mercadoPago, /if \(pendente\.tarefa\) return/);
   assert.match(mercadoPago, /replace\(\/\\\.\\d\{3\}Z\$\/\, 'Z'\)/);
   assert.match(mercadoPago, /pendente: true/);
-  assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente\) \{/);
+  assert.match(monitoramento, /if \(!resultadoRendimentos\.pendente && !somenteDisponiveis\) \{/);
   assert.match(monitoramento, /salvarConfiguracao\('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2'\)/);
+});
+
+test('inicialização consulta arquivos antes das 10h e mantém acompanhamento de tarefas pendentes', () => {
+  const vm = require('node:vm');
+  const fonte = fs.readFileSync(path.join(raiz, 'services', 'monitoramentoComercial.js'), 'utf8');
+  const inicio = fonte.indexOf('function deveSincronizarRendimentosMercadoPago');
+  const fim = fonte.indexOf('\nfunction montarPayloadWebhook', inicio);
+  const contexto = { HORA_SINCRONISMO_RENDIMENTOS_MP: '10:00' };
+  vm.createContext(contexto);
+  vm.runInContext(fonte.slice(inicio, fim), contexto);
+  const verificar = contexto.deveSincronizarRendimentosMercadoPago;
+  const config = { mercadoPagoAccessToken: 'token-ficticio', ultimoSincronismoRendimentosMP: '2026-10-05', versaoSincronismoRendimentosMP: 'relatorio-do-dia-v2' };
+  const agora = { data: '2026-10-05', hora: '09:00' };
+  assert.equal(verificar(config, agora), false);
+  assert.equal(verificar(config, agora, true), true);
+  assert.equal(verificar({ ...config, relatorioManualRendimentosMPPendente: '{"dia":"2026-10-04"}' }, agora), true);
+  assert.equal(verificar({ ...config, mercadoPagoAccessToken: '' }, agora, true), false);
+  assert.equal(verificar({ ...config, ultimoSincronismoRendimentosMP: '2026-10-04' }, { ...agora, hora: '10:00' }), true);
+  assert.equal(verificar(config, { ...agora, hora: '10:00' }), false);
 });

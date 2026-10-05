@@ -593,3 +593,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Corrigido: arquivos listados pelo Mercado Pago com estado `enabled` são tratados como disponíveis para download e importação, assim como `processed`. A confirmação relaciona o relatório ao período e ao horário de geração, porque o ID da tarefa e o ID do relatório são diferentes.
 - Limitação confirmada: a API de Relatórios fecha o período de hoje às 23:59 e gera o arquivo às 03:00 do dia seguinte; não oferece o rendimento intradiário antes desse fechamento. Após a geração, a importação é automática e deduplicada. Sem migração; dados e segredos preservados. Validação: consulta segura da tarefa/lista, sintaxe, testes internos, diff e pacote local.
+
+## Recuperação de rendimentos ao iniciar — versão 1.3.84
+
+- O monitor consulta os relatórios disponíveis na primeira execução após iniciar, inclusive antes das 10h. Nesse caso apenas importa arquivos já prontos, sem antecipar a solicitação diária e sem marcar a rotina das 10h como concluída. Tarefas pendentes continuam sendo consultadas mesmo antes das 10h.
+- Diagnóstico de 05/10: a API respondeu HTTP 200; os arquivos disponíveis para os períodos de 03/10 e 04/10 continham somente saldo inicial e total, sem crédito de rendimento. A solicitação de 05/10 foi registrada às 10h e estava pendente. E-mail de relatório pronto não comprova que o CSV inclui crédito intradiário. Nenhum valor foi lançado manualmente nesta correção.
+- Afeta administrador, comercial provisionado e instalação local; Painel Mestre inalterado. Sem migração; bancos, configurações, tokens, sessões WhatsApp, backups e DATA_DIR preservados. Validação: consulta real somente de leitura à API e ao banco; testes de horário, inicialização, pendência e ausência de token; sintaxe JS, diff e pacote. Ação operacional: aplicar deploy e reiniciar pelo fluxo oficial; conferir o resultado na tela após o monitor executar.
