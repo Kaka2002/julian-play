@@ -5,6 +5,52 @@ const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 const repoRoot = path.join(__dirname, '..');
 
+test('recarga automática preserva a tela durante 502 e falha de conexão', async () => {
+    const vm = require('node:vm');
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    const trecho = fonte.slice(fonte.indexOf('function autoAtualizarPaginaScript('), fonte.indexOf('\nfunction listaClientes('));
+    const script = trecho.slice(trecho.indexOf('<script>') + 8, trecho.lastIndexOf('</script>')).replace('${Number(intervaloMs)}', '30000');
+    let agora = 0;
+    let modo = '502';
+    let navegacoes = 0;
+    const intervalos = [];
+    const eventos = {};
+    const documento = { hidden: false, activeElement: null, querySelectorAll: () => [], addEventListener: (nome, fn) => { eventos[nome] = fn; } };
+    const contexto = {
+        URL, AbortController, Date: class extends Date { static now() { return agora; } },
+        document: documento,
+        window: { location: { href: 'https://exemplo.test/clientes', replace: () => { navegacoes++; } } },
+        setInterval: fn => intervalos.push(fn), setTimeout: () => 1, clearTimeout: () => {},
+        fetch: async () => {
+            if (modo === 'rede') throw new Error('falha de rede');
+            return { ok: modo === 'ok', headers: { get: () => 'text/html' } };
+        }
+    };
+    vm.runInNewContext(script, contexto);
+    const atualizar = intervalos[1];
+    agora = 30000;
+    await atualizar();
+    assert.equal(navegacoes, 0);
+    modo = 'rede';
+    await atualizar();
+    assert.equal(navegacoes, 0);
+    modo = 'ok';
+    documento.hidden = true;
+    await atualizar();
+    assert.equal(navegacoes, 0);
+    documento.hidden = false;
+    eventos.visibilitychange();
+    await atualizar();
+    assert.equal(navegacoes, 0);
+    agora += 16000;
+    documento.activeElement = { tagName: 'INPUT' };
+    await atualizar();
+    assert.equal(navegacoes, 0);
+    documento.activeElement = null;
+    await atualizar();
+    assert.equal(navegacoes, 1);
+});
+
 test('resposta humanizada protege digitacao para LID e assistente de gestão', () => {
     const conversa = fs.readFileSync(path.join(repoRoot, 'services', 'conversaService.js'), 'utf8');
     const whatsapp = fs.readFileSync(path.join(repoRoot, 'config', 'whatsapp.js'), 'utf8');

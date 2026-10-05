@@ -8410,12 +8410,16 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
             if (!intervalo || intervalo < 15000) return;
 
             let ultimaInteracao = Date.now();
+            let verificandoAtualizacao = false;
             const eventos = ['input', 'change', 'keydown', 'pointerdown', 'focusin'];
 
             eventos.forEach((evento) => {
                 document.addEventListener(evento, () => {
                     ultimaInteracao = Date.now();
                 }, { passive: true });
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) ultimaInteracao = Date.now();
             });
 
             function estaEditando() {
@@ -8496,14 +8500,32 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
             atualizarVencimentos();
             setInterval(atualizarVencimentos, 60000);
 
-            setInterval(() => {
+            setInterval(async () => {
                 if (document.hidden) return;
                 if (estaEditando()) return;
                 if (Date.now() - ultimaInteracao < 15000) return;
+                if (verificandoAtualizacao) return;
 
                 const url = new URL(window.location.href);
                 url.searchParams.set('_atualizado', Date.now().toString());
-                window.location.replace(url.toString());
+                verificandoAtualizacao = true;
+                const controller = new AbortController();
+                const limite = setTimeout(() => controller.abort(), 10000);
+                try {
+                    // Uma falha transitória do túnel não deve substituir a
+                    // página funcional por uma tela de erro na recarga automática.
+                    const resposta = await fetch(url.toString(), {
+                        cache: 'no-store', credentials: 'same-origin', signal: controller.signal
+                    });
+                    if (!resposta.ok || !String(resposta.headers.get('content-type') || '').includes('text/html')) return;
+                    if (document.hidden || estaEditando() || Date.now() - ultimaInteracao < 15000) return;
+                    window.location.replace(url.toString());
+                } catch (_) {
+                    // Mantém a tela e tenta novamente no próximo intervalo.
+                } finally {
+                    clearTimeout(limite);
+                    verificandoAtualizacao = false;
+                }
             }, intervalo);
         })();
     </script>`;
