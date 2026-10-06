@@ -59,7 +59,9 @@ function criarConsumidor({ dataDir, config, getClient, getStatusWhatsApp, enfile
                 if (!destino) result = 'not_registered';
                 else {
                     const to = destino._serialized;
-                    if (!/^55[0-9]{10,11}@c\.us$/.test(to || '')) throw new Error('Destino invalido.');
+                    // Only accept the identifier returned by the phone lookup. A LID is
+                    // an opaque WhatsApp identifier, never a telephone to normalize.
+                    if (!/^(?:55[0-9]{10,11}@c\.us|[0-9]{5,20}@lid)$/.test(to || '')) throw new Error('Destino invalido.');
                     // Exclusive creation protects even two overlapping processes. No recipient in this journal.
                     try { fs.writeFileSync(file, JSON.stringify({ result: 'reserved' }), { flag: 'wx', mode: 0o600 }); }
                     catch (error) { if (error.code === 'EEXIST') return; throw error; }

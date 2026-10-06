@@ -2160,3 +2160,9 @@ pm ci normalmente.
 
 - Aceita aviso explicitamente marcado como TESTE para licenca trial. A mensagem nao confirma pagamento; preserva periodo original e informa que nenhuma licenca foi alterada. A fila PHP exige autenticacao e opt-in privado restrito ao aparelho e destinatario autorizados; referencia estavel evita repeticoes. Nao insere pedido nem pagamento.
 - Administrador opt-in afetado; Mestre e perfis comerciais/locais inalterados. Bancos, sessoes, configuracoes e DATA_DIR preservados; sem migracao. Upload do PHP e configuracao privada, deploy oficial e acionamento unico sao necessarios. Testes locais usam transporte simulado; envio real permanece pendente ate upload/acionamento e confirmacao no aparelho.
+
+
+## Destinatario LID nos avisos Lume — versao 1.3.90
+
+- Consulta real do telefone autorizado retornou identificador @lid. O consumidor rejeitava esse formato antes de reservar/envio, deixando o aviso claimed ate a lease expirar. Aceita agora LID numerico somente retornado por getNumberId para o telefone da fila autenticada; nunca interpreta LID como telefone, nem aceita grupos. Diario e deduplicacao preservados.
+- Afeta administrador opt-in Lume; Mestre, comercial e local inalterados. Preserva licenca trial, vencimento, banco, sessao, configuracoes, backups e DATA_DIR; sem migracao. Acao: deploy oficial; aviso claimed retoma depois da lease existente sem recriar pedido nem apagar diario. Nenhuma mensagem enviada durante diagnostico. Testes simulados cobrem LID, grupo rejeitado e envio unico.
