@@ -18,3 +18,12 @@ test('envio incerto nao tenta novamente',async()=>{const f=fixture({uncertain:tr
 test('pausa na fila antes de enviar pode ser recuperada',async()=>{const f=fixture({queueError:true});try{await f.consumer.executar();assert.equal(f.sends(),0);assert.equal(f.acks[0].result,'deferred');assert.equal(fs.existsSync(path.join(f.dataDir,'.lume-whatsapp-envios',`${job.reference}.json`)),false);}finally{f.cleanup();}});
 test('outros perfis, conta diferente e desconexao nao consultam avisos',async()=>{for(const options of [{admin:false},{sender:'5511888888888'},{connected:false}]){const f=fixture(options);try{await f.consumer.executar();assert.equal(f.requests(),0);}finally{f.cleanup();}}});
 test('configuracao e destinatarios invalidos sao rejeitados',()=>{assert.equal(validarConfig({...config,site:'https://example.org'}),false);assert.throws(()=>validarAviso({...job,phone:'123@g.us'}));assert.throws(()=>validarAviso({...job,reference:'../secret'}));assert.throws(()=>validarAviso({...job,expires:'1900000000'}));});
+test('diagnostico exige marcador de teste e nao afirma pagamento',()=>{
+    const { mensagem } = require('../services/lumeAtivacaoService');
+    const diagnostic = {...job,plan:'trial',test:true};
+    assert.throws(()=>validarAviso({...job,plan:'trial'}));
+    assert.throws(()=>validarAviso({...job,test:true}));
+    assert.match(mensagem(diagnostic),/TESTE/);
+    assert.doesNotMatch(mensagem(diagnostic),/Pagamento confirmado/);
+    assert.match(mensagem(diagnostic),/licenca nao foi alterada/);
+});

@@ -626,3 +626,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - A rotina usa a fila e protecoes proativas existentes, sem cadastro de clientes ou lancamentos financeiros. Computador e WhatsApp devem estar conectados. Aceite do envio nao comprova leitura/entrega. Falha antes de chamar sendMessage pode ser retomada; envio incerto fica para revisao e nao repete automaticamente. Nenhuma mensagem real foi disparada na validacao local.
 - Acao manual: enviar o pacote publico e whatsapp.php para a hospedagem privada; publicar esta versao pelo fluxo oficial e reiniciar o painel administrador depois do upload. Confirmar envio real em compra autorizada e revisar casos incertos na fila privada. Crontab nao e necessario para o WhatsApp.
 - Validacao: testes isolados PHP da fila/recibos/consentimento, testes Node de deduplicacao/perfis/falhas, sintaxe, diff e pacote. Verificacao em aparelho real e pagamento real permanecem pendentes.
+
+
+## Diagnostico WhatsApp Lume — versao 1.3.89
+
+- Aceita aviso explicitamente marcado como TESTE para licenca trial. A mensagem nao confirma pagamento; preserva periodo original e informa que nenhuma licenca foi alterada. A fila PHP exige autenticacao e opt-in privado restrito ao aparelho e destinatario autorizados; referencia estavel evita repeticoes. Nao insere pedido nem pagamento.
+- Administrador opt-in afetado; Mestre e perfis comerciais/locais inalterados. Bancos, sessoes, configuracoes e DATA_DIR preservados; sem migracao. Upload do PHP e configuracao privada, deploy oficial e acionamento unico sao necessarios. Testes locais usam transporte simulado; envio real permanece pendente ate upload/acionamento e confirmacao no aparelho.
