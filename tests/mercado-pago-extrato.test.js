@@ -4,6 +4,24 @@ const fs = require('fs');
 const path = require('path');
 const raiz = path.resolve(__dirname, '..');
 
+test('saldo do relatório usa total explícito, aceita zero e não soma rendimentos novamente', () => {
+  const vm = require('node:vm');
+  const fonte = fs.readFileSync(path.join(raiz, 'services', 'mercadoPagoService.js'), 'utf8');
+  const funcao = fonte.slice(fonte.indexOf('function saldoDoRelatorio('), fonte.indexOf('async function obterSaldoRelatorioMercadoPago('));
+  const contexto = {};
+  vm.runInNewContext(funcao, contexto);
+  const relatorio = { begin_date: '2026-10-06T03:00:00Z', end_date: '2026-10-07T02:59:59Z', file_name: 'teste.csv' };
+  const total = { RECORD_TYPE: 'total', NET_CREDIT_AMOUNT: '436.40', NET_DEBIT_AMOUNT: '0.00' };
+  const resultado = contexto.saldoDoRelatorio([{ RECORD_TYPE: 'initial_available_balance', NET_CREDIT_AMOUNT: '436.24' }, { RECORD_TYPE: 'release', NET_CREDIT_AMOUNT: '0.16' }, total], relatorio);
+  assert.equal(resultado.valor, 436.40);
+  assert.equal(resultado.fim, relatorio.end_date);
+  assert.equal(contexto.saldoDoRelatorio([{ ...total, NET_CREDIT_AMOUNT: '0.00' }], relatorio).valor, 0);
+  assert.equal(contexto.saldoDoRelatorio([{ ...total, NET_CREDIT_AMOUNT: 'inválido' }], relatorio), null);
+  assert.equal(contexto.saldoDoRelatorio([], relatorio), null);
+  assert.equal(contexto.saldoDoRelatorio([total, total], relatorio), null);
+  assert.equal(contexto.saldoDoRelatorio([total], { ...relatorio, end_date: '' }), null);
+});
+
 test('sincronização Mercado Pago configura relatório diário e guarda extrato com deduplicação', () => {
   const fonte = fs.readFileSync(path.join(raiz, 'services', 'mercadoPagoService.js'), 'utf8');
   assert.match(fonte, /release_report\/config/);

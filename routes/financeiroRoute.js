@@ -10,7 +10,7 @@ function criarFinanceiroRoute(deps = {}) {
         criarDespesaFinanceira, atualizarDespesaFinanceira, removerDespesaFinanceira,
         listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId,
         criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro,
-        importarRendimentosMercadoPago,
+        importarRendimentosMercadoPago, obterSaldoRelatorioMercadoPago, consultarSaldoRelatorioMercadoPago,
         obterConciliacaoSaldo, salvarConciliacaoSaldo,
         telaDespesasFinanceiras, telaEditarDespesaFinanceira, calcularReceitaRealDoMes,
         telaRendimentosFinanceiros, telaEditarRendimentoFinanceiro,
@@ -137,15 +137,15 @@ function criarFinanceiroRoute(deps = {}) {
     router.get('/financeiro/rendimentos', async (req, res) => {
         desativarCache(res);
         const filtros = filtrosDespesas(req.query);
-        const [rendimentos, despesas, pagamentos, conciliacao] = await Promise.all([
+        const [rendimentos, despesas, pagamentos, conciliacao, saldoMercadoPago] = await Promise.all([
             listarRendimentosFinanceiros(filtros),
             listarDespesasFinanceiras({ mes: filtros.mes, status: 'validas' }),
             listarPagamentosFinanceiro({ mes: filtros.mes, status: 'validos' }),
-            obterConciliacaoSaldo(filtros.mes)
+            obterConciliacaoSaldo(filtros.mes), obterSaldoRelatorioMercadoPago()
         ]);
         const receitaMes = calcularReceitaRealDoMes(pagamentos).total;
         const despesasMes = despesas.reduce((total, despesa) => total + Number(String(despesa.valor || 0).replace('.', '').replace(',', '.')), 0);
-        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes, conciliacao }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
+        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes, conciliacao, saldoMercadoPago }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
     });
 
     function urlRendimentos(filtros, mensagem = '') {
@@ -155,6 +155,13 @@ function criarFinanceiroRoute(deps = {}) {
         if (mensagem) query.set('mensagem', mensagem);
         return `/financeiro/rendimentos?${query.toString()}`;
     }
+    router.post('/financeiro/rendimentos/consultar-saldo-mercado-pago', async (req, res) => {
+        const filtros = filtrosDespesas(req.body);
+        try {
+            await consultarSaldoRelatorioMercadoPago();
+            return res.redirect(urlRendimentos(filtros, 'Saldo do último relatório Mercado Pago atualizado. Não é uma consulta de saldo em tempo real.'));
+        } catch (err) { return res.redirect(urlRendimentos(filtros, err.message)); }
+    });
     router.post('/financeiro/rendimentos', async (req, res, next) => {
         const filtros = filtrosDespesas(req.body);
         try { await criarRendimentoFinanceiro(req.body, req.usuarioPainel || 'sistema'); return res.redirect(urlRendimentos(filtros, 'Rendimento registrado com sucesso.')); }

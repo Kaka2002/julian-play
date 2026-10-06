@@ -81,6 +81,48 @@ function csvLinhas(texto) {
     });
 }
 
+function saldoDoRelatorio(linhas, relatorio) {
+    const totais = linhas.filter(item => String(item.RECORD_TYPE).toLowerCase() === 'total');
+    if (totais.length !== 1 || !Number.isFinite(Date.parse(relatorio.end_date))) return null;
+    const credito = Number(totais[0].NET_CREDIT_AMOUNT);
+    const debito = Number(totais[0].NET_DEBIT_AMOUNT);
+    if (totais[0].NET_CREDIT_AMOUNT === '' || totais[0].NET_DEBIT_AMOUNT === '' || !Number.isFinite(credito) || !Number.isFinite(debito)) return null;
+    return { valor: credito - debito, inicio: relatorio.begin_date, fim: relatorio.end_date, geradoEm: relatorio.generation_date || relatorio.last_modified || '', arquivo: relatorio.file_name, consultadoEm: new Date().toISOString() };
+}
+
+async function obterSaldoRelatorioMercadoPago() {
+    const config = await obterConfiguracoes();
+    try {
+        const saldo = JSON.parse(config.saldoRelatorioMercadoPago || 'null');
+        return saldo && Number.isFinite(saldo.valor) && Number.isFinite(Date.parse(saldo.fim)) ? saldo : null;
+    } catch (_) { return null; }
+}
+
+async function guardarSaldoRelatorio(linhas, relatorio) {
+    const saldo = saldoDoRelatorio(linhas, relatorio);
+    if (!saldo) return null;
+    const anterior = await obterSaldoRelatorioMercadoPago();
+    if (anterior && Date.parse(anterior.fim) > Date.parse(saldo.fim)) return anterior;
+    if (anterior && anterior.fim === saldo.fim && Date.parse(anterior.geradoEm) > Date.parse(saldo.geradoEm)) return anterior;
+    await salvarConfiguracao('saldoRelatorioMercadoPago', JSON.stringify(saldo));
+    return saldo;
+}
+
+async function consultarSaldoRelatorioMercadoPago() {
+    const config = await obterConfiguracoes();
+    const token = config.mercadoPagoAccessToken;
+    if (!token) throw new Error('Configure o Access Token do Mercado Pago em Manutenção.');
+    const lista = await requisicaoMercadoPago('/v1/account/release_report/list', token);
+    const relatorio = (Array.isArray(lista) ? lista : []).filter(item => relatorioDisponivel(item) && item.file_name && Number.isFinite(Date.parse(item.end_date)))
+        .sort((a, b) => Date.parse(b.end_date) - Date.parse(a.end_date) || Date.parse(b.generation_date || 0) - Date.parse(a.generation_date || 0))[0];
+    if (!relatorio) throw new Error('Nenhum relatório Mercado Pago disponível para consultar o saldo.');
+    const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
+    if (!resposta.ok) throw new Error(`Falha ao consultar saldo do relatório Mercado Pago (HTTP ${resposta.status}).`);
+    const saldo = await guardarSaldoRelatorio(csvLinhas(await resposta.text()), relatorio);
+    if (!saldo) throw new Error('O relatório não possui um saldo total válido. O saldo anterior foi preservado.');
+    return saldo;
+}
+
 function valorRelatorio(item) {
     const valor = item.NET_CREDIT_AMOUNT || item.NET_AMOUNT || item.SETTLEMENT_NET_AMOUNT || item.TOTAL_AMOUNT || item.AMOUNT || '0';
     return moedaNumero(valor);
@@ -255,6 +297,7 @@ async function importarRendimentosMercadoPago(opcoes = {}) {
         const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${accessToken}` } });
         if (!resposta.ok) throw new Error(`Mercado Pago: não foi possível baixar o relatório (${resposta.status}).`);
         const linhas = csvLinhas(await resposta.text());
+        await guardarSaldoRelatorio(linhas, relatorio);
         const movimentos = movimentosDoRelatorio(linhas, relatorio.file_name);
         for (const movimento of movimentos) {
             const existe = await buscarUm('SELECT id FROM movimentos_mercado_pago WHERE identificadorExterno = ?', [movimento.identificador]);
@@ -544,5 +587,8 @@ module.exports = {
     listarConfirmacoesPixPendentes,
     listarConfirmacoesPixControlePendentes,
     marcarConfirmacaoPixControle,
-    importarRendimentosMercadoPago
+    importarRendimentosMercadoPago,
+    obterSaldoRelatorioMercadoPago,
+    consultarSaldoRelatorioMercadoPago,
+    saldoDoRelatorio
 };
