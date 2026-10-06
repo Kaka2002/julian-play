@@ -5,6 +5,37 @@ const path = require('path');
 const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
 const repoRoot = path.join(__dirname, '..');
 
+test('controle monetário mascara campos sem alterar valores e reutiliza preferência', () => {
+    const vm = require('node:vm');
+    const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');
+    const inicio = fonte.indexOf("            const botaoValores = document.querySelector('.money-visibility-toggle');");
+    const fim = fonte.indexOf('\n        })();', inicio);
+    const script = fonte.slice(inicio, fim).replace('${JSON.stringify(ativo)}', '"financeiro"').replaceAll('\\\\', '\\');
+    for (const preferencia of ['0', '1']) {
+        let clicar;
+        const campo = { type: 'text', value: '123,45', dataset: {} };
+        const valor = { dataset: { moneyOriginal: 'R$ 123,45' }, textContent: '' };
+        const botao = { setAttribute() {}, addEventListener: (_, fn) => { clicar = fn; } };
+        let salvo = preferencia;
+        vm.runInNewContext(`(() => {${script}})()`, {
+            NodeFilter: { SHOW_TEXT: 4 },
+            document: {
+                querySelector: () => botao,
+                createTreeWalker: () => ({ nextNode: () => false }),
+                querySelectorAll: seletor => seletor === '.money-value' ? [valor] : [campo],
+                body: { classList: { toggle() {} } }
+            },
+            window: { localStorage: { getItem: () => salvo, setItem: (_, v) => { salvo = v; } } }
+        });
+        assert.equal(campo.type, preferencia === '1' ? 'text' : 'password');
+        assert.equal(valor.textContent, preferencia === '1' ? 'R$ 123,45' : 'R$ ***');
+        clicar();
+        assert.equal(campo.type, preferencia === '1' ? 'password' : 'text');
+        assert.equal(campo.value, '123,45');
+        assert.equal(salvo, preferencia === '1' ? '0' : '1');
+    }
+});
+
 test('recarga automática preserva a tela durante 502 e falha de conexão', async () => {
     const vm = require('node:vm');
     const fonte = fs.readFileSync(path.join(repoRoot, 'routes', 'clientesRoute.js'), 'utf8');

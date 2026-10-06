@@ -906,6 +906,10 @@ function icon(nome) {
 }
 
 function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {} }) {
+    if (ativo === 'financeiro' && !conteudo.includes('money-visibility-toggle')) {
+        const botao = `<button class="money-visibility-toggle" type="button" aria-pressed="false" aria-label="Mostrar valores monetários" title="Mostrar valores monetários"><span class="money-icon-hidden">${icon('eye-closed')}</span><span class="money-icon-visible">${icon('eye')}</span><span class="sr-only">Valores monetários</span></button>`;
+        conteudo = `<div class="actions" style="justify-content:flex-end;margin-bottom:12px;">${botao}</div>${conteudo}`;
+    }
     const status = getStatusWhatsApp();
     const nomeSistema = config.nomeSistema || 'Controle de Cliente IPTV e P2P';
     const versaoSistema = packageInfo.version || '1.0.0';
@@ -3467,6 +3471,12 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                     const moedaOriginal = elemento.dataset.moneyOriginal || 'R$ 0,00';
                     elemento.textContent = valoresVisiveis ? moedaOriginal : (moedaOriginal.startsWith('BRL') ? 'BRL ***' : 'R$ ***');
                 });
+                if (${JSON.stringify(ativo)} === 'financeiro') {
+                    document.querySelectorAll('input[inputmode="decimal"],input[name="valor"],input[name="saldoInicial"],input[name="saldoBanco"]').forEach((campo) => {
+                        if (!campo.dataset.moneyOriginalType) campo.dataset.moneyOriginalType = campo.type;
+                        campo.type = valoresVisiveis ? campo.dataset.moneyOriginalType : 'password';
+                    });
+                }
                 botaoValores.setAttribute('aria-pressed', String(valoresVisiveis));
                 const texto = valoresVisiveis ? 'Ocultar valores monetários' : 'Mostrar valores monetários';
                 botaoValores.setAttribute('aria-label', texto);
