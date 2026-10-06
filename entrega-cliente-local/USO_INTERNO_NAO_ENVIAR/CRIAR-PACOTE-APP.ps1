@@ -37,6 +37,7 @@ function DeveIgnorarCaminho($item) {
     if ($nome -like '*.sqlite3') { return $true }
     if ($nome -like '*.log') { return $true }
     if ($nome -like '.julian-*-install.json') { return $true }
+    if ($nome -like '.lume-whatsapp*') { return $true }
     if ($nome -eq 'AGENTS.md') { return $true }
 
     return $false
@@ -91,6 +92,9 @@ $hash = (Get-FileHash -LiteralPath $Destino -Algorithm SHA256).Hash.ToLowerInvar
 [IO.File]::WriteAllText("$Destino.sha256", "$hash  $([IO.Path]::GetFileName($Destino))`r`n", (New-Object Text.UTF8Encoding($false)))
 & node (Join-Path $raizProjeto 'scripts\gerar-manifesto-pacote.js') $Destino
 if ($LASTEXITCODE -ne 0) { Write-Warning 'Manifesto nao assinado: configure LICENSE_PRIVATE_KEY no Painel Mestre antes da distribuicao.' }
+$tempBaseVerificado = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\', '/') + [IO.Path]::DirectorySeparatorChar
+$tempAlvoVerificado = [IO.Path]::GetFullPath($temporario)
+if (-not $tempAlvoVerificado.StartsWith($tempBaseVerificado, [StringComparison]::OrdinalIgnoreCase) -or (Split-Path -Leaf $tempAlvoVerificado) -notlike 'julian-play-app-*') { throw 'Diretorio temporario fora do destino esperado.' }
 Remove-Item -LiteralPath $temporario -Recurse -Force
 
 Write-Host "Pacote criado: $Destino" -ForegroundColor Green

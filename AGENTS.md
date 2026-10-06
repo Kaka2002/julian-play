@@ -113,3 +113,5 @@ Antes do commit final, confirmar que codigo, versao, `CONTEXTO-PARA-CODEX.md` e
 acompanhar o workflow `Validacao do Julian Play` ate o resultado final sempre
 que houver acesso ao GitHub; se a API estiver indisponivel ou limitada,
 informar claramente que a confirmacao remota ficou pendente.
+
+14. A integracao Lume Player e opt-in por configuracao privada no DATA_DIR da instalacao administradora. Nunca incluir .lume-whatsapp.json ou .lume-whatsapp-envios em Git ou pacotes, nem habilitar em clientes comerciais. Validar com servico simulado; envios reais somente para destinatarios autorizados.

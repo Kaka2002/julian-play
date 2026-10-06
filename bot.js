@@ -303,6 +303,7 @@ const server = app.listen(PORT, async () => {
             recuperarWhatsAppAutomaticamente
         });
         iniciarConciliacaoFinanceira();
+        require('./services/lumeAtivacaoService').iniciarAvisosLume({ dataDir: configuracaoRuntime.dataDir, getClient, getStatusWhatsApp });
     }
 });
 
