@@ -638,3 +638,7 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Consulta real do telefone autorizado retornou identificador @lid. O consumidor rejeitava esse formato antes de reservar/envio, deixando o aviso claimed ate a lease expirar. Aceita agora LID numerico somente retornado por getNumberId para o telefone da fila autenticada; nunca interpreta LID como telefone, nem aceita grupos. Diario e deduplicacao preservados.
 - Afeta administrador opt-in Lume; Mestre, comercial e local inalterados. Preserva licenca trial, vencimento, banco, sessao, configuracoes, backups e DATA_DIR; sem migracao. Acao: deploy oficial; aviso claimed retoma depois da lease existente sem recriar pedido nem apagar diario. Nenhuma mensagem enviada durante diagnostico. Testes simulados cobrem LID, grupo rejeitado e envio unico.
+## Implementado: organização de Rendimentos — 1.3.91
+
+- Saldo do relatório substitui a conciliação bancária na interface; consulta e sincronização aparecem juntas abaixo do saldo. Título Rendimentos permanece no início. Campos e comparação manuais saem da tela, sem excluir registros ou alterar serviços financeiros.
+- Administrador, comercial provisionado e local afetados; Mestre inalterado. Bancos, configurações, sessões, backups e DATA_DIR preservados. Sem migração; recarregar após deploy. Validação: sintaxe, diff e pacote oficial.

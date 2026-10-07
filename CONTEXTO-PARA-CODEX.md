@@ -2166,3 +2166,7 @@ pm ci normalmente.
 
 - Consulta real do telefone autorizado retornou identificador @lid. O consumidor rejeitava esse formato antes de reservar/envio, deixando o aviso claimed ate a lease expirar. Aceita agora LID numerico somente retornado por getNumberId para o telefone da fila autenticada; nunca interpreta LID como telefone, nem aceita grupos. Diario e deduplicacao preservados.
 - Afeta administrador opt-in Lume; Mestre, comercial e local inalterados. Preserva licenca trial, vencimento, banco, sessao, configuracoes, backups e DATA_DIR; sem migracao. Acao: deploy oficial; aviso claimed retoma depois da lease existente sem recriar pedido nem apagar diario. Nenhuma mensagem enviada durante diagnostico. Testes simulados cobrem LID, grupo rejeitado e envio unico.
+## Organização de Rendimentos — versão 1.3.91
+
+- O saldo do último relatório Mercado Pago ocupa o lugar do formulário de conciliação bancária, após o título Rendimentos. Consultar saldo e Sincronizar Mercado Pago ficam lado a lado, com quebra em telas pequenas. Removidos desta tela os campos manuais e a comparação de saldo esperado; dados e rota de conciliação existentes preservados.
+- Afeta administrador, comercial provisionado e local; Mestre inalterado. Preserva bancos, configurações, rendimentos, sessões, backups e DATA_DIR. Sem migração. Após deploy, recarregar a tela. Validação: sintaxe JS, diff e pacote oficial; mudança somente de apresentação.
