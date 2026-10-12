@@ -2,6 +2,22 @@ const test=require('node:test'); const assert=require('node:assert/strict');
 const fs=require('fs'); const path=require('path');
 const {executarIsolado,removerAmbiente,repoRoot}=require('./helpers/isolated');
 
+test('navegação consulta sessão sem gravar a cada página e mantém revogação imediata', () => {
+    const r = executarIsolado(`(async()=>{
+        const db=require('./database/sqlite'); const a=require('./services/authService');
+        const sessao=await a.criarSessao('teste');const req={headers:{cookie:'julian_play_session='+sessao.token}};
+        let escritas=0;const run=db.run.bind(db);db.run=function(sql,...args){if(sql.startsWith('UPDATE sessoes_painel SET ultimoAcessoEm'))escritas++;return run(sql,...args)};
+        await a.obterSessao(req);await a.obterSessao(req);
+        const recentes=escritas;
+        await new Promise((ok,erro)=>db.run('UPDATE sessoes_painel SET ultimoAcessoEm = ?', ['2000-01-01T00:00:00Z'], e=>e?erro(e):ok()));
+        escritas=0;await a.obterSessao(req);const antiga=escritas;
+        await a.encerrarSessao(req);const revogada=await a.obterSessao(req);
+        process.stdout.write(JSON.stringify({recentes,antiga,revogada}));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try { assert.deepEqual(JSON.parse(r.stdout), { recentes: 0, antiga: 1, revogada: null }); }
+    finally { removerAmbiente(r.ambiente); }
+});
+
 test('HTML desativa atalhos do LastPass em todos os campos e formularios',()=>{const s=require('../services/securityService');const html=s.desativarAtalhosGerenciadorSenhas('<html><head></head><body><form><input type="password" data-autofill-empty="true"><textarea></textarea><select></select></form></body></html>');assert.equal((html.match(/data-lpignore="true"/g)||[]).length,4);assert.match(html,/julian-play-password-manager-style/);assert.match(html,/julian-play-password-manager-control/);assert.match(html,/campo-segredo-manual/);assert.match(html,/el\.type = 'text'/);assert.match(html,/data-1p-ignore/);assert.match(html,/data-bwignore/);assert.match(html,/usuarioDigitou/);assert.match(html,/setInterval\(\(\) => limpar\(\), 250\)/);assert.match(html,/clearInterval\(vigilancia\)/);assert.match(html,/MutationObserver/)});
 
 test('pagina de login preserva preenchimento automatico',()=>{const s=require('../services/securityService');const html=s.desativarAtalhosGerenciadorSenhas('<form method="post" action="/login"><input name="usuario" autocomplete="username"><input type="password" name="senha" autocomplete="current-password"></form>');assert.doesNotMatch(html.match(/<form[\s\S]*?<\/form>/)[0],/data-lpignore/);assert.match(html,/autocomplete="username"/);assert.match(html,/autocomplete="current-password"/)});

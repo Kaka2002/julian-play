@@ -11,6 +11,14 @@ function idSeguro(valor) {
 function middlewareCorrelacao(req, res, next) {
     const correlationId = idSeguro(req.get('x-correlation-id') || req.get('x-request-id'));
     res.setHeader('x-correlation-id', correlationId);
+    const menus = new Set(['/clientes', '/clientes/todos', '/crm', '/financeiro', '/financeiro/despesas', '/financeiro/rendimentos', '/financeiro/conciliacao', '/manutencao']);
+    if (req.method === 'GET' && menus.has(req.path)) {
+        const inicio = process.hrtime.bigint();
+        res.once?.('finish', () => {
+            const duracaoMs = Math.round(Number(process.hrtime.bigint() - inicio) / 1e6);
+            if (duracaoMs >= 1000) console.warn(`[navegacao-lenta] pagina=${req.path} duracaoMs=${duracaoMs} status=${res.statusCode} correlationId=${correlationId}`);
+        });
+    }
     contexto.run({ correlationId, metodo: req.method, caminho: req.originalUrl }, next);
 }
 

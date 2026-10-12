@@ -3407,8 +3407,13 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 if (!botao) return;
                 const campo = botao.closest('.password-toggle-field')?.querySelector('input[data-password-toggle]');
                 if (!campo) return;
-                const mostrar = campo.type === 'password';
-                campo.type = mostrar ?'text' : 'password';
+                const mostrar = campo.type === 'password' || campo.classList.contains('campo-segredo-manual');
+                if (campo.dataset.autofillPreparado) {
+                    campo.type = 'text';
+                    campo.classList.toggle('campo-segredo-manual', !mostrar);
+                } else {
+                    campo.type = mostrar ?'text' : 'password';
+                }
                 const texto = mostrar ?'Ocultar senha' : 'Mostrar senha';
                 botao.title = texto;
                 botao.setAttribute('aria-label', texto);
@@ -3473,8 +3478,7 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
                 });
                 if (${JSON.stringify(ativo)} === 'financeiro') {
                     document.querySelectorAll('input[inputmode="decimal"],input[name="valor"],input[name="saldoInicial"],input[name="saldoBanco"]').forEach((campo) => {
-                        if (!campo.dataset.moneyOriginalType) campo.dataset.moneyOriginalType = campo.type;
-                        campo.type = valoresVisiveis ? campo.dataset.moneyOriginalType : 'password';
+                        campo.style.webkitTextSecurity = valoresVisiveis ? 'none' : 'disc';
                     });
                 }
                 botaoValores.setAttribute('aria-pressed', String(valoresVisiveis));

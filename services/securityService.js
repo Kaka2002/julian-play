@@ -31,10 +31,16 @@ function comparar(a, b) {
 
 function desativarAtalhosGerenciadorSenhas(conteudo) {
     let html = String(conteudo || '');
-    html = html.replace(/<(form|input|textarea|select)\b(?![^>]*\bdata-lpignore=)([^>]*)>/gi,
-        '<$1 data-lpignore="true"$2>');
-    html = html.replace(/<form\b[^>]*action=["']\/login["'][^>]*>[\s\S]*?<\/form>/gi,
-        formulario => formulario.replace(/\sdata-lpignore=["']true["']/gi, ''));
+    const formulariosLogin = [];
+    html = html.replace(/<form\b[^>]*action=["']\/login["'][^>]*>[\s\S]*?<\/form>/gi, formulario => {
+        formulariosLogin.push(formulario);
+        return `<!--julian-login-${formulariosLogin.length - 1}-->`;
+    });
+    html = html.replace(/<(form|input|textarea|select)\b([^>]*)>/gi, (_, tag, atributos) => {
+        const limpos = atributos.replace(/\s(?:autocomplete|data-lpignore|data-1p-ignore|data-bwignore)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+        return `<${tag} autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"${limpos}>`;
+    });
+    html = html.replace(/<!--julian-login-(\d+)-->/g, (_, indice) => formulariosLogin[Number(indice)]);
 
     const estilo = `<style id="julian-play-password-manager-style">
         [data-lastpass-icon-root], [data-lastpass-root], div[id^="__lpform_"] { display:none!important; visibility:hidden!important; pointer-events:none!important; }
@@ -44,7 +50,7 @@ function desativarAtalhosGerenciadorSenhas(conteudo) {
         (() => {
             const limpar = (raiz = document) => {
                 raiz.querySelectorAll?.('[data-autofill-empty="true"]').forEach(el => {
-                    if (!el.dataset.usuarioDigitou) el.value = '';
+                    if (!el.dataset.usuarioDigitou && !el.form?.dataset.usuarioInteragiu) el.value = '';
                 });
             };
             const proteger = (el) => {
@@ -67,13 +73,23 @@ function desativarAtalhosGerenciadorSenhas(conteudo) {
                     }
                     form.setAttribute('autocomplete', 'off');
                     proteger(form);
+                    if (!form.dataset.autofillPreparado) {
+                        form.dataset.autofillPreparado = 'true';
+                        ['input', 'change', 'keydown', 'paste'].forEach(tipo => form.addEventListener(tipo, evento => {
+                            if (evento.isTrusted) form.dataset.usuarioInteragiu = 'true';
+                        }));
+                    }
                     campos.forEach(el => {
+                        if (el.dataset.autofillPreparado) return;
+                        el.dataset.autofillPreparado = 'true';
                         proteger(el);
+                        el.setAttribute('autocomplete', 'off');
+                        if (el.matches('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]),textarea') && !el.defaultValue) {
+                            el.setAttribute('data-autofill-empty', 'true');
+                        }
                         if (el.matches('input[type="password"]')) {
-                            el.value = '';
                             el.type = 'text';
                             el.classList.add('campo-segredo-manual');
-                            el.setAttribute('data-autofill-empty', 'true');
                         }
                     });
                 });
@@ -82,9 +98,9 @@ function desativarAtalhosGerenciadorSenhas(conteudo) {
                     proteger(el);
                     if (!el.dataset.autofillProtegido) {
                         el.dataset.autofillProtegido = 'true';
-                        ['keydown', 'paste'].forEach(tipo => el.addEventListener(tipo, () => {
-                            el.dataset.usuarioDigitou = 'true';
-                        }, { once: true }));
+                        ['keydown', 'paste', 'input'].forEach(tipo => el.addEventListener(tipo, evento => {
+                            if (evento.isTrusted) el.dataset.usuarioDigitou = 'true';
+                        }));
                         ['pointerdown', 'focus'].forEach(tipo => el.addEventListener(tipo, () => {
                             setTimeout(() => limpar(el.form || document), 0);
                             setTimeout(() => limpar(el.form || document), 100);
@@ -98,7 +114,17 @@ function desativarAtalhosGerenciadorSenhas(conteudo) {
             addEventListener('pageshow', () => aplicar());
             const vigilancia = setInterval(() => limpar(), 250);
             setTimeout(() => clearInterval(vigilancia), 10000);
-            new MutationObserver(() => aplicar()).observe(document.documentElement, { childList: true, subtree: true });
+            new MutationObserver(registros => {
+                const formularios = new Set();
+                registros.forEach(registro => registro.addedNodes.forEach(no => {
+                    if (no.nodeType !== 1) return;
+                    if (no.matches?.('[data-lastpass-icon-root],[data-lastpass-root],div[id^="__lpform_"]')) { no.remove(); return; }
+                    if (no.matches?.('form')) formularios.add(no.parentElement);
+                    if (no.matches?.('input,textarea,select')) formularios.add(no.closest('form')?.parentElement);
+                    if (no.querySelector?.('form,input,textarea,select')) formularios.add(no);
+                }));
+                formularios.forEach(raiz => { if (raiz) aplicar(raiz); });
+            }).observe(document.documentElement, { childList: true, subtree: true });
         })();
     </script>`;
 

@@ -120,9 +120,13 @@ async function obterSessao(req) {
         await executar('UPDATE sessoes_painel SET revogadaEm = ? WHERE tokenHash = ?', [new Date().toISOString(), tokenHash]);
         return null;
     }
-    const agora = new Date().toISOString();
-    await executar('UPDATE sessoes_painel SET ultimoAcessoEm = ? WHERE tokenHash = ?', [agora, tokenHash]);
-    return { token, tokenHash, ...sessao, ultimoAcessoEm: agora };
+    const ultimoAcesso = Date.parse(sessao.ultimoAcessoEm);
+    if (!Number.isFinite(ultimoAcesso) || Date.now() - ultimoAcesso >= 60000) {
+        const agora = new Date().toISOString();
+        await executar('UPDATE sessoes_painel SET ultimoAcessoEm = ? WHERE tokenHash = ? AND revogadaEm IS NULL', [agora, tokenHash]);
+        sessao.ultimoAcessoEm = agora;
+    }
+    return { token, tokenHash, ...sessao };
 }
 
 function cookieSessao(token, req = null) {

@@ -642,3 +642,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Saldo do relatório substitui a conciliação bancária na interface; consulta e sincronização aparecem juntas abaixo do saldo. Título Rendimentos permanece no início. Campos e comparação manuais saem da tela, sem excluir registros ou alterar serviços financeiros.
 - Administrador, comercial provisionado e local afetados; Mestre inalterado. Bancos, configurações, sessões, backups e DATA_DIR preservados. Sem migração; recarregar após deploy. Validação: sintaxe, diff e pacote oficial.
+## Implementado: autofill e otimização de navegação — 1.3.92
+
+- Bloqueio solicitado ao gerenciador no HTML fora de login; campos novos vazios protegidos, preservando edição e digitação. Campos financeiros mantêm tipo de texto durante máscara. Observador limita trabalho a novos formulários/campos e inicialização única.
+- Reduzidas gravações de ultimoAcessoEm a uma por minuto; autenticação continua verificando banco, expiração e revogação em cada requisição. Medição de menus lentos registra apenas rota fixa, duração, status e correlação.
+- Parcial: causa da demora antes da página aparecer ainda não confirmada. Rotas sem autenticação rápidas e SQLITE_BUSY histórico não bastam para concluir causa. Validar páginas autenticadas após deploy e revisar log navegacao-lenta. Extensões podem ignorar hints de autofill; preservados padrões do sistema e valores salvos, não há limpeza indiscriminada de campos.
+- Os quatro perfis recebem proteção e sessão compartilhadas; financeiro apenas administrador/comercial/local. Bancos, tokens, sessões, configurações, backups e DATA_DIR preservados. Sem migração. Validação: dez testes de segurança, controle monetário e teste de navegador; sintaxe, diff e pacote oficial. Ação: deploy e recarregar páginas.

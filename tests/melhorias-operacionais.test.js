@@ -13,7 +13,7 @@ test('controle monetÃ¡rio mascara campos sem alterar valores e reutiliza preferÃ
     const script = fonte.slice(inicio, fim).replace('${JSON.stringify(ativo)}', '"financeiro"').replaceAll('\\\\', '\\');
     for (const preferencia of ['0', '1']) {
         let clicar;
-        const campo = { type: 'text', value: '123,45', dataset: {} };
+        const campo = { type: 'text', value: '123,45', dataset: {}, style: {} };
         const valor = { dataset: { moneyOriginal: 'R$ 123,45' }, textContent: '' };
         const botao = { setAttribute() {}, addEventListener: (_, fn) => { clicar = fn; } };
         let salvo = preferencia;
@@ -27,10 +27,12 @@ test('controle monetÃ¡rio mascara campos sem alterar valores e reutiliza preferÃ
             },
             window: { localStorage: { getItem: () => salvo, setItem: (_, v) => { salvo = v; } } }
         });
-        assert.equal(campo.type, preferencia === '1' ? 'text' : 'password');
+        assert.equal(campo.type, 'text');
+        assert.equal(campo.style.webkitTextSecurity, preferencia === '1' ? 'none' : 'disc');
         assert.equal(valor.textContent, preferencia === '1' ? 'R$ 123,45' : 'R$ ***');
         clicar();
-        assert.equal(campo.type, preferencia === '1' ? 'password' : 'text');
+        assert.equal(campo.type, 'text');
+        assert.equal(campo.style.webkitTextSecurity, preferencia === '1' ? 'disc' : 'none');
         assert.equal(campo.value, '123,45');
         assert.equal(salvo, preferencia === '1' ? '0' : '1');
     }
