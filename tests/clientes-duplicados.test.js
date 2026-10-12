@@ -61,3 +61,26 @@ test('revisão de duplicados é protegida e integrada à lista e às pendências
     assert.match(pendencias, /tipo: 'cliente_duplicado'/);
     assert.ok(bot.indexOf("app.use('/', protegerPainel)") < bot.indexOf("app.use('/', clientesRoute)"));
 });
+test('lista sem mudança de vencimento permanece legível durante outra transação de escrita', () => {
+    const { executarIsolado, removerAmbiente } = require('./helpers/isolated');
+    const resultado = executarIsolado(`(async()=>{
+        const db=require('./database/sqlite');const sqlite=require('sqlite3');const clientes=require('./services/clientes');await db.ready;
+        const run=(sql,params=[])=>new Promise((ok,erro)=>db.run(sql,params,e=>e?erro(e):ok()));
+        await run("INSERT INTO clientes(nome,telefone,status,vencimento,dataVencimento,atualizadoEm) VALUES ('Futuro','5511990000001','ativo','2099-01-01','2099-01-01T23:59','2000-01-01')");
+        await run("INSERT INTO clientes(nome,telefone,status,vencimento,dataVencimento) VALUES ('Vencido','5511990000002','teste','2000-01-01','2000-01-01T23:59')");
+        await run("INSERT INTO clientes(nome,telefone,status,vencimento,dataVencimento) VALUES ('Renovado','5511990000003','expirado','2099-01-01','2099-01-01T23:59')");
+        await clientes.atualizarStatusAutomaticoClientes();
+        const conexao=await new Promise((ok,erro)=>{const c=new sqlite.Database(db.dbPath,e=>e?erro(e):ok(c))});
+        const executar=sql=>new Promise((ok,erro)=>conexao.run(sql,e=>e?erro(e):ok()));
+        await executar('BEGIN IMMEDIATE');
+        const lista=await clientes.listarClientes();
+        await executar('ROLLBACK');await new Promise(ok=>conexao.close(ok));
+        console.log(JSON.stringify(lista.map(c=>({nome:c.nome,status:c.status,atualizadoEm:c.atualizadoEm}))));process.exit(0);
+    })().catch(e=>{console.error(e);process.exit(1)})`);
+    try {
+        const lista = JSON.parse(resultado.stdout.trim().split(/\r?\n/).at(-1));
+        assert.equal(lista.find(c => c.nome === 'Futuro').atualizadoEm, '2000-01-01');
+        assert.equal(lista.find(c => c.nome === 'Vencido').status, 'expirado');
+        assert.equal(lista.find(c => c.nome === 'Renovado').status, 'ativo');
+    } finally { removerAmbiente(resultado.ambiente); }
+});

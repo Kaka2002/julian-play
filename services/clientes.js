@@ -702,8 +702,15 @@ async function listarClientesAtivosComerciais() {
 
 async function atualizarStatusAutomaticoClientes() {
     const agora = agoraSaoPauloISO();
+    // A consulta da lista não deve disputar a trava de escrita quando nenhum
+    // vencimento mudou de estado. As condições das atualizações são repetidas
+    // no SELECT e no UPDATE para preservar a validação no momento da gravação.
+    const mudancas = await buscarUm(`SELECT
+        SUM(CASE WHEN status IN ('ativo', 'pendente', 'teste') AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) < datetime(replace(?, 'T', ' ')) THEN 1 ELSE 0 END) AS expirar,
+        SUM(CASE WHEN status = 'expirado' AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) >= datetime(replace(?, 'T', ' ')) THEN 1 ELSE 0 END) AS ativar
+        FROM clientes WHERE status IN ('ativo', 'pendente', 'teste', 'expirado') AND vencimento IS NOT NULL AND vencimento != ''`, [agora, agora]);
 
-    await executar(
+    if (mudancas?.expirar) await executar(
         `UPDATE clientes SET
             status = 'expirado',
             atualizadoEm = CURRENT_TIMESTAMP
@@ -714,7 +721,7 @@ async function atualizarStatusAutomaticoClientes() {
         [agora]
     );
 
-    await executar(
+    if (mudancas?.ativar) await executar(
         `UPDATE clientes SET
             status = 'ativo',
             atualizadoEm = CURRENT_TIMESTAMP
