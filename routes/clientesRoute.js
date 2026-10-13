@@ -187,7 +187,7 @@ const {
     testarIntegracaoPainel,
     reagendarRenovacao
 } = require('../services/renovacaoPainelService');
-const { registrarIndicacao, listarIndicacoes, listarResumoIndicacoesPainel, processarCreditosIndicacoes, cancelarIndicacao } = require('../services/indicacoesService');
+const { registrarIndicacao, listarIndicacoes, listarResumoIndicacoesPainel, processarCreditosIndicacoes, cancelarIndicacao, obterCampanhaAtiva } = require('../services/indicacoesService');
 const { prepararIndicacaoCadastro, concluirIndicacaoCadastro, avisarBonusProgramado } = require('../services/cadastroIndicacaoService');
 
 async function avisarBonusCadastro(cliente) {
@@ -8237,7 +8237,7 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
     </script>`;
 }
 
-function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }, paginaPrioridades = 1, indicacoesResumo = []) {
+function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_PAGINA, receitaBase = clientes, aniversariantes = [], resumoSuporte = {}, resumoComercial = {}, pagamentosMes = [], planos = [], pendencias = { itens: [], resumo: {} }, paginaPrioridades = 1, indicacoesResumo = [], campanhaIndicacao = null) {
     const resumo = calcularResumo(clientes);
     const receita = calcularReceitaMensal(receitaBase);
     const receitaReal = calcularReceitaRealDoMes(pagamentosMes);
@@ -8342,6 +8342,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Campanha de indicação</h2>
+                <div class="helper"><strong>Campanha ativa: ${escapar(campanhaIndicacao?.titulo || 'Nenhuma campanha de indicação ativa')}</strong></div>
                 <div class="subtitle">O bônus segue a campanha ativa em Modelos. Acompanhe indicações e créditos automáticos em Controlar indicações.</div>
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
                 ${campanhaEmAndamento ? controlesCampanhaAmizadeHtml('/clientes') : ''}
@@ -10194,7 +10195,7 @@ router.get('/clientes', async (req, res) => {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
     }).format(new Date()));
     const whatsapp = getStatusWhatsApp();
-    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos, sistema, indicacoesResumo] = await Promise.all([
+    const [clientes, receitaBase, pagamentosMes, aniversariantes, resumoSuporte, resumoComercial, planos, sistema, indicacoesResumo, campanhaIndicacao] = await Promise.all([
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
@@ -10203,7 +10204,8 @@ router.get('/clientes', async (req, res) => {
         resumoCrm(),
         listarTiposPlanos(),
         obterStatusSistema(whatsapp),
-        listarResumoIndicacoesPainel()
+        listarResumoIndicacoesPainel(),
+        obterCampanhaAtiva()
     ]);
     const pendencias = await listarPendenciasOperacionais({}, { operacional: { whatsapp, sistema } });
     const mensagem = req.query.mensagem || '';
@@ -10213,7 +10215,7 @@ router.get('/clientes', async (req, res) => {
 
     await renderizar(res, {
         titulo: 'Painel',
-        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias, paginaPrioridades, indicacoesResumo),
+        conteudo: dashboard(clientes, pagina, porPagina, receitaBase, aniversariantes, resumoSuporte, resumoComercial, pagamentosMes, planos, pendencias, paginaPrioridades, indicacoesResumo, campanhaIndicacao),
         mensagem,
         ativo: 'painel'
     });
