@@ -296,6 +296,7 @@ function montarCliente(dados = {}) {
         nascimento: normalizarAniversario(dados.nascimento),
         tipoPlanoId: limparTexto(dados.tipoPlanoId),
         diasContrato: Number(dados.diasContrato || 0),
+        bonusDiasManual: String(dados.bonusDiasManual || '') === '1',
         valorPlano: normalizarMoeda(dados.valorPlano),
         assinaturaApp: normalizarMoeda(dados.assinaturaApp),
         validadeApp: limparTexto(dados.validadeApp),
@@ -827,14 +828,30 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
         throw new Error('O plano Bônus Mensal só pode ser usado por um cliente que já possua bônus disponível.');
     }
 
-    const vencimentoNovo = limparTexto(cliente.dataVencimento || cliente.vencimento);
-    if (!vencimentoNovo) {
+    let vencimentoNovo = limparTexto(cliente.dataVencimento || cliente.vencimento);
+    if (!vencimentoNovo && !cliente.bonusDiasManual) {
         throw new Error('Informe o vencimento do ciclo antes de usar o Bônus Mensal.');
     }
 
-    const meses = mesesPlanoBonus(tipoPlano);
-    cliente.plano = tipoPlano.nome;
-    cliente.diasContrato = meses * 30;
+    const dias = cliente.bonusDiasManual ? Number(cliente.diasContrato) : mesesPlanoBonus(tipoPlano) * 30;
+    if (!Number.isSafeInteger(dias) || dias <= 0) throw new Error('Informe uma quantidade inteira e positiva de dias para o bônus.');
+    const meses = Math.ceil(dias / 30);
+    if (cliente.bonusDiasManual) {
+        const mesmoPeriodo = Number(cliente.diasContrato) === Number(existente.diasContrato)
+            && String(cliente.dataInicio || '').slice(0, 16) === String(existente.dataInicio || '').slice(0, 16)
+            && String(cliente.dataVencimento || '').slice(0, 16) === String(existente.dataVencimento || '').slice(0, 16)
+            && /b[oô]nus/i.test(String(existente.plano || ''));
+        if (!mesmoPeriodo) {
+            const inicio = new Date(cliente.dataInicio);
+            if (Number.isNaN(inicio.getTime())) throw new Error('Informe a data de início do bônus.');
+            const fim = adicionarDiasData(inicio, dias);
+            cliente.dataVencimento = fim.dataVencimento;
+            cliente.vencimento = fim.vencimento;
+            vencimentoNovo = fim.dataVencimento;
+        }
+    }
+    cliente.plano = cliente.bonusDiasManual ? 'Bônus' : tipoPlano.nome;
+    cliente.diasContrato = dias;
     cliente.valorPlano = existente.valorPlano;
     cliente.assinaturaApp = existente.assinaturaApp;
     cliente.status = 'ativo';
@@ -850,7 +867,7 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
     );
 
     if (pagamentoExistente) {
-        if (Number(pagamentoExistente.diasContrato) !== meses * 30) throw new Error('Este vencimento já possui outro período de bônus registrado. Confira as datas.');
+        if (Number(pagamentoExistente.diasContrato) !== dias) throw new Error('Este vencimento já possui outro período de bônus registrado. Confira as datas.');
         // Reabrir e salvar o mesmo contrato não pode descontar o bônus outra vez.
         cliente.bonusMeses = Math.max(0, Number.parseInt(existente.bonusMeses || 0, 10) || 0);
         return { ativo: true, deveRegistrar: false };
@@ -867,6 +884,7 @@ async function prepararUsoPlanoBonusMensal(cliente, existente) {
         deveRegistrar: true,
         saldoAnterior,
         meses,
+        dias,
         saldoRestante: cliente.bonusMeses,
         vencimentoNovo
     };
@@ -877,7 +895,7 @@ function dadosPagamentoBonusMensal(cliente, usoBonus) {
         cliente.id,
         cliente.tipoPlanoId,
         cliente.plano,
-        usoBonus.meses * 30,
+        usoBonus.dias || usoBonus.meses * 30,
         '0,00',
         '0,00',
         '0,00',

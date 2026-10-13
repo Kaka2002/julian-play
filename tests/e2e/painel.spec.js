@@ -195,7 +195,8 @@ test('identifica saldo antigo e oferece bônus de três meses preservando preço
     await page.goto('/clientes/2/editar');
     const historico = page.locator('#historico-bonus');
     await expect(historico.getByRole('heading', { name: 'Origem e histórico de bônus' })).toBeVisible();
-    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus — 3 meses' });
+    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus' });
+    await page.locator('#diasContrato').fill('90');
     await expect(page.locator('#valorPlano')).toHaveValue('35,00');
     await expect(page.locator('#diasContrato')).toHaveValue('90');
     await expect(page.locator('#dataVencimento')).toHaveValue('2099-04-01T23:59');
@@ -206,7 +207,8 @@ test('identifica saldo antigo e oferece bônus de três meses preservando preço
     await expect(page.locator('input[name="bonusMeses"]')).toHaveValue('3');
     await expect(historico.getByRole('cell', { name: /Indique e ganhe 3 meses/ })).toBeVisible();
     await expect(historico.locator('form')).toHaveCount(0);
-    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus — 3 meses' });
+    await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus' });
+    await page.locator('#diasContrato').fill('90');
     await page.getByRole('button', { name: 'Salvar cliente', exact: true }).click();
     await page.goto('/clientes/2/editar');
     await expect(page.locator('input[name="bonusMeses"]')).toHaveValue('0');

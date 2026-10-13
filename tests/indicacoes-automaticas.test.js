@@ -169,3 +169,19 @@ test('ficha vincula ID sem repetir e aviso usa campanha antiga após troca da at
  const normal=await modelos.montarMensagemAvisoProgramado({...salvo,valorPlano:'35,00'},5);assert.doesNotMatch(normal,/mês de bônus|Bônus Mensal/);
  await cadastro.avisarBonusProgramado(salvo,transporte);assert.equal(envios,1);
 `));
+test('bônus por dias exatos desconta teto de dias por 30 e não repete o consumo', () => isolated(`
+ const clientes=require('./services/clientes');const planos=await require('./services/tiposPlanos').listarTiposPlanos();const bonus=planos.find(p=>p.nome==='Bônus Mensal');
+ await run('UPDATE clientes SET bonusMeses=3, plano=?, diasContrato=30 WHERE id=1',['Mensal']);
+ const antes=await clientes.buscarClientePorId(1);
+ const dados={...antes,tipoPlanoId:bonus.id,bonusDiasManual:'1',diasContrato:45,dataInicio:'2026-01-31T12:00',dataVencimento:'2026-05-01T12:00',bonusMesesOriginal:3,statusAvisoBonus:'programado'};
+ const salvo=await clientes.salvarCliente(dados);
+ assert.equal(salvo.diasContrato,45);assert.equal(salvo.dataVencimento,'2026-03-17T12:00');assert.equal(salvo.bonusMeses,1);assert.equal(salvo.statusAvisoBonus,'aplicado');assert.equal(salvo.valorPlano,'35,00');
+ const lancamentoDias=await get("SELECT diasContrato,valorTotal FROM cliente_pagamentos WHERE clienteId=1 AND formaPagamento='Bônus mensal'");assert.deepEqual(lancamentoDias,{diasContrato:45,valorTotal:'0,00'});
+ const repetido=await clientes.salvarCliente({...salvo,bonusDiasManual:'1',bonusMesesOriginal:1});assert.equal(repetido.bonusMeses,1);
+ assert.equal((await get('SELECT COUNT(*) n FROM cliente_pagamentos WHERE clienteId=1')).n,1);
+ await assert.rejects(clientes.salvarCliente({...salvo,bonusDiasManual:'1',diasContrato:31,dataInicio:'2026-05-01T12:00',dataVencimento:'2026-06-01T12:00'}),/suficiente/);
+ assert.equal((await clientes.buscarClientePorId(1)).bonusMeses,1);
+ for(const dias of [0,-1,1.5])await assert.rejects(clientes.salvarCliente({...salvo,bonusDiasManual:'1',diasContrato:dias}),/inteira e positiva/);
+ const final=await clientes.salvarCliente({...salvo,bonusDiasManual:'1',diasContrato:30,dataInicio:'2026-05-01T12:00',dataVencimento:'2026-06-01T12:00',bonusMesesOriginal:1});
+ assert.equal(final.dataVencimento,'2026-05-31T12:00');assert.equal(final.bonusMeses,0);
+`));

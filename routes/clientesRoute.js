@@ -6718,8 +6718,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
     })?.id || '';
     const saldoBonusDisponivel = Math.max(0, Number.parseInt(cliente.bonusMeses || 0, 10) || 0);
     const planoAtualEhBonus = planos.some(plano => String(plano.id) === String(planoAtualOriginal) && ehPlanoBonusMensal(plano));
+    const bonusGenerico = planos.find(plano => ehPlanoBonusMensal(plano) && mesesPlanoBonus(plano) === 1);
     const planosDisponiveis = planos.filter(plano => !ehPlanoBonusMensal(plano)
-        || saldoBonusDisponivel >= mesesPlanoBonus(plano) || String(plano.id) === String(planoAtualOriginal));
+        || (String(plano.id) === String(planoAtualEhBonus ? planoAtualOriginal : bonusGenerico?.id) && (saldoBonusDisponivel > 0 || planoAtualEhBonus)));
     const planoBonusUmMes = planosDisponiveis.find(plano => ehPlanoBonusMensal(plano) && mesesPlanoBonus(plano) === 1);
     const vencimentoParaGuia = cliente.dataVencimento || cliente.vencimento || '';
     const dataVencimentoParaGuia = vencimentoParaGuia ?new Date(vencimentoParaGuia) : null;
@@ -6745,7 +6746,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         <div class="subtitle">Dados pessoais, contrato e acesso ao aplicativo</div>
     </section>
     ${alertaClienteHtml(alertas)}
-    ${aplicarBonusGuiado ?'<div class="notice success">Bônus — 1 mês foi preparado com início no vencimento atual e término calculado. Confira as datas e clique em Salvar cliente para aplicar. Nenhum saldo foi consumido ainda.</div>' : ''}
+    ${aplicarBonusGuiado ?'<div class="notice success">Bônus selecionado. Informe os dias e confira início e vencimento antes de salvar. Nenhum saldo foi consumido ainda.</div>' : ''}
     <section class="panel">
         <form class="fields client-form cliente-editor-form" method="post" action="/clientes/salvar">
             ${cliente.id ?`<input type="hidden" name="id" value="${escapar(cliente.id)}">` : ''}
@@ -6812,16 +6813,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     { valor: '', texto: 'Selecione...' },
                     ...planosDisponiveis.map(plano => ({
                         valor: plano.id,
-                        texto: ehPlanoBonusMensal(plano) ? `Bônus — ${mesesPlanoBonus(plano)} ${mesesPlanoBonus(plano) === 1 ? 'mês' : 'meses'}` : plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
+                        texto: ehPlanoBonusMensal(plano) ? 'Bônus' : plano.dias > 0 ?`${plano.nome} (${plano.dias} dias)` : plano.nome
                     }))
                 ]
             })}
             <div class="helper full">${saldoBonusDisponivel > 0
-                ?`Este cliente possui <strong>${saldoBonusDisponivel} bônus</strong>. Escolha <strong>Bônus — 1 mês</strong> ou <strong>Bônus — 3 meses</strong> para consumir o período correspondente, sem cobrança no Financeiro. O valor contratado será preservado. Confira o vencimento antes de salvar; o aviso é manual em Modelos.`
+                ?`Este cliente possui <strong>${saldoBonusDisponivel} mês(es) de bônus</strong>. Escolha <strong>Bônus</strong> e informe os dias. Até 30 dias consomem 1 mês; de 31 a 60 consomem 2, e assim por diante. O vencimento usa os dias exatos. Financeiro sem cobrança; preço contratado preservado.`
                 : planoAtualEhBonus
-                    ?'Este ciclo de Bônus Mensal já foi registrado. Para iniciar outro ciclo, conceda um novo bônus antes de salvar uma nova data de vencimento.'
-                    :'O plano Bônus Mensal aparece somente quando o cliente possui bônus disponível.'}</div>
+                    ?'Este ciclo de Bônus já foi registrado. Para iniciar outro ciclo é necessário saldo disponível.'
+                    :'O plano Bônus aparece somente quando o cliente possui bônus disponível.'}</div>
             ${campo({ nome: 'diasContrato', label: 'Dias de Contrato', valor: cliente.diasContrato, tipo: 'number', attrs: 'id="diasContrato" min="0"' })}
+            <input type="hidden" name="bonusDiasManual" value="1">
             ${campo({ nome: 'valorPlano', label: 'Valor do Plano (R$)', valor: cliente.valorPlano, attrs: 'id="valorPlano" inputmode="decimal" class="money-field" placeholder="99,90"' })}
             ${campo({ nome: 'assinaturaApp', label: 'Assinatura App (R$)', valor: cliente.assinaturaApp, attrs: 'id="assinaturaApp" inputmode="decimal" class="money-field" placeholder="0,00"' })}
             ${campo({
@@ -6997,7 +6999,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     180: 6,
                     365: 12
                 };
-                const meses = mesesPorDias[dias] || 0;
+                const meses = plano?.mesesBonus ? 0 : (mesesPorDias[dias] || 0);
 
                 if (meses) {
                     const diaOriginal = data.getDate();
@@ -8229,7 +8231,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
     const bonusProgramados = clientes
         .filter(cliente => Number(cliente.bonusMeses || 0) > 0 && String(cliente.statusAvisoBonus || '') === 'programado')
         .sort((a, b) => new Date(a.dataVencimento || a.vencimento || 0) - new Date(b.dataVencimento || b.vencimento || 0));
-    const bonusAplicadosMes = pagamentosMes.filter(pagamento => /bônus\s+(mensal|trimestral)/i.test(String(pagamento.plano || ''))).length;
+    const bonusAplicadosMes = pagamentosMes.filter(pagamento => /^b[oô]nus(?:\s|$)/i.test(String(pagamento.plano || ''))).length;
     const acompanhamentoBonusDashboardHtml = (bonusProgramados.length || bonusAplicadosMes) ?`<div class="dashboard-bonus-track">
         <strong>${icon('planos')} ${bonusProgramados.length ?`Bônus para acompanhar (${bonusProgramados.length})` :'Bônus neste mês'}</strong>
         <div class="dashboard-bonus-items">${bonusProgramados.length ?bonusProgramados.slice(0, 3).map(cliente => `<a href="/clientes/${escapar(cliente.id)}/editar#resumo-bonus"><span>${escapar(cliente.nome || 'Cliente')}</span><small>${escapar(cliente.bonusMeses)} ${Number(cliente.bonusMeses) === 1 ?'mês' : 'meses'} · ${escapar(textoVencimento(cliente))}</small></a>`).join('') : '<span class="helper">Nenhum bônus aguardando aplicação.</span>'}</div>

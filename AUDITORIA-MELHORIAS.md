@@ -663,3 +663,13 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Teste de navegador procura Indique e ganhe 3 meses, em vez de Campanha — 2 indicados. A falha do GitHub era uma expectativa de rótulo desatualizada; preservadas as verificações de identificação sem crédito adicional e aplicação do bônus.
 - Sem alteração funcional nos quatro perfis ou em bancos, créditos, modelos, sessões, configurações, backups e DATA_DIR. Sem migração. Validar suíte completa de navegador, sintaxe, diff e pacote; publicar e repetir deploy se a validação anterior o interrompeu. Validação em aparelho real da entrega 1.3.94 continua pendente.
+
+## Implementado: validação real do aviso de bônus — 13/10/2026
+
+- Criado cadastro temporário explicitamente autorizado na instalação administradora, com saldo fictício de um mês e datas futuras. Cadastro normal preservado; sem pagamento ou envio durante a preparação. Código 1.3.95 inalterado; demais perfis preservados.
+- Operador confirmou recebimento e ausência de repetição ao salvar novamente. Cadastro temporário e seu histórico removidos, com preservação do cadastro normal. Nenhum saldo fictício adicionado ao cadastro real.
+## Implementado: Bônus com dias informados — 1.3.96
+
+- Opção única Bônus; dias manuais calculam vencimento exato. Consumo arredondado para cima em blocos de 30 dias, conforme escolha do operador. Saldo insuficiente ou dias inválidos bloqueados; repetição do mesmo ciclo não duplica baixa/Financeiro. Valor registrado 0,00, preço contratado preservado.
+- Datas de bônus antigos mantidas ao reabrir sem mudanças; regra legada preservada fora do formulário atualizado. Administrador, comercial/local afetados; Mestre inalterado. Bancos, créditos, configurações, sessões, backups e DATA_DIR preservados. Sem migração; recarregar após deploy e conferir período. Validação: testes de 45/30 dias, saldo, rejeições e idempotência, navegador, sintaxe, diff e pacote.
+- Concluída validação real da programação de bônus: recebimento e ausência de repetição confirmados pelo operador. Cadastro temporário removido com conferência de preservação do cadastro normal; sem pagamento criado. Validação comercial/gestão confirmada pelo operador.
