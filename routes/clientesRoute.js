@@ -3507,6 +3507,42 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             atualizarValores(valoresVisiveis);
         })();
     </script>
+<script>
+(() => {
+    const chave = 'julian-play-paginacao-posicao';
+    function guardar(destino, navegador) {
+        try {
+            const url = new URL(destino, location.href);
+            if (url.origin !== location.origin || url.pathname !== location.pathname) return;
+            sessionStorage.setItem(chave, JSON.stringify({
+                destino: url.href, instante: Date.now(),
+                indice: Array.from(document.querySelectorAll('.pagination')).indexOf(navegador),
+                topo: navegador.getBoundingClientRect().top, scroll: window.scrollY
+            }));
+        } catch (_) {}
+    }
+    document.addEventListener('click', event => {
+        const link = event.target.closest?.('.pagination a[href]');
+        if (!link || link.classList.contains('disabled') || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || link.target === '_blank') return;
+        guardar(link.href, link.closest('.pagination'));
+    });
+    document.addEventListener('change', event => {
+        if (event.target.matches?.('.pagination select')) guardar(event.target.value, event.target.closest('.pagination'));
+    }, true);
+    try {
+        const salvo = JSON.parse(sessionStorage.getItem(chave) || 'null');
+        sessionStorage.removeItem(chave);
+        if (!salvo || salvo.destino !== location.href || Date.now() - salvo.instante > 60000) return;
+        const restaurar = () => {
+            const navegador = document.querySelectorAll('.pagination')[salvo.indice];
+            const top = navegador ? window.scrollY + navegador.getBoundingClientRect().top - salvo.topo : salvo.scroll;
+            window.scrollTo({ top: Math.max(0, top), behavior: 'instant' });
+        };
+        requestAnimationFrame(restaurar);
+        if (document.readyState !== 'complete') window.addEventListener('load', restaurar, { once: true });
+    } catch (_) {}
+})();
+</script>
 </body>
     </html>`;
 }
@@ -7886,9 +7922,11 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, 
         ${mostrarQuantidade ? `<label class="pagination-size">Por página
             <select aria-label="Quantidade por página" onchange="window.location.href=this.value">${opcoesQuantidade}</select>
         </label>` : ''}
+        <a class="page-link ${pagina <= 1 ?'disabled' : ''}" aria-disabled="${pagina <= 1}" href="${escapar(montarUrlPaginacao(base, params, 1))}">Início</a>
         <a class="page-link ${pagina <= 1 ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina - 1))}">Anterior</a>
         ${paginas.join('')}
         <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" href="${escapar(montarUrlPaginacao(base, params, pagina + 1))}">Próxima</a>
+        <a class="page-link ${pagina >= totalPaginas ?'disabled' : ''}" aria-disabled="${pagina >= totalPaginas}" href="${escapar(montarUrlPaginacao(base, params, totalPaginas))}">Fim</a>
     </nav>`;
 }
 

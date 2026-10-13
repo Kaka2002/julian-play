@@ -673,3 +673,14 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Opção única Bônus; dias manuais calculam vencimento exato. Consumo arredondado para cima em blocos de 30 dias, conforme escolha do operador. Saldo insuficiente ou dias inválidos bloqueados; repetição do mesmo ciclo não duplica baixa/Financeiro. Valor registrado 0,00, preço contratado preservado.
 - Datas de bônus antigos mantidas ao reabrir sem mudanças; regra legada preservada fora do formulário atualizado. Administrador, comercial/local afetados; Mestre inalterado. Bancos, créditos, configurações, sessões, backups e DATA_DIR preservados. Sem migração; recarregar após deploy e conferir período. Validação: testes de 45/30 dias, saldo, rejeições e idempotência, navegador, sintaxe, diff e pacote.
 - Concluída validação real da programação de bônus: recebimento e ausência de repetição confirmados pelo operador. Cadastro temporário removido com conferência de preservação do cadastro normal; sem pagamento criado. Validação comercial/gestão confirmada pelo operador.
+
+## Implementado: paginação com Início e Fim — versão 1.3.97
+
+- Implementado acesso direto à primeira e última página na paginação compartilhada e no histórico de mensagens informativas. Mantém filtros, quantidade por página e parâmetros próprios de cada lista; controles de limite ficam desabilitados ou ausentes conforme o componente existente.
+- Afeta administrador, cliente comercial provisionado e instalação local nas listas que usam estes componentes. Mestre sem alteração de interface. Bancos, configurações, bônus, sessões, backups e DATA_DIR preservados; sem migração ou alteração de permissões. Após deploy, recarregar a página.
+- Validação: sintaxe dos dois arquivos JavaScript, links da paginação com filtros e parâmetro personalizado, diff e geração do pacote oficial.
+
+## Implementado: posição da tela na paginação — versão 1.3.98
+
+- Paginação mantém sua posição visual ao mudar página ou quantidade por página, inclusive Clientes e históricos. Guarda apenas destino, índice e posição na sessão da aba, consumidos na próxima navegação para o mesmo caminho e destino exato, com validade de um minuto. Links para nova aba não alteram esta posição. Nenhum conteúdo pessoal armazenado.
+- Afeta administrador, comercial provisionado e cliente local que usam o layout compartilhado; Mestre sem alteração. Bancos, configurações, bônus, sessões WhatsApp, backups e DATA_DIR preservados; sem migração. Recarregar após deploy. Validação: sintaxe, navegação simulada no Chromium com alteração da altura da lista e quantidade, diff e pacote oficial.

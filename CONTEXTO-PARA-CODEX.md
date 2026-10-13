@@ -2206,3 +2206,14 @@ pm ci normalmente.
 - Financeiro registra dias exatos e 0,00; preço contratado preservado. Mesma aplicação salva novamente não consome nem lança de novo. Contratos antigos de bônus mensal/trimestral conservam datas ao reabrir sem alteração; chamadas legadas sem modo dias preservam regras anteriores. Não altera campanha, origem do crédito ou aviso WhatsApp.
 - Administrador, comercial provisionado e local afetados; Mestre sem nova interface. Bancos, créditos, configurações, sessões, backups e DATA_DIR preservados; sem migração. Após deploy recarregar, selecionar Bônus e conferir dias/início/vencimento antes de salvar. Validação: sintaxe, testes de saldo/data/financeiro/repetição, suíte de navegador, diff e pacote oficial.
 - Validação real anterior concluída: operador confirmou comandos comercial/gestão, recebimento do aviso e ausência de nova mensagem ao salvar novamente. Ficha temporária e seus registros vinculados foram removidos exclusivamente pelo ID/identificação, em transação; cadastro normal com mesmo telefone conferido e preservado. Nenhum pagamento de teste foi criado. Não há cadastro temporário remanescente.
+
+## Paginação com Início e Fim — versão 1.3.97
+
+- Implementado acesso direto à primeira e última página na paginação compartilhada e no histórico de mensagens informativas. Mantém filtros, quantidade por página e parâmetros próprios de cada lista; controles de limite ficam desabilitados ou ausentes conforme o componente existente.
+- Afeta administrador, cliente comercial provisionado e instalação local nas listas que usam estes componentes. Mestre sem alteração de interface. Bancos, configurações, bônus, sessões, backups e DATA_DIR preservados; sem migração ou alteração de permissões. Após deploy, recarregar a página.
+- Validação: sintaxe dos dois arquivos JavaScript, links da paginação com filtros e parâmetro personalizado, diff e geração do pacote oficial.
+
+## Posição da tela na paginação — versão 1.3.98
+
+- Paginação mantém sua posição visual ao mudar página ou quantidade por página, inclusive Clientes e históricos. Guarda apenas destino, índice e posição na sessão da aba, consumidos na próxima navegação para o mesmo caminho e destino exato, com validade de um minuto. Links para nova aba não alteram esta posição. Nenhum conteúdo pessoal armazenado.
+- Afeta administrador, comercial provisionado e cliente local que usam o layout compartilhado; Mestre sem alteração. Bancos, configurações, bônus, sessões WhatsApp, backups e DATA_DIR preservados; sem migração. Recarregar após deploy. Validação: sintaxe, navegação simulada no Chromium com alteração da altura da lista e quantidade, diff e pacote oficial.
