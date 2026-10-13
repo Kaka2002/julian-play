@@ -204,7 +204,7 @@ test('identifica saldo antigo e oferece bônus de três meses preservando preço
     await form.locator('input[name="indicado"]').fill('Indicado de teste');
     await form.getByRole('button', { name: 'Identificar sem adicionar saldo' }).click();
     await expect(page.locator('input[name="bonusMeses"]')).toHaveValue('3');
-    await expect(historico.getByRole('cell', { name: /Campanha — 2 indicados/ })).toBeVisible();
+    await expect(historico.getByRole('cell', { name: /Indique e ganhe 3 meses/ })).toBeVisible();
     await expect(historico.locator('form')).toHaveCount(0);
     await page.locator('#tipoPlanoId').selectOption({ label: 'Bônus — 3 meses' });
     await page.getByRole('button', { name: 'Salvar cliente', exact: true }).click();
