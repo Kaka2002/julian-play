@@ -179,7 +179,7 @@ test('indicações mostram regra ativa e modelos de bônus podem ser editados', 
     await autenticar(page);
     await page.goto('/indicacoes');
     await expect(page.getByRole('heading', { name: 'Programa de indicação' })).toBeVisible();
-    await expect(page.getByText('1 indicado(s), 1 mensalidade(s) paga(s) por indicado: 1 mês(es) de bônus.', { exact: true })).toBeVisible();
+    await expect(page.getByText('1 indicado(s), 1 renovação(ões) paga(s) por indicado: 1 mês(es) de bônus. A primeira assinatura não conta.', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Quem indicou')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Liberar 3 meses' })).toHaveCount(0);
     await page.goto('/modelos');

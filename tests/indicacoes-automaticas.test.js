@@ -20,16 +20,33 @@ async function pagamento(id, ciclo, forma='PIX', valor='35,00', excluido='') {
 async function saldo() { return (await get('SELECT bonusMeses FROM clientes WHERE id=1')).bonusMeses; }
 await db.ready;
 for(let id=1;id<=6;id++) await run('INSERT INTO clientes (id,nome,telefone,status,valorPlano,dataVencimento) VALUES (?,?,?, ?,?,?)',[id,'Cliente '+id,'551190000000'+id,'ativo','35,00','2026-10-01T23:59']);
+for(let id=2;id<=6;id++) await pagamento(id,'2026-09-01'); // primeira assinatura, fora da contagem
 `;
 function isolated(code) {
     const result = executarIsolado(`(async()=>{${setup}\n${code}\nawait db.encerrar();console.log('ok')})().catch(e=>{console.error(e);process.exit(1)})`);
     try { assert.equal(result.stdout, 'ok'); } finally { removerAmbiente(result.ambiente); }
 }
 
-test('campanha de um credita após pagamento e mantém vencimento, valor e aplicação manuais', () => isolated(`
+test('primeira assinatura e sua duplicação não contam; somente renovação gera bônus', () => isolated(`
+ await run('DELETE FROM cliente_pagamentos WHERE clienteId=2');
+ await campanha('campanha_amizade_presente');
+ await svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:2});
+ assert.equal((await svc.listarIndicacoes()).itens[0].pagamentosValidos,0);
+ await pagamento(2,'2026-10-01'); await pagamento(2,'2026-10-01');
+ await pagamento(2,'zero','PIX','0,00'); await pagamento(2,'gratis','Bônus mensal');
+ await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),0);
+ assert.equal((await svc.listarIndicacoes()).itens[0].pagamentosValidos,0);
+ await pagamento(2,'2026-11-01'); await svc.processarCreditosIndicacoes();
+ assert.equal(await saldo(),1);
+ assert.equal((await svc.listarIndicacoes()).itens[0].pagamentosValidos,1);
+ await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),1);
+`));
+
+test('campanha de um credita após renovação e mantém vencimento, valor e aplicação manuais', () => isolated(`
  await campanha('campanha_amizade_presente');
  await svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:2});
  await svc.processarCreditosIndicacoes(); assert.equal(await saldo(),0);
+ assert.equal((await svc.listarIndicacoes()).itens[0].pagamentosValidos,0);
  await pagamento(2,'2026-11-01');
  await Promise.all([svc.processarCreditosIndicacoes(),svc.processarCreditosIndicacoes()]);
  assert.equal(await saldo(),1);

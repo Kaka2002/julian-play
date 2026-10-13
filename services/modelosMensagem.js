@@ -144,7 +144,7 @@ const modeloCampanhaAmizade = {
     plano: 'campanha',
     titulo: 'Amizade que vale presente',
     cor: 'green',
-    texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Quando ele assinar um de nossos planos, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
+    texto: 'Olá, *{{nome}}!*\n\nIndique um amigo de verdade. Após a primeira renovação paga dele, você ganha *1 mês de acesso grátis*.\n\nPara indicar, envie o contato do seu amigo pelo WhatsApp: *{{telefoneWhatsApp}}*.'
 };
 
 const modeloCampanhaIndiqueTresMeses = {
@@ -152,7 +152,7 @@ const modeloCampanhaIndiqueTresMeses = {
     plano: 'campanha',
     titulo: 'Indique e ganhe 3 meses',
     cor: 'green',
-    texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 2 meses ativos,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
+    texto: '🎁 *INDIQUE E GANHE 3 MESES*\n\nIndique 2 amigos para a JULIAN PLAY.\n\nQuando os dois assinarem e completarem 2 renovações pagas cada,\nvocê ganha 3 meses grátis.\n\n✅ Válido para clientes novos\n✅ Benefício liberado após conferência\n✅ Não acumula com outras promoções'
 };
 
 const CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA = 'teste_expirado_assinatura';

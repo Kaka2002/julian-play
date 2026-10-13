@@ -95,7 +95,8 @@ async function registrarIndicacao(dados = {}) {
     return { id, ...clientes, reativada: Boolean(anterior) };
 }
 
-const pagamentosValidosSql = `(SELECT COUNT(DISTINCT COALESCE(NULLIF(pagamento.vencimentoNovo, ''), 'pagamento:' || pagamento.id))
+// O primeiro ciclo pago representa a assinatura inicial; somente os seguintes são renovações.
+const pagamentosValidosSql = `(SELECT MAX(0, COUNT(DISTINCT COALESCE(NULLIF(pagamento.vencimentoNovo, ''), 'pagamento:' || pagamento.id)) - 1)
     FROM cliente_pagamentos pagamento
     WHERE pagamento.clienteId = indicado.id
         AND (pagamento.excluidoEm IS NULL OR pagamento.excluidoEm = '')

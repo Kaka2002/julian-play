@@ -83,6 +83,9 @@ test('crédito automático cria uma única origem com o indicado e catálogo com
  const svc=require('./services/indicacoesService');
  await svc.registrarIndicacao({indicadorClienteId:c.id,indicadoClienteId:indicado.id});
  await run("INSERT INTO cliente_pagamentos (clienteId,plano,formaPagamento,valorTotal) VALUES (?,'Mensal','PIX','35,00')",[indicado.id]);
+ await svc.processarCreditosIndicacoes();
+ assert.equal((await bonus.listarHistoricoBonus(c.id)).creditos.length,0);
+ await run("INSERT INTO cliente_pagamentos (clienteId,plano,formaPagamento,valorTotal) VALUES (?,'Mensal','PIX','35,00')",[indicado.id]);
  await svc.processarCreditosIndicacoes();await svc.processarCreditosIndicacoes();
  const h=await bonus.listarHistoricoBonus(c.id);
  assert.equal(h.creditos.length,1);assert.equal(h.creditos[0].campanhaChave,'campanha_amizade_presente');

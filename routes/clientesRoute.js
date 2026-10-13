@@ -8317,9 +8317,9 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         ${indicacoesResumo.map(grupo => `<article class="pending-item">
             <div><span class="badge ${grupo.prontoParaCredito ? 'green' : 'info'}">${grupo.prontoParaCredito ? 'Pronto para crédito' : 'Em acompanhamento'}</span>
                 <h3>${escapar(grupo.indicadorNome)} · ${escapar(grupo.campanha.titulo)}</h3>
-                <p>${escapar(`${grupo.registrados} indicado(s) registrado(s); ${grupo.prontos}/${grupo.campanha.indicados} atingiram ${grupo.campanha.pagamentos} mensalidade(s).`)}
+                <p>${escapar(`${grupo.registrados} indicado(s) registrado(s); ${grupo.prontos}/${grupo.campanha.indicados} atingiram ${grupo.campanha.pagamentos} renovação(ões) paga(s).`)}
                 ${grupo.faltamIndicados ?` Falta(m) ${escapar(grupo.faltamIndicados)} indicado(s) qualificado(s).` : grupo.prontoParaCredito ?' A liberação será processada automaticamente.' : grupo.previsaoLiberacao ?` Previsão: após ${escapar(formatarDataHoraCurta(grupo.previsaoLiberacao))}.` : ''}</p>
-                ${grupo.pendencias.map(item => `<div class="helper">${escapar(item.nome)}: ${escapar(item.pagos)}/${escapar(grupo.campanha.pagamentos)} mensalidade(s) · ${item.faltamPagamentos ?`faltam ${escapar(item.faltamPagamentos)}${item.previsao ? ` · previsão ${escapar(formatarDataHoraCurta(item.previsao))}` : ''}` : 'meta atingida'}</div>`).join('')}
+                ${grupo.pendencias.map(item => `<div class="helper">${escapar(item.nome)}: ${escapar(item.pagos)}/${escapar(grupo.campanha.pagamentos)} renovação(ões) · ${item.faltamPagamentos ?`faltam ${escapar(item.faltamPagamentos)}${item.previsao ? ` · previsão ${escapar(formatarDataHoraCurta(item.previsao))}` : ''}` : 'meta atingida'}</div>`).join('')}
             </div><a class="button secondary" href="/indicacoes">Ver detalhes</a>
         </article>`).join('')}
     </div>` : '<div class="helper" style="padding:0 20px 20px;">Nenhuma indicação em acompanhamento.</div>';
@@ -9229,25 +9229,25 @@ function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: nul
         const situacao = liberado ? `${item.beneficioMeses} mês(es) creditado(s)`
             : item.status === 'cancelada' ? 'Cancelada'
                 : !item.campanhaAtiva ? 'Aguardando ativação desta campanha'
-                    : Number(item.pagamentosValidos) >= regra.pagamentos ? 'Mensalidades cumpridas; aguardando grupo da campanha'
-                        : 'Aguardando mensalidades';
+                    : Number(item.pagamentosValidos) >= regra.pagamentos ? 'Renovações cumpridas; aguardando grupo da campanha'
+                        : 'Aguardando renovações';
         return `<tr><td data-label="Indicador">${escapar(item.indicadorNome)}</td>
             <td data-label="Indicado">${escapar(item.indicadoNome)}</td>
             <td data-label="Campanha">${escapar(regra?.titulo || item.campanhaChave)}</td>
-            <td data-label="Mensalidades">${escapar(item.pagamentosValidos)} / ${escapar(regra?.pagamentos || 3)}</td>
+            <td data-label="Renovações">${escapar(item.pagamentosValidos)} / ${escapar(regra?.pagamentos || 3)}</td>
             <td data-label="Situação">${escapar(situacao)}${item.creditoId ?`<div class="helper">Crédito #${escapar(item.creditoId)} · ${escapar(item.beneficioLiberadoEm)}</div>` : ''}</td>
             <td data-label="Ações"><a class="button secondary" href="/clientes/${escapar(item.indicadorClienteId)}/editar">Usar bônus</a>
                 ${item.status === 'ativa' ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação?');"><button class="button secondary" type="submit">Cancelar</button></form>` : ''}</td></tr>`;
     }).join('');
     return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Crédito automático, uso do bônus e aviso ao cliente manuais.</div></div><a class="button secondary" href="/modelos">Campanhas e mensagens</a></section>
         <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${escapar(campanha?.titulo || 'Nenhuma campanha de indicação ativa')}</h2>
-        <div class="subtitle">${campanha ?`${campanha.indicados} indicado(s), ${campanha.pagamentos} mensalidade(s) paga(s) por indicado: ${campanha.meses} mês(es) de bônus.` : 'Ative uma das duas campanhas em Modelos para registrar e liberar indicações.'}</div></div></div>
+        <div class="subtitle">${campanha ?`${campanha.indicados} indicado(s), ${campanha.pagamentos} renovação(ões) paga(s) por indicado: ${campanha.meses} mês(es) de bônus. A primeira assinatura não conta.` : 'Ative uma das duas campanhas em Modelos para registrar e liberar indicações.'}</div></div></div>
         <div class="notice" style="margin:0 20px 20px;">O saldo é atualizado automaticamente em até um minuto. Vencimento e mensagens continuam sob seu controle. Cada indicação fica vinculada à campanha ativa no registro; trocar a campanha pausa os vínculos anteriores. Pagamentos de bônus, testes, excluídos ou sem valor não contam. Uma indicação não pode gerar bônus novamente.</div>
         ${campanha ?`<form class="fields" method="post" action="/indicacoes" style="padding:0 20px 20px;">
             ${campo({ nome: 'indicadorClienteId', label: 'Quem indicou', valor: '', opcoes })}
             ${campo({ nome: 'indicadoClienteId', label: 'Cliente indicado', valor: '', opcoes })}
             <div class="actions full"><button class="button green" type="submit">Registrar indicação</button></div></form>` : ''}</section>
-        <section class="clients-panel"><table class="clients-table"><thead><tr><th>Indicador</th><th>Indicado</th><th>Campanha</th><th>Mensalidades</th><th>Situação</th><th>Ações</th></tr></thead>
+        <section class="clients-panel"><table class="clients-table"><thead><tr><th>Indicador</th><th>Indicado</th><th>Campanha</th><th>Renovações</th><th>Situação</th><th>Ações</th></tr></thead>
         <tbody>${linhas || '<tr><td colspan="6" class="empty">Nenhuma indicação registrada.</td></tr>'}</tbody></table></section>`;
 }
 
