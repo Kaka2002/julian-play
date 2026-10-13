@@ -8231,6 +8231,9 @@ function ajustarPaginacaoVencimentosScript(total, porPagina) {
             if (total > 0 && quantidade !== atual) {
                 url.searchParams.set('porPagina', String(quantidade));
                 url.searchParams.set('pagina', '1');
+                try {
+                    sessionStorage.setItem('julian-play-paginacao-posicao', JSON.stringify({ destino: url.toString(), instante: Date.now(), indice: -1, scroll: window.scrollY }));
+                } catch (_) {}
                 window.location.replace(url.toString());
             }
         })();
@@ -8595,6 +8598,9 @@ function autoAtualizarPaginaScript(intervaloMs = CLIENTES_AUTO_REFRESH_MS) {
                     });
                     if (!resposta.ok || !String(resposta.headers.get('content-type') || '').includes('text/html')) return;
                     if (document.hidden || estaEditando() || Date.now() - ultimaInteracao < 15000) return;
+                    try {
+                        sessionStorage.setItem('julian-play-paginacao-posicao', JSON.stringify({ destino: url.toString(), instante: Date.now(), indice: -1, scroll: window.scrollY }));
+                    } catch (_) {}
                     window.location.replace(url.toString());
                 } catch (_) {
                     // Mantém a tela e tenta novamente no próximo intervalo.

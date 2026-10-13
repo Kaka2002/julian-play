@@ -46,6 +46,8 @@ de clientes ou outros segredos.
 
 ## Regras para qualquer alteracao
 
+- Versionamento: depois de atingir o patch 100, incrementar o numero intermediario e zerar o patch (por exemplo, 1.3.100 -> 1.4.0).
+
 1. Identificar se a mudanca e compartilhada, exclusiva do Painel Mestre, exclusiva de uma instalacao administradora ou exclusiva de cliente comercial/local.
 2. Nao usar a existencia de `LICENSE_CUSTOMER_NAME` como unica indicacao de permissao. Para diferenciar administrador e cliente, usar a regra central `instalacaoAdministrador()` quando aplicavel.
 3. Manter dados de cada instalacao dentro do respectivo `DATA_DIR`/`DB_PATH`. Nunca fazer uma instalacao ler ou alterar o banco ou a sessao de outra.

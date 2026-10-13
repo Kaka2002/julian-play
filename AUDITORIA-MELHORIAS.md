@@ -695,3 +695,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Bloco Campanha de indicação identifica o nome da campanha ativa usando a regra central do serviço, mesmo sem indicações em acompanhamento. Sem campanha válida única, informa nenhuma campanha de indicação ativa. Histórico e origem dos bônus continuam independentes da campanha atual.
 - Afeta administrador, comercial provisionado e instalação local; Mestre sem alteração de interface. Preserva bancos, créditos, configurações, modelos, sessões WhatsApp, backups e DATA_DIR. Sem migração; recarregar após deploy. Validação: sintaxe, conferência do vínculo entre consulta e apresentação, diff e pacote oficial.
+
+## Implementado: posição na atualização automática — versão 1.4.0
+
+- Recarga automática após resposta HTML válida guarda a posição vertical imediatamente antes da navegação e restaura no mesmo destino. Ajuste automático da quantidade de vencimentos do dashboard também preserva posição. Reutiliza o estado de navegação da aba com validade curta e consumo único; não altera navegação manual entre áreas. Falhas de consulta mantêm a página aberta conforme proteção existente.
+- Afeta administrador, comercial provisionado e cliente local nas telas com atualização automática compartilhada; Mestre sem alteração. Bancos, bônus, configurações, sessões WhatsApp, backups e DATA_DIR preservados; sem migração. Recarregar após deploy. Versionamento passa de 1.3.100 para 1.4.0 conforme solicitação do operador, regra permanente registrada em AGENTS.
+- Validação: sintaxe, preservação de posição em Chromium com recarga automática simulada e diff; pacote oficial gerado.
