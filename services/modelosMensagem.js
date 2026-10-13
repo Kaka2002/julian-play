@@ -565,11 +565,8 @@ async function montarMensagemAvisoProgramado(cliente, diasAntes) {
     if (usaAvisoBonus) {
         const modelo = await obterModeloPorChave('aviso_bonus_indicacao');
         const campanhas = String(cliente.campanhasBonus || '').split('|').filter(Boolean);
-        const origemBonus = campanhas.includes('campanha_amizade_presente')
-            ? 'campanha Amizade que vale presente'
-            : campanhas.includes('campanha_indique_ganhe_tres_meses')
-                ? 'campanha Indique e ganhe 3 meses'
-                : 'campanha de indicação';
+        const nomesOrigem = require('./bonusService').ORIGENS;
+        const origemBonus = [...new Set(campanhas.map(chave => nomesOrigem[chave]).filter(Boolean))].join('; ') || 'bônus com origem ainda não identificada';
         return aplicarVariaveis(modelo?.texto || modelosPadrao.find(item => item.chave === 'aviso_bonus_indicacao').texto, {
             nome: primeiroNome(cliente.nome),
             vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
@@ -583,7 +580,7 @@ async function montarMensagemAvisoProgramado(cliente, diasAntes) {
     const modelo = await obterModeloAvisoProgramado(diasAntes);
     const variaveis = {
         nome: primeiroNome(cliente.nome),
-        plano: cliente.plano || 'assinatura',
+        plano: cliente.statusAvisoBonus === 'aplicado' && /b[oô]nus/i.test(String(cliente.plano || '')) ? 'assinatura' : (cliente.plano || 'assinatura'),
         vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
         dias: Math.abs(Number(diasAntes)),
         valor: cliente.valorPlano || cliente.valor || ''

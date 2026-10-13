@@ -2,8 +2,8 @@ const db = require('../database/sqlite');
 const sqlite3 = require('sqlite3');
 
 const ORIGENS = {
-    campanha_amizade_presente: 'Campanha antiga — 1 indicado / 1 mês',
-    campanha_indique_ganhe_tres_meses: 'Campanha — 2 indicados / 3 meses',
+    campanha_amizade_presente: 'Amizade que vale presente — 1 mês de bônus',
+    campanha_indique_ganhe_tres_meses: 'Indique e ganhe 3 meses — 3 meses de bônus',
     aniversario: 'Aniversário',
     outro: 'Outro bônus',
     nao_identificada: 'Origem não identificada'

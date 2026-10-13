@@ -188,6 +188,19 @@ const {
     reagendarRenovacao
 } = require('../services/renovacaoPainelService');
 const { registrarIndicacao, listarIndicacoes, listarResumoIndicacoesPainel, processarCreditosIndicacoes, cancelarIndicacao } = require('../services/indicacoesService');
+const { prepararIndicacaoCadastro, concluirIndicacaoCadastro, avisarBonusProgramado } = require('../services/cadastroIndicacaoService');
+
+async function avisarBonusCadastro(cliente) {
+    const client = getClient();
+    return avisarBonusProgramado(cliente, {
+        conectado: Boolean(client && getStatusWhatsApp().conectado),
+        enviar: async (cadastro, mensagem) => {
+            const destino = await resolverDestinoWhatsApp(client, cadastro.telefone);
+            await require('../services/conversaService').simularRespostaHumanizada({ client, from: destino }, destino);
+            return enviarMensagemWhatsAppComFallback(client, cadastro.telefone, mensagem, 'Aviso de bônus programado');
+        }
+    });
+}
 
 const router = express.Router();
 const contextoAuditoria = new AsyncLocalStorage();
@@ -3511,14 +3524,14 @@ async function renderizar(res, opcoes) {
 }
 
 async function obterListasCliente() {
-    const [planos, apps, dispositivos, paineis] = await Promise.all([
+    const [planos, apps, dispositivos, paineis, indicadores, indicacoesCadastro] = await Promise.all([
         listarTiposPlanos(),
         listarApps(),
         listarDispositivos(),
-        listarPaineis()
+        listarPaineis(), listarClientes(), listarIndicacoes()
     ]);
 
-    return { planos, apps, dispositivos, paineis };
+    return { planos, apps, dispositivos, paineis, indicadores, indicacoesCadastro: indicacoesCadastro.itens || [], campanhaIndicacao: indicacoesCadastro.campanha };
 }
 
 function campo({ nome, label, tipo = 'text', valor = '', opcoes = [], attrs = '', classe = '' }) {
@@ -6667,6 +6680,11 @@ function clienteAniversarioPendente(cliente = {}) {
 }
 
 function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
+    const indicacaoCadastro = (listas.indicacoesCadastro || []).find(i => Number(i.indicadoClienteId) === Number(cliente.id) && i.status !== 'cancelada');
+    const campanhasIndicacao = [
+        { valor: 'campanha_amizade_presente', texto: 'Amizade que vale presente — 1 mês' },
+        { valor: 'campanha_indique_ganhe_tres_meses', texto: 'Indique e ganhe 3 meses — 3 meses' }
+    ];
     const planos = listas.planos || [];
     const apps = listas.apps || [];
     const dispositivos = listas.dispositivos || [];
@@ -6753,12 +6771,15 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 ]
             })}
             ${campo({
-                nome: 'indicadoPor',
+                nome: 'indicadorClienteId',
                 label: 'Indicado por',
-                valor: cliente.indicadoPor || '',
-                tipo: 'text',
-                attrs: 'maxlength="120" placeholder="Nome de quem fez a indicação (opcional)"'
+                valor: indicacaoCadastro?.indicadorClienteId || cliente.indicadorClienteId || '',
+                tipo: 'select',
+                opcoes: [{ valor: '', texto: cliente.indicadoPor ? `Nome anterior: ${cliente.indicadoPor} — selecione o cadastro` : 'Sem indicação cadastrada' }, ...(listas.indicadores || []).filter(i => Number(i.id) !== Number(cliente.id) && !i.anonimizadoEm).map(i => ({ valor: i.id, texto: `${i.nome} — ID ${i.id}` }))]
             })}
+            <input type="hidden" name="indicadoPor" value="${escapar(cliente.indicadoPor || '')}">
+            ${campo({ nome: 'campanhaIndicacaoChave', label: 'Campanha desta indicação', tipo: 'select', valor: indicacaoCadastro?.campanhaChave || cliente.campanhaIndicacaoChave || listas.campanhaIndicacao?.chave || '', attrs: indicacaoCadastro ? 'disabled' : '', opcoes: [{ valor: '', texto: 'Selecione a campanha de origem' }, ...campanhasIndicacao.map(c => ({ ...c, texto: `${c.texto}${c.valor === listas.campanhaIndicacao?.chave ? ' — ativa' : ' — não ativa'}` }))] })}
+            <div class="field-note" style="grid-column:1 / -1;">Campanha ativa: ${escapar(listas.campanhaIndicacao?.titulo || 'Nenhuma campanha de indicação ativa')}. O vínculo e os bônus anteriores mantêm a campanha de origem. Para saldo antigo sem origem, use “Ver origem e histórico de bônus / identificar saldo antigo”, sem adicionar saldo novamente.</div>
             ${opcoesMulti('tags', 'Tags/Categorias', TAGS_CLIENTE.map(nome => ({ nome })), tagsSelecionadas, 'Adicionar tag...')}
             ${campo({ nome: 'bonusMeses', label: 'Bônus disponíveis (meses)', valor: cliente.bonusMeses || 0, tipo: 'number', attrs: 'min="0" step="1"' })}
             <input type="hidden" name="bonusMesesOriginal" value="${escapar(cliente.bonusMeses || 0)}">
@@ -10482,6 +10503,7 @@ router.use(criarClientesAcoesRoute({
     retornoCampanha,
     salvarCliente,
     telaEnviarModeloCliente,
+    prepararIndicacaoCadastro, concluirIndicacaoCadastro, avisarBonusCadastro,
     telefoneCampanhaAmizade,
     valorPrimeiroItem,
     vencimentoExpirou,

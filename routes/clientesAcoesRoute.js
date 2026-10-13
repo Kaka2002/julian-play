@@ -80,6 +80,7 @@ function criarClientesAcoesRoute(deps = {}) {
         resolverDestinoWhatsApp,
         retornoCampanha,
         salvarCliente,
+        prepararIndicacaoCadastro, concluirIndicacaoCadastro, avisarBonusCadastro,
         telaEnviarModeloCliente,
         telefoneCampanhaAmizade,
         valorPrimeiroItem,
@@ -194,12 +195,16 @@ router.get('/clientes/:id/pagamentos/:pagamentoId/editar', async (req, res) => {
 router.post('/clientes/salvar', async (req, res) => {
     try {
         const novoCadastro = !req.body.id;
+        const indicacao = prepararIndicacaoCadastro ? await prepararIndicacaoCadastro(req.body) : null;
+        if (indicacao) req.body.indicadoPor = indicacao.nome;
         const alertas = await buscarAlertasCadastroCliente(req.body);
         const clienteSalvo = await salvarCliente(req.body, {
             responsavel: req.usuarioPainel || 'sistema',
             origem: 'painel_cliente',
             motivo: req.body.motivoAlteracao || ''
         });
+        if (concluirIndicacaoCadastro) await concluirIndicacaoCadastro(indicacao, clienteSalvo);
+        const avisoBonus = avisarBonusCadastro ? await avisarBonusCadastro(clienteSalvo) : null;
         const novaNota = String(req.body.novaNotaTexto || req.body.novaNotaPadrao || '').trim();
         const adicionandoNota = req.body.acao === 'adicionarNota';
 
@@ -219,9 +224,9 @@ router.post('/clientes/salvar', async (req, res) => {
             status: clienteSalvo?.status
         });
 
-        const mensagemAlerta = alertas.length
+        const mensagemAlerta = avisoBonus?.mensagem || (alertas.length
             ?'Cliente salvo. Atenção: existe histórico problemático para nome ou telefone parecido.'
-            : 'Cliente salvo com sucesso';
+            : 'Cliente salvo com sucesso');
 
         if (adicionandoNota && clienteSalvo?.id) {
             return res.redirect(montarUrlClienteMensagem(clienteSalvo.id, novaNota

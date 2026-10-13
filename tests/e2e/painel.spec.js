@@ -213,3 +213,15 @@ test('identifica saldo antigo e oferece bônus de três meses preservando preço
     await expect(page.locator('#valorPlano')).toHaveValue('35,00');
     await expect(page.locator('#historico-bonus').getByText('Bônus utilizado: 3 mês(es)', { exact: true })).toBeVisible();
 });
+test('ficha oferece indicador por ID e campanha de origem independente da ativa', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/clientes/novo');
+    const indicador = page.locator('select[name="indicadorClienteId"]');
+    await expect(indicador).toBeVisible();
+    expect(await indicador.locator('option').count()).toBeGreaterThan(1);
+    await expect(indicador.locator('option').nth(1)).toContainText(/ID \d+/);
+    const campanha = page.locator('select[name="campanhaIndicacaoChave"]');
+    await campanha.selectOption('campanha_amizade_presente');
+    await expect(campanha).toHaveValue('campanha_amizade_presente');
+    await expect(page.getByText(/Campanha ativa:/)).toBeVisible();
+});

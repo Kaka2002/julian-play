@@ -65,7 +65,10 @@ async function registrarIndicacao(dados = {}) {
     const indicadorId = idValido(dados.indicadorClienteId, 'quem indicou');
     const indicadoId = idValido(dados.indicadoClienteId, 'o cliente indicado');
     const clientes = await validarClientesDistintos(indicadorId, indicadoId);
-    const campanha = await obterCampanhaAtiva();
+    const ativa = await obterCampanhaAtiva();
+    const campanha = dados.campanhaChave && REGRAS[dados.campanhaChave]
+        ? { chave: dados.campanhaChave, ...REGRAS[dados.campanhaChave] } : ativa;
+    if (dados.campanhaChave && !REGRAS[dados.campanhaChave]) throw new Error('Campanha de indicação inválida.');
     if (!campanha) throw new Error('Ative um dos dois modelos de campanha de indicação em Modelos.');
     // Um indicado não pode ser reaproveitado em outra campanha ou por outro indicador.
     const existente = await buscarUm("SELECT id FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada'", [indicadoId]);
