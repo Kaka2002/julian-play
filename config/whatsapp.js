@@ -669,6 +669,7 @@ async function iniciarWhatsApp() {
         });
 
         instalarCompatibilidadeMidia(client);
+        const clienteDestaInicializacao = client;
         console.log('Iniciando cliente WhatsApp...');
 
         client.on('loading_screen', (percent, message) => {
@@ -683,20 +684,24 @@ async function iniciarWhatsApp() {
         });
 
         client.on('authenticated', () => {
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            if (conectado) return;
             statusWhatsApp = 'autenticado';
             qrAtual = '';
             console.log('Autenticado');
         });
 
         client.on('change_state', (state) => {
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
             if (state === 'CONNECTED') {
-                statusWhatsApp = 'conectando';
+                statusWhatsApp = conectado ? 'conectado' : 'conectando';
             }
 
             console.log('Estado alterado:', state);
         });
 
         client.on('ready', () => {
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
             if (conectado) return;
 
             conectado = true;
@@ -716,7 +721,8 @@ async function iniciarWhatsApp() {
         });
 
         client.on('disconnected', (reason) => {
-            const clienteAtual = client;
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            const clienteAtual = clienteDestaInicializacao;
             conectado = false;
             inicializando = false;
             statusWhatsApp = reason === 'LOGOUT' ? 'limpando_logout' : 'desconectado';
@@ -922,6 +928,9 @@ async function verificarSaudeWhatsApp() {
 }
 
 async function recuperarWhatsAppAutomaticamente({ limparSessao = false, motivo = 'recuperacao automatica' } = {}) {
+    if (limpandoCliente) {
+        return { status: 'ignorado', motivo: 'limpeza de cliente anterior em andamento' };
+    }
     if (recuperacaoEmAndamento) {
         return {
             status: 'ignorado',
