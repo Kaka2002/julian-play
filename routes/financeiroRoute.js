@@ -145,7 +145,7 @@ function criarFinanceiroRoute(deps = {}) {
         ]);
         const receitaMes = calcularReceitaRealDoMes(pagamentos).total;
         const despesasMes = despesas.reduce((total, despesa) => total + Number(String(despesa.valor || 0).replace('.', '').replace(',', '.')), 0);
-        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, filtros, receitaMes, despesasMes, conciliacao, saldoMercadoPago }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
+        return renderizar(res, { titulo: 'Rendimentos', conteudo: telaRendimentosFinanceiros({ rendimentos, pagina: req.query.pagina, filtros, receitaMes, despesasMes, conciliacao, saldoMercadoPago }), mensagem: req.query.mensagem || '', ativo: 'financeiro' });
     });
 
     function urlRendimentos(filtros, mensagem = '') {

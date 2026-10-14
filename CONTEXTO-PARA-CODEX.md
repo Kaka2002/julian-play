@@ -2240,3 +2240,8 @@ pm ci normalmente.
 - Registros mostraram conexão, LOGOUT, limpeza e recuperação por erro do navegador sobrepostas. Operador confirmou remoção do aparelho vinculado. Causa original do LOGOUT não comprovada. Recuperação automática agora ignora reinício durante limpeza; reconexão segue fluxo existente. Eventos de autenticação, estado, ready e desconexão do cliente antigo não alteram a instância atual; autenticação repetida não rebaixa conexão pronta.
 - Afeta administrador, comercial provisionado e local; Mestre inalterado. Bancos, configurações, sessões existentes, backups e DATA_DIR preservados. Limpeza após LOGOUT real e novo QR manual mantêm comportamento anterior. Sem migração. Sessão real não reiniciada durante diagnóstico. Aplicar deploy e conferir estabilidade no celular; validação real prolongada pendente. Envios, digitação e resolução LID inalterados.
 - Validação: sintaxe, simulação de recuperação durante limpeza, revisão dos eventos, diff e pacote oficial.
+
+## Rendimentos com oito registros por página — versão 1.4.2
+
+- Lista de rendimentos usa paginação compartilhada com oito linhas fixas, Anterior/Próxima, números, Início/Fim e preservação da posição. Filtros mantidos nos links; totais continuam calculados com todos os registros filtrados, independentemente da página. Página fora dos limites ajustada.
+- Afeta administrador, comercial provisionado e cliente local; Mestre inalterado. Bancos, lançamentos, configurações, sessões, backups e DATA_DIR preservados; sem migração. Recarregar após deploy. Validação: sintaxe, teste de rendimentos existente, conferência da paginação e diff; pacote oficial.
