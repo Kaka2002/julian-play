@@ -21,6 +21,7 @@ const {
     montarPlanosPadraoComerciais
 } = require('./pixService');
 const { licencaPermiteUso } = require('./licencaService');
+const { verificarAniversarios } = require('./aniversarioAutomaticoService');
 
 const UM_DIA_MS = 24 * 60 * 60 * 1000;
 const TESTE_AVISO_MINUTOS = 30;
@@ -437,6 +438,7 @@ function iniciarAgendadorRenovacao(options) {
 
         const agora = obterAgoraSaoPaulo();
         const jaPassouHorario = agora.hora > horaEnvio || (agora.hora === horaEnvio && agora.minuto >= minutoEnvio);
+        verificarAniversarios(options).catch(() => console.error('[aniversario] Falha na verificação automática.'));
 
         verificarTestesGratisVencendo(options)
             .then((resultado) => {
