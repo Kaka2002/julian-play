@@ -12,7 +12,7 @@ test('parabéns às 10h: retomada no dia, reserva anual, falha incerta e bônus 
         await run("INSERT INTO clientes(id,nome,telefone,nascimento,whatsappOptOutEm) VALUES(2,'Optout','5511999990002','10-15','2026-01-01')");
         const svc = require('./services/aniversarioAutomaticoService');
         let hora = '2026-10-15T12:59:00Z', conectado = true, envios = 0, digitacao = 0;
-        const client = {getNumberId:async t=>({_serialized:t+'@c.us'}),sendMessage:async (to,msg)=>{envios++;assert.match(msg,/FELIZ ANIVERSÁRIO/);assert.doesNotMatch(msg,/bônus/i);return {id:{_serialized:'teste'}};}};
+        const client = {getNumberId:async t=>({_serialized:'123456789012345@lid'}),sendMessage:async (to,msg)=>{assert.equal(to,'123456789012345@lid');envios++;assert.match(msg,/FELIZ ANIVERSÁRIO/);assert.doesNotMatch(msg,/bônus/i);return {id:{_serialized:'teste'}};}};
         const options = {getClient:()=>client,getStatusWhatsApp:()=>({conectado}),agora:()=>new Date(hora),enfileirar:async fn=>fn(),humanizar:async()=>{digitacao++;}};
         await svc.verificarAniversarios(options);assert.equal(envios,0);
         hora = '2026-10-15T13:00:00Z';conectado=false;

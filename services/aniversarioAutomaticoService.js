@@ -62,7 +62,8 @@ async function verificarAniversarios({ getClient, getStatusWhatsApp, agora = () 
                     if (!podeEnviar()) return;
                     const id = await client.getNumberId(telefone);
                     const destino = id?._serialized;
-                    if (!destino || !destino.endsWith('@c.us')) return;
+                    // O LID foi resolvido a partir do telefone cadastrado; nunca é convertido em telefone.
+                    if (!destino || !/@(?:c\.us|lid)$/.test(destino)) return;
                     await humanizar({ client, from: destino }, destino);
                     if (!podeEnviar()) return;
                     const atual = await all(`SELECT id FROM clientes WHERE id = ? AND COALESCE(anonimizadoEm, '') = ''
