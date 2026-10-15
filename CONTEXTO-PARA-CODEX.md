@@ -2258,3 +2258,15 @@ pm ci normalmente.
 - Na validação autorizada, agendador percorreu fila sem registrar envio. Revisão identificou rejeição de destinos LID retornados por getNumberId. Corrigido para aceitar o destino c.us ou LID resolvido a partir do telefone cadastrado, sem converter LID em telefone. Causa exata do salto na tentativa real não registrada pelo cliente antigo; novo teste simula e verifica envio ao LID. Digitação humanizada e proteções anteriores preservadas.
 - Cadastro temporário da validação removido pelo ID/marcador após conferir ausência de envio e integridade do cadastro normal. Sem bônus ou pagamento concedido. Validação em aparelho real ainda pendente após novo deploy; não afirmar entrega ou digitação visual confirmadas.
 - Administrador, comercial provisionado e local afetados; Mestre inalterado. Bancos, dados, configurações, sessões, bônus e backups preservados; sem migração. Publicar e atualizar para repetir teste autorizado. Validação: sintaxe, regressão de aniversário com destino LID, diff e pacote oficial.
+
+## Validação real de parabéns após 1.4.4 — 15/10/2026
+
+- Versão e conexão conferidas; teste autorizado acionado pelo agendador com cadastro temporário isolado e datas contratuais futuras. Reserva anual registrada, resultado sem confirmação do provedor marcado incerto; nenhum reenvio automático. Recebimento e digitação visual aguardam confirmação do operador. Cadastro normal, bônus e pagamentos não alterados. Remover somente cadastro temporário por ID/marcador após confirmação, preservando o cadastro normal; nunca excluir por telefone.
+- Operação restrita à instalação administradora; Mestre, comercial e local sem alteração. Sem mudança de código/versão, migração ou novo deploy. Teste não comprova entrega. Nenhum identificador pessoal registrado nesta documentação.
+
+- Conclusão da validação real: operador confirmou recebimento dos parabéns; não observou a digitação, cuja validação visual permanece pendente. Sem reenvio. Cadastro temporário e registros vinculados removidos em transação por ID/marcador, após verificar ausência de pagamento e comparar cadastro normal antes/depois. Cadastro normal e bônus preservados; nenhum teste temporário remanescente desta validação.
+
+## Data de hoje nos novos lançamentos — versão 1.4.5
+
+- Novo rendimento e nova despesa abrem com a data corrente em America/Sao_Paulo, independente do mês filtrado; operador pode alterar manualmente. Edição conserva a data já salva. Filtros e lançamentos existentes inalterados.
+- Afeta administrador, comercial provisionado e cliente local; Mestre sem alteração. Bancos, valores, datas salvas, configurações, sessões e backups preservados; sem migração. Recarregar após deploy. Validação: sintaxe e renderização dos dois formulários com mês diferente e datas de edição, diff e pacote oficial.

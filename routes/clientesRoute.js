@@ -8977,7 +8977,7 @@ function resumoDespesasFinanceiras(despesas = []) {
 
 function formularioDespesaFinanceira({ despesa = {}, mes = mesAtualInput(), acao = '/financeiro/despesas', textoBotao = 'Registrar despesa' } = {}) {
     const categorias = CATEGORIAS_DESPESA.map(categoria => `<option value="${escapar(categoria)}" ${categoria === despesa.categoria ?'selected' : ''}>${escapar(categoria)}</option>`).join('');
-    const dataPagamento = String(despesa.dataPagamento || `${mes}-01`).slice(0, 10);
+    const dataPagamento = String(despesa.dataPagamento || hojeISO()).slice(0, 10);
 
     return `<section class="clients-panel" style="margin-bottom:24px;">
         <div class="panel-head"><div><h2 class="panel-title">${despesa.id ?'Editar despesa' : 'Nova despesa'}</h2><div class="subtitle">Registre pagamentos efetuados para acompanhar os custos reais do mês.</div></div></div>
@@ -9042,7 +9042,7 @@ function resumoRendimentosFinanceiros(rendimentos = []) {
 }
 
 function formularioRendimentoFinanceiro({ rendimento = {}, mes = mesAtualInput(), acao = '/financeiro/rendimentos', textoBotao = 'Registrar rendimento' } = {}) {
-    const dataRecebimento = String(rendimento.dataRecebimento || `${mes}-01`).slice(0, 10);
+    const dataRecebimento = String(rendimento.dataRecebimento || hojeISO()).slice(0, 10);
     return `<section class="clients-panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${rendimento.id ?'Editar rendimento' :'Novo rendimento'}</h2><div class="subtitle">Registre o rendimento da conta onde você recebe os pagamentos dos clientes.</div></div></div><form class="form-grid" method="post" action="${escapar(acao)}"><input type="hidden" name="mes" value="${escapar(mes)}"><label>Descrição<input name="descricao" maxlength="160" required value="${escapar(rendimento.descricao || '')}" placeholder="Ex.: Rendimento automático da conta"></label><label>Valor (R$)<input name="valor" inputmode="decimal" required value="${escapar(rendimento.valor || '')}" placeholder="0,00"></label><label>Data do recebimento<input type="date" name="dataRecebimento" required value="${escapar(dataRecebimento)}"></label><label>Instituição financeira<input name="instituicao" maxlength="120" value="${escapar(rendimento.instituicao || '')}" placeholder="Ex.: Mercado Pago"></label><label style="grid-column:1 / -1;">Observações<textarea name="observacoes" maxlength="1000" rows="3" placeholder="Detalhes opcionais para conferência">${escapar(rendimento.observacoes || '')}</textarea></label><div class="actions" style="grid-column:1 / -1;"><button class="button green" type="submit">${icon('plus')} ${escapar(textoBotao)}</button><a class="button secondary" href="/financeiro/rendimentos?mes=${encodeURIComponent(mes)}">Cancelar</a></div></form></section>`;
 }
 
