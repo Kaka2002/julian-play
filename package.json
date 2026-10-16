@@ -1,6 +1,6 @@
 {
   "name": "julian-play",
-  "version": "1.4.7",
+  "version": "1.4.8",
   "main": "bot.js",
   "scripts": {
     "start": "node supervisor.js",

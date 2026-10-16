@@ -304,13 +304,23 @@ test('inicializacao do WhatsApp possui recuperacao segura e limitada', () => {
     assert.match(bot, /limparSessao: false/);
 });
 
-test('WhatsApp reutiliza cache Web estavel e nao repete texto sem resposta', () => {
+test('WhatsApp usa Web atual por padrão, permite cache explícito e não repete texto sem resposta', () => {
     const whatsapp = fs.readFileSync(path.join(__dirname, '..', 'config', 'whatsapp.js'), 'utf8');
     const clientes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'clientesRoute.js'), 'utf8');
     assert.match(whatsapp, /WWEBJS_WEB_VERSION/);
-    assert.match(whatsapp, /2\.3000\.1047557390/);
+    assert.doesNotMatch(whatsapp, /2\.3000\.1047557390/);
+    assert.match(whatsapp, /if \(!WEB_VERSION_PIN\) return ''/);
+    assert.match(whatsapp, /webVersionCache: \{ type: 'none' \}/);
     assert.match(whatsapp, /webVersionCache:\s*\{/);
     assert.match(whatsapp, /strict:\s*true/);
+    const vm = require('node:vm');
+    const politica = whatsapp.slice(whatsapp.indexOf('const WEB_VERSION_PIN ='), whatsapp.indexOf('const TAKEOVER_ATIVO ='));
+    for (const [env, esperado] of [[{}, false], [{ WWEBJS_WEB_VERSION: 'versao-teste' }, true]]) {
+        const contexto = { process: { env }, path, fs: { existsSync: () => true }, CACHE_DATA_PATH: 'cache', PROJECT_CACHE_DATA_PATH: 'projeto' };
+        vm.createContext(contexto);
+        vm.runInContext(politica + '; resultado = WEB_VERSION_CACHE_ATIVO;', contexto);
+        assert.equal(contexto.resultado, esperado);
+    }
     assert.match(clientes, /waitUntilMsgSent:\s*true/);
     assert.match(clientes, /nao repetindo para evitar duplicidade/);
 });

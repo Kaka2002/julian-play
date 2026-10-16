@@ -24,13 +24,13 @@ const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : pat
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
 const CACHE_DATA_PATH = process.env.WWEBJS_CACHE_PATH || path.join(DATA_DIR, '.wwebjs_cache');
 const PROJECT_CACHE_DATA_PATH = process.env.WWEBJS_PROJECT_CACHE_PATH || path.join(__dirname, '..', '.wwebjs_cache');
-// The WhatsApp Web bundle changed its internal modules recently. Keep a
-// known-good cached bundle available for existing server installs, while
-// allowing a new install without that file to use the current bundle.
-const WEB_VERSION_PIN = process.env.WWEBJS_WEB_VERSION || '2.3000.1047557390';
+// Cache fixo somente por escolha explícita; HTML antigo não deve substituir
+// silenciosamente a versão entregue pelo WhatsApp em todas as inicializações.
+const WEB_VERSION_PIN = String(process.env.WWEBJS_WEB_VERSION || '').trim();
 const WEB_VERSION_CACHE_PATHS = [...new Set([CACHE_DATA_PATH, PROJECT_CACHE_DATA_PATH])];
 
 function localizarCacheWebFixado() {
+    if (!WEB_VERSION_PIN) return '';
     for (const cachePath of WEB_VERSION_CACHE_PATHS) {
         const arquivo = path.join(cachePath, `${WEB_VERSION_PIN}.html`);
         if (fs.existsSync(arquivo)) return cachePath;
@@ -641,7 +641,7 @@ async function iniciarWhatsApp() {
         if (WEB_VERSION_CACHE_ATIVO) {
             console.log(`WhatsApp Web fixado em ${WEB_VERSION_PIN} usando cache ${WEB_VERSION_CACHE_PATH}`);
         } else {
-            console.log(`Cache fixado ${WEB_VERSION_PIN} nao encontrado; usando a versao Web atual.`);
+            console.log('Usando a versao Web atual do WhatsApp, sem cache HTML fixado.');
         }
 
         client = new Client({
@@ -667,7 +667,7 @@ async function iniciarWhatsApp() {
                         strict: true
                     }
                 }
-                : {})
+                : { webVersionCache: { type: 'none' } })
         });
 
         instalarCompatibilidadeMidia(client);
