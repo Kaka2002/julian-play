@@ -7,6 +7,15 @@ function criarManutencaoWhatsappRoute(deps = {}) {
         recuperarWhatsAppAutomaticamente, instalacaoAdministrador,
         validarNumeroWhatsappRobo, salvarNumeroWhatsappRoboConfigurado
     } = deps;
+    let operacaoEmAndamento = false;
+    function iniciarOperacao(tarefa) {
+        if (operacaoEmAndamento) return false;
+        operacaoEmAndamento = true;
+        Promise.resolve().then(tarefa).catch(err => {
+            logControleClientes('Erro na operacao WhatsApp em segundo plano', { erro: err.message });
+        }).finally(() => { operacaoEmAndamento = false; });
+        return true;
+    }
 
     router.post('/manutencao/whatsapp/protecao', async (req, res) => {
         try {
@@ -30,39 +39,36 @@ function criarManutencaoWhatsappRoute(deps = {}) {
     });
 
     router.post('/manutencao/whatsapp/novo-qr', async (_req, res) => {
-        try {
+        iniciarOperacao(async () => {
             const resultado = await gerarNovoQrCodeWhatsApp({ motivo: 'Solicitado pelo painel de manutencao' });
             logControleClientes('Sessao do WhatsApp reiniciada para gerar novo QR Code', { status: resultado.status, authDataPath: resultado.authDataPath });
-            return res.redirect('/qr');
-        } catch (err) {
-            logControleClientes('Erro ao reiniciar sessao do WhatsApp para novo QR Code', { erro: err.message });
-            return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao gerar novo QR Code: ${err.message}`)}`);
-        }
+        });
+        return res.redirect('/qr');
     });
 
     router.post('/manutencao/whatsapp/reconectar', async (_req, res) => {
-        try {
+        const iniciada = iniciarOperacao(async () => {
             const resultado = await recuperarWhatsAppAutomaticamente({ limparSessao: false, motivo: 'Recuperacao segura solicitada pelo painel de manutencao' });
             logControleClientes('Recuperacao segura do WhatsApp solicitada pelo painel de manutencao', { status: resultado.status, motivo: resultado.motivo || '' });
-            const mensagem = resultado.status === 'ignorado'
-                ? 'A recuperacao do WhatsApp ja esta em andamento. Aguarde alguns segundos e atualize esta pagina.'
-                : 'Reconexao segura iniciada. A sessao atual foi preservada; aguarde alguns segundos e confira o status do WhatsApp.';
-            return res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
-        } catch (err) {
-            logControleClientes('Erro na recuperacao segura do WhatsApp pelo painel de manutencao', { erro: err.message });
-            return res.redirect(`/manutencao?mensagem=${encodeURIComponent(`Erro ao tentar reconectar o WhatsApp: ${err.message}`)}`);
-        }
+        });
+        const mensagem = !iniciada
+            ? 'A recuperacao do WhatsApp ja esta em andamento. Aguarde alguns segundos e atualize esta pagina.'
+            : 'Reconexao segura iniciada. A sessao atual foi preservada; aguarde alguns segundos e confira o status do WhatsApp.';
+        return res.redirect(`/manutencao?mensagem=${encodeURIComponent(mensagem)}`);
     });
 
     router.post('/manutencao/whatsapp/numero', async (req, res) => {
         if (instalacaoAdministrador()) {
             return res.redirect(`/manutencao?mensagem=${encodeURIComponent('A troca do WhatsApp desta instalacao deve ser feita pelo Painel Mestre.')}`);
         }
+        if (operacaoEmAndamento) return res.redirect(`/manutencao?mensagem=${encodeURIComponent('Aguarde a operacao atual do WhatsApp antes de alterar o numero.')}`);
         try {
             const numero = validarNumeroWhatsappRobo(req.body.numeroWhatsappRobo);
             salvarNumeroWhatsappRoboConfigurado(numero);
-            const resultado = await gerarNovoQrCodeWhatsApp({ motivo: `Numero do WhatsApp do robo alterado para ${numero} pelo painel de manutencao` });
-            logControleClientes('Numero do WhatsApp do robo alterado', { numero, status: resultado.status, authDataPath: resultado.authDataPath });
+            iniciarOperacao(async () => {
+                const resultado = await gerarNovoQrCodeWhatsApp({ motivo: 'Numero do WhatsApp alterado pelo painel de manutencao' });
+                logControleClientes('Numero do WhatsApp do robo alterado', { status: resultado.status });
+            });
             return res.redirect('/qr');
         } catch (err) {
             logControleClientes('Erro ao alterar numero do WhatsApp do robo', { erro: err.message });
