@@ -26,3 +26,4 @@ playwright-report/
 
 # Private bridge configuration and send journal.
 .lume-whatsapp*
+whatsapp-ciclo-sessao.log

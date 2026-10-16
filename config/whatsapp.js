@@ -18,6 +18,7 @@ const { responderConsulta: responderAssistenteWhatsapp, obterTelefoneAssistenteA
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
 const { registrarComprovanteWhatsapp } = require('../services/pagamentoManualService');
+const { registrarCicloWhatsApp } = require('../services/diagnosticoSessaoWhatsappService');
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ? '/var/data' : path.join(__dirname, '..'));
 const AUTH_DATA_PATH = process.env.WWEBJS_AUTH_PATH || path.join(DATA_DIR, '.wwebjs_auth');
@@ -631,6 +632,7 @@ async function iniciarWhatsApp() {
 
     inicializando = true;
     statusWhatsApp = 'iniciando';
+    registrarCicloWhatsApp('iniciando');
 
     try {
         const executablePath = await obterExecutablePath();
@@ -677,6 +679,8 @@ async function iniciarWhatsApp() {
         });
 
         client.on('qr', (qr) => {
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            if (statusWhatsApp !== 'aguardando_qr') registrarCicloWhatsApp('aguardando_qr');
             qrAtual = qr;
             ultimoQrEm = new Date();
             statusWhatsApp = 'aguardando_qr';
@@ -686,6 +690,7 @@ async function iniciarWhatsApp() {
         client.on('authenticated', () => {
             if (client !== clienteDestaInicializacao || limpandoCliente) return;
             if (conectado) return;
+            registrarCicloWhatsApp('autenticado');
             statusWhatsApp = 'autenticado';
             qrAtual = '';
             console.log('Autenticado');
@@ -693,6 +698,7 @@ async function iniciarWhatsApp() {
 
         client.on('change_state', (state) => {
             if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            registrarCicloWhatsApp('estado', { estado: state });
             if (state === 'CONNECTED') {
                 statusWhatsApp = conectado ? 'conectado' : 'conectando';
             }
@@ -705,6 +711,7 @@ async function iniciarWhatsApp() {
             if (conectado) return;
 
             conectado = true;
+            registrarCicloWhatsApp('conectado');
             inicializando = false;
             statusWhatsApp = 'conectado';
             qrAtual = '';
@@ -713,6 +720,8 @@ async function iniciarWhatsApp() {
         });
 
         client.on('auth_failure', (msg) => {
+            if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            registrarCicloWhatsApp('falha_autenticacao');
             conectado = false;
             inicializando = false;
             statusWhatsApp = 'falha_autenticacao';
@@ -722,6 +731,7 @@ async function iniciarWhatsApp() {
 
         client.on('disconnected', (reason) => {
             if (client !== clienteDestaInicializacao || limpandoCliente) return;
+            registrarCicloWhatsApp('desconectado', { motivo: reason, logout: reason === 'LOGOUT' });
             const clienteAtual = clienteDestaInicializacao;
             conectado = false;
             inicializando = false;
@@ -816,6 +826,7 @@ async function iniciarWhatsApp() {
 }
 
 async function encerrarWhatsApp() {
+    registrarCicloWhatsApp('encerramento_solicitado');
     if (tentativaReconexao) {
         clearTimeout(tentativaReconexao);
         tentativaReconexao = null;

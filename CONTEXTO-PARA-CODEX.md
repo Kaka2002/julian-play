@@ -2270,3 +2270,10 @@ pm ci normalmente.
 
 - Novo rendimento e nova despesa abrem com a data corrente em America/Sao_Paulo, independente do mês filtrado; operador pode alterar manualmente. Edição conserva a data já salva. Filtros e lançamentos existentes inalterados.
 - Afeta administrador, comercial provisionado e cliente local; Mestre sem alteração. Bancos, valores, datas salvas, configurações, sessões e backups preservados; sem migração. Recarregar após deploy. Validação: sintaxe e renderização dos dois formulários com mês diferente e datas de edição, diff e pacote oficial.
+
+## Diagnóstico persistente do ciclo WhatsApp — versão 1.4.6
+
+- Investigação da partida: estado atual UNPAIRED/aguardando_qr, diretório de autenticação presente. Última partida foi direto para QR sem autenticação; antes dela há LOGOUT no log acumulado. Logs antigos sem timestamp por evento não permitem datar exatamente a perda nem provar sua causa. Pasta existente não significa vínculo ainda válido. Correção 1.4.1 evita corrida de recuperação, mas não elimina logout remoto.
+- Adicionado histórico técnico limitado aos últimos 60 eventos com hora UTC: partida, QR inicial, autenticação, estado, conexão, falha, desconexão/motivo e encerramento solicitado. Grava somente no DATA_DIR/whatsapp-ciclo-sessao.log; arquivo excluído do Git. Sem QR, telefone, URL ou credencial. Falha de gravação não interrompe WhatsApp. Eventos QR e falha de autenticação de instâncias antigas também ignorados, completando proteção existente.
+- Afeta administrador, comercial provisionado e local; Mestre sem alteração. Bancos, sessão existente, configurações, bônus e backups preservados; sem migração. Não foi apagada sessão nem disparado novo QR manual durante investigação. Após deploy, se estado continuar UNPAIRED, operador precisa vincular pelo celular. Estabilidade após reinício e causa de logout permanecem pendentes de observação; não é correção comprovada da origem do logout. Envios, digitação e LID não alterados.
+- Validação: sintaxe, teste isolado de limite/horários e ausência de dados sensíveis, diff e pacote oficial. Sem envio real.
