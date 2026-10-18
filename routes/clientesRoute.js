@@ -9126,6 +9126,8 @@ function variaveisDisponiveis(clicavel = false) {
         ['{{dias}}', 'Dias restantes ou vencidos'],
         ['{{valor}}', 'Valor do plano'],
         ['{{bonusDisponivel}}', 'Saldo de bônus em meses'],
+        ['{{inicio}}', 'Data e hora de início do período'],
+        ['{{diasBonus}}', 'Dias do período de bônus cadastrado'],
         ['{{planos}}', 'Lista de planos e valores; usada no modelo de teste grátis encerrado'],
         ['{{telefoneWhatsApp}}', 'WhatsApp da instalação usado em campanhas']
     ];

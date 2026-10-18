@@ -102,7 +102,11 @@ test('modelos novos preservam personalização e resolvem saldo e vencimento no 
  assert.equal(lista.find(m=>m.id===modelo.id).texto,'Texto personalizado');
  assert.equal(lista.find(m=>m.id===modelo.id).ativo,0);
  const aplicado=lista.find(m=>m.chave==='bonus_periodo_aplicado');
- const mensagem=await modelos.montarMensagemModeloManual({nome:'Pessoa Teste',bonusMeses:2,dataVencimento:'2026-10-31T23:59'},aplicado);
+ const mensagem=await modelos.montarMensagemModeloManual({nome:'Pessoa Teste',bonusMeses:2,valorPlano:'35,00',diasContrato:30,dataInicio:'2026-10-01T23:59',dataVencimento:'2026-10-31T23:59'},aplicado);
+ assert.match(mensagem,/01\\/10\\/2026/); assert.match(mensagem,/30 dia/); assert.ok(mensagem.includes('R$ 0,00')); assert.doesNotMatch(mensagem,/35,00/);
+ await modelos.salvarModelo({...aplicado,texto:'Meu texto de bônus',ativo:'0'});
+ const preservado=(await modelos.listarModelos()).find(m=>m.id===aplicado.id);
+ assert.equal(preservado.texto,'Meu texto de bônus'); assert.equal(preservado.ativo,0);
  assert.match(mensagem,/31\\/10\\/2026/); assert.match(mensagem,/2 mês/); assert.doesNotMatch(mensagem,/{{/);
 `));
 

@@ -1,4 +1,6 @@
 const db = require('../database/sqlite');
+const TEXTO_BONUS_APLICADO_ANTERIOR = 'Olá, *{{nome}}!*\n\nSeu período de bônus foi aplicado sem cobrança. Seu acesso está válido até *{{vencimento}}*. 🎁\n\nSaldo de bônus disponível: *{{bonusDisponivel}} mês(es)*.';
+const TEXTO_BONUS_APLICADO = '🎁 *BÔNUS APLICADO COM SUCESSO!*\n━━━━━━━━━━━━━━━━━━━━\n\nOlá, *{{nome}}!*\n\nSeu período de bônus já está aplicado! Aproveite seu acesso sem cobrança durante este período. 💙🍿\n\n📋 *Plano:* Bônus\n🗓️ *Período concedido:* {{diasBonus}} dia(s)\n📅 *Início do bônus:* {{inicio}}\n⏳ *Válido até:* {{vencimento}}\n💰 *Valor deste período:* R$ 0,00 — sem cobrança\n\n🎁 *Saldo de bônus restante:* {{bonusDisponivel}} mês(es)\n\nObrigado por fazer parte da nossa história! Ao final deste bônus, sua próxima renovação volta às condições normais do plano contratado.\n\n━━━━━━━━━━━━━━━━━━━━\n🎉 *Aproveite seu bônus e bom entretenimento!*';
 
 const modelosPadrao = [
     {
@@ -247,8 +249,10 @@ async function garantirModelosPadrao() {
     await executar(
         'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
         ['bonus_periodo_aplicado', 'bonus', 'Bônus aplicado — confirmação do período',
-            'Olá, *{{nome}}!*\n\nSeu período de bônus foi aplicado sem cobrança. Seu acesso está válido até *{{vencimento}}*. 🎁\n\nSaldo de bônus disponível: *{{bonusDisponivel}} mês(es)*.', 'green']
+            TEXTO_BONUS_APLICADO, 'green']
     );
+    await executar('UPDATE modelos_mensagem SET texto = ? WHERE chave = ? AND texto = ?',
+        [TEXTO_BONUS_APLICADO, 'bonus_periodo_aplicado', TEXTO_BONUS_APLICADO_ANTERIOR]);
     const avisoBonusIndicacao = modelosPadrao.find(modelo => modelo.chave === 'aviso_bonus_indicacao');
     await executar(
         'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
@@ -625,6 +629,8 @@ function montarVariaveisCliente(cliente = {}, opcoes = {}) {
         : Math.abs(Number(opcoes.dias) || 0);
 
     return {
+        inicio: cliente.dataInicio ? formatarDataHora(cliente.dataInicio) : 'Não informado',
+        diasBonus: Math.max(0, Number.parseInt(cliente.diasContrato, 10) || 0),
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',
         vencimento: formatarDataHora(cliente.dataVencimento || cliente.vencimento),
