@@ -1871,10 +1871,14 @@ function layout({ titulo, conteudo, mensagem = '', ativo = 'painel', config = {}
             box-shadow: 0 1px 6px rgba(15, 23, 42, .04);
         }
 
-        .page-link.active {
-            border-color: var(--blue);
-            background: var(--blue);
+        .page-link.active,
+        html[data-tema="noturno"] .page-link.active,
+        .pagination .page-link[aria-current="page"] {
+            border-color: #3655dc;
+            background: #3655dc;
             color: #fff;
+            font-weight: 900;
+            box-shadow: 0 0 0 2px rgba(92, 122, 255, .35);
         }
 
         .page-link.disabled {
@@ -7901,7 +7905,7 @@ function paginacao({ base, params = {}, pagina, totalPaginas, total, porPagina, 
     const ultima = Math.min(totalPaginas, pagina + 2);
 
     for (let numero = primeira; numero <= ultima; numero += 1) {
-        paginas.push(`<a class="page-link ${numero === pagina ?'active' : ''}" href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
+        paginas.push(`<a class="page-link ${numero === pagina ?'active' : ''}" ${numero === pagina ? 'aria-current="page" aria-label="Página atual: ' + numero + '"' : ''} href="${escapar(montarUrlPaginacao(base, params, numero))}">${numero}</a>`);
     }
 
     const parametroPagina = String(params.parametroPagina || 'pagina');

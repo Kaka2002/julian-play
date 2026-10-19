@@ -772,3 +772,9 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Evidencia operacional: partida de hoje teve erros de contexto destruido e terminou aguardando QR; nao ha LOGOUT registrado no intervalo. Estas correcoes tratam falhas comprovadas no controle local, sem afirmar causa resolvida de perda remota do vinculo ou de Chrome residual. Sessao que ja solicita QR pode exigir vinculacao manual apos deploy. Estabilidade diaria continua pendente de observacao.
 - Afeta administrador, comercial provisionado e local; Mestre sem mudanca. Bancos, configuracoes, sessao existente, bonus, backups e DATA_DIR preservados; sem migracao. Transportes, digitacao e LID inalterados; nenhum envio real ou reinicio operacional executado.
 - Validacao: sintaxe, quatro testes isolados de recuperacao/ready/concorrencia/partida, regressoes de diagnostico e manutencao, diff e pacote oficial. Publicar e executar deploy; conferir vinculo e estabilidade apos proxima partida.
+
+## Pagina atual destacada — versao 1.4.11
+
+- Implementado: paginacao compartilhada e Pendencias identificam pagina atual com aria-current. Estilo ativo tem prioridade sobre tema noturno, com fundo azul, texto branco, peso e contorno; modo claro mantem mesmo destaque. Historico de mensagens informativas agora mostra numeros e identifica a pagina atual; corrigidos destinos de Inicio, Anterior e Fim. Filtros e preservacao da rolagem mantidos.
+- Afeta administrador, comercial provisionado e instalacao local nas listas do painel; Mestre sem alteracao. Bancos, configuracoes, sessoes, bonus e backups preservados; sem migracao ou alteracao de permissoes. Recarregar apos deploy.
+- Validacao: sintaxe dos tres arquivos, verificacao do estilo computado em Chromium nos temas claro/noturno e da marcacao ativa, diff e pacote oficial. Sem envios reais.

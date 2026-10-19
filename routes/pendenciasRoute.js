@@ -68,7 +68,7 @@ function criarPendenciasRoute(deps = {}) {
                     </form>
                 </div>
             </article>`).join('')}</div>` : '<div class="empty">Nenhuma pendência encontrada para estes filtros.</div>'}
-            ${paginacao.totalPaginas > 1 ? `<div class="pagination"><span class="pagination-info">${paginacao.total} pendência(s)</span><div>${Array.from({length:paginacao.totalPaginas},(_,i)=>{const p=i+1;const q=new URLSearchParams({...filtros,pagina:String(p),porPagina:String(paginacao.porPagina)});return `<a class="page-link ${p===paginacao.pagina?'active':''}" href="/pendencias?${q}">${p}</a>`;}).join('')}</div></div>` : ''}
+            ${paginacao.totalPaginas > 1 ? `<div class="pagination"><span class="pagination-info">${paginacao.total} pendência(s)</span><div>${Array.from({length:paginacao.totalPaginas},(_,i)=>{const p=i+1;const q=new URLSearchParams({...filtros,pagina:String(p),porPagina:String(paginacao.porPagina)});return `<a class="page-link ${p===paginacao.pagina?'active':''}" ${p===paginacao.pagina?'aria-current="page" aria-label="Página atual: '+p+'"':''} href="/pendencias?${q}">${p}</a>`;}).join('')}</div></div>` : ''}
         </section>`;
     }
 
