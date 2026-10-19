@@ -49,8 +49,10 @@ const SESSION_DATA_PATH = path.join(AUTH_DATA_PATH, 'session-julianplay');
 const ARQUIVO_AVISOS_FORA_HORARIO = path.join(DATA_DIR, 'database', 'avisos-fora-horario.json');
 
 let client;
+const clientesProntos = new WeakSet();
 let qrAtual = '';
 let inicializando = false;
+let inicializacaoIniciadaEm = 0;
 let conectado = false;
 let tentativaReconexao = null;
 let tentativasReconexao = 0;
@@ -631,6 +633,7 @@ async function iniciarWhatsApp() {
     }
 
     inicializando = true;
+    inicializacaoIniciadaEm = Date.now();
     statusWhatsApp = 'iniciando';
     registrarCicloWhatsApp('iniciando');
 
@@ -710,6 +713,7 @@ async function iniciarWhatsApp() {
             if (client !== clienteDestaInicializacao || limpandoCliente) return;
             if (conectado) return;
 
+            clientesProntos.add(clienteDestaInicializacao);
             conectado = true;
             registrarCicloWhatsApp('conectado');
             inicializando = false;
@@ -895,6 +899,7 @@ async function gerarNovoQrCodeWhatsApp({ motivo = 'novo QR Code manual' } = {}) 
 
 async function verificarSaudeWhatsApp() {
     const verificadoEm = new Date().toISOString();
+    const clienteVerificado = client;
 
     if (!client) {
         ultimaVerificacaoSaude = {
@@ -907,8 +912,15 @@ async function verificarSaudeWhatsApp() {
     }
 
     try {
-        const estado = await client.getState();
+        const estado = await clienteVerificado.getState();
+        if (client !== clienteVerificado || limpandoCliente) return { ok: false, estado: 'cliente_substituido', erro: '', verificadoEm };
         const ok = estado === 'CONNECTED';
+        // Restaurar somente clientes que ja completaram ready.
+        if (ok && clientesProntos.has(clienteVerificado)) {
+            conectado = true;
+            inicializando = false;
+            statusWhatsApp = 'conectado';
+        }
 
         if (conectado && !ok) {
             conectado = false;
@@ -922,6 +934,7 @@ async function verificarSaudeWhatsApp() {
             verificadoEm
         };
     } catch (err) {
+        if (client !== clienteVerificado || limpandoCliente) return { ok: false, estado: 'cliente_substituido', erro: '', verificadoEm };
         if (conectado) {
             conectado = false;
             statusWhatsApp = 'sessao_presa';
@@ -939,6 +952,9 @@ async function verificarSaudeWhatsApp() {
 }
 
 async function recuperarWhatsAppAutomaticamente({ limparSessao = false, motivo = 'recuperacao automatica' } = {}) {
+    if (inicializando && Date.now() - inicializacaoIniciadaEm < Math.max(AUTH_TIMEOUT_MS, PROTOCOL_TIMEOUT_MS, 300000) + 30000) {
+        return { status: 'ignorado', motivo: 'inicializacao ainda em andamento; sessao preservada' };
+    }
     if (limpandoCliente) {
         return { status: 'ignorado', motivo: 'limpeza de cliente anterior em andamento' };
     }
