@@ -24,7 +24,9 @@ await run("UPDATE clientes SET plano='Mensal'");
 for(let id=2;id<=6;id++) await pagamento(id,'2026-09-01'); // primeira assinatura, fora da contagem
 `;
 function isolated(code) {
-    const result = executarIsolado(`(async()=>{${setup}\n${code}\nawait db.encerrar();console.log('ok')})().catch(e=>{console.error(e);process.exit(1)})`);
+    // Multiplas gravacoes e inicializacao do banco podem superar 30s no servidor.
+    // Mesmo limite de 90s usado pelo helper no CI; todas as assercoes permanecem.
+    const result = executarIsolado(`(async()=>{${setup}\n${code}\nawait db.encerrar();console.log('ok')})().catch(e=>{console.error(e);process.exit(1)})`, { timeout: 90000 });
     try { assert.equal(result.stdout, 'ok'); } finally { removerAmbiente(result.ambiente); }
 }
 

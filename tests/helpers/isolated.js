@@ -16,13 +16,19 @@ function criarAmbiente(prefixo = 'julian-play-test-') {
 
 function executarIsolado(codigo, opcoes = {}) {
     const ambiente = opcoes.ambiente || criarAmbiente();
+    const timeout = opcoes.timeout ?? timeoutPadrao;
     const resultado = spawnSync(process.execPath, ['-e', codigo], {
         cwd: repoRoot,
         env: { ...process.env, DATA_DIR: ambiente.dataDir, DB_PATH: path.join(ambiente.dataDir, 'clientes.db'), BACKUP_DIR: ambiente.backupDir, NODE_ENV: 'test', ...opcoes.env },
         encoding: 'utf8',
-        timeout: opcoes.timeout ?? timeoutPadrao
+        timeout
     });
-    if (resultado.status !== 0) throw new Error(`Processo isolado falhou (${resultado.status}).\nSTDOUT:\n${resultado.stdout}\nSTDERR:\n${resultado.stderr}`);
+    if (resultado.status !== 0) {
+        const motivo = resultado.error?.code === 'ETIMEDOUT'
+            ? `Tempo limite do processo isolado excedido (${timeout} ms).`
+            : `Processo isolado falhou (codigo=${resultado.status}, sinal=${resultado.signal || 'nenhum'}, erro=${resultado.error?.code || 'nenhum'}).`;
+        throw new Error(`${motivo}\nSTDOUT:\n${resultado.stdout}\nSTDERR:\n${resultado.stderr}`);
+    }
     return { ambiente, stdout: resultado.stdout.trim(), stderr: resultado.stderr.trim() };
 }
 
