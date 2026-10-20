@@ -258,3 +258,29 @@ test('teste pendente aguarda horas e recalcular funciona no teste e no plano', a
     await expect(page.locator('#valorPlano')).not.toHaveValue('');
     await expect(page.locator('#dataVencimento')).toHaveValue('2026-11-19T10:00');
 });
+
+test('login orienta captcha expirado e bloqueia repeticao enquanto valida', async ({ page }) => {
+    await page.goto('/login');
+    await page.evaluate(() => {
+        const captcha=document.createElement('div');captcha.className='g-recaptcha';document.querySelector('form').append(captcha);
+        window.grecaptcha={getResponse:()=>''};window.captchaLoginExpirado();
+    });
+    await expect(page.locator('#login-status')).toContainText('expirou');
+    await page.getByLabel('Senha', {exact:true}).fill('ficticia');
+    await page.getByLabel(/Confirmação humana/).fill('1');
+    await page.getByRole('button',{name:'Acessar painel'}).click();
+    await expect(page.locator('#login-status')).toContainText('Marque Não sou um robô');
+    await page.evaluate(()=>{
+        window.estadosEnvio=[];
+        window.grecaptcha.getResponse=()=> 'token-ficticio';
+        document.querySelector('form').addEventListener('submit',evento=>{
+            window.estadosEnvio.push(evento.defaultPrevented);
+            evento.preventDefault(); // Mantem o documento para observar o estado durante a espera.
+        });
+    });
+    await page.getByRole('button',{name:'Acessar painel'}).click();
+    await expect(page.getByRole('button',{name:'Validando acesso…'})).toBeDisabled();
+    await page.evaluate(()=>document.querySelector('form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
+    expect(await page.evaluate(()=>window.estadosEnvio)).toEqual([false,true]);
+    await expect(page.locator('#login-status')).toContainText('Validando a confirmação');
+});

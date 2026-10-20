@@ -634,7 +634,7 @@ test('cliente novo exige consentimento explicito para entrar em campanhas', () =
 });
 
 test('backup verificado pode ser copiado para armazenamento externo', () => {
-    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const externa=path.join(${JSON.stringify(require('os').tmpdir())},'julian-play-backup-externo-'+Date.now());const destino=await m.copiarBackupExterno(b.nome,externa);const exercicio=await m.executarExercicioRestauracaoMensal('',{caminhoArquivo:destino,origem:'externa'});process.stdout.write(JSON.stringify({db:fs.existsSync(destino),manifesto:fs.existsSync(destino+'.json'),status:exercicio.status,origem:exercicio.origem,hash:exercicio.hashSha256}));fs.rmSync(externa,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)})`);
+    const resultado = executarIsolado(`(async()=>{const fs=require('fs');const path=require('path');const m=require('./services/manutencao');const b=await m.criarBackupAutomatico();const externa=path.join(${JSON.stringify(require('os').tmpdir())},'julian-play-backup-externo-'+Date.now());const destino=await m.copiarBackupExterno(b.nome,externa);const exercicio=await m.executarExercicioRestauracaoMensal('',{caminhoArquivo:destino,origem:'externa'});process.stdout.write(JSON.stringify({db:fs.existsSync(destino),manifesto:fs.existsSync(destino+'.json'),status:exercicio.status,origem:exercicio.origem,hash:exercicio.hashSha256}));fs.rmSync(externa,{recursive:true,force:true});})().catch(e=>{console.error(e);process.exit(1)})`, {timeout:90000});
     try {
         const retorno = JSON.parse(resultado.stdout);
         assert.equal(retorno.db, true);

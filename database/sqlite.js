@@ -9,6 +9,8 @@ const dbPath = process.env.DB_PATH || path.join(DATA_DIR, 'clientes.db');
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 
 const db = new sqlite3.Database(dbPath);
+// Aguarda disputas breves com transacoes isoladas sem repetir a operacao na aplicacao.
+db.configure('busyTimeout', 5000);
 
 const ready = new Promise((resolve, reject) => {
 db.serialize(() => {

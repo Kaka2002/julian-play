@@ -286,7 +286,15 @@ function PrepararRelease {
         # Testes internos usam bancos temporarios e DISABLE_WHATSAPP; nao tocam
         # nas sessoes nem nos bancos ativos.
         $env:DISABLE_WHATSAPP = '1'
-        ExecutarComando -Comando $Npm -Argumentos @('test') -MensagemErro 'Os testes da versao candidata falharam.' -Diretorio $pastaRelease
+        $aprovacaoLocal = $false
+        $verificadorValidacao = Join-Path $diretorioProjeto 'scripts\validar-entrega.js'
+        if (Test-Path -LiteralPath $verificadorValidacao -PathType Leaf) {
+            & $Node.Source $verificadorValidacao --verificar $pastaRelease $diretorioProjeto | Out-Host
+            $aprovacaoLocal = $LASTEXITCODE -eq 0
+        }
+        if (-not $aprovacaoLocal) {
+            ExecutarComando -Comando $Npm -Argumentos @('test') -MensagemErro 'Os testes da versao candidata falharam.' -Diretorio $pastaRelease
+        }
         return $pastaRelease
     } catch {
         if (Test-Path -LiteralPath $arquivoZip) { Remove-Item -LiteralPath $arquivoZip -Force }

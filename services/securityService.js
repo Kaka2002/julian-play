@@ -228,6 +228,7 @@ async function validarRecaptcha(resposta, opcoes = {}) {
             body: corpo.toString(),
             signal: controlador.signal
         });
+        if (!respostaGoogle.ok) return { configurado: true, valido: false, motivo: 'servico_indisponivel' };
         const dados = await respostaGoogle.json();
         const permitidos = hostnamesRecaptchaPermitidos();
         const hostname = String(dados.hostname || '').trim().toLowerCase();

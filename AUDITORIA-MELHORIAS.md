@@ -821,3 +821,29 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Corrigida divergencia local/CI: suite de indicacoes usa 90 segundos por processo isolado, em vez de 30 segundos no deploy local. Dois testes foram encerrados aos 30 segundos no candidato 1.4.13; a mesma versao passou no GitHub. Todas as assercoes e a recusa de atualizacao por falha permanecem.
 - Diagnostico do helper agora distingue timeout, codigo de saida, sinal e erro do processo. Sem mudanca nas regras de indicacao ou bonus, na aplicacao ou nos quatro perfis. Bancos, configuracoes, sessoes, backups e isolamento preservados; sem envio real ou acao manual nos dados.
 - Validacao: 11/11 testes de indicacoes aprovados (265,6s); os dois casos interrompidos anteriormente passaram, um deles em 34,5s. Sintaxe JavaScript, simulacao ETIMEDOUT e diff aprovados. Pacote assinado e ZIP externo 1.4.14 gerados e inspecionados (zero entradas proibidas). Suite inteira de 223 testes nao repetida nesta mudanca restrita aos testes; ultimo deploy teve 221 aprovados e dois timeouts. Limitacao conhecida: suite completa continua demorada no computador de producao; esta entrega nao promete reducao do tempo total do deploy. Nova validacao remota pendente do push.
+
+## Implementado: login e reducao de disputa no banco — 1.4.15
+
+- Falha externa de reCAPTCHA tem mensagem propria, continua negando acesso e nao penaliza o usuario como tentativa invalida. Formulario informa expiracao/espera e bloqueia envio repetido. CAPTCHA valido, senha, TOTP, CSRF e sessoes mantem as protecoes existentes.
+- Modelos inicializados uma vez por grupo/processo com compartilhamento concorrente e nova tentativa apos falha; consultas seguintes nao tentam gravar padroes. Edicoes consultadas diretamente; exclusao e restauracao invalidam inicializacao. Indicacoes sem trabalho nao abrem transacao de escrita; com trabalho mantem releitura, atomicidade e credito unico.
+- Espera SQLite limitada a 5 segundos para travas curtas; sem troca do journal, WAL, alteracao no formato do banco ou nas copias de backup. Administrador, comercial e local afetados; Mestre sem mudanca de permissao. Dados, sessoes, configuracoes e isolamento preservados.
+- Limitacoes: nao garante disponibilidade da rede/Google e nao afirma eliminar toda causa de lentidao. Suite completa e navegador em andamento antes da entrega; nenhuma mensagem real ou alteracao de dados de producao executada.
+
+- Login tambem devolve resposta HTTP 503 segura em excecoes do banco/handler, evitando espera sem resposta no Express 4. Sem vazamento de detalhe interno ou criacao de cookie de sessao; regressao especifica adicionada. Validacao completa reiniciada apos essa ultima alteracao.
+
+- Validacao encontrou timeout local de 30s tambem na copia/restauracao externa. Limite padrao dos processos isolados alinhado em 90s no local/CI, com overrides existentes preservados. Primeira suite completa: 225 passaram e um timeout; nova suite completa em andamento antes de liberar comandos. Nao ha reducao do tempo total prometida nem remocao de testes.
+
+## Implementado: deploy reaproveita validacao completa correspondente — 1.4.15
+
+- npm run test:entrega executa npm ci, testes internos e navegador em copia isolada no D:. Confere fontes antes/depois e emite aprovacao DPAPI Windows CurrentUser, com prazo de 48h e hashes das fontes/lockfile e Node exato. Sem chave privada em arquivos do projeto; cache .codex nao integra Git nem pacote.
+- Deploy confere os arquivos efetivos do candidato contra aprovacao. Mudanca, cache ausente/invalido/vencido ou outro usuario/maquina/Node executa os testes normalmente. Backup, PM2, dependencias, prontidao e rollback mantidos. Mestre/administrador/comercial/local preservam isolamento e dados; sem mudanca de permissao ou envio real.
+- Testes direcionados de recusa e simulacao da funcao PowerShell real aprovados. Validacao completa final em andamento. Limitacoes: GitHub e outro computador nao recebem aprovacao local; documentos Markdown sao excluidos da identidade de codigo, texto CRLF/LF e normalizado e binarios sao exatos; o deploy ainda faz instalacao, backup, reinicio e verificacao de saude.
+
+- Conferencia real de todas as fontes versus git archive aprovada usando indice/arvore temporarios, sem commit ou mudanca no indice real. Testes de CRLF/LF em arquivo auxiliar, integridade binaria e integracao PowerShell aprovados. Nova suite completa reiniciada sobre esse codigo final; so o resultado dela podera gerar comprovante.
+
+## Aprovacao final 1.4.15
+
+- Executado npm run test:entrega sobre copia isolada com dependencias instaladas pelo lockfile: 228/228 testes internos (zero falhas/ignorados) e 17/17 testes de navegador aprovados. Comprovante protegido emitido automaticamente pelo fluxo completo. Sintaxe JavaScript, PowerShell e diff aprovados.
+- Nenhuma acao em dados, sessao ou processos de producao; sem envio real. Publicacao/deploy manuais ainda pendentes. As execucoes anteriores interrompidas ou com timeout sao historico da investigacao, nao a aprovacao usada pelo deploy. Pacote/ZIP em conferencia final.
+
+- Entrega final concluida: 228 testes internos e 17 de navegador aprovados pelo fluxo completo, comprovante real reconhecido contra o candidato Git, pacote 1.4.15 assinado e assinatura verificada. ZIP externo final de 15.750.639 bytes com hash acompanhante. Inspecao interna/externa sem conteudo privado; nove relatorios antigos da pasta de envio foram movidos para rascunhos privados .codex, preservados e excluidos da entrega. Nenhum commit/push/deploy ou envio real executado. Falhas externas do Google continuam sujeitas a rede/provedor; a entrega trata a indisponibilidade e reduz escritas desnecessarias, sem prometer disponibilidade externa ou eliminar toda causa de lentidao.

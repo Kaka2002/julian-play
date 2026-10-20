@@ -34,3 +34,69 @@ test('CSRF injeta token, bloqueia POST invalido e permite logout seguro',()=>{co
 test('logout revoga imediatamente e sessao persiste no banco',()=>{const r=executarIsolado(`(async()=>{const a=require('./services/authService');const s=await a.criarSessao('admin',{headers:{'user-agent':'teste'},ip:'127.0.0.1'});const req={headers:{cookie:'julian_play_session='+s.token}};const antes=!!(await a.obterSessao(req));delete require.cache[require.resolve('./services/authService')];const recarregado=require('./services/authService');const persistiu=!!(await recarregado.obterSessao(req));await recarregado.encerrarSessao(req);process.stdout.write(JSON.stringify([antes,persistiu,!!(await recarregado.obterSessao(req))]));process.exit(0)})().catch(e=>{console.error(e);process.exit(1)})`);try{assert.deepEqual(JSON.parse(r.stdout),[true,true,false])}finally{removerAmbiente(r.ambiente)}});
 
 test('health externo nao expoe numero nem ultimos contatos do WhatsApp',()=>{const bot=fs.readFileSync(path.join(repoRoot,'bot.js'),'utf8');const inicio=bot.indexOf("app.get('/health'");const fim=bot.indexOf('app.use(protegerPainel)',inicio);const rota=bot.slice(inicio,fim);assert.match(rota,/cf-connecting-ip/);assert.match(rota,/x-forwarded-for/);assert.match(rota,/origemLocal/);const respostaExterna=rota.slice(0,rota.indexOf('res.status(200).json({',rota.indexOf('return res.status(200).json({')+10));assert.doesNotMatch(respostaExterna,/numeroConectado|ultimaMensagemRecebidaDe|ultimoEnvioRoboPara/)});
+
+test('falha de rede, timeout e HTTP do reCAPTCHA falham fechados com motivo proprio', async () => {
+    const site=process.env.RECAPTCHA_SITE_KEY, segredo=process.env.RECAPTCHA_SECRET_KEY;
+    process.env.RECAPTCHA_SITE_KEY='site-teste'; process.env.RECAPTCHA_SECRET_KEY='segredo-teste';
+    try {
+        const s=require('../services/securityService');
+        const timeout=await s.validarRecaptcha('token',{timeoutMs:5,fetch:(_,o)=>new Promise((ok,no)=>o.signal.addEventListener('abort',()=>{const e=new Error('timeout');e.name='AbortError';no(e)}))});
+        const rede=await s.validarRecaptcha('token',{fetch:async()=>{throw new Error('rede')}});
+        const http=await s.validarRecaptcha('token',{fetch:async()=>({ok:false,json:async()=>{throw new Error('nao deve ler HTML')}})});
+        assert.deepEqual([timeout,rede,http].map(r=>[r.valido,r.motivo]),[[false,'tempo_esgotado'],[false,'falha_de_rede'],[false,'servico_indisponivel']]);
+    } finally {
+        if(site===undefined)delete process.env.RECAPTCHA_SITE_KEY;else process.env.RECAPTCHA_SITE_KEY=site;
+        if(segredo===undefined)delete process.env.RECAPTCHA_SECRET_KEY;else process.env.RECAPTCHA_SECRET_KEY=segredo;
+    }
+});
+
+test('login nao penaliza indisponibilidade do Google e continua recusando captcha invalido', () => {
+    const r=executarIsolado(`(async()=>{
+        const assert=require('node:assert/strict');process.env.PANEL_USER='teste';process.env.PANEL_PASSWORD='senha-ficticia-de-teste';
+        const db=require('./database/sqlite');await db.ready;
+        const seguranca=require('./services/securityService');seguranca.recaptchaDisponivelParaRequisicao=()=>true;
+        let motivo='tempo_esgotado';seguranca.validarRecaptcha=async()=>({valido:false,motivo});
+        const login=require('./services/loginSecurityService');let falhas=0;login.registrarFalha=async()=>{falhas++};
+        const express=require('express');const app=express();app.use(express.urlencoded({extended:false}));app.use(require('./routes/authRoute'));
+        const servidor=await new Promise(ok=>{const s=app.listen(0,'127.0.0.1',()=>ok(s))});
+        try {
+            for(const falha of ['tempo_esgotado','falha_de_rede','servico_indisponivel']) {
+                motivo=falha;const res=await fetch('http://127.0.0.1:'+servidor.address().port+'/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:'usuario=teste&senha=ficticia'});
+                assert.equal(res.status,302);assert.match(decodeURIComponent(res.headers.get('location')),/Google/);
+            }
+            assert.equal(falhas,0);
+            motivo='timeout-or-duplicate';await fetch('http://127.0.0.1:'+servidor.address().port+'/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:'usuario=teste&senha=ficticia'});
+            assert.equal(falhas,1);
+            login.bloqueioAtual=async()=>{const e=new Error('detalhe privado');e.code='SQLITE_BUSY';throw e};
+            const ocupado=await fetch('http://127.0.0.1:'+servidor.address().port+'/login',{method:'POST',redirect:'manual',headers:{'content-type':'application/x-www-form-urlencoded'},body:'usuario=outro&senha=ficticia'});
+            assert.equal(ocupado.status,503);assert.equal(ocupado.headers.get('retry-after'),'5');assert.doesNotMatch(await ocupado.text(),/detalhe privado|SQLITE_BUSY|ficticia/);assert.equal(ocupado.headers.get('set-cookie'),null);
+            console.log('ok');
+        } finally { await new Promise(ok=>servidor.close(ok));await db.encerrar(); }
+    })().catch(e=>{console.error(e);process.exit(1)})`,{timeout:90000});
+    try{assert.equal(r.stdout,'ok')}finally{removerAmbiente(r.ambiente)}
+});
+
+test('consultas de modelos e verificacao sem credito nao disputam escrita com login', () => {
+    const r=executarIsolado(`(async()=>{
+        const db=require('./database/sqlite');await db.ready;
+        const assert=require('node:assert/strict');const modelos=require('./services/modelosMensagem');const indicacoes=require('./services/indicacoesService');
+        const listas=await Promise.all([modelos.listarModelos(),modelos.listarModelos(),modelos.listarModelos()]);
+        const modelo=listas[0].find(m=>m.chave==='bonus_periodo_aplicado');
+        await modelos.salvarModelo({...modelo,texto:'Personalizado preservado'});
+        const sqlite3=require('sqlite3');const Database=sqlite3.Database;let conexoes=0,escritas=0;
+        sqlite3.Database=function(...args){conexoes++;return new Database(...args)};
+        const run=db.run;db.run=function(sql,...args){escritas++;return run.call(this,sql,...args)};
+        const outros=await Promise.all([modelos.listarModelos(),modelos.buscarModeloPorId(modelo.id),modelos.montarMensagemAvisoProgramado({nome:'Teste',plano:'Mensal'},5),indicacoes.processarCreditosIndicacoes()]);
+        assert.equal(outros[1].texto,'Personalizado preservado');assert.equal(escritas,0);assert.equal(conexoes,0);
+        db.run=run;sqlite3.Database=Database;
+        const escritor=await new Promise((ok,no)=>{const c=new Database(db.dbPath,e=>e?no(e):ok(c))});
+        const escrita=(conexao,sql)=>new Promise((ok,no)=>conexao.run(sql,e=>e?no(e):ok()));
+        await escrita(escritor,'BEGIN IMMEDIATE');
+        const liberar=new Promise((ok,no)=>setTimeout(()=>escrita(escritor,'COMMIT').then(ok,no),100));
+        await Promise.all([liberar,escrita(db,"INSERT OR REPLACE INTO configuracoes(chave,valor) VALUES('regressao_disputa_breve','preservado')")]);
+        await new Promise(ok=>escritor.close(ok));
+        await modelos.removerModelo(modelo.id);assert.ok((await modelos.listarModelos()).some(m=>m.chave==='bonus_periodo_aplicado'));
+        await db.encerrar();console.log('ok');
+    })().catch(e=>{console.error(e);process.exit(1)})`,{timeout:90000});
+    try{assert.equal(r.stdout,'ok')}finally{removerAmbiente(r.ambiente)}
+});

@@ -237,7 +237,24 @@ async function seedModelosJaProcessado() {
     return false;
 }
 
-async function garantirModelosPadrao() {
+const inicializacoesModelos = new Map();
+function inicializarUmaVez(chave, inicializar) {
+    if (!inicializacoesModelos.has(chave)) {
+        const tarefa = Promise.resolve().then(inicializar);
+        inicializacoesModelos.set(chave, tarefa);
+        tarefa.catch(() => {
+            if (inicializacoesModelos.get(chave) === tarefa) inicializacoesModelos.delete(chave);
+        });
+    }
+    return inicializacoesModelos.get(chave);
+}
+
+function invalidarInicializacaoModelos() { inicializacoesModelos.clear(); }
+function garantirModelosPadrao() { return inicializarUmaVez('padrao', inicializarModelosPadrao); }
+function garantirModeloCampanhaAmizade() { return inicializarUmaVez('campanha', inicializarModeloCampanhaAmizade); }
+function garantirModeloTesteExpiradoAssinatura() { return inicializarUmaVez('teste', inicializarModeloTesteExpiradoAssinatura); }
+
+async function inicializarModelosPadrao() {
     const seedJaProcessado = await seedModelosJaProcessado();
     for (const meses of [1, 3]) {
         await executar(
@@ -306,7 +323,7 @@ async function garantirModelosPadrao() {
     await marcarSeedModelosProcessado();
 }
 
-async function garantirModeloCampanhaAmizade() {
+async function inicializarModeloCampanhaAmizade() {
     for (const [modelo, ativo] of [[modeloCampanhaAmizade, 1], [modeloCampanhaIndiqueTresMeses, 0]]) {
         await executar(
             `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
@@ -325,7 +342,7 @@ async function garantirModeloCampanhaAmizade() {
     );
 }
 
-async function garantirModeloTesteExpiradoAssinatura() {
+async function inicializarModeloTesteExpiradoAssinatura() {
     const chaveSeed = `seed_${CHAVE_MODELO_TESTE_EXPIRADO_ASSINATURA}`;
     const jaProcessado = await buscarUm(
         'SELECT valor FROM configuracoes WHERE chave = ?',
@@ -423,8 +440,10 @@ async function salvarModelo(dados = {}) {
     return buscarModeloPorId(resultado.id);
 }
 
-function removerModelo(id) {
-    return executar('DELETE FROM modelos_mensagem WHERE id = ?', [id]);
+async function removerModelo(id) {
+    const resultado = await executar('DELETE FROM modelos_mensagem WHERE id = ?', [id]);
+    invalidarInicializacaoModelos();
+    return resultado;
 }
 
 function primeiroNome(nome) {
@@ -657,6 +676,7 @@ async function montarMensagemTesteExpiradoAssinatura(cliente, planos = []) {
 }
 
 module.exports = {
+    invalidarInicializacaoModelos,
     listarModelos,
     buscarModeloPorId,
     salvarModelo,

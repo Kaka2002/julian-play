@@ -724,6 +724,7 @@ async function restaurarBackup(nomeBackup) {
 
     fs.copyFileSync(db.dbPath, caminhoAntesRestaurar);
     fs.copyFileSync(origem, db.dbPath);
+    require('./modelosMensagem').invalidarInicializacaoModelos();
 
     return {
         restaurado: nomeSeguro,

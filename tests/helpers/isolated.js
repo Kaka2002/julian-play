@@ -4,7 +4,8 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
-const timeoutPadrao = process.env.CI ? 90000 : 30000;
+// Mesmo limite local e no CI: migracoes/copia de banco podem exceder 30s no Windows.
+const timeoutPadrao = 90000;
 
 function criarAmbiente(prefixo = 'julian-play-test-') {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), prefixo));

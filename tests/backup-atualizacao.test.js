@@ -403,3 +403,83 @@ test('exportador do ambiente PM2 seleciona segredos sem mostra-los no terminal',
   assert.match(fonteExportador,/Security\.Cryptography\.SHA256/);
  }finally{fs.rmSync(raiz,{recursive:true,force:true})}
 });
+
+test('deploy reutiliza somente comprovante completo integro e correspondente ao candidato',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-validacao-reuso-'));
+ const origem=path.join(raiz,'origem'),candidato=path.join(raiz,'candidato');
+ fs.mkdirSync(path.join(origem,'scripts'),{recursive:true});fs.mkdirSync(candidato);
+ const validador=require('../scripts/validar-entrega');
+ const fontes={'scripts/validar-entrega.js':'// validador ficticio de regressao\n','package-lock.json':'{"lockfileVersion":3}\n','package.json':'{"name":"fixture"}\n','app.js':'console.log("ok");\n','README.md':'Documento\n','arquivo.gitkeep':'\n','arquivo.bin':Buffer.from([255,0,13,10])};
+ try{
+  for(const [nome,texto] of Object.entries(fontes)){fs.mkdirSync(path.dirname(path.join(origem,nome)),{recursive:true});fs.writeFileSync(path.join(origem,nome),texto);fs.mkdirSync(path.dirname(path.join(candidato,nome)),{recursive:true});fs.writeFileSync(path.join(candidato,nome),texto)}
+  for(const args of [['init','-q'],['add','.']]){const r=spawnSync('git',args,{cwd:origem,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr)}
+  assert.equal(validador.verificar(candidato,origem),false);
+  const comandos=[];const dados=validador.validarEntrega(origem,{executar:(_,args)=>comandos.push(args.join(' '))});
+  assert.deepEqual(comandos,['ci','test','run test:e2e']);assert.equal(validador.verificar(candidato,origem),true);
+  fs.writeFileSync(path.join(candidato,'app.js'),fontes['app.js'].replace(/\n/g,'\r\n'));
+  assert.equal(validador.verificar(candidato,origem),true,'CRLF e LF representam o mesmo codigo Git');
+  fs.writeFileSync(path.join(candidato,'arquivo.gitkeep'),'\r\n');assert.equal(validador.verificar(candidato,origem),true);
+  fs.writeFileSync(path.join(candidato,'arquivo.bin'),Buffer.from([255,0,10]));assert.equal(validador.verificar(candidato,origem),false);fs.writeFileSync(path.join(candidato,'arquivo.bin'),fontes['arquivo.bin']);
+  fs.appendFileSync(path.join(candidato,'README.md'),'Documento atualizado');assert.equal(validador.verificar(candidato,origem),true);
+  fs.writeFileSync(path.join(candidato,'app.js'),'codigo alterado');assert.equal(validador.verificar(candidato,origem),false);
+  fs.writeFileSync(path.join(candidato,'app.js'),fontes['app.js']);
+  fs.writeFileSync(path.join(candidato,'package-lock.json'),'dependencias diferentes');assert.equal(validador.verificar(candidato,origem),false);
+  fs.writeFileSync(path.join(candidato,'package-lock.json'),fontes['package-lock.json']);
+  fs.writeFileSync(path.join(candidato,'extra.js'),'codigo novo');assert.equal(validador.verificar(candidato,origem),false);fs.unlinkSync(path.join(candidato,'extra.js'));
+  assert.equal(validador.verificar(candidato,origem,{agora:dados.aprovadoEm+49*60*60*1000}),false);
+  assert.equal(validador.verificar(candidato,origem,{ambiente:{node:'outro',plataforma:process.platform,arquitetura:process.arch}}),false);
+  const comprovante=path.join(origem,'.codex','validacoes','aprovacao.json');const registro=JSON.parse(fs.readFileSync(comprovante,'utf8'));registro.protegido='AAAA';fs.writeFileSync(comprovante,JSON.stringify(registro));assert.equal(validador.verificar(candidato,origem),false);
+  assert.throws(()=>validador.validarEntrega(origem,{executar:()=>{throw Error('suite recusada')}}),/suite recusada/);assert.equal(fs.existsSync(comprovante),false);
+  assert.throws(()=>validador.validarEntrega(origem,{executar:(_,args)=>{if(args[0]==='test')fs.appendFileSync(path.join(origem,'app.js'),'mudou durante o teste')}}),/fontes mudaram/);assert.equal(fs.existsSync(comprovante),false);
+  const atualizar=fs.readFileSync(path.join(repoRoot,'update-windows.ps1'),'utf8');assert.match(atualizar,/--verificar \$pastaRelease \$diretorioProjeto/);assert.match(atualizar,/if \(-not \$aprovacaoLocal\)[\s\S]*Argumentos @\('test'\)/);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});
+
+test('preparacao real do deploy usa comprovante do git archive e volta ao teste quando o commit muda',()=>{
+ const raiz=fs.mkdtempSync(path.join(os.tmpdir(),'julian-validacao-release-'));
+ const origem=path.join(raiz,'origem');fs.mkdirSync(path.join(origem,'scripts'),{recursive:true});
+ const validador=require('../scripts/validar-entrega');
+ try{
+  fs.copyFileSync(path.join(repoRoot,'scripts','validar-entrega.js'),path.join(origem,'scripts','validar-entrega.js'));
+  fs.writeFileSync(path.join(origem,'package-lock.json'),'{"lockfileVersion":3}\n');fs.writeFileSync(path.join(origem,'app.js'),'console.log("teste");\n');
+  const git=(args)=>{const r=spawnSync('git',args,{cwd:origem,encoding:'utf8',windowsHide:true});assert.equal(r.status,0,r.stderr);return r.stdout.trim()};
+  git(['init','-q']);git(['add','.']);git(['-c','user.name=Regressao','-c','user.email=regressao@example.invalid','commit','-qm','fixture']);git(['-c','user.name=Regressao','-c','user.email=regressao@example.invalid','commit','--allow-empty','-qm','candidato']);
+  validador.validarEntrega(origem,{executar:()=>{}});
+  const script=path.join(raiz,'preparar.ps1');
+  fs.writeFileSync(script,`param($Projeto,$Fonte,$Commit,$NodeExe)
+$ErrorActionPreference='Stop'
+$diretorioProjeto=$Projeto
+Set-Location $Projeto
+$global:ChamouTestes=$false
+function Etapa($texto) { }
+function ValidarPowerShell($arquivo) { }
+function ExecutarComando { param($Comando,$Argumentos,$MensagemErro,$Diretorio)
+ if($Comando.Source -eq 'npm-simulado') { $global:ChamouTestes=$true; throw 'fallback de testes' }
+ Push-Location $Diretorio
+ try { & $Comando.Source @Argumentos | Out-Host; if($LASTEXITCODE -ne 0){throw $MensagemErro} } finally {Pop-Location}
+}
+$tokens=$null;$erros=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile($Fonte,[ref]$tokens,[ref]$erros)
+$funcao=$ast.Find({param($item) $item -is [Management.Automation.Language.FunctionDefinitionAst] -and $item.Name -eq 'PrepararRelease'},$true)
+. ([scriptblock]::Create($funcao.Extent.Text))
+$release=$null
+try {
+ $retorno=@(PrepararRelease -Git ([pscustomobject]@{Source=(Get-Command git.exe).Source}) -Npm ([pscustomobject]@{Source='npm-simulado'}) -Node ([pscustomobject]@{Source=$NodeExe}) -CommitAlvo $Commit -InstalarDependencias $false)
+ $release=[string]($retorno | Select-Object -Last 1)
+ if($global:ChamouTestes){throw 'Testes repetidos sem necessidade'}
+ Write-Output 'REUSO_CONFIRMADO'
+} catch { if($global:ChamouTestes){Write-Output 'FALLBACK_CONFIRMADO'}else{throw} }
+finally {
+ if($release -and (Test-Path -LiteralPath $release)) {
+  $alvo=[IO.Path]::GetFullPath($release);$permitido=[IO.Path]::GetFullPath($env:TEMP).TrimEnd('\\')+'\\'
+  if(-not $alvo.StartsWith($permitido,[StringComparison]::OrdinalIgnoreCase) -or [IO.Path]::GetFileName($alvo) -notlike 'julian-play-release-*'){throw 'Limpeza fora do temporario'}
+  Remove-Item -LiteralPath $alvo -Recurse -Force
+ }
+}
+`);
+  const executar=()=>spawnSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',script,origem,path.join(repoRoot,'update-windows.ps1'),git(['rev-parse','HEAD']),process.execPath],{encoding:'utf8',windowsHide:true,timeout:30000});
+  let r=executar();assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/REUSO_CONFIRMADO/);assert.doesNotMatch(r.stdout,/FALLBACK_CONFIRMADO/);
+  fs.appendFileSync(path.join(origem,'app.js'),'// novo commit\n');git(['add','app.js']);git(['-c','user.name=Regressao','-c','user.email=regressao@example.invalid','commit','-qm','mudanca']);
+  r=executar();assert.equal(r.status,0,r.stderr);assert.match(r.stdout,/FALLBACK_CONFIRMADO/);
+ }finally{fs.rmSync(raiz,{recursive:true,force:true})}
+});

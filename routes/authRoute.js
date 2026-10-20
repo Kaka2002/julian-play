@@ -75,6 +75,20 @@ function limparFalhasLogin(req, usuario) {
     tentativasLogin.delete(chaveTentativa(req, usuario));
 }
 
+// Express 4 nao encaminha automaticamente rejeicoes de handlers async.
+function responderLogin(acao) {
+    return async (req, res) => {
+        try { await acao(req, res); }
+        catch (erro) {
+            const codigo = /^SQLITE_[A-Z_]+$/.test(erro?.code || '') ? erro.code : 'erro_interno';
+            console.error('[login] Nao foi possivel concluir a requisicao:', codigo);
+            if (res.headersSent) { res.end(); return; }
+            res.set('Retry-After', '5');
+            res.status(503).send('<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acesso temporariamente indisponível</title><main><h1>Acesso temporariamente indisponível</h1><p>Não foi possível concluir a entrada. Aguarde alguns segundos e tente novamente.</p><p><a href="/login">Voltar ao login</a></p></main></html>');
+        }
+    };
+}
+
 function codigoConfiguracaoValido(valor) {
     const informado = Buffer.from(String(valor || '').trim());
     const esperado = Buffer.from(CODIGO_CONFIGURACAO);
@@ -285,19 +299,44 @@ function telaLogin({ mensagem = '', next = '/clientes', config = {}, usuarioPain
             ${process.env.PANEL_TOTP_SECRET ? `<label>Código do autenticador
                 <input name="totp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
             </label>` : ''}
-            ${usarRecaptcha ? `<div class="g-recaptcha" data-sitekey="${escapar(process.env.RECAPTCHA_SITE_KEY)}"></div>` : `<input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
+            ${usarRecaptcha ? `<div class="g-recaptcha" data-sitekey="${escapar(process.env.RECAPTCHA_SITE_KEY)}" data-expired-callback="captchaLoginExpirado" data-error-callback="captchaLoginIndisponivel"></div>` : `<input type="hidden" name="captchaDesafio" value="${escapar(captcha.desafio)}">
             <label>Confirmação humana: ${escapar(captcha.pergunta)}
                 <input name="captchaResposta" inputmode="numeric" autocomplete="off" required>
             </label>`}
             <button type="submit">Acessar painel</button>
+            <p id="login-status" role="status" aria-live="polite"></p>
         </form>
-        <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>`}
+        <div class="helper">Depois do login, sua sessão fica ativa neste navegador.</div>
+        <script>
+        (() => {
+            const form = document.querySelector('form[action="/login"]');
+            const botao = form.querySelector('button[type="submit"]');
+            const status = document.getElementById('login-status');
+            let enviando = false;
+            window.captchaLoginExpirado = () => { if (!enviando) status.textContent = 'A confirmação expirou. Marque novamente Não sou um robô antes de entrar.'; };
+            window.captchaLoginIndisponivel = () => { if (!enviando) status.textContent = 'Não foi possível carregar a confirmação do Google. Verifique a conexão e recarregue a página.'; };
+            form.addEventListener('submit', evento => {
+                if (enviando) { evento.preventDefault(); return; }
+                if (form.querySelector('.g-recaptcha') && !window.grecaptcha?.getResponse()) {
+                    evento.preventDefault();
+                    status.textContent = 'Marque Não sou um robô e aguarde a confirmação antes de entrar.';
+                    return;
+                }
+                enviando = true;
+                botao.disabled = true;
+                botao.textContent = 'Validando acesso…';
+                status.textContent = 'Validando a confirmação e seu acesso. Aguarde.';
+                setTimeout(() => { status.textContent = 'A resposta está demorando. Aguarde o resultado para evitar repetir o envio.'; }, 12000);
+            });
+            window.addEventListener('pageshow', () => { enviando = false; botao.disabled = false; botao.textContent = 'Acessar painel'; status.textContent = ''; });
+        })();
+        </script>`}
     </main>
 </body>
 </html>`;
 }
 
-router.get('/login', async (req, res) => {
+router.get('/login', responderLogin(async (req, res) => {
     desativarCache(res);
 
     if (!(await acessoConfigurado())) {
@@ -319,9 +358,9 @@ router.get('/login', async (req, res) => {
         usuarioPainel,
         usarRecaptcha: recaptchaDisponivelParaRequisicao(req)
     }));
-});
+}));
 
-router.post('/login', async (req, res) => {
+router.post('/login', responderLogin(async (req, res) => {
     desativarCache(res);
     const next = destinoSeguro(req.body.next);
     const chaveLogin = chaveTentativa(req, req.body.usuario);
@@ -336,6 +375,10 @@ router.post('/login', async (req, res) => {
         ? await validarRecaptcha(req.body['g-recaptcha-response'], { ip: req.ip || req.socket?.remoteAddress })
         : { valido: validarCaptcha(req.body.captchaDesafio, req.body.captchaResposta) };
     if (!validacaoHumana.valido) {
+        if (['tempo_esgotado', 'falha_de_rede', 'servico_indisponivel'].includes(validacaoHumana.motivo)) {
+            await registrarEventoSistema('seguranca_login', 'alerta', 'Serviço de confirmação humana indisponível.', { motivo: validacaoHumana.motivo });
+            return res.redirect(`/login?erro=${encodeURIComponent('Não foi possível consultar a confirmação do Google. Tente novamente com uma nova confirmação. Esta falha não conta como tentativa de senha.')}&next=${encodeURIComponent(next)}`);
+        }
         registrarFalhaLogin(req, req.body.usuario);
         await loginPersistente.registrarFalha(chaveLogin, MAX_TENTATIVAS_LOGIN, BLOQUEIO_LOGIN_MS);
         await registrarEventoSistema('seguranca_login', 'alerta', 'Validação humana inválida no login.', mascararSegredos({ ip: req.ip || req.socket?.remoteAddress, usuario: req.body.usuario, motivo: validacaoHumana.motivo }));
@@ -361,7 +404,7 @@ router.post('/login', async (req, res) => {
     await registrarEventoSistema('seguranca_login', 'info', 'Login administrativo realizado.', { ip: req.ip || req.socket?.remoteAddress, usuario: String(req.body.usuario || '').trim() });
     res.setHeader('Set-Cookie', cookieSessao(sessao.token, req));
     return res.redirect(next);
-});
+}));
 
 router.get('/contrato', async (req, res) => {
     const sessao = await obterSessao(req);

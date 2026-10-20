@@ -174,6 +174,28 @@ function processarCreditosIndicacoes() {
 async function creditarElegiveis() {
     await db.ready;
     await require('./modelosMensagem').listarModelos();
+    // Sem trabalho, a verificacao periodica permanece somente leitura.
+    // A transacao abaixo relê todas as regras antes de efetivar um credito.
+    const transicao = await buscarUm(`SELECT 1 FROM programa_indicacoes i JOIN clientes c ON c.id=i.indicadoClienteId
+        WHERE (i.status='ativa' AND (c.status IN ('teste','pendente') OR lower(COALESCE(c.plano,'')) LIKE '%teste%'))
+        OR (i.status='aguardando_assinatura' AND c.status='ativo' AND COALESCE(c.plano,'')<>''
+            AND lower(c.plano) NOT LIKE '%teste%' AND lower(c.plano) NOT LIKE '%bonus%' AND lower(c.plano) NOT LIKE '%bônus%'
+            AND CAST(REPLACE(COALESCE(c.valorPlano,'0'),',','.') AS REAL)>0) LIMIT 1`);
+    if (!transicao) {
+        const campanha = await obterCampanhaAtiva();
+        const regraAtual = campanha && REGRAS[campanha.chave];
+        if (!regraAtual) return [];
+        const itens = await buscarTodos(consultaIndicacoes);
+        const grupos = new Map();
+        for (const item of itens) {
+            if (item.status !== 'ativa' || item.campanhaChave !== campanha.chave || item.pagamentosValidos < regraAtual.pagamentos) continue;
+            if (itens.some(outro => outro.indicadoClienteId === item.indicadoClienteId && outro.status === 'beneficio_liberado')) continue;
+            const grupo = grupos.get(item.indicadorClienteId) || new Set();
+            grupo.add(item.indicadoClienteId);
+            grupos.set(item.indicadorClienteId, grupo);
+        }
+        if (![...grupos.values()].some(grupo => grupo.size >= regraAtual.indicados)) return [];
+    }
     // Conexão exclusiva: nenhuma operação de outra rota entra nesta transação.
     const sqlite3 = require('sqlite3');
     const conexao = await new Promise((resolve, reject) => {
