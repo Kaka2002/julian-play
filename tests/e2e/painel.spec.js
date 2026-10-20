@@ -284,3 +284,16 @@ test('login orienta captcha expirado e bloqueia repeticao enquanto valida', asyn
     expect(await page.evaluate(()=>window.estadosEnvio)).toEqual([false,true]);
     await expect(page.locator('#login-status')).toContainText('Validando a confirmação');
 });
+
+test('navega entre manutencao painel e clientes sem perder a resposta', async ({ page }) => {
+    await autenticar(page);
+    for (const [nome, caminho] of [['Manutenção', '/manutencao'], ['Painel', '/clientes'], ['Clientes', '/clientes/todos'], ['Painel', '/clientes']]) {
+        const [resposta] = await Promise.all([
+            page.waitForNavigation(),
+            page.getByRole('link', { name: nome, exact: true }).first().click()
+        ]);
+        expect(resposta.status()).toBe(200);
+        expect(new URL(page.url()).pathname).toBe(caminho);
+        await expect(page.locator('body')).not.toContainText('Não foi possível abrir o Painel agora.');
+    }
+});

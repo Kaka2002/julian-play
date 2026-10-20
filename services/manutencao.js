@@ -732,6 +732,30 @@ async function restaurarBackup(nomeBackup) {
     };
 }
 
+// O dashboard precisa apenas deste indicador; nao deve executar inventario,
+// migracoes e varreduras de eventos/payloads para decidir a prioridade do backup.
+async function obterResumoStatusSistema() {
+    let nomes;
+    try {
+        nomes = await fs.promises.readdir(BACKUP_DIR);
+    } catch (erro) {
+        if (erro.code === 'ENOENT') return { backupRecente: false };
+        throw erro;
+    }
+    const agora = Date.now();
+    const datas = await Promise.all(nomes.filter(nome => nome.toLowerCase().endsWith('.db')).map(async nome => {
+        try {
+            const stat = await fs.promises.stat(path.join(BACKUP_DIR, nome));
+            return stat.isFile() ? stat.mtimeMs : 0;
+        } catch (erro) {
+            // A retencao pode remover um backup entre readdir e stat.
+            if (erro.code === 'ENOENT') return 0;
+            throw erro;
+        }
+    }));
+    return { backupRecente: datas.some(data => data > 0 && agora - data <= 36 * 60 * 60 * 1000) };
+}
+
 async function obterStatusSistema(statusWhatsApp = {}) {
     await db.ready;
 
@@ -829,6 +853,7 @@ module.exports = {
     restaurarBackup,
     executarDiagnosticoSistema,
     obterStatusSistema,
+    obterResumoStatusSistema,
     obterArmazenamentoBanco,
     otimizarBancoDados,
     limparEventosAntigosComBackup,

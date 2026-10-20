@@ -222,3 +222,56 @@ test('medicao assincrona do armazenamento soma dados, backups e sessao', () => {
         fs.rmSync(pastaMestre, { recursive: true, force: true });
     }
 });
+
+test('dashboard usa resumo de backup e responde falhas sem aguardar o proxy', () => {
+    const r = executarIsolado(`(async()=>{
+        const assert=require('node:assert/strict'), fs=require('fs'), path=require('path');
+        const db=require('./database/sqlite');await db.ready;
+        const manutencao=require('./services/manutencao');
+        const pasta=process.env.BACKUP_DIR;fs.mkdirSync(pasta,{recursive:true});
+        const antigo=path.join(pasta,'antigo.db');fs.writeFileSync(antigo,'fixture');
+        const dataAntiga=new Date(Date.now()-37*60*60*1000);fs.utimesSync(antigo,dataAntiga,dataAntiga);
+        for(const nome of fs.readdirSync(pasta).filter(n=>n.endsWith('.db'))){const arquivo=path.join(pasta,nome);if(fs.statSync(arquivo).isFile())fs.utimesSync(arquivo,dataAntiga,dataAntiga)}
+        fs.mkdirSync(path.join(pasta,'diretorio.db'));
+        assert.equal((await manutencao.obterResumoStatusSistema()).backupRecente,false);
+        const recente=path.join(pasta,'recente.db');fs.writeFileSync(recente,'fixture');
+        assert.equal((await manutencao.obterResumoStatusSistema()).backupRecente,true);
+        // Nao consulta armazenamento, migracoes, eventos ou inventario completo para abrir o painel.
+        manutencao.obterStatusSistema=async()=>{throw new Error('diagnostico completo nao deve rodar')};
+        const clientes=require('./services/clientes');const listar=clientes.listarClientes;let falhar=false;
+        clientes.listarClientes=(...args)=>{if(falhar){const e=new Error('detalhe privado de teste');e.code='SQLITE_BUSY';throw e}return listar(...args)};
+        const express=require('express'),app=express();
+        app.use(require('./services/observabilidadeService').middlewareCorrelacao);
+        app.use(require('./routes/clientesRoute'));
+        const servidor=await new Promise(ok=>{const s=app.listen(0,'127.0.0.1',()=>ok(s))});
+        const erros=[],registrar=console.error;console.error=(linha)=>erros.push(linha);
+        try {
+            const url='http://127.0.0.1:'+servidor.address().port+'/clientes';
+            const sucesso=await fetch(url,{signal:AbortSignal.timeout(10000)});
+            assert.equal(sucesso.status,200);assert.match(await sucesso.text(),/Prioridades do dia/);
+            falhar=true;const resposta=await fetch(url,{signal:AbortSignal.timeout(10000)});
+            assert.equal(resposta.status,503);assert.equal(resposta.headers.get('retry-after'),'5');
+            const html=await resposta.text();assert.match(html,/Tentar novamente/);assert.doesNotMatch(html,/detalhe privado|SQLITE_BUSY/);
+            assert.equal(resposta.headers.get('set-cookie'),null);
+            assert.ok(erros.some(l=>l.includes('pagina=/clientes codigo=SQLITE_BUSY correlationId=')));
+            assert.ok(erros.every(l=>!l.includes('detalhe privado')));
+        } finally {console.error=registrar;await new Promise(ok=>servidor.close(ok));await db.encerrar()}
+        console.log('ok');
+    })().catch(e=>{console.error(e);process.exit(1)})`,{timeout:90000,env:{DISABLE_WHATSAPP:'1'}});
+    try { assert.equal(r.stdout,'ok'); } finally { removerAmbiente(r.ambiente); }
+});
+test('observabilidade distingue resposta concluida de conexao interrompida', () => {
+    const { EventEmitter } = require('node:events');
+    const { middlewareCorrelacao } = require('../services/observabilidadeService');
+    const avisos=[], original=console.warn;
+    console.warn=linha=>avisos.push(linha);
+    try {
+        for (const concluida of [false,true]) {
+            const res=new EventEmitter();res.setHeader=()=>{};res.writableFinished=concluida;
+            middlewareCorrelacao({method:'GET',path:'/clientes',originalUrl:'/clientes',get:()=>undefined},res,()=>{});
+            res.emit('close');
+        }
+        assert.equal(avisos.length,1);
+        assert.match(avisos[0],/^\[navegacao-interrompida\] pagina=\/clientes duracaoMs=\d+ correlationId=/);
+    } finally {console.warn=original;}
+});

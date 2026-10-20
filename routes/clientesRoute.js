@@ -14,6 +14,7 @@ const criarManutencaoConfiguracoesRoute = require('./manutencaoConfiguracoesRout
 const fs = require('fs');
 const path = require('path');
 const packageInfo = require('../package.json');
+const { responderPagina } = require('../services/observabilidadeService');
 const { AsyncLocalStorage } = require('async_hooks');
 const { execFile, spawn } = require('child_process');
 const { MessageMedia } = require('whatsapp-web.js');
@@ -92,7 +93,8 @@ const {
     copiarBackupExterno,
     executarExercicioRestauracaoMensal,
     executarDiagnosticoSistema,
-    obterStatusSistema
+    obterStatusSistema,
+    obterResumoStatusSistema
 } = require('../services/manutencao');
 const { agendarEncerramentoTeste } = require('../services/encerramentoTesteService');
 const {
@@ -10232,7 +10234,7 @@ function formularioPainel(painel = {}, historico = []) {
     </section>`:''}`;
 }
 
-router.get('/clientes', async (req, res) => {
+router.get('/clientes', responderPagina(async (req, res) => {
     desativarCache(res);
     const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric'
@@ -10246,7 +10248,7 @@ router.get('/clientes', async (req, res) => {
         resumoAtendimentos(),
         resumoCrm(),
         listarTiposPlanos(),
-        obterStatusSistema(whatsapp),
+        obterResumoStatusSistema(),
         listarResumoIndicacoesPainel(),
         obterCampanhaAtiva()
     ]);
@@ -10262,7 +10264,7 @@ router.get('/clientes', async (req, res) => {
         mensagem,
         ativo: 'painel'
     });
-});
+}));
 
 async function renderizarPaginaCampanhas(req, res) {
     desativarCache(res);
