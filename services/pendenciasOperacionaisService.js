@@ -68,6 +68,15 @@ function criarItem(dados) {
 function pendenciasClientes(clientes, agora) {
     const itens = [];
     for (const cliente of clientes) {
+        if (cliente.status === 'pendente' && /teste/i.test(cliente.plano || '')) {
+            itens.push(criarItem({
+                id: cliente.id, tipo: 'teste_pendente', area: 'clientes', prioridade: 'baixa', clienteId: cliente.id,
+                titulo: cliente.nome + ' — teste aguardando início',
+                detalhe: 'Teste ainda não iniciado. Sem contagem de prazo nem avisos de vencimento ou término. Para liberar, marque Teste e selecione as horas.',
+                href: '/clientes/' + cliente.id + '/editar'
+            }));
+            continue;
+        }
         const vencimento = cliente.dataVencimento || cliente.vencimento;
         const dias = diasAte(vencimento, agora);
         if (dias === null || !['ativo', 'teste', 'pendente'].includes(cliente.status)) continue;
@@ -196,7 +205,7 @@ function aplicarFiltros(itens, filtros = {}) {
 async function listarPendenciasOperacionais(filtros = {}, opcoes = {}) {
     const agora = opcoes.agora instanceof Date ? opcoes.agora : new Date();
     const [clientes, atendimentos, leads, cobrancas, mensagens, renovacoes, campanhas, divergenciasFinanceiras, duplicados] = await Promise.all([
-        buscarTodos(`SELECT id,nome,status,vencimento,dataVencimento FROM clientes WHERE anonimizadoEm IS NULL OR anonimizadoEm = ''`),
+        buscarTodos(`SELECT id,nome,status,plano,vencimento,dataVencimento FROM clientes WHERE anonimizadoEm IS NULL OR anonimizadoEm = ''`),
         buscarTodos(`SELECT a.*,c.nome clienteNome FROM cliente_atendimentos a JOIN clientes c ON c.id=a.clienteId WHERE a.status IN ('aberto','em_andamento')`),
         buscarTodos(`SELECT * FROM leads WHERE status NOT IN ('ganho','perdido')`),
         buscarTodos(`SELECT c.*,cl.nome clienteNome FROM cobrancas_pix c JOIN clientes cl ON cl.id=c.clienteId ORDER BY c.id DESC LIMIT 500`),

@@ -20,6 +20,7 @@ async function pagamento(id, ciclo, forma='PIX', valor='35,00', excluido='') {
 async function saldo() { return (await get('SELECT bonusMeses FROM clientes WHERE id=1')).bonusMeses; }
 await db.ready;
 for(let id=1;id<=6;id++) await run('INSERT INTO clientes (id,nome,telefone,status,valorPlano,dataVencimento) VALUES (?,?,?, ?,?,?)',[id,'Cliente '+id,'551190000000'+id,'ativo','35,00','2026-10-01T23:59']);
+await run("UPDATE clientes SET plano='Mensal'");
 for(let id=2;id<=6;id++) await pagamento(id,'2026-09-01'); // primeira assinatura, fora da contagem
 `;
 function isolated(code) {

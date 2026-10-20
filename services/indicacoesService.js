@@ -32,7 +32,7 @@ function normalizarMac(valor) { return String(valor || '').replace(/[^a-zA-Z0-9]
 
 async function validarClientesDistintos(indicadorId, indicadoId) {
     if (indicadorId === indicadoId) throw new Error('O cliente não pode indicar a si mesmo.');
-    const clientes = await buscarTodos('SELECT id, nome, telefone, enderecoMac FROM clientes WHERE id IN (?, ?)', [indicadorId, indicadoId]);
+    const clientes = await buscarTodos('SELECT id, nome, telefone, enderecoMac, status, plano, valorPlano FROM clientes WHERE id IN (?, ?)', [indicadorId, indicadoId]);
     const indicador = clientes.find(item => Number(item.id) === indicadorId);
     const indicado = clientes.find(item => Number(item.id) === indicadoId);
     if (!indicador || !indicado) throw new Error('Um dos clientes selecionados não foi encontrado.');
@@ -65,6 +65,7 @@ async function registrarIndicacao(dados = {}) {
     const indicadorId = idValido(dados.indicadorClienteId, 'quem indicou');
     const indicadoId = idValido(dados.indicadoClienteId, 'o cliente indicado');
     const clientes = await validarClientesDistintos(indicadorId, indicadoId);
+    const participacao = clientes.indicado.status === 'ativo' && Boolean(clientes.indicado.plano) && Number.parseFloat(String(clientes.indicado.valorPlano || '0').replace(',', '.')) > 0 && !/teste|b[oô]nus/i.test(clientes.indicado.plano || '') ? 'ativa' : 'aguardando_assinatura';
     const ativa = await obterCampanhaAtiva();
     const campanha = dados.campanhaChave && REGRAS[dados.campanhaChave]
         ? { chave: dados.campanhaChave, ...REGRAS[dados.campanhaChave] } : ativa;
@@ -76,18 +77,18 @@ async function registrarIndicacao(dados = {}) {
     const anterior = await buscarUm('SELECT id FROM programa_indicacoes WHERE indicadorClienteId = ? AND indicadoClienteId = ?', [indicadorId, indicadoId]);
     let id;
     if (anterior) {
-        const resultado = await executar(`UPDATE programa_indicacoes SET status = 'ativa', campanhaChave = ?, beneficioMeses = ?,
+        const resultado = await executar(`UPDATE programa_indicacoes SET status = ?, campanhaChave = ?, beneficioMeses = ?,
             motivoCancelamento = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'cancelada'
             AND NOT EXISTS (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
-        [campanha.chave, campanha.meses, anterior.id, indicadoId]);
+        [participacao, campanha.chave, campanha.meses, anterior.id, indicadoId]);
         if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
         id = anterior.id;
     } else {
         const resultado = await executar(`INSERT INTO programa_indicacoes
-            (indicadorClienteId, indicadoClienteId, campanhaChave, beneficioMeses)
-            SELECT ?, ?, ?, ? WHERE NOT EXISTS
+            (indicadorClienteId, indicadoClienteId, campanhaChave, beneficioMeses, status)
+            SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS
                 (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
-        [indicadorId, indicadoId, campanha.chave, campanha.meses, indicadoId]);
+        [indicadorId, indicadoId, campanha.chave, campanha.meses, participacao, indicadoId]);
         if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
         id = resultado.id;
     }
@@ -107,7 +108,7 @@ const pagamentosValidosSql = `(SELECT MAX(0, COUNT(DISTINCT COALESCE(NULLIF(paga
 
 const consultaIndicacoes = `SELECT indicacao.*, indicador.nome AS indicadorNome, indicador.telefone AS indicadorTelefone,
     indicado.nome AS indicadoNome, indicado.telefone AS indicadoTelefone, indicado.dataVencimento AS indicadoDataVencimento,
-    ${pagamentosValidosSql} AS pagamentosValidos
+    CASE WHEN indicacao.status = 'aguardando_assinatura' THEN 0 ELSE ${pagamentosValidosSql} END AS pagamentosValidos
     FROM programa_indicacoes indicacao
     JOIN clientes indicador ON indicador.id = indicacao.indicadorClienteId
     JOIN clientes indicado ON indicado.id = indicacao.indicadoClienteId
@@ -187,6 +188,8 @@ async function creditarElegiveis() {
     try {
         await run('BEGIN IMMEDIATE');
         transacao = true;
+        await run("UPDATE programa_indicacoes SET status = 'aguardando_assinatura' WHERE status = 'ativa' AND indicadoClienteId IN (SELECT id FROM clientes WHERE status IN ('teste', 'pendente') OR lower(COALESCE(plano, '')) LIKE '%teste%')");
+        await run("UPDATE programa_indicacoes SET status = 'ativa' WHERE status = 'aguardando_assinatura' AND indicadoClienteId IN (SELECT id FROM clientes WHERE status = 'ativo' AND lower(COALESCE(plano, '')) NOT LIKE '%teste%' AND lower(COALESCE(plano, '')) NOT LIKE '%bonus%' AND lower(COALESCE(plano, '')) NOT LIKE '%bônus%' AND COALESCE(plano, '') <> '' AND CAST(REPLACE(COALESCE(valorPlano, '0'), ',', '.') AS REAL) > 0)");
         const ativas = await all("SELECT chave FROM modelos_mensagem WHERE plano = 'campanha' AND ativo = 1");
         const chave = ativas.length === 1 ? ativas[0].chave : '';
         const regra = REGRAS[chave];
@@ -233,7 +236,7 @@ async function creditarElegiveis() {
 
 async function cancelarIndicacao(indicacaoId, motivo = '') {
     const id = idValido(indicacaoId, 'a indicação');
-    const resultado = await executar(`UPDATE programa_indicacoes SET status = 'cancelada', motivoCancelamento = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'ativa'`, [String(motivo || '').trim().slice(0, 300), id]);
+    const resultado = await executar(`UPDATE programa_indicacoes SET status = 'cancelada', motivoCancelamento = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status IN ('ativa', 'aguardando_assinatura')`, [String(motivo || '').trim().slice(0, 300), id]);
     if (!resultado.changes) throw new Error('A indicação não está ativa ou já gerou um crédito.');
 }
 

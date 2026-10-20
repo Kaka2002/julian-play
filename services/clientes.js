@@ -707,7 +707,7 @@ async function atualizarStatusAutomaticoClientes() {
     // vencimento mudou de estado. As condições das atualizações são repetidas
     // no SELECT e no UPDATE para preservar a validação no momento da gravação.
     const mudancas = await buscarUm(`SELECT
-        SUM(CASE WHEN status IN ('ativo', 'pendente', 'teste') AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) < datetime(replace(?, 'T', ' ')) THEN 1 ELSE 0 END) AS expirar,
+        SUM(CASE WHEN (status IN ('ativo', 'teste') OR (status = 'pendente' AND (plano IS NULL OR plano NOT LIKE '%Teste%'))) AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) < datetime(replace(?, 'T', ' ')) THEN 1 ELSE 0 END) AS expirar,
         SUM(CASE WHEN status = 'expirado' AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) >= datetime(replace(?, 'T', ' ')) THEN 1 ELSE 0 END) AS ativar
         FROM clientes WHERE status IN ('ativo', 'pendente', 'teste', 'expirado') AND vencimento IS NOT NULL AND vencimento != ''`, [agora, agora]);
 
@@ -715,7 +715,7 @@ async function atualizarStatusAutomaticoClientes() {
         `UPDATE clientes SET
             status = 'expirado',
             atualizadoEm = CURRENT_TIMESTAMP
-        WHERE status IN ('ativo', 'pendente', 'teste')
+        WHERE (status IN ('ativo', 'teste') OR (status = 'pendente' AND (plano IS NULL OR plano NOT LIKE '%Teste%')))
             AND vencimento IS NOT NULL
             AND vencimento != ''
             AND datetime(replace(COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59'), 'T', ' ')) < datetime(replace(?, 'T', ' '))`,
@@ -937,6 +937,8 @@ async function registrarNotaUsoPlanoBonusMensal(cliente, usoBonus, pagamento) {
 
 async function salvarCliente(dados, contextoAuditoria = {}) {
     const cliente = montarCliente(dados);
+    const anteriorTeste = Number(dados.id) > 0 ? await buscarClientePorId(Number(dados.id)) : null;
+    require('./regrasTesteService').prepararPeriodoTeste(cliente, anteriorTeste);
     let clienteProtegido = protegerCredenciais(cliente);
     const idCliente = Number.parseInt(dados.id, 10);
 
@@ -1731,6 +1733,7 @@ function listarClientesParaAvisosProgramados() {
                 CAST(julianday(date(vencimento)) - julianday(date(?)) AS INTEGER) AS diasAntes
             FROM clientes
             WHERE status IN ('ativo', 'teste', 'pendente')
+                AND (plano IS NULL OR plano NOT LIKE '%Teste%')
                 AND vencimento IS NOT NULL
                 AND vencimento != ''
         )
@@ -1837,7 +1840,9 @@ function listarTestesGratisParaAvisoPorHorario(agoraIso, limiteIso, codigoAviso)
                 clientes.*,
                 COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
             FROM clientes
-            WHERE (status = 'teste' OR plano LIKE '%Teste%')
+            WHERE status IN ('teste', 'ativo', 'expirado')
+                AND (status = 'teste' OR plano LIKE '%Teste%')
+                AND COALESCE(horasTeste, '') <> ''
                 AND vencimento IS NOT NULL
                 AND vencimento != ''
         )
@@ -1862,7 +1867,9 @@ function listarTestesGratisExpiradosParaAviso(agoraIso, codigoAviso) {
                 clientes.*,
                 COALESCE(NULLIF(dataVencimento, ''), vencimento || 'T23:59:59') AS vencimentoEfetivo
             FROM clientes
-            WHERE (status = 'teste' OR plano LIKE '%Teste%')
+            WHERE status IN ('teste', 'ativo', 'expirado')
+                AND (status = 'teste' OR plano LIKE '%Teste%')
+                AND COALESCE(horasTeste, '') <> ''
                 AND vencimento IS NOT NULL
                 AND vencimento != ''
         )

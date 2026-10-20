@@ -227,3 +227,26 @@ test('ficha oferece indicador por ID e campanha de origem independente da ativa'
     await expect(campanha).toHaveValue('campanha_amizade_presente');
     await expect(page.getByText(/Campanha ativa:/)).toBeVisible();
 });
+
+test('teste pendente aguarda horas e recalcular funciona no teste e no plano', async ({ page }) => {
+    await autenticar(page);
+    await page.goto('/clientes/novo');
+    await page.locator('#tipoPlanoId').selectOption({label:'Teste Grátis'});
+    await expect(page.locator('#statusCliente')).toHaveValue('pendente');
+    await expect(page.locator('#dataInicio')).toHaveValue('');
+    await expect(page.locator('#dataVencimento')).toHaveValue('');
+    await page.locator('#statusCliente').selectOption('teste');
+    await expect(page.locator('#horasTeste')).toHaveAttribute('required','');
+    await page.locator('#horasTeste').selectOption('02 horas');
+    const inicio=await page.locator('#dataInicio').inputValue();
+    const fim=await page.locator('#dataVencimento').inputValue();
+    expect(new Date(fim)-new Date(inicio)).toBe(7200000);
+    await page.locator('#dataVencimento').fill('2030-01-01T10:00');
+    await page.locator('#recalcularVencimento').click();
+    await expect(page.locator('#dataVencimento')).toHaveValue(fim);
+    await page.locator('#tipoPlanoId').selectOption({label:'Mensal (30 dias)'});
+    await page.locator('#statusCliente').selectOption('ativo');
+    await page.locator('#dataInicio').fill('2026-10-19T10:00');
+    await page.locator('#recalcularVencimento').click();
+    await expect(page.locator('#dataVencimento')).toHaveValue('2026-11-19T10:00');
+});

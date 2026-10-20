@@ -6915,7 +6915,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                     <input type="datetime-local" name="dataVencimento" id="dataVencimento" value="${escapar(vencimento)}" required>
                     <button class="button secondary icon-only" type="button" id="recalcularVencimento" title="Recalcular vencimento">${icon('refresh')}</button>
                 </div>
-                <span class="helper">Clique em recalcular para usar início + dias</span>
+                <span class="helper">Pendente não inicia o teste. Marque Teste e selecione as horas. Recalcular usa início + horas no teste ou início + dias no plano.</span>
             </label>
 
             <div class="form-section full">Acesso ao aplicativo</div>
@@ -7003,10 +7003,9 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             if (!plano.mesesBonus) valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
-                statusCliente.value = 'teste';
-                if (!horasTeste.value) horasTeste.value = '24 horas';
-                atualizarHorasTeste();
+                if (statusCliente.value !== 'teste') statusCliente.value = 'pendente';
             }
+            atualizarHorasTeste();
             calcularVencimento();
         }
 
@@ -7023,6 +7022,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             const dias = Number(diasContrato.value || 0);
             const plano = planos.find(item => item.id === tipoPlano.value);
             const ehTeste = statusCliente?.value === 'teste';
+            if (statusCliente.value === 'pendente' && /teste/i.test(planoLegado.value)) return;
 
             if (!dataInicio.value) return;
             const data = new Date(dataInicio.value);
@@ -7059,7 +7059,13 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
         tipoPlano?.addEventListener('change', atualizarPlano);
         diasContrato?.addEventListener('input', calcularVencimento);
         dataInicio?.addEventListener('change', calcularVencimento);
-        recalcular?.addEventListener('click', calcularVencimento);
+        recalcular?.addEventListener('click', () => {
+            if (statusCliente.value === 'pendente' && /teste/i.test(planoLegado.value)) { alert('Marque Teste e selecione as horas para iniciar a contagem.'); return; }
+            if (statusCliente.value === 'teste' && !horasTeste.value) { horasTeste.reportValidity(); return; }
+            if (!dataInicio.value) { dataInicio.reportValidity(); return; }
+            if (statusCliente.value !== 'teste' && !Number(diasContrato.value)) { alert('Informe os dias de contrato para recalcular.'); return; }
+            calcularVencimento();
+        });
 
         if (!dataVencimento.value && dataInicio.value && diasContrato.value) {
             calcularVencimento();
@@ -7075,10 +7081,27 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             const habilitado = statusCliente.value === 'teste';
             horasTeste.disabled = !habilitado;
             horasTeste.closest('label').style.opacity = habilitado ?'1' : '.55';
+            horasTeste.required = habilitado;
+            const aguardando = statusCliente.value === 'pendente' && /teste/i.test(planoLegado.value);
+            dataInicio.required = !aguardando;
+            dataVencimento.required = !aguardando;
+            dataInicio.disabled = aguardando;
+            dataVencimento.disabled = aguardando;
+            if (aguardando) { dataInicio.value = ''; dataVencimento.value = ''; }
             if (!habilitado) horasTeste.value = '';
         }
 
-        statusCliente?.addEventListener('change', atualizarHorasTeste);
+        statusCliente?.addEventListener('change', () => {
+            if (statusCliente.value === 'teste') {
+                const planoTeste = planos.find(item => /teste/i.test(item.nome));
+                if (planoTeste) { tipoPlano.value = planoTeste.id; planoLegado.value = planoTeste.nome; diasContrato.value = planoTeste.dias || 0; valorPlano.value = '0,00'; }
+                const agora = new Date();
+                dataInicio.value = new Date(agora.getTime() - agora.getTimezoneOffset()*60000).toISOString().slice(0,16);
+                dataVencimento.value = '';
+                horasTeste.value = '';
+            }
+            atualizarHorasTeste();
+        });
         horasTeste?.addEventListener('change', calcularVencimento);
         atualizarHorasTeste();
 
@@ -9242,6 +9265,7 @@ function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: nul
         const liberado = item.status === 'beneficio_liberado';
         const situacao = liberado ? `${item.beneficioMeses} mês(es) creditado(s)`
             : item.status === 'cancelada' ? 'Cancelada'
+                : item.status === 'aguardando_assinatura' ? 'Aguardando primeira assinatura com plano ativo'
                 : !item.campanhaAtiva ? 'Aguardando ativação desta campanha'
                     : Number(item.pagamentosValidos) >= regra.pagamentos ? 'Renovações cumpridas; aguardando grupo da campanha'
                         : 'Aguardando renovações';
@@ -9251,7 +9275,7 @@ function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: nul
             <td data-label="Renovações">${escapar(item.pagamentosValidos)} / ${escapar(regra?.pagamentos || 3)}</td>
             <td data-label="Situação">${escapar(situacao)}${item.creditoId ?`<div class="helper">Crédito #${escapar(item.creditoId)} · ${escapar(item.beneficioLiberadoEm)}</div>` : ''}</td>
             <td data-label="Ações"><a class="button secondary" href="/clientes/${escapar(item.indicadorClienteId)}/editar">Usar bônus</a>
-                ${item.status === 'ativa' ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação?');"><button class="button secondary" type="submit">Cancelar</button></form>` : ''}</td></tr>`;
+                ${['ativa', 'aguardando_assinatura'].includes(item.status) ?`<form method="post" action="/indicacoes/${escapar(item.id)}/cancelar" onsubmit="return confirm('Cancelar esta indicação?');"><button class="button secondary" type="submit">Cancelar</button></form>` : ''}</td></tr>`;
     }).join('');
     return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Crédito automático, uso do bônus e aviso ao cliente manuais.</div></div><a class="button secondary" href="/modelos">Campanhas e mensagens</a></section>
         <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${escapar(campanha?.titulo || 'Nenhuma campanha de indicação ativa')}</h2>

@@ -117,3 +117,5 @@ que houver acesso ao GitHub; se a API estiver indisponivel ou limitada,
 informar claramente que a confirmacao remota ficou pendente.
 
 14. A integracao Lume Player e opt-in por configuracao privada no DATA_DIR da instalacao administradora. Nunca incluir .lume-whatsapp.json ou .lume-whatsapp-envios em Git ou pacotes, nem habilitar em clientes comerciais. Validar com servico simulado; envios reais somente para destinatarios autorizados.
+
+15. Desenvolver e criar arquivos auxiliares do Julian Play em D:\julian-play. Usar .codex para rascunhos locais que nao devem integrar Git nem pacotes. Nao criar novas copias de desenvolvimento no C:. Manter dados e chaves privadas nos DATA_DIR isolados, fora dos artefatos de entrega.
