@@ -248,5 +248,13 @@ test('teste pendente aguarda horas e recalcular funciona no teste e no plano', a
     await page.locator('#statusCliente').selectOption('ativo');
     await page.locator('#dataInicio').fill('2026-10-19T10:00');
     await page.locator('#recalcularVencimento').click();
+    await page.evaluate(() => {
+        const campo = document.createElement('input');
+        campo.name = 'verificacao-autofill-dinamico';
+        document.querySelector('form.client-form').append(campo);
+    });
+    await expect(page.locator('[name="verificacao-autofill-dinamico"]')).toHaveAttribute('data-autofill-protegido', 'true');
+    await expect(page.locator('#diasContrato')).toHaveValue('30');
+    await expect(page.locator('#valorPlano')).not.toHaveValue('');
     await expect(page.locator('#dataVencimento')).toHaveValue('2026-11-19T10:00');
 });

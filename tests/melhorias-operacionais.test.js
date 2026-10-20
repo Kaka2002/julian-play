@@ -488,7 +488,7 @@ test('filtros de renovacao separam hoje, tres dias e teste vencido', () => {
         const iso=(dias)=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+dias);return d.toISOString().slice(0,19)};
         await c.salvarCliente({nome:'Vence Hoje',telefone:'5511999998301',plano:'Mensal',dataVencimento:iso(0),status:'ativo'});
         await c.salvarCliente({nome:'Vence Em Dois',telefone:'5511999998302',plano:'Mensal',dataVencimento:iso(2),status:'ativo'});
-        await c.salvarCliente({nome:'Teste Vencido',telefone:'5511999998303',plano:'Teste Grátis',dataVencimento:iso(-2),status:'teste'});
+        await c.salvarCliente({nome:'Teste Vencido',telefone:'5511999998303',plano:'Teste Grátis',dataInicio:iso(-3),dataVencimento:iso(-2),horasTeste:'24 horas',status:'expirado'});
         const nomes=async renovacao=>(await c.listarClientes({renovacao})).map(x=>x.nome).sort();
         process.stdout.write(JSON.stringify({hoje:await nomes('hoje'),tres:await nomes('tres_dias'),teste:await nomes('teste_vencido')}));process.exit(0);
     })().catch(e=>{console.error(e);process.exit(1)})`);

@@ -79,7 +79,7 @@ test('falha financeira reverte saldo e consumo das origens na mesma transação'
 
 test('crédito automático cria uma única origem com o indicado e catálogo comercial exclui bônus', () => isolated(`
  const c=await criar(0);
- const indicado=await clientes.salvarCliente({nome:'Indicado',telefone:'5511999997777',status:'ativo'});
+ const indicado=await clientes.salvarCliente({nome:'Indicado',telefone:'5511999997777',status:'ativo',plano:'Mensal',tipoPlanoId:String(mensal.id),valorPlano:'35,00',diasContrato:30});
  const svc=require('./services/indicacoesService');
  await svc.registrarIndicacao({indicadorClienteId:c.id,indicadoClienteId:indicado.id});
  await run("INSERT INTO cliente_pagamentos (clienteId,plano,formaPagamento,valorTotal) VALUES (?,'Mensal','PIX','35,00')",[indicado.id]);

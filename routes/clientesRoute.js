@@ -6989,18 +6989,24 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             return (limpo.match(/.{1,2}/g) || []).join(':');
         }
 
+        function definirCampoCalculado(campo, valor) {
+            campo.value = valor;
+            // Valor derivado de uma escolha no painel, nao de autofill externo.
+            campo.dataset.usuarioDigitou = 'true';
+        }
+
         function atualizarPlano() {
             const plano = planos.find(item => item.id === tipoPlano.value);
             if (!plano) return;
-            diasContrato.value = plano.dias || '';
+            definirCampoCalculado(diasContrato, plano.dias || '');
             if (plano.mesesBonus) {
                 const vencimentoAtual = new Date(vencimentoAntesDoBonus);
                 const agora = new Date();
                 const base = !Number.isNaN(vencimentoAtual.getTime()) && vencimentoAtual > agora ? vencimentoAtual : agora;
-                dataInicio.value = new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                definirCampoCalculado(dataInicio, new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
                 statusCliente.value = 'ativo';
             }
-            if (!plano.mesesBonus) valorPlano.value = formatarMoedaCampo(plano.valor || valorPlano.value || '');
+            if (!plano.mesesBonus) definirCampoCalculado(valorPlano, formatarMoedaCampo(plano.valor || valorPlano.value || ''));
             planoLegado.value = plano.nome || '';
             if ((plano.nome || '').toLowerCase().includes('teste')) {
                 if (statusCliente.value !== 'teste') statusCliente.value = 'pendente';
@@ -7053,7 +7059,7 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
                 }
             }
 
-            dataVencimento.value = new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            definirCampoCalculado(dataVencimento, new Date(data.getTime() - data.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
         }
 
         tipoPlano?.addEventListener('change', atualizarPlano);
@@ -7087,17 +7093,17 @@ function formularioCliente(cliente = {}, listas = {}, opcoesFormulario = {}) {
             dataVencimento.required = !aguardando;
             dataInicio.disabled = aguardando;
             dataVencimento.disabled = aguardando;
-            if (aguardando) { dataInicio.value = ''; dataVencimento.value = ''; }
+            if (aguardando) { definirCampoCalculado(dataInicio, ''); definirCampoCalculado(dataVencimento, ''); }
             if (!habilitado) horasTeste.value = '';
         }
 
         statusCliente?.addEventListener('change', () => {
             if (statusCliente.value === 'teste') {
                 const planoTeste = planos.find(item => /teste/i.test(item.nome));
-                if (planoTeste) { tipoPlano.value = planoTeste.id; planoLegado.value = planoTeste.nome; diasContrato.value = planoTeste.dias || 0; valorPlano.value = '0,00'; }
+                if (planoTeste) { tipoPlano.value = planoTeste.id; planoLegado.value = planoTeste.nome; definirCampoCalculado(diasContrato, planoTeste.dias || 0); definirCampoCalculado(valorPlano, '0,00'); }
                 const agora = new Date();
-                dataInicio.value = new Date(agora.getTime() - agora.getTimezoneOffset()*60000).toISOString().slice(0,16);
-                dataVencimento.value = '';
+                definirCampoCalculado(dataInicio, new Date(agora.getTime() - agora.getTimezoneOffset()*60000).toISOString().slice(0,16));
+                definirCampoCalculado(dataVencimento, '');
                 horasTeste.value = '';
             }
             atualizarHorasTeste();

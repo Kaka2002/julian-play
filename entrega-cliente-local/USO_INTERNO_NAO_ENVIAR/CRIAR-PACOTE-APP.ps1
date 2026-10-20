@@ -15,6 +15,9 @@ function DeveIgnorarCaminho($item) {
     $pastasIgnoradas = @(
         '.git',
         'node_modules',
+        'test-results',
+        'playwright-report',
+        'outputs',
         '.wwebjs_auth',
         '.wwebjs_auth_backup',
         '.wwebjs_cache',
@@ -32,13 +35,19 @@ function DeveIgnorarCaminho($item) {
         if ($parte -like '.wwebjs_cache*') { return $true }
     }
 
+    if ($nome -like '*.zip' -or $nome -like '*.zip.sha256') { return $true }
+    if ($nome -like '.env*') { return $true }
+    if ($nome -like 'ambiente-seguro*.json') { return $true }
+    if ($nome -like '*private*key*.pem') { return $true }
+    if ($relativo -match '^database[\\/]conversas\.json$') { return $true }
+
     if ($nome -like '*.db') { return $true }
     if ($nome -like '*.sqlite') { return $true }
     if ($nome -like '*.sqlite3') { return $true }
     if ($nome -like '*.log') { return $true }
     if ($nome -like '.julian-*-install.json') { return $true }
     if ($nome -like '.lume-whatsapp*') { return $true }
-    if ($nome -eq 'AGENTS.md') { return $true }
+    if ($nome -in @('AGENTS.md', 'CONTEXTO-PARA-CODEX.md', 'AUDITORIA-MELHORIAS.md')) { return $true }
 
     return $false
 }

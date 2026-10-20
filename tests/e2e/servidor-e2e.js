@@ -35,6 +35,9 @@ async function executar() {
         tipoPlanoId: planos.find(p => p.nome === 'Mensal').id, plano: 'Mensal', diasContrato: 30,
         valorPlano: '35,00', bonusMeses: 3, dataInicio: '2098-12-01T23:59', dataVencimento: '2099-01-01T23:59'
     });
+    // Acoes e creditos continuam reais; apenas o disparo periodico e isolado.
+    // Evita transacoes de fundo concorrendo com login e formularios do E2E.
+    require('../../services/indicacoesService').iniciarCreditosIndicacoes = () => {};
     require('../../bot');
 }
 
