@@ -39,6 +39,39 @@ async function criarRendimentoFinanceiro(dados = {}, responsavel = '') {
     await registrarEventoSistema('rendimento_financeiro', 'info', 'Rendimento financeiro registrado.', { rendimentoId: resultado.id, descricao: rendimento.descricao, valor: rendimento.valor, responsavel: limparTexto(responsavel, 120) });
     return buscarRendimentoFinanceiroPorId(resultado.id);
 }
+async function criarRendimentoMercadoPagoSeAusente(dados, identificador, arquivo, anteriores = []) {
+    const rendimento = validarDados(dados);
+    const ids = [...new Set([String(identificador), ...anteriores.map(String)])];
+    if (!ids[0] || !arquivo) throw new Error('Importacao sem identificador ou relatorio.');
+    if (await buscarUm('SELECT id FROM rendimentos_mercado_pago_importados WHERE identificadorExterno=?', [ids[0]])) return null;
+    const sqlite3 = require('sqlite3');
+    const conexao = await new Promise((ok, no) => {
+        const c = new sqlite3.Database(db.dbPath, sqlite3.OPEN_READWRITE, e => e ? no(e) : ok(c));
+    });
+    conexao.configure('busyTimeout', 5000);
+    const run = (sql, params=[]) => new Promise((ok,no) => conexao.run(sql,params,function(e){ e ? no(e) : ok({id:this.lastID,changes:this.changes}); }));
+    const get = (sql, params=[]) => new Promise((ok,no) => conexao.get(sql,params,(e,row)=>e?no(e):ok(row)));
+    let aberta = false;
+    try {
+        await run('BEGIN IMMEDIATE'); aberta = true;
+        const existente = await get(`SELECT rendimentoId FROM rendimentos_mercado_pago_importados WHERE identificadorExterno IN (${ids.map(()=>'?').join(',')}) LIMIT 1`,ids);
+        if (existente) {
+            // Identifica registros antigos sem SOURCE_ID sem adicionar saldo novamente.
+            await run('INSERT OR IGNORE INTO rendimentos_mercado_pago_importados(identificadorExterno,rendimentoId,arquivoRelatorio) VALUES(?,?,?)',[ids[0],existente.rendimentoId,arquivo]);
+            await run('COMMIT'); aberta=false; return null;
+        }
+        const novo = await run('INSERT INTO rendimentos_financeiros(descricao,valor,dataRecebimento,instituicao,observacoes) VALUES(?,?,?,?,?)',[rendimento.descricao,rendimento.valor,rendimento.dataRecebimento,rendimento.instituicao,rendimento.observacoes]);
+        await run('INSERT INTO rendimentos_mercado_pago_importados(identificadorExterno,rendimentoId,arquivoRelatorio) VALUES(?,?,?)',[ids[0],novo.id,arquivo]);
+        const contexto = require('./observabilidadeService').obterContextoObservabilidade();
+        await run('INSERT INTO eventos_sistema(tipo,nivel,mensagem,detalhes) VALUES(?,?,?,?)',['rendimento_financeiro','info','Rendimento financeiro registrado.',JSON.stringify({rendimentoId:novo.id,descricao:rendimento.descricao,valor:rendimento.valor,responsavel:'importação Mercado Pago',correlationId:contexto.correlationId||''})]);
+        await run('COMMIT'); aberta=false;
+        return {id:novo.id,...rendimento};
+    } catch (erro) {
+        if(aberta) await run('ROLLBACK');
+        throw erro;
+    } finally { await new Promise(ok=>conexao.close(ok)); }
+}
+
 async function atualizarRendimentoFinanceiro(id, dados = {}, responsavel = '') {
     const rendimento = validarDados(dados); const resultado = await executar('UPDATE rendimentos_financeiros SET descricao = ?, valor = ?, dataRecebimento = ?, instituicao = ?, observacoes = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND (excluidoEm IS NULL OR excluidoEm = \'\')', [rendimento.descricao, rendimento.valor, rendimento.dataRecebimento, rendimento.instituicao, rendimento.observacoes, Number(id)]);
     if (!resultado.changes) throw new Error('Rendimento não encontrado ou já removido.');
@@ -49,4 +82,4 @@ async function removerRendimentoFinanceiro(id, responsavel = '') {
     if (!resultado.changes) throw new Error('Rendimento não encontrado ou já removido.');
     await registrarEventoSistema('rendimento_financeiro', 'alerta', 'Rendimento financeiro removido do resumo.', { rendimentoId: Number(id), responsavel: limparTexto(responsavel, 120) });
 }
-module.exports = { listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId, criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro };
+module.exports = { criarRendimentoMercadoPagoSeAusente, listarRendimentosFinanceiros, buscarRendimentoFinanceiroPorId, criarRendimentoFinanceiro, atualizarRendimentoFinanceiro, removerRendimentoFinanceiro };

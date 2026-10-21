@@ -87,7 +87,7 @@ function saldoDoRelatorio(linhas, relatorio) {
     const credito = Number(totais[0].NET_CREDIT_AMOUNT);
     const debito = Number(totais[0].NET_DEBIT_AMOUNT);
     if (totais[0].NET_CREDIT_AMOUNT === '' || totais[0].NET_DEBIT_AMOUNT === '' || !Number.isFinite(credito) || !Number.isFinite(debito)) return null;
-    return { valor: credito - debito, inicio: relatorio.begin_date, fim: relatorio.end_date, geradoEm: relatorio.generation_date || relatorio.last_modified || '', arquivo: relatorio.file_name, consultadoEm: new Date().toISOString() };
+    return { valor: credito - debito, inicio: relatorio.begin_date, fim: relatorio.end_date, geradoEm: relatorio.generation_date || relatorio.date_created || relatorio.last_modified || '', arquivo: relatorio.file_name, consultadoEm: new Date().toISOString() };
 }
 
 async function obterSaldoRelatorioMercadoPago() {
@@ -137,26 +137,26 @@ function configuracaoRelatorioAusente(erro) {
 function dataRelatorio(item) {
     const bruto = String(item.DATE || item.DATE_CREATED || item.RELEASE_DATE || '').trim();
     const data = new Date(bruto);
-    return Number.isNaN(data.getTime()) ?new Date().toISOString().slice(0, 10) :data.toISOString().slice(0, 10);
+    return Number.isNaN(data.getTime()) ? diaSaoPaulo() : diaSaoPaulo(data);
 }
 
-function diaSaoPaulo() {
+function diaSaoPaulo(data = new Date()) {
     const partes = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date()).reduce((resultado, parte) => {
+    }).formatToParts(data).reduce((resultado, parte) => {
         resultado[parte.type] = parte.value;
         return resultado;
     }, {});
     return `${partes.year}-${partes.month}-${partes.day}`;
 }
 
-function intervaloRelatorioDoDia(data = diaSaoPaulo()) {
+function intervaloRelatorioDoDia(data = diaSaoPaulo(), fim = new Date()) {
     return {
         // A API Mercado Pago aceita o UTC do exemplo oficial somente até os
         // segundos. Com milissegundos ela responde, de modo enganoso, que a
         // data obrigatória não foi enviada.
         begin_date: dataUtcSemMilissegundos(`${data}T00:00:00-03:00`),
-        end_date: dataUtcSemMilissegundos(new Date())
+        end_date: dataUtcSemMilissegundos(fim)
     };
 }
 
@@ -165,19 +165,39 @@ function dataUtcSemMilissegundos(valor) {
 }
 
 function relatorioIncluiDia(relatorio = {}, data = diaSaoPaulo()) {
-    const inicio = String(relatorio.begin_date || '').slice(0, 10);
-    const fim = String(relatorio.end_date || '').slice(0, 10);
-    return Boolean(inicio && fim && inicio <= data && fim >= data);
+    const inicio = Date.parse(relatorio.begin_date);
+    const fim = Date.parse(relatorio.end_date);
+    const inicioDia = Date.parse(`${data}T00:00:00-03:00`);
+    return Number.isFinite(inicio) && Number.isFinite(fim) && Number.isFinite(inicioDia)
+        && inicio < inicioDia + 86400000 && fim >= inicioDia;
 }
 
-async function solicitarRelatorioDoDia(accessToken, config, relatorios = []) {
+function periodoSincronizacaoRendimentos(opcoes = {}) {
+    const hoje = diaSaoPaulo();
+    const mes = String(opcoes.mes || '').trim();
+    if (mes && !/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)) throw new Error('Informe um mes valido para sincronizar.');
+    if (mes && mes > hoje.slice(0, 7)) throw new Error('Nao e possivel sincronizar um mes futuro.');
+    // Inclui o mes do dia anterior na virada do mes para recuperar creditos tardios.
+    const ontem = new Date(Date.parse(`${hoje}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+    const inicio = `${mes || ontem.slice(0, 7)}-01`;
+    let fim = new Date();
+    if (mes && mes < hoje.slice(0, 7)) {
+        const proximo = new Date(`${mes}-01T03:00:00Z`);
+        proximo.setUTCMonth(proximo.getUTCMonth() + 1);
+        fim = new Date(proximo.getTime() - 1000);
+    }
+    return intervaloRelatorioDoDia(inicio, fim);
+}
+
+async function solicitarRelatorioDoDia(accessToken, config, relatorios = [], opcoes = {}) {
     const hoje = diaSaoPaulo();
     const pendente = relatorioManualPendente(config);
     // Um relatório agendado pode ter o intervalo do dia, mas ter sido gerado
     // antes de um rendimento recente. Por isso, a primeira consulta do dia
     // sempre solicita seu próprio arquivo e acompanha esse arquivo específico.
-    if (pendente?.dia === hoje) return { solicitado: false, pendente };
-    const intervalo = intervaloRelatorioDoDia(hoje);
+    const intervalo = periodoSincronizacaoRendimentos(opcoes);
+    const mesmoPeriodo = pendente?.inicio === intervalo.begin_date && pendente?.dia === hoje;
+    if (pendente && (!relatorioManualFoiProcessado(relatorios, pendente) || (!opcoes.atualizarHistorico && mesmoPeriodo))) return { solicitado: false, pendente };
     const resposta = await requisicaoMercadoPago('/v1/account/release_report', accessToken, {
         method: 'POST',
         body: JSON.stringify(intervalo)
@@ -185,8 +205,11 @@ async function solicitarRelatorioDoDia(accessToken, config, relatorios = []) {
     await salvarConfiguracao('ultimaSolicitacaoRelatorioRendimentosMP', hoje);
     const solicitacao = {
         dia: hoje,
+        inicio: intervalo.begin_date,
+        fim: intervalo.end_date,
         arquivo: String(resposta?.file_name || resposta?.fileName || ''),
         tarefa: String(resposta?.id || resposta?.report_id || ''),
+        acompanharTarefa: Boolean(resposta?.id || resposta?.report_id),
         solicitadoEm: new Date().toISOString()
     };
     await salvarConfiguracao('relatorioManualRendimentosMPPendente', JSON.stringify(solicitacao));
@@ -204,18 +227,22 @@ function relatorioManualPendente(config = {}) {
 
 function relatorioManualFoiProcessado(relatorios = [], pendente = null) {
     if (!pendente?.dia) return true;
+    if (pendente.acompanharTarefa && !pendente.arquivo) return false;
     return relatorios.some(relatorio => {
         if (!relatorioDisponivel(relatorio) || !relatorio.file_name) return false;
         if (pendente.arquivo) return relatorio.file_name === pendente.arquivo;
         // O identificador da tarefa é diferente do identificador do relatório
         // retornado na listagem. Por isso, a confirmação é feita pelo período
         // solicitado e pelo momento de geração do arquivo, não pelo ID da tarefa.
-        const geradoEm = new Date(relatorio.generation_date || relatorio.last_modified || 0).getTime();
+        const geradoEm = new Date(relatorio.generation_date || relatorio.date_created || relatorio.last_modified || 0).getTime();
         const solicitadoEm = new Date(pendente.solicitadoEm || 0).getTime();
-        return relatorioIncluiDia(relatorio, pendente.dia)
+        const incluiPeriodo = pendente.inicio && pendente.fim
+            ? Date.parse(relatorio.begin_date) <= Date.parse(pendente.inicio) && Date.parse(relatorio.end_date) >= Date.parse(pendente.fim)
+            : relatorioIncluiDia(relatorio, pendente.dia);
+        return incluiPeriodo
             && Number.isFinite(geradoEm)
             && Number.isFinite(solicitadoEm)
-            && geradoEm >= solicitadoEm;
+            && geradoEm >= solicitadoEm - 1000;
     });
 }
 
@@ -273,28 +300,50 @@ function movimentosDoRelatorio(linhas, arquivo) {
     }).filter(item => item.tipo !== 'subtotal' && item.tipo !== 'total' && item.tipo !== 'available_balance' && (item.credito || item.debito));
 }
 
-async function importarRendimentosMercadoPago(opcoes = {}) {
+let importacaoRendimentosEmAndamento = null;
+function importarRendimentosMercadoPago(opcoes = {}) {
+    if (importacaoRendimentosEmAndamento) return importacaoRendimentosEmAndamento;
+    importacaoRendimentosEmAndamento = executarImportacaoRendimentosMercadoPago(opcoes)
+        .finally(() => { importacaoRendimentosEmAndamento = null; });
+    return importacaoRendimentosEmAndamento;
+}
+
+async function atualizarArquivoRelatorioPendente(accessToken, config) {
+    const pendente = relatorioManualPendente(config);
+    if (!pendente?.acompanharTarefa || !pendente.tarefa || pendente.arquivo) return;
+    const tarefa = await requisicaoMercadoPago(`/v1/account/release_report/task/${encodeURIComponent(pendente.tarefa)}`, accessToken);
+    if (['failed', 'error', 'cancelled', 'canceled'].includes(String(tarefa.status || '').toLowerCase())) {
+        throw new Error('Mercado Pago nao concluiu o relatorio solicitado. A pendencia foi preservada para verificacao.');
+    }
+    if (!tarefa.file_name) return;
+    pendente.arquivo = String(tarefa.file_name);
+    config.relatorioManualRendimentosMPPendente = JSON.stringify(pendente);
+    await salvarConfiguracao('relatorioManualRendimentosMPPendente', config.relatorioManualRendimentosMPPendente);
+}
+
+async function executarImportacaoRendimentosMercadoPago(opcoes = {}) {
     const config = await obterConfiguracoes();
     const accessToken = String(config.mercadoPagoAccessToken || '').trim();
     if (!accessToken) throw new Error('Configure primeiro o Access Token do Mercado Pago em Manutenção.');
+    await atualizarArquivoRelatorioPendente(accessToken, config);
     if (!opcoes.somenteDisponiveis) await garantirRelatorioMercadoPago(accessToken);
     const lista = await requisicaoMercadoPago('/v1/account/release_report/list', accessToken);
     const relatorios = Array.isArray(lista) ?lista : [];
     const solicitacao = opcoes.somenteDisponiveis
         ? { solicitado: false, pendente: relatorioManualPendente(config) }
-        : await solicitarRelatorioDoDia(accessToken, config, relatorios);
+        : await solicitarRelatorioDoDia(accessToken, config, relatorios, opcoes);
     const solicitadoHoje = solicitacao.solicitado;
     const relatorioPendente = solicitacao.pendente;
     const relatoriosProcessados = relatorios
         .filter(item => relatorioDisponivel(item) && item.file_name)
-        .sort((a, b) => new Date(b.generation_date || b.last_modified || 0) - new Date(a.generation_date || a.last_modified || 0));
+        .sort((a, b) => new Date(a.generation_date || a.date_created || a.last_modified || 0) - new Date(b.generation_date || b.date_created || b.last_modified || 0));
     if (!relatoriosProcessados.length) {
         return { arquivo: '', importados: 0, movimentosImportados: 0, pendente: true, solicitadoHoje };
     }
-    const { criarRendimentoFinanceiro } = require('./rendimentosFinanceirosService');
+    const { criarRendimentoMercadoPagoSeAusente } = require('./rendimentosFinanceirosService');
     let importados = 0; let movimentosImportados = 0;
     for (const relatorio of relatoriosProcessados) {
-        const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${accessToken}` } });
+        const resposta = await fetch(`https://api.mercadopago.com/v1/account/release_report/${encodeURIComponent(relatorio.file_name)}`, { headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000) });
         if (!resposta.ok) throw new Error(`Mercado Pago: não foi possível baixar o relatório (${resposta.status}).`);
         const linhas = csvLinhas(await resposta.text());
         await guardarSaldoRelatorio(linhas, relatorio);
@@ -302,28 +351,27 @@ async function importarRendimentosMercadoPago(opcoes = {}) {
         for (const movimento of movimentos) {
             const existe = await buscarUm('SELECT id FROM movimentos_mercado_pago WHERE identificadorExterno = ?', [movimento.identificador]);
             if (existe) continue;
-            await executar(`INSERT INTO movimentos_mercado_pago (identificadorExterno, dataMovimento, tipoRegistro, descricao, credito, debito, arquivoRelatorio)
+            const gravado = await executar(`INSERT OR IGNORE INTO movimentos_mercado_pago (identificadorExterno, dataMovimento, tipoRegistro, descricao, credito, debito, arquivoRelatorio)
                 VALUES (?, ?, ?, ?, ?, ?, ?)`, [movimento.identificador, movimento.data, movimento.tipo, movimento.descricao, moedaTexto(movimento.credito), moedaTexto(movimento.debito), relatorio.file_name]);
-            movimentosImportados += 1;
+            movimentosImportados += gravado.changes;
         }
         for (const item of linhas) {
             if (!ehRendimentoMercadoPago(item)) continue;
             const valor = valorRelatorio(item); if (valor <= 0) continue;
-            const identificador = String(item.SOURCE_ID || item.OPERATION_ID || item.TRANSACTION_ID || `${relatorio.file_name}:${item.DATE_CREATED || item.DATE || ''}:${valor}`);
-            const existe = await buscarUm('SELECT id FROM rendimentos_mercado_pago_importados WHERE identificadorExterno = ?', [identificador]);
-            if (existe) continue;
-            const rendimento = await criarRendimentoFinanceiro({ descricao: 'Rendimento Mercado Pago', valor: moedaTexto(valor), dataRecebimento: dataRelatorio(item), instituicao: 'Mercado Pago', observacoes: `Importado do relatório ${relatorio.file_name}. Operação: ${identificador}` }, 'importação Mercado Pago');
-            await executar('INSERT INTO rendimentos_mercado_pago_importados (identificadorExterno, rendimentoId, arquivoRelatorio) VALUES (?, ?, ?)', [identificador, rendimento.id, relatorio.file_name]);
-            importados += 1;
+            const anterior = `${relatorio.file_name}:${item.DATE_CREATED || item.DATE || ''}:${valor}`;
+            const identidade = JSON.stringify(Object.keys(item).sort().map(chave => [chave, String(item[chave]).trim()]));
+            const identificador = String(item.SOURCE_ID || item.OPERATION_ID || item.TRANSACTION_ID || `sem-id:${crypto.createHash('sha256').update(identidade).digest('hex')}`);
+            const rendimento = await criarRendimentoMercadoPagoSeAusente({ descricao: 'Rendimento Mercado Pago', valor: moedaTexto(valor), dataRecebimento: dataRelatorio(item), instituicao: 'Mercado Pago', observacoes: `Importado do relatório ${relatorio.file_name}. Operação: ${identificador}` }, identificador, relatorio.file_name, [anterior]);
+            if (rendimento) importados += 1;
         }
     }
     const hoje = diaSaoPaulo();
     const manualProcessado = relatorioManualFoiProcessado(relatorios, relatorioPendente);
     const pendente = solicitadoHoje || !manualProcessado;
-    if (manualProcessado && relatorioPendente?.dia) {
+    if (!solicitadoHoje && manualProcessado && relatorioPendente?.dia) {
         await salvarConfiguracao('relatorioManualRendimentosMPPendente', '');
     }
-    const arquivo = relatoriosProcessados[0]?.file_name || '';
+    const arquivo = relatoriosProcessados.at(-1)?.file_name || '';
     await registrarEventoSistema('rendimento_mercado_pago', 'info', 'Extrato e rendimentos Mercado Pago sincronizados.', { arquivo, importados, movimentosImportados, pendente });
     return { arquivo, importados, movimentosImportados, pendente, solicitadoHoje };
 }

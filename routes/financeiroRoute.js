@@ -170,12 +170,11 @@ function criarFinanceiroRoute(deps = {}) {
     router.post('/financeiro/rendimentos/sincronizar-mercado-pago', async (req, res, next) => {
         const filtros = filtrosDespesas(req.body);
         try {
-            const resultado = await importarRendimentosMercadoPago();
-            const mensagem = resultado.importados
-                ?`${resultado.importados} rendimento(s) importado(s) do Mercado Pago.`
-                :resultado.pendente
-                    ?'O relatório do dia foi solicitado ao Mercado Pago. O sistema continuará consultando automaticamente até ele ficar pronto.'
-                    :'Nenhum rendimento novo encontrado nos relatórios Mercado Pago.';
+            const resultado = await importarRendimentosMercadoPago({ mes: filtros.mes, atualizarHistorico: true });
+            let mensagem = resultado.importados
+                ? `${resultado.importados} rendimento(s) importado(s) do Mercado Pago.`
+                : 'Nenhum rendimento novo encontrado nos relatórios disponíveis do Mercado Pago.';
+            if (resultado.pendente) mensagem += ' A atualização do histórico está em processamento no Mercado Pago. O sistema continuará consultando e importará somente os rendimentos ainda não registrados.';
             return res.redirect(urlRendimentos(filtros, mensagem));
         } catch (err) { if (err?.message) return res.redirect(urlRendimentos(filtros, err.message)); return next(err); }
     });

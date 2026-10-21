@@ -195,7 +195,7 @@ function deveSincronizarRendimentosMercadoPago(config = {}, agora = {}, iniciali
             String(agora.hora || '') >= HORA_SINCRONISMO_RENDIMENTOS_MP
             && (
             String(config.ultimoSincronismoRendimentosMP || '') !== String(agora.data || '')
-            || String(config.versaoSincronismoRendimentosMP || '') !== 'relatorio-do-dia-v2'
+            || String(config.versaoSincronismoRendimentosMP || '') !== 'historico-mensal-v3'
             )
         ));
 }
@@ -561,7 +561,7 @@ async function executarMonitoramento(controles = {}) {
                 verificarRendimentosNaInicializacao = false;
                 if (!resultadoRendimentos.pendente && !somenteDisponiveis) {
                     await salvarConfiguracao('ultimoSincronismoRendimentosMP', diaAtual);
-                    await salvarConfiguracao('versaoSincronismoRendimentosMP', 'relatorio-do-dia-v2');
+                    await salvarConfiguracao('versaoSincronismoRendimentosMP', 'historico-mensal-v3');
                 }
             } catch (erroRendimentos) {
                 await registrarEventoSistema('rendimento_mercado_pago', 'alerta', `Sincronização diária de rendimentos Mercado Pago pendente: ${erroRendimentos.message}`, { data: diaAtual });
