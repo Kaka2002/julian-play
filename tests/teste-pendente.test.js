@@ -18,7 +18,7 @@ test('cadastro pendente e suspenso bloqueiam avisos; indicacao aguarda plano ati
  const indicador=await c.salvarCliente({nome:'Indicador teste',telefone:'5511900000001',status:'ativo',plano:'Mensal',valorPlano:'35,00'});
  const novo=await c.salvarCliente({nome:'Pendente teste',telefone:'5511900000002',status:'pendente',plano:'Teste Grátis',dataInicio:'2020-01-01T10:00',dataVencimento:'2020-01-02T10:00'});
  assert.equal(novo.dataInicio,'');assert.equal(novo.dataVencimento,'');
- const lista=await m.listarModelos();await m.salvarModelo({...lista.find(x=>x.chave==='campanha_amizade_presente'),ativo:'1'});
+ const lista=await m.listarModelos();await m.salvarModelo({...lista.find(x=>x.chave==='campanha_amizade_presente'),ativo:'1',campanhaValidadeEm:'2099-12-31T23:59'});
  await i.registrarIndicacao({indicadorClienteId:indicador.id,indicadoClienteId:novo.id});
  assert.equal((await i.listarIndicacoes()).itens[0].status,'aguardando_assinatura');
  assert.equal((await i.listarResumoIndicacoesPainel()).length,0);

@@ -47,6 +47,14 @@ async function executar() {
         nome:'Lead E2E Layout',telefone:'5511966665555',status:'em_conversa',origem:'Teste isolado',
         observacoes:'Aguardar retorno do interessado e conferir pagamento antes da assinatura. '.repeat(8)+'ReferenciaSemEspacos'.repeat(15)
     });
+    await require('../../services/appsDispositivos').salvarPainel({nome:'Aura E2E isolado',tipoIntegracao:'sigma_reseller',apiUrl:'https://auratvpainel.com/api/reseller-api/v1',apiToken:'sigma-token-e2e-ficticio',renovacaoAutomatica:'0'});
+    const sigma=require('../../services/sigmaResellerService');
+    const criarSigma=sigma.criarClienteSigma;
+    sigma.criarClienteSigma=(painel)=>criarSigma(painel,async(url,op)=>{
+        if(painel.apiToken!=='sigma-token-e2e-ficticio'||op.method!=='GET')throw new Error('E2E Sigma isolado recusou a chamada');
+        const data=url.endsWith('/me')?{id:'revenda-e2e',creditsBalance:7}:url.includes('/customers/by-username/')?{id:'assinatura-e2e',username:'assinatura-ficticia-e2e',status:'ACTIVE',connections:2,expires_at:'2099-01-01T23:59:59Z',password:'SEGREDO-NAO-EXIBIR'}:[{id:'catalogo-e2e',name:'Mensal ficticio',connections:2,credits:1}];
+        return new Response(JSON.stringify({data,meta:{last_page:1}}),{headers:{'content-type':'application/json'}});
+    });
     // Acoes e creditos continuam reais; apenas o disparo periodico e isolado.
     // Evita transacoes de fundo concorrendo com login e formularios do E2E.
     require('../../services/indicacoesService').iniciarCreditosIndicacoes = () => {};

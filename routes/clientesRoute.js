@@ -4911,6 +4911,7 @@ async function enviarMensagemWhatsAppComFallback(client, telefone, mensagem, des
         } catch (err) {
             ultimoErro = err;
             console.warn(`[clientes] ${descricao} falhou para ${destino}: ${err.message}`);
+            if(opcoes.campanhaEdicaoId)throw err;
         }
     }
 
@@ -4942,6 +4943,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
             const envio = await aguardarComTimeout(
                 enfileirarEnvio(
                     async () => {
+                        if(opcoes.campanhaEdicaoId)await require('../services/campanhaValidadeService').exigirCampanhaAtiva(opcoes.campanhaEdicaoId);
                         if (opcoes.simularDigitacao) {
                             await simularDigitacaoDestino(
                                 client,
@@ -4951,6 +4953,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                             );
                         }
 
+                        if(opcoes.campanhaEdicaoId)await require('../services/campanhaValidadeService').exigirCampanhaAtiva(opcoes.campanhaEdicaoId);
                         return client.sendMessage(destino, media, {
                             caption: legenda,
                             linkPreview: false,
@@ -4961,7 +4964,7 @@ async function enviarImagemWhatsAppComFallback(client, telefone, arquivoImagem, 
                     {
                         ...(opcoes.fila || {}),
                         proativo: true,
-                        persistencia: {
+                        persistencia: opcoes.campanhaEdicaoId ? null : {
                             tipo: 'midia',
                             destino,
                             midia: { mimetype: media.mimetype, data: media.data, filename: media.filename },
@@ -5261,11 +5264,14 @@ function erroCampanhaCancelada() {
 }
 
 async function aguardarCampanhaAmizadeLiberada() {
+    const conferir=async()=>{const r=await buscarCampanha(campanhaAmizadeExecucao.id);if(!r?.campanhaEdicaoId)throw new Error('Campanha sem edição vigente.');await require('../services/campanhaValidadeService').exigirCampanhaAtiva(r.campanhaEdicaoId);};
+    await conferir();
     if (campanhaAmizadeExecucao.cancelada) {
         throw erroCampanhaCancelada();
     }
 
     while (campanhaAmizadeExecucao.pausada) {
+        await conferir();
         campanhaAmizadeExecucao.mensagem = 'Campanha pausada. Clique em continuar para retomar os envios.';
         await sincronizarCampanhaAtual('pausada');
         await esperar(5000);
@@ -5359,32 +5365,34 @@ async function criarImagemCampanhaAmizade(telefoneInstalacao, config = {}) {
     return { arquivo: destino, temporario: false };
 }
 
-async function enviarCampanhaAmizadeParaCliente(client, cliente, imagemCampanha, telefoneInstalacao, descricao = 'Campanha amizade que vale presente') {
+async function enviarCampanhaAmizadeParaCliente(client, cliente, imagemCampanha, telefoneInstalacao, descricao = 'Campanha amizade que vale presente',edicaoId=null) {
     const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
     if (!telefone) {
         throw new Error('Cliente sem telefone cadastrado.');
     }
 
-    const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao));
-    const envio = await enviarImagemWhatsAppComFallback(
+    const edicao=await require('../services/campanhaValidadeService').exigirCampanhaAtiva(edicaoId);
+    const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao),edicao.id);
+    const envio = await require('../services/campanhaValidadeService').enviarUnico(edicao.id,telefone,()=>enviarImagemWhatsAppComFallback(
         client,
         telefone,
         imagemCampanha.arquivo,
         legenda,
         descricao,
         {
+            campanhaEdicaoId:edicao.id,
             simularDigitacao: true,
             fila: {
                 intervaloMinimoSegundos: 2,
                 intervaloMaximoSegundos: 5
             }
         }
-    );
+    ));
 
     return {
         ...envio,
-        telefone
+        telefone,campanhaTitulo:edicao.titulo,campanhaEdicaoId:edicao.id
     };
 }
 
@@ -5419,7 +5427,7 @@ async function enviarCampanhaAmizadeManualPorId(clienteId, descricao = 'Campanha
             descricao
         );
 
-        await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada manualmente pelo WhatsApp.');
+        await adicionarNotaCliente(cliente.id,`Campanha ${envioWhatsApp.campanhaTitulo}, edição ${envioWhatsApp.campanhaEdicaoId}, enviada manualmente pelo WhatsApp.`);
         logControleClientes('Campanha amizade manual enviada', {
             clienteId: cliente.id,
             destino: envioWhatsApp.destino,
@@ -5461,6 +5469,9 @@ function mensagemCampanhaForaHorario(config = {}) {
 }
 
 async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
+    const registro=await buscarCampanha(campanhaAmizadeExecucao.id);
+    if(!registro?.campanhaEdicaoId)throw new Error('Campanha sem edição e validade. Inicie um novo envio de campanha vigente.');
+    const edicao=await require('../services/campanhaValidadeService').exigirCampanhaAtiva(registro.campanhaEdicaoId);
     const statusInicial = getStatusWhatsApp();
     const client = getClient();
     const config = await obterConfiguracoes();
@@ -5503,8 +5514,15 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
             campanhaAmizadeExecucao.total = todosClientes.length;
             await sincronizarCampanhaAtual('em_andamento');
 
+            const telefonesSelecionados=new Set();
             for (const cliente of todosClientes) {
                 const telefone = normalizarTelefoneClienteWhatsApp(cliente);
+                const celular=require('../services/campanhaValidadeService').telefoneCampanha(telefone);
+                if(celular&&(telefonesSelecionados.has(celular)||await require('../services/campanhaValidadeService').jaRecebeu(edicao.id,celular))){
+                    campanhaAmizadeExecucao.jaEnviados+=1;
+                    await registrarItemCampanha(campanhaAmizadeExecucao.id,cliente,{telefone:celular,status:'ja_enviado',motivo:'mesmo celular de outro cadastro nesta campanha'});
+                    continue;
+                }
 
                 if (!telefone || clienteEhTeste(cliente)) {
                     const motivo = clienteEhTeste(cliente) ? 'teste' : 'sem telefone';
@@ -5549,6 +5567,7 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
                     ...cliente,
                     _campanhaItemId: itemId
                 });
+                telefonesSelecionados.add(celular);
             }
         }
 
@@ -5575,25 +5594,15 @@ async function executarCampanhaAmizadeEmLotes(opcoes = {}) {
 
             for (const cliente of lote) {
                 await aguardarCampanhaAmizadeLiberada();
+                await require('../services/campanhaValidadeService').exigirCampanhaAtiva(edicao.id);
                 const telefone = normalizarTelefoneClienteWhatsApp(cliente);
 
                 try {
-                    const legenda = await montarMensagemCampanhaAmizade(cliente, formatarTelefoneCampanha(telefoneInstalacao));
-                    const envioCampanha = await enviarImagemWhatsAppComFallback(
-                        client,
-                        telefone,
-                        imagemCampanha.arquivo,
-                        legenda,
-                        'Campanha amizade que vale presente em lote',
-                        {
-                            simularDigitacao: true,
-                            fila: {
-                                intervaloMinimoSegundos: 2,
-                                intervaloMaximoSegundos: 5
-                            }
-                        }
-                    );
-                    await adicionarNotaCliente(cliente.id, 'Campanha "Amizade que vale presente" enviada pelo WhatsApp.');
+                    if(await require('../services/campanhaValidadeService').jaRecebeu(edicao.id,telefone)){
+                        campanhaAmizadeExecucao.jaEnviados+=1;await atualizarItemCampanha(cliente._campanhaItemId,{status:'ja_enviado',motivo:'celular já reservado ou enviado nesta edição'});continue;
+                    }
+                    const envioCampanha = await enviarCampanhaAmizadeParaCliente(client,cliente,imagemCampanha,telefoneInstalacao,'Campanha de indicação em lote',edicao.id);
+                    await adicionarNotaCliente(cliente.id,`Campanha ${edicao.titulo}, edição ${edicao.id}, enviada pelo WhatsApp.`);
                     campanhaAmizadeExecucao.enviados += 1;
                     registrarClienteCampanha(campanhaAmizadeExecucao.clientesEnviados, cliente);
                     await atualizarItemCampanha(cliente._campanhaItemId, {
@@ -6250,7 +6259,7 @@ function secaoHistoricoBonus(cliente, historico = {}) {
     const creditos = historico.creditos || [];
     const baixas = historico.baixas || [];
     const linhas = creditos.map(c => `<tr>
-        <td data-label="Origem">${escapar(ORIGENS[c.campanhaChave] || c.campanhaChave)}<div class="helper">Crédito #${escapar(c.id)}${c.origem === 'saldo_anterior' ? ' · saldo anterior à atualização' : ''}</div></td>
+        <td data-label="Origem">${escapar(ORIGENS[c.campanhaChave] || c.campanhaChave)}<div class="helper">Crédito #${escapar(c.id)}${c.campanhaEdicaoId?` · edição #${escapar(c.campanhaEdicaoId)}`:''}${c.origem === 'saldo_anterior' ? ' · saldo anterior à atualização' : ''}</div></td>
         <td data-label="Indicado">${escapar(c.indicados || c.indicado || 'Não informado')}</td>
         <td data-label="Registro">${escapar(formatarDataHoraCurta(c.criadoEm))}${c.identificadoEm ?`<div class="helper">Origem identificada em ${escapar(formatarDataHoraCurta(c.identificadoEm))}</div>` : ''}</td>
         <td data-label="Recebidos">${escapar(c.meses)}</td>
@@ -8014,7 +8023,7 @@ function controlesCampanhaAmizadeHtml(retorno = '/campanhas') {
     </div>`;
 }
 
-function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensReclamacao = [], paginacaoItens = null, campanhaRetomavel = null, clientes = [], totalElegiveis = 0, previsaoCampanha = {}, config = {} }) {
+function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensReclamacao = [], paginacaoItens = null, campanhaRetomavel = null, clientes = [], totalElegiveis = 0, previsaoCampanha = {}, config = {},campanhaIndicacao=null }) {
     const ativa = campanhaAmizadeExecucao.emAndamento ? campanhaAmizadeExecucao : null;
     const retomavel = !ativa && campanhaRetomavel ? campanhaRetomavel : null;
     const totalAtivas = campanhas.filter(item => ['em_andamento', 'pausada', 'cancelando'].includes(String(item.status || ''))).length;
@@ -8053,7 +8062,8 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
             <span class="badge ${totalElegiveis ? 'green' : 'orange'}">${escapar(totalElegiveis)} receberão agora</span>
         </div>
         <div class="mini-card" style="margin-top:14px;">
-            <strong>Amizade que vale presente</strong>
+            <strong>${escapar(campanhaIndicacao?.titulo || 'Nenhuma campanha vigente para criar bônus')}</strong>
+            ${campanhaIndicacao?`<div class="helper">Edição #${escapar(campanhaIndicacao.id)} · válida até ${escapar(formatarDataHoraCurta(campanhaIndicacao.validadeEm))}</div>`:'<p>Defina a validade e ative uma campanha em Modelos.</p>'}
             <div class="helper">Envia para clientes ativos com consentimento. Testes, repetições e contatos sem telefone são ignorados automaticamente.</div>
             <div class="notice" style="margin-top:12px;">
                 <strong>Prévia deste disparo:</strong>
@@ -8073,7 +8083,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
                         <option value="">Enviar teste para 1 cliente...</option>
                         ${opcoesClientesCampanha}
                     </select>
-                    <button class="button secondary" type="submit">${icon('whats')} Testar envio</button>
+                    <button class="button secondary" type="submit" ${!campanhaIndicacao?'disabled':''}>${icon('whats')} Testar envio</button>
                 </form>
                 <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Confirmar campanha para ${escapar(totalElegiveis)} cliente(s)? Os demais serão ignorados conforme a prévia exibida.');">
                     <input type="hidden" name="retorno" value="/campanhas">
@@ -8126,7 +8136,7 @@ function telaCampanhas({ campanhas = [], campanha = null, itens = [], itensRecla
         ${campanhas.length ? `<div class="table-wrap"><table>
             <thead><tr><th>Campanha</th><th>Status</th><th>Inicio</th><th>Resultado</th><th>Proximo lote</th><th>Acoes</th></tr></thead>
             <tbody>${campanhas.map(item => `<tr>
-                <td><strong>${escapar(item.nome)}</strong><div class="helper">Execução #${escapar(item.id)}${item.publico ? ` • ${escapar(item.publico)}` : ''}</div></td>
+                <td><strong>${escapar(item.nome)}</strong><div class="helper">Execução #${escapar(item.id)}${item.campanhaEdicaoId?` · edição #${escapar(item.campanhaEdicaoId)}`:' · registro legado sem edição identificada'}${item.publico ? ` • ${escapar(item.publico)}` : ''}</div></td>
                 <td><span class="badge ${classeStatusCampanha(item.status)}">${escapar(textoStatusCampanha(item.status))}</span></td>
                 <td>${escapar(formatarDataHoraCurta(item.iniciadaEm || item.criadoEm))}</td>
                 <td>${Number(item.enviados || 0)} enviado(s), ${Number(item.ignorados || 0)} ignorado(s), ${Number(item.jaEnviados || 0)} repetido(s), ${Number(item.erros || 0)} erro(s)</td>
@@ -8388,7 +8398,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         <div class="panel-head">
             <div>
                 <h2 class="panel-title">Campanha de indicação</h2>
-                <div class="helper"><strong>Campanha ativa: ${escapar(campanhaIndicacao?.titulo || 'Nenhuma campanha de indicação ativa')}</strong></div>
+                <div class="helper"><strong>Campanha ativa: ${escapar(campanhaIndicacao?.titulo || 'Nenhuma campanha vigente para criar bônus')}</strong>${campanhaIndicacao ? ` · Edição #${escapar(campanhaIndicacao.id)} · válida até ${escapar(formatarDataHoraCurta(campanhaIndicacao.validadeEm))}` : ' · Defina a validade em Modelos.'}</div>
                 <div class="subtitle">O bônus segue a campanha ativa em Modelos. Acompanhe indicações e créditos automáticos em Controlar indicações.</div>
                 ${mensagemCampanhaStatus ? `<div class="notice ${campanhaEmAndamento ? 'warn' : ''}" style="margin-top:10px;">${escapar(mensagemCampanhaStatus)}${detalheCampanhaStatus ? `<br><span class="helper">${escapar(detalheCampanhaStatus)}</span>` : ''}</div>` : ''}
                 ${campanhaEmAndamento ? controlesCampanhaAmizadeHtml('/clientes') : ''}
@@ -8401,10 +8411,10 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
                         <option value="">Enviar para 1 cliente...</option>
                         ${opcoesClientesCampanha}
                     </select>
-                    <button class="button secondary" type="submit">${icon('whats')} Testar envio</button>
+                    <button class="button secondary" type="submit" ${!campanhaIndicacao?'disabled':''}>${icon('whats')} Testar envio</button>
                 </form>
-                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha Amizade que vale presente para todos os clientes ativos, exceto testes?');">
-                    <button class="button green" type="submit" ${campanhaEmAndamento ? 'disabled title="Campanha em andamento. Aguarde finalizar."' : ''}>${icon('whats')} ${campanhaEmAndamento ? 'Campanha em andamento' : 'Disparar campanha'}</button>
+                <form method="post" action="/clientes/disparar-amizade-presente" onsubmit="return confirm('Enviar a campanha ativa para os celulares dos clientes ativos, exceto testes? Cada celular receberá uma vez nesta edição.');">
+                    <button class="button green" type="submit" ${campanhaEmAndamento || !campanhaIndicacao ? 'disabled' : ''}>${icon('whats')} ${campanhaEmAndamento ? 'Campanha em andamento' : 'Disparar campanha'}</button>
                 </form>
             </div>
         </div>
@@ -9214,6 +9224,7 @@ function cardModelo(modelo) {
             </div>
         </div>
         <div class="model-preview">${escapar(modelo.texto)}</div>
+        ${modelo.plano==='campanha'?`<p class="helper">${modelo.campanhaValidadeEm?`Validade: ${escapar(formatarDataHoraCurta(modelo.campanhaValidadeEm))}`:'Defina a validade para habilitar esta campanha.'}</p>`:''}
     </article>`;
 }
 
@@ -9281,13 +9292,14 @@ function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: nul
         const liberado = item.status === 'beneficio_liberado';
         const situacao = liberado ? `${item.beneficioMeses} mês(es) creditado(s)`
             : item.status === 'cancelada' ? 'Cancelada'
+                : item.status === 'expirada' ? 'Encerrada — não participa de novas campanhas'
                 : item.status === 'aguardando_assinatura' ? 'Aguardando primeira assinatura com plano ativo'
                 : !item.campanhaAtiva ? 'Aguardando ativação desta campanha'
                     : Number(item.pagamentosValidos) >= regra.pagamentos ? 'Renovações cumpridas; aguardando grupo da campanha'
                         : 'Aguardando renovações';
         return `<tr><td data-label="Indicador">${escapar(item.indicadorNome)}</td>
             <td data-label="Indicado">${escapar(item.indicadoNome)}</td>
-            <td data-label="Campanha">${escapar(regra?.titulo || item.campanhaChave)}</td>
+            <td data-label="Campanha">${escapar(regra?.titulo || item.campanhaChave)} · ${escapar(item.beneficioMeses)} mês(es)${item.campanhaEdicaoId?` · edição #${escapar(item.campanhaEdicaoId)}`:''}</td>
             <td data-label="Renovações">${escapar(item.pagamentosValidos)} / ${escapar(regra?.pagamentos || 3)}</td>
             <td data-label="Situação">${escapar(situacao)}${item.creditoId ?`<div class="helper">Crédito #${escapar(item.creditoId)} · ${escapar(item.beneficioLiberadoEm)}</div>` : ''}</td>
             <td data-label="Ações"><a class="button secondary" href="/clientes/${escapar(item.indicadorClienteId)}/editar">Usar bônus</a>
@@ -9296,7 +9308,7 @@ function telaIndicacoes({ clientes = [], indicacoes = { itens: [], campanha: nul
     return `<section class="page-title page-title-with-action"><div><h1>Programa de indicação</h1><div class="subtitle">Crédito automático, uso do bônus e aviso ao cliente manuais.</div></div><a class="button secondary" href="/modelos">Campanhas e mensagens</a></section>
         <section class="panel" style="margin-bottom:24px;"><div class="panel-head"><div><h2 class="panel-title">${escapar(campanha?.titulo || 'Nenhuma campanha de indicação ativa')}</h2>
         <div class="subtitle">${campanha ?`${campanha.indicados} indicado(s), ${campanha.pagamentos} renovação(ões) paga(s) por indicado: ${campanha.meses} mês(es) de bônus. A primeira assinatura não conta.` : 'Ative uma das duas campanhas em Modelos para registrar e liberar indicações.'}</div></div></div>
-        <div class="notice" style="margin:0 20px 20px;">O saldo é atualizado automaticamente em até um minuto. Vencimento e mensagens continuam sob seu controle. Cada indicação fica vinculada à campanha ativa no registro; trocar a campanha pausa os vínculos anteriores. Pagamentos de bônus, testes, excluídos ou sem valor não contam. Uma indicação não pode gerar bônus novamente.</div>
+        <div class="notice" style="margin:0 20px 20px;">O saldo é atualizado automaticamente em até um minuto. No encerramento da campanha, a apuração termina; bônus já conquistados são preservados. Cada indicação fica vinculada à edição de origem, sem reaproveitar pagamentos antigos ou indicações encerradas. Pagamentos de bônus, testes, excluídos ou sem valor não contam.</div>
         ${campanha ?`<form class="fields" method="post" action="/indicacoes" style="padding:0 20px 20px;">
             ${campo({ nome: 'indicadorClienteId', label: 'Quem indicou', valor: '', opcoes })}
             ${campo({ nome: 'indicadoClienteId', label: 'Cliente indicado', valor: '', opcoes })}
@@ -9353,7 +9365,7 @@ function formularioModelo(modelo = {}) {
                     { valor: '0', texto: 'Inativo' }
                 ]
             })}
-            ${modelo.plano === 'campanha' ?'<div class="notice full">Deixe <strong>Ativo</strong> somente no texto que deseja disparar. Ao ativar este modelo, os outros modelos de campanha serão desativados automaticamente.</div>' : ''}
+            ${modelo.plano === 'campanha' ?`${campo({nome:'campanhaValidadeEm',label:'Validade da campanha (horário de Brasília)',tipo:'datetime-local',valor:require('../services/campanhaValidadeService').entradaValidade(modelo.campanhaValidadeEm)})}<div class="notice full">Defina a validade para ativar. No prazo, a campanha será encerrada e deixará de gerar bônus ou enviar mensagens. Bônus já conquistados são preservados. Reativar uma campanha encerrada cria uma nova edição, sem reaproveitar indicações antigas. Ao trocar a campanha ativa, a apuração da anterior é encerrada.</div>` : ''}
             ${editorMensagemModelo(modelo.texto)}
             <div class="actions full">
                 <button class="button" type="submit">${icon('check')} Salvar modelo</button>
@@ -10207,6 +10219,7 @@ function formularioPainel(painel = {}, historico = []) {
             ${campo({ nome: 'nome', label: 'Nome do painel', valor: painel.nome })}
             ${campo({ nome: 'tipoIntegracao', label: 'Tipo da integração', valor: painel.tipoIntegracao || 'rest_json', opcoes: [
                 { valor: 'rest_json', texto: 'API REST / JSON genérica' },
+                { valor: 'sigma_reseller', texto: 'Aura / Sigma — consulta de revenda' },
                 { valor: 'p2p_rest', texto: 'Painel P2P via REST' },
                 { valor: 'iptv_rest', texto: 'Painel IPTV via REST' }
             ] })}
@@ -10235,8 +10248,9 @@ function formularioPainel(painel = {}, historico = []) {
                 <a class="button secondary" href="/paineis">Cancelar</a>
             </div>
         </form>
-        <div class="notice full" style="margin:18px;">A API receberá POST JSON com ação, protocolo único, usuário do cliente, produto, plano, dias, pagamento e valor. Em falhas temporárias, a fila tentará novamente sem duplicar a renovação.</div>
+        <div class="notice full" style="margin:18px;">Aura/Sigma: use https://auratvpainel.com/api/reseller-api/v1 e token com me.read, customers.read, servers.read e packages.read. Esta etapa apenas consulta; mantenha a renovação automática desligada. Outros tipos usam o contrato POST JSON genérico; repetições exigem proteção contra duplicidade no servidor de destino.</div>
     </section>
+    ${painel.id && painel.tipoIntegracao === 'sigma_reseller' ? `<section class="panel" style="margin-top:20px;padding:20px;"><h2>Consultar Aura/Sigma</h2><p>Use a configuração já salva. Consultas não alteram clientes, pagamentos ou créditos. Senhas de assinantes não são exibidas.</p><form class="fields" method="post" action="/paineis/${escapar(painel.id)}/sigma/consultar">${campo({nome:'consulta',label:'Consulta',valor:'perfil',opcoes:[{valor:'perfil',texto:'Conexão e saldo'},{valor:'servers',texto:'Servidores'},{valor:'packages',texto:'Pacotes'},{valor:'assinatura',texto:'Assinatura por usuário exato'}]})}${campo({nome:'usuarioSigma',label:'Usuário exato no Aura',valor:'',attrs:'maxlength="200" autocomplete="off"'})}${campo({nome:'paginaSigma',label:'Página do catálogo',valor:'1',tipo:'number',attrs:'min="1" max="10000"'})}<div class="actions full"><button class="button" type="submit">Consultar Aura/Sigma</button></div></form></section>` : ''}
     ${painel.id ?`<section class="panel" style="margin-top:20px;"><div class="panel-head"><div><h2 class="panel-title">Histórico de renovações</h2><div class="subtitle">Protocolos e tentativas deste painel</div></div></div>
         ${historico.length ?`<table><thead><tr><th>Protocolo</th><th>Cliente</th><th>Status</th><th>Tentativas</th><th>Erro</th><th>Atualização</th><th>Ação</th></tr></thead><tbody>${historico.map(item=>`<tr><td>${escapar(item.protocolo)}</td><td>${escapar(item.clienteNome)}</td><td><span class="badge ${item.status==='concluida'?'green':item.status==='falha'?'red':'orange'}">${escapar(item.status)}</span></td><td>${escapar(item.tentativas)}</td><td>${escapar(item.erro || '-')}</td><td>${escapar(formatarDataHoraCurta(item.atualizadoEm))}</td><td>${item.status==='falha'?`<form method="post" action="/paineis/${painel.id}/renovacoes/${item.id}/tentar"><button class="button secondary" type="submit">Tentar novamente</button></form>`:'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhuma solicitação registrada.</div>'}
     </section>`:''}`;
@@ -10292,7 +10306,12 @@ async function renderizarPaginaCampanhas(req, res) {
     const limiteSemanalCliente = Math.max(1, Number.parseInt(config.campanhaLimiteSemanalCliente || 1, 10) || 1);
     const inicioSemana = new Date(Date.now() - (7 * 24 * 60 * 60 * 1000)).toISOString();
     const previsaoCampanha = { enviar: 0, limiteSemanal: 0, testes: 0, semTelefone: 0, limiteDiario: 0 };
+    const campanhaIndicacao=await obterCampanhaAtiva();
+    const celularesPrevistos=new Set();
     for (const cliente of clientesElegiveis) {
+        const celular=require('../services/campanhaValidadeService').telefoneCampanha(normalizarTelefoneClienteWhatsApp(cliente));
+        if(celularesPrevistos.has(celular)||campanhaIndicacao&&await require('../services/campanhaValidadeService').jaRecebeu(campanhaIndicacao.id,celular)){previsaoCampanha.repetidos=(previsaoCampanha.repetidos||0)+1;continue;}
+        if(celular)celularesPrevistos.add(celular);
         if (!normalizarTelefone(cliente.telefone)) {
             previsaoCampanha.semTelefone += 1;
         } else if (clienteEhTeste(cliente)) {
@@ -10306,6 +10325,7 @@ async function renderizarPaginaCampanhas(req, res) {
         }
     }
 
+    if(!campanhaIndicacao)previsaoCampanha.enviar=0;
     await renderizar(res, {
         titulo: 'Campanhas',
         conteudo: telaCampanhas({
@@ -10318,6 +10338,7 @@ async function renderizarPaginaCampanhas(req, res) {
             clientes,
             totalElegiveis: previsaoCampanha.enviar,
             previsaoCampanha,
+            campanhaIndicacao,
             config
         }),
         mensagem: req.query.mensagem || '',
@@ -11295,6 +11316,7 @@ router.post('/campanhas/amizade/cancelar', async (req, res) => {
 });
 
 router.post('/clientes/disparar-amizade-presente', async (req, res) => {
+    if(!await obterCampanhaAtiva())return res.redirect(`${retornoCampanha(req)}?mensagem=${encodeURIComponent('Nenhuma campanha vigente. Defina a validade e ative uma campanha em Modelos.')}`);
     const status = getStatusWhatsApp();
     const client = getClient();
     const config = await obterConfiguracoes();
@@ -11341,7 +11363,7 @@ router.post('/clientes/disparar-amizade-presente', async (req, res) => {
             data: campanhaAmizadeExecucao.iniciadaEm,
             detalhes: {
                 campanhaId: campanhaAmizadeExecucao.id,
-                nome: 'Amizade que vale presente',
+                nome: campanha.nome,
                 loteTamanho: CAMPANHA_AMIZADE_LOTE_TAMANHO,
                 intervaloLotesSegundos: [150, 210]
             }

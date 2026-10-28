@@ -45,9 +45,28 @@ function criarPaineisRoute(deps = {}) {
         try {
             await salvarPainel({ ...req.body, id: req.params.id });
             const resultado = await testarIntegracaoPainel(req.params.id);
-            return res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`API respondeu com HTTP ${resultado.status}.`)}`);
+            return res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(resultado.resumo || `API respondeu com HTTP ${resultado.status}.`)}`);
         } catch (err) {
             return res.redirect(`/paineis/${req.params.id}/editar?mensagem=${encodeURIComponent(`Falha no teste da API: ${err.message}`)}`);
+        }
+    });
+
+    router.post('/paineis/:id/sigma/consultar', async (req,res) => {
+        res.set('Cache-Control','no-store');
+        try {
+            const painel=await buscarPainelPorId(req.params.id);
+            if (!painel || painel.tipoIntegracao!=='sigma_reseller' || !painel.ativo) throw new Error('Selecione um painel Aura/Sigma ativo.');
+            const api=require('../services/sigmaResellerService').criarClienteSigma(painel);
+            let resultado;
+            if(req.body.consulta==='perfil') resultado=await api.perfil();
+            else if(['servers','packages'].includes(req.body.consulta)) resultado=await api.catalogo(req.body.consulta,req.body.paginaSigma || 1);
+            else if(req.body.consulta==='assinatura') resultado=await api.assinatura(req.body.usuarioSigma);
+            else throw new Error('Selecione uma consulta válida.');
+            return renderizar(res,{titulo:'Consulta Aura/Sigma',ativo:'paineis',conteudo:`<section class="panel" style="padding:20px;"><h1>Consulta Aura/Sigma</h1><p>Somente leitura. Nenhum acesso, pagamento ou crédito foi alterado.</p>${require('../services/sigmaResellerService').resultadoConsultaHtml(resultado,escapar)}<a class="button secondary" href="/paineis/${Number(painel.id)}/editar">Voltar ao painel</a></section>`});
+        } catch(err) {
+            res.status(400);
+            const mensagem=err instanceof require('../services/sigmaResellerService').ErroSigma ? err.message : 'Não foi possível consultar. Confira o painel, a URL e o token salvos.';
+            return renderizar(res,{titulo:'Consulta Aura/Sigma',ativo:'paineis',conteudo:`<section class="panel" style="padding:20px;"><h1>Consulta não concluída</h1><p>${escapar(mensagem)}</p><a href="/paineis">Voltar aos painéis</a></section>`});
         }
     });
 

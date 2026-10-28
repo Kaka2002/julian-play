@@ -81,6 +81,8 @@ test('crédito automático cria uma única origem com o indicado e catálogo com
  const c=await criar(0);
  const indicado=await clientes.salvarCliente({nome:'Indicado',telefone:'5511999997777',status:'ativo',plano:'Mensal',tipoPlanoId:String(mensal.id),valorPlano:'35,00',diasContrato:30});
  const svc=require('./services/indicacoesService');
+ const modelos=require('./services/modelosMensagem');const modelo=(await modelos.listarModelos()).find(m=>m.chave==='campanha_amizade_presente');
+ await modelos.salvarModelo({...modelo,ativo:'1',campanhaValidadeEm:'2099-12-31T23:59'});
  await svc.registrarIndicacao({indicadorClienteId:c.id,indicadoClienteId:indicado.id});
  await run("INSERT INTO cliente_pagamentos (clienteId,plano,formaPagamento,valorTotal) VALUES (?,'Mensal','PIX','35,00')",[indicado.id]);
  await svc.processarCreditosIndicacoes();

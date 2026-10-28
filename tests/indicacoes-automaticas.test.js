@@ -12,7 +12,7 @@ const get = (sql,p=[]) => new Promise((ok,no)=>db.get(sql,p,(e,r)=>e?no(e):ok(r)
 async function campanha(chave) {
   const lista=await modelos.listarModelos();
   const modelo=lista.find(m=>m.chave===chave);
-  await modelos.salvarModelo({...modelo,ativo:'1'});
+  await modelos.salvarModelo({...modelo,ativo:'1',campanhaValidadeEm:'2099-12-31T23:59'});
 }
 async function pagamento(id, ciclo, forma='PIX', valor='35,00', excluido='') {
   await run('INSERT INTO cliente_pagamentos (clienteId, plano, formaPagamento, valorTotal, vencimentoNovo, excluidoEm) VALUES (?, ?, ?, ?, ?, ?)',[id,'Mensal',forma,valor,ciclo,excluido]);
@@ -139,7 +139,7 @@ test('campanha inativa e vínculos cancelados não creditam; mesmo telefone é r
  await run("UPDATE clientes SET telefone='5511900000001' WHERE id=3");
  await assert.rejects(svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:3}),/mesmo telefone/);
  await run("UPDATE modelos_mensagem SET ativo=0 WHERE plano='campanha'");
- await assert.rejects(svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:4}),/Ative/);
+ await assert.rejects(svc.registrarIndicacao({indicadorClienteId:1,indicadoClienteId:4}),/Nenhuma campanha vigente/);
 `));
 
 test('migração conserva vínculos antigos e associa a regra original sem liberar créditos', async () => {

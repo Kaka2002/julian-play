@@ -48,7 +48,7 @@ async function enfileirarRenovacoesDaCobranca(cobrancaId) {
         const nomePainel = String(acesso.painel || '').trim();
         if (!nomePainel) continue;
         const painel = await buscarUm(`SELECT * FROM paineis WHERE lower(nome) = lower(?) AND ativo = 1
-            AND renovacaoAutomatica = 1 AND COALESCE(apiUrl, '') != '' LIMIT 1`, [nomePainel]);
+            AND renovacaoAutomatica = 1 AND COALESCE(apiUrl, '') != '' AND COALESCE(tipoIntegracao,'') != 'sigma_reseller' LIMIT 1`, [nomePainel]);
         if (!painel) continue;
         painel.apiUsuario = revelar('painel.apiUsuario', painel.apiUsuario || '');
         painel.apiToken = revelar('painel.apiToken', painel.apiToken || '');
@@ -78,6 +78,7 @@ async function reconciliarCobrancasAprovadas(limite = 50) {
 }
 
 async function chamarPainel(painel, payload) {
+    if (painel.tipoIntegracao === 'sigma_reseller') throw new Error('Aura/Sigma disponível somente para consulta; renovação externa não habilitada.');
     const controlador = new AbortController();
     const timer = setTimeout(() => controlador.abort(), Math.max(3, Number(painel.timeoutSegundos || 15)) * 1000);
     const headers = { 'content-type': 'application/json', 'x-julian-play-protocol': payload.protocolo || 'teste' };
@@ -96,7 +97,7 @@ async function processarItem(item) {
         tentativas=tentativas+1, atualizadoEm=CURRENT_TIMESTAMP WHERE id=? AND status IN ('pendente','nova_tentativa')`, [item.id]);
     if (!bloqueio.changes) return { ignorado: true };
     const atual = await buscarUm(`SELECT fila.*, painel.nome AS painelNome, painel.apiUrl, painel.apiUsuario, painel.apiToken,
-        painel.timeoutSegundos, painel.maxTentativas FROM renovacoes_painel_fila fila INNER JOIN paineis painel ON painel.id=fila.painelId WHERE fila.id=?`, [item.id]);
+        painel.timeoutSegundos, painel.maxTentativas, painel.tipoIntegracao FROM renovacoes_painel_fila fila INNER JOIN paineis painel ON painel.id=fila.painelId WHERE fila.id=?`, [item.id]);
     atual.apiUsuario = revelar('painel.apiUsuario', atual.apiUsuario || '');
     atual.apiToken = revelar('painel.apiToken', atual.apiToken || '');
     try {
@@ -134,6 +135,10 @@ async function listarHistoricoRenovacoes(painelId, limite = 30) {
 async function testarIntegracaoPainel(painelId) {
     const painel = await buscarUm('SELECT * FROM paineis WHERE id=?', [painelId]);
     if (!painel || !painel.apiUrl) throw new Error('Configure e salve a URL da API antes do teste.');
+    if (painel.tipoIntegracao === 'sigma_reseller') {
+        const perfil = await require('./sigmaResellerService').criarClienteSigma({ ...painel, apiToken:revelar('painel.apiToken',painel.apiToken || '') }).perfil();
+        return { status:200, resumo:`Aura/Sigma conectado. Saldo: ${perfil.creditos} créditos. Somente consulta; nenhum acesso alterado.` };
+    }
     return chamarPainel(painel, { action: 'test', protocolo: `TESTE-${Date.now()}`, source: 'julian-play' });
 }
 

@@ -36,7 +36,7 @@ async function listarHistoricoBonus(clienteId) {
     await db.ready;
     const all = (sql, params) => new Promise((resolve, reject) => db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
     const [creditos, baixas, anteriores] = await Promise.all([
-        all(`SELECT b.*, (SELECT GROUP_CONCAT(c.nome, ', ') FROM programa_indicacoes i
+        all(`SELECT b.*, (SELECT campanhaEdicaoId FROM indicacao_creditos ic WHERE ic.id=b.indicacaoCreditoId) AS campanhaEdicaoId, (SELECT GROUP_CONCAT(c.nome, ', ') FROM programa_indicacoes i
             JOIN clientes c ON c.id = i.indicadoClienteId WHERE i.creditoId = b.indicacaoCreditoId) AS indicados
             FROM bonus_creditos b WHERE b.clienteId = ? ORDER BY b.id`, [clienteId]),
         all(`SELECT o.*, baixa.creditoId, baixa.meses, c.campanhaChave FROM bonus_baixas baixa

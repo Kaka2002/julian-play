@@ -21,7 +21,7 @@ async function prepararIndicacaoCadastro(dados) {
     if (mac(dados.enderecoMac) && mac(dados.enderecoMac) === mac(indicador.enderecoMac)) throw new Error('Indicador e indicado não podem usar o mesmo MAC.');
     const campanhaChave = String(dados.campanhaIndicacaoChave || '');
     if (campanhaChave && !['campanha_amizade_presente', 'campanha_indique_ganhe_tres_meses'].includes(campanhaChave)) throw new Error('Campanha de indicação inválida.');
-    if (!existente && !campanhaChave && !await indicacoes.obterCampanhaAtiva()) throw new Error('Selecione a campanha de origem ou ative uma campanha em Modelos.');
+    if (!existente) {const ativa=await indicacoes.obterCampanhaAtiva();if(!ativa||campanhaChave&&campanhaChave!==ativa.chave)throw new Error('Nenhuma campanha vigente para criar bônus. Defina a validade e ative a campanha em Modelos.');}
     return { indicadorId, nome: indicador.nome, existente, campanhaChave };
 }
 

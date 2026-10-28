@@ -324,7 +324,7 @@ async function inicializarModelosPadrao() {
 }
 
 async function inicializarModeloCampanhaAmizade() {
-    for (const [modelo, ativo] of [[modeloCampanhaAmizade, 1], [modeloCampanhaIndiqueTresMeses, 0]]) {
+    for (const [modelo, ativo] of [[modeloCampanhaAmizade, 0], [modeloCampanhaIndiqueTresMeses, 0]]) {
         await executar(
             `INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo)
             VALUES (?, ?, ?, ?, ?, ?)`,
@@ -375,9 +375,10 @@ async function listarModelos() {
     await garantirModelosPadrao();
     await garantirModeloCampanhaAmizade();
     await garantirModeloTesteExpiradoAssinatura();
+    await require('./campanhaValidadeService').campanhaAtiva();
 
     return buscarTodos(
-        `SELECT * FROM modelos_mensagem
+        `SELECT *, (SELECT validadeEm FROM indicacao_campanhas e WHERE e.id=modelos_mensagem.campanhaEdicaoId) AS campanhaValidadeEm FROM modelos_mensagem
         ORDER BY
             CASE plano
                 WHEN 'teste_expirado' THEN 1
@@ -396,7 +397,7 @@ async function buscarModeloPorId(id) {
     await garantirModelosPadrao();
     await garantirModeloCampanhaAmizade();
     await garantirModeloTesteExpiradoAssinatura();
-    return buscarUm('SELECT * FROM modelos_mensagem WHERE id = ?', [id]);
+    return buscarUm('SELECT *, (SELECT validadeEm FROM indicacao_campanhas e WHERE e.id=modelos_mensagem.campanhaEdicaoId) AS campanhaValidadeEm FROM modelos_mensagem WHERE id = ?', [id]);
 }
 
 async function salvarModelo(dados = {}) {
@@ -408,6 +409,9 @@ async function salvarModelo(dados = {}) {
 
     if (!titulo) throw new Error('Informe o titulo do modelo.');
     if (!texto) throw new Error('Informe o texto da mensagem.');
+    if(id && plano!=='campanha'){const atual=await buscarModeloPorId(id);if(require('./campanhaValidadeService').REGRAS[atual?.chave])throw new Error('Mantenha o plano Campanha para este modelo de indicação.');}
+
+    if(plano==='campanha')return require('./campanhaValidadeService').salvarCampanhaModelo({...dados,id,titulo,texto,cor});
 
     const ativo = dados.ativo === '0' ? 0 : 1;
     if (plano === 'campanha' && ativo) {
@@ -509,11 +513,12 @@ async function obterModeloPorChave(chave) {
     );
 }
 
-async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '') {
+async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '',edicaoId=null) {
     await garantirModeloCampanhaAmizade();
+    const edicao=await require('./campanhaValidadeService').exigirCampanhaAtiva(edicaoId);
     const modelo = await buscarUm(`SELECT * FROM modelos_mensagem
-        WHERE plano = 'campanha' AND ativo = 1
-        ORDER BY datetime(atualizadoEm) DESC, id DESC LIMIT 1`);
+        WHERE plano = 'campanha' AND ativo = 1 AND campanhaEdicaoId=?
+        ORDER BY datetime(atualizadoEm) DESC, id DESC LIMIT 1`,[edicao.id]);
     const variaveis = {
         nome: primeiroNome(cliente.nome),
         plano: cliente.plano || 'assinatura',
@@ -524,7 +529,8 @@ async function montarMensagemCampanhaAmizade(cliente, telefoneWhatsApp = '') {
         telefoneWhatsApp: telefoneWhatsApp || 'o WhatsApp da instalação'
     };
 
-    return aplicarVariaveis(modelo?.texto || modeloCampanhaAmizade.texto, variaveis);
+    if(!modelo||modelo.chave!==edicao.chave)throw new Error('Nenhuma campanha de indicação vigente.');
+    return aplicarVariaveis(modelo.texto, variaveis)+`\n\nValidade da campanha: ${new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(edicao.validadeEm))} (Brasília).`;
 }
 
 async function obterModeloParaCliente(cliente, dias) {

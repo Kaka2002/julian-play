@@ -1,5 +1,40 @@
 const { test, expect } = require('@playwright/test');
 
+test('campanha exige validade e mostra o prazo salvo no modelo',async({page})=>{
+    await autenticar(page);await page.goto('/modelos');
+    const card=page.locator('.model-card').filter({has:page.getByRole('heading',{name:'Amizade que vale presente',exact:true})});
+    await card.getByTitle('Editar modelo').click();
+    await page.getByLabel('Título',{exact:true}).fill('Amizade que vale presente');
+    await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('1');
+    await page.getByLabel('Validade da campanha (horário de Brasília)',{exact:true}).fill('2099-12-31T23:59');
+    await page.getByRole('button',{name:'Salvar modelo',exact:true}).click();
+    await expect(page).toHaveURL(/\/modelos\?mensagem=/);
+    await expect(card).toContainText('31/12/99');
+});
+
+test('desativar campanha bloqueia novas indicacoes e apresenta ausencia de campanha vigente',async({page})=>{
+    await autenticar(page);await page.goto('/modelos');
+    const card=page.locator('.model-card').filter({has:page.getByRole('heading',{name:'Amizade que vale presente',exact:true})});
+    await card.getByTitle('Editar modelo').click();
+    await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('0');
+    await page.getByRole('button',{name:'Salvar modelo',exact:true}).click();
+    await page.goto('/indicacoes');await expect(page.getByRole('heading',{name:'Nenhuma campanha de indicação ativa',exact:true})).toBeVisible();
+    await expect(page.locator('form[action="/indicacoes"]')).toHaveCount(0);
+});
+
+for(const consulta of ['perfil','packages','assinatura'])test('Aura Sigma consulta '+consulta+' sem exibir token ou senha',async({page})=>{
+    await autenticar(page);await page.goto('/paineis');
+    const linha=page.locator('.device-card').filter({hasText:'Aura E2E isolado'});await linha.getByTitle('Editar painel').click();
+    await expect(page.getByLabel('Token da API',{exact:true})).toHaveValue('');
+    await page.getByRole('combobox',{name:'Consulta',exact:true}).selectOption(consulta);
+    if(consulta==='assinatura')await page.getByLabel('Usuário exato no Aura').fill('assinatura-ficticia-e2e');
+    await page.getByRole('button',{name:'Consultar Aura/Sigma',exact:true}).click();
+    if(consulta==='perfil'){await expect(page.getByText('Saldo em créditos',{exact:true})).toBeVisible();await expect(page.getByText('7',{exact:true})).toBeVisible();}
+    if(consulta==='packages')await expect(page.getByText('Mensal ficticio',{exact:true})).toBeVisible();
+    if(consulta==='assinatura')await expect(page.getByText('assinatura-e2e',{exact:true})).toBeVisible();
+    await expect(page.locator('body')).not.toContainText('SEGREDO-NAO-EXIBIR');await expect(page.locator('body')).not.toContainText('sigma-token-e2e-ficticio');
+});
+
 test('CRM distribui acoes sem sobrepor historico longo em desktop e celular',async({page},testInfo)=>{
     await autenticar(page);
     for(const largura of [1920,1280,390]){
@@ -75,7 +110,7 @@ test('campanhas disponiveis aparecem separadas do historico', async ({ page }) =
     await page.goto('/campanhas');
 
     await expect(page.getByRole('heading', { name: 'Campanhas disponíveis' })).toBeVisible();
-    await expect(page.getByText('Amizade que vale presente', { exact: true })).toBeVisible();
+    await expect(page.getByText('Nenhuma campanha vigente para criar bônus', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Campanhas registradas' })).toBeVisible();
 });
 
@@ -194,6 +229,14 @@ test('upload da logo grava a imagem e nao o token CSRF', async ({ page }) => {
 
 test('indicações mostram regra ativa e modelos de bônus podem ser editados', async ({ page }) => {
     await autenticar(page);
+    await page.goto('/modelos');
+    const campanha=page.locator('.model-card').filter({has:page.getByRole('heading',{name:'Amizade que vale presente',exact:true})});
+    await campanha.getByTitle('Editar modelo').click();
+    await page.getByLabel('Título',{exact:true}).fill('Amizade que vale presente');
+    await page.getByRole('combobox',{name:'Status',exact:true}).selectOption('1');
+    await page.getByLabel('Validade da campanha (horário de Brasília)',{exact:true}).fill('2099-12-31T23:59');
+    await page.getByRole('button',{name:'Salvar modelo',exact:true}).click();
+    await expect(page).toHaveURL(/\/modelos\?mensagem=/);
     await page.goto('/indicacoes');
     await expect(page.getByRole('heading', { name: 'Programa de indicação' })).toBeVisible();
     await expect(page.getByText('1 indicado(s), 1 renovação(ões) paga(s) por indicado: 1 mês(es) de bônus. A primeira assinatura não conta.', { exact: true })).toBeVisible();

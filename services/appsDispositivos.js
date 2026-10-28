@@ -240,6 +240,11 @@ async function salvarPainel(dados = {}) {
     const maxTentativas = Math.max(1, Math.min(10, Number(dados.maxTentativas || 5)));
 
     if (!nome) throw new Error('Informe o nome do painel.');
+    if (tipoIntegracao === 'sigma_reseller') {
+        require('./sigmaResellerService').validarBase(apiUrl);
+        if (renovacaoAutomatica) throw new Error('Aura/Sigma está disponível somente para consulta nesta etapa. Mantenha a renovação automática desligada.');
+        if (!String(process.env.JULIAN_SECRET_KEY || process.env.LICENSE_ADMIN_TOKEN || '').trim()) throw new Error('Configure a chave privada da instalação antes de guardar o token Aura/Sigma.');
+    }
     if (apiUrl && !/^https?:\/\//i.test(apiUrl)) throw new Error('A URL da API precisa iniciar com http:// ou https://.');
 
     if (id) {

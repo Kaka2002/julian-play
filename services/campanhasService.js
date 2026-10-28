@@ -41,12 +41,15 @@ function buscarUm(sql, params = []) {
 }
 
 async function criarCampanha(dados = {}) {
+    const validade=require('./campanhaValidadeService');
+    const edicao=validade.REGRAS[dados.modeloChave]?await validade.exigirCampanhaAtiva():null;
+    if(edicao)dados={...dados,nome:edicao.titulo,modeloChave:edicao.chave};
     const resultado = await executar(`
         INSERT INTO campanhas (
             nome, modeloChave, publico, imagem, status, total, enviados,
             ignorados, erros, jaEnviados, loteAtual, totalLotes,
-            proximoLoteEm, mensagem, detalhes, iniciadaEm, finalizadaEm
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            proximoLoteEm, mensagem, detalhes, iniciadaEm, finalizadaEm,campanhaEdicaoId
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
         dados.nome || 'Campanha',
         dados.modeloChave || '',
@@ -64,7 +67,7 @@ async function criarCampanha(dados = {}) {
         dados.mensagem || '',
         dados.detalhes ? JSON.stringify(dados.detalhes) : '',
         dados.iniciadaEm || new Date().toISOString(),
-        dados.finalizadaEm || ''
+        dados.finalizadaEm || '',edicao?.id || null
     ]);
 
     return buscarCampanha(resultado.id);
@@ -320,7 +323,10 @@ async function buscarCampanhaRetomavel(id = null) {
     return buscarUm(`
         SELECT c.*
         FROM campanhas c
-        WHERE c.modeloChave = 'campanha_amizade_presente'
+        JOIN indicacao_campanhas e ON e.id=c.campanhaEdicaoId
+        JOIN modelos_mensagem m ON m.campanhaEdicaoId=e.id
+        WHERE c.modeloChave IN ('campanha_amizade_presente','campanha_indique_ganhe_tres_meses')
+            AND e.status='ativa' AND m.ativo=1 AND e.validadeEm>?
             AND c.status IN ('em_andamento', 'pausada', 'erro', 'interrompida')
             AND EXISTS (
                 SELECT 1
@@ -331,7 +337,7 @@ async function buscarCampanhaRetomavel(id = null) {
             ${filtro}
         ORDER BY COALESCE(NULLIF(c.iniciadaEm, ''), c.criadoEm) DESC, c.id DESC
         LIMIT 1
-    `, params);
+    `, [new Date().toISOString(),...params]);
 }
 
 module.exports = {

@@ -56,9 +56,7 @@ const REGRAS = {
 
 async function obterCampanhaAtiva() {
     await require('./modelosMensagem').listarModelos();
-    const ativas = await buscarTodos("SELECT chave FROM modelos_mensagem WHERE plano = 'campanha' AND ativo = 1");
-    const chave = ativas.length === 1 ? ativas[0].chave : '';
-    return REGRAS[chave] ? { chave, ...REGRAS[chave] } : null;
+    return require('./campanhaValidadeService').campanhaAtiva();
 }
 
 async function registrarIndicacao(dados = {}) {
@@ -67,28 +65,30 @@ async function registrarIndicacao(dados = {}) {
     const clientes = await validarClientesDistintos(indicadorId, indicadoId);
     const participacao = clientes.indicado.status === 'ativo' && Boolean(clientes.indicado.plano) && Number.parseFloat(String(clientes.indicado.valorPlano || '0').replace(',', '.')) > 0 && !/teste|b[oô]nus/i.test(clientes.indicado.plano || '') ? 'ativa' : 'aguardando_assinatura';
     const ativa = await obterCampanhaAtiva();
-    const campanha = dados.campanhaChave && REGRAS[dados.campanhaChave]
-        ? { chave: dados.campanhaChave, ...REGRAS[dados.campanhaChave] } : ativa;
+    const campanha = ativa;
     if (dados.campanhaChave && !REGRAS[dados.campanhaChave]) throw new Error('Campanha de indicação inválida.');
-    if (!campanha) throw new Error('Ative um dos dois modelos de campanha de indicação em Modelos.');
+    if (!campanha || dados.campanhaChave && dados.campanhaChave!==campanha.chave) throw new Error('Nenhuma campanha vigente para esta indicação. Defina a validade e ative a campanha em Modelos.');
+    const base=await buscarUm(`SELECT COALESCE(MAX(id),0) AS ate,COUNT(*) AS quantidade FROM cliente_pagamentos WHERE clienteId=? AND COALESCE(excluidoEm,'')='' AND CAST(REPLACE(COALESCE(valorTotal,'0'),',','.') AS REAL)>0 AND lower(COALESCE(formaPagamento,'')) NOT LIKE '%bonus%' AND lower(COALESCE(formaPagamento,'')) NOT LIKE '%bônus%' AND lower(COALESCE(plano,'')) NOT LIKE '%teste%'`,[indicadoId]);
     // Um indicado não pode ser reaproveitado em outra campanha ou por outro indicador.
     const existente = await buscarUm("SELECT id FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada'", [indicadoId]);
     if (existente) throw new Error('Este indicado já participa de uma indicação ou já gerou benefício.');
-    const anterior = await buscarUm('SELECT id FROM programa_indicacoes WHERE indicadorClienteId = ? AND indicadoClienteId = ?', [indicadorId, indicadoId]);
+    const anterior = await buscarUm('SELECT id,campanhaEdicaoId FROM programa_indicacoes WHERE indicadorClienteId = ? AND indicadoClienteId = ?', [indicadorId, indicadoId]);
+    if(anterior && Number(anterior.campanhaEdicaoId)!==Number(campanha.id))throw new Error('Este indicado pertence ao histórico de outra edição e não pode ser reaproveitado.');
     let id;
     if (anterior) {
         const resultado = await executar(`UPDATE programa_indicacoes SET status = ?, campanhaChave = ?, beneficioMeses = ?,
-            motivoCancelamento = '', atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'cancelada'
+            motivoCancelamento = '', campanhaEdicaoId=?,pagamentoAteId=?,assinaturaInicialRegistrada=?,atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND status = 'cancelada'
             AND NOT EXISTS (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
-        [participacao, campanha.chave, campanha.meses, anterior.id, indicadoId]);
+        [participacao, campanha.chave, campanha.meses,campanha.id,base.ate,base.quantidade?1:0, anterior.id, indicadoId]);
         if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
         id = anterior.id;
     } else {
         const resultado = await executar(`INSERT INTO programa_indicacoes
-            (indicadorClienteId, indicadoClienteId, campanhaChave, beneficioMeses, status)
-            SELECT ?, ?, ?, ?, ? WHERE NOT EXISTS
-                (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')`,
-        [indicadorId, indicadoId, campanha.chave, campanha.meses, participacao, indicadoId]);
+            (indicadorClienteId, indicadoClienteId, campanhaChave, beneficioMeses, status,campanhaEdicaoId,pagamentoAteId,assinaturaInicialRegistrada)
+            SELECT ?, ?, ?, ?, ?, ?, ?, ? WHERE NOT EXISTS
+                (SELECT 1 FROM programa_indicacoes WHERE indicadoClienteId = ? AND status <> 'cancelada')
+                AND EXISTS (SELECT 1 FROM indicacao_campanhas e JOIN modelos_mensagem m ON m.campanhaEdicaoId=e.id WHERE e.id=? AND e.status='ativa' AND m.ativo=1 AND e.validadeEm>?)`,
+        [indicadorId, indicadoId, campanha.chave, campanha.meses, participacao,campanha.id,base.ate,base.quantidade?1:0, indicadoId,campanha.id,new Date().toISOString()]);
         if (!resultado.changes) throw new Error('Este indicado já participa de uma indicação.');
         id = resultado.id;
     }
@@ -97,9 +97,11 @@ async function registrarIndicacao(dados = {}) {
 }
 
 // O primeiro ciclo pago representa a assinatura inicial; somente os seguintes são renovações.
-const pagamentosValidosSql = `(SELECT MAX(0, COUNT(DISTINCT COALESCE(NULLIF(pagamento.vencimentoNovo, ''), 'pagamento:' || pagamento.id)) - 1)
+const pagamentosValidosSql = `(SELECT MAX(0, COUNT(DISTINCT COALESCE(NULLIF(pagamento.vencimentoNovo, ''), 'pagamento:' || pagamento.id)) - CASE WHEN indicacao.assinaturaInicialRegistrada=1 THEN 0 ELSE 1 END)
     FROM cliente_pagamentos pagamento
     WHERE pagamento.clienteId = indicado.id
+        AND pagamento.id>indicacao.pagamentoAteId
+        AND NOT EXISTS (SELECT 1 FROM cliente_pagamentos anterior WHERE anterior.clienteId=pagamento.clienteId AND anterior.id<=indicacao.pagamentoAteId AND COALESCE(anterior.excluidoEm,'')='' AND COALESCE(pagamento.vencimentoNovo,'')<>'' AND anterior.vencimentoNovo=pagamento.vencimentoNovo)
         AND (pagamento.excluidoEm IS NULL OR pagamento.excluidoEm = '')
         AND lower(COALESCE(pagamento.formaPagamento, '')) NOT LIKE '%bônus%'
         AND lower(COALESCE(pagamento.formaPagamento, '')) NOT LIKE '%bonus%'
@@ -117,7 +119,7 @@ const consultaIndicacoes = `SELECT indicacao.*, indicador.nome AS indicadorNome,
 async function listarIndicacoes() {
     const campanha = await obterCampanhaAtiva();
     const itens = (await buscarTodos(consultaIndicacoes)).map(item => ({
-        ...item, regra: REGRAS[item.campanhaChave], campanhaAtiva: item.campanhaChave === campanha?.chave
+        ...item, regra: REGRAS[item.campanhaChave], campanhaAtiva: Number(item.campanhaEdicaoId) === Number(campanha?.id)
     }));
     return { itens, campanha, resumos: [] };
 }
@@ -132,8 +134,8 @@ function adicionarMeses(dataTexto, meses) {
 async function listarResumoIndicacoesPainel() {
     const { itens } = await listarIndicacoes();
     const grupos = new Map();
-    for (const item of itens.filter(item => item.status === 'ativa' && item.regra)) {
-        const chave = `${item.indicadorClienteId}:${item.campanhaChave}`;
+    for (const item of itens.filter(item => item.status === 'ativa' && item.regra && item.campanhaAtiva)) {
+        const chave = `${item.indicadorClienteId}:${item.campanhaEdicaoId}`;
         const grupo = grupos.get(chave) || { indicadorId: item.indicadorClienteId, indicadorNome: item.indicadorNome, campanha: item.regra, itens: [] };
         grupo.itens.push(item);
         grupos.set(chave, grupo);
@@ -188,7 +190,7 @@ async function creditarElegiveis() {
         const itens = await buscarTodos(consultaIndicacoes);
         const grupos = new Map();
         for (const item of itens) {
-            if (item.status !== 'ativa' || item.campanhaChave !== campanha.chave || item.pagamentosValidos < regraAtual.pagamentos) continue;
+            if (item.status !== 'ativa' || Number(item.campanhaEdicaoId)!==Number(campanha.id) || item.pagamentosValidos < regraAtual.pagamentos) continue;
             if (itens.some(outro => outro.indicadoClienteId === item.indicadoClienteId && outro.status === 'beneficio_liberado')) continue;
             const grupo = grupos.get(item.indicadorClienteId) || new Set();
             grupo.add(item.indicadoClienteId);
@@ -212,7 +214,8 @@ async function creditarElegiveis() {
         transacao = true;
         await run("UPDATE programa_indicacoes SET status = 'aguardando_assinatura' WHERE status = 'ativa' AND indicadoClienteId IN (SELECT id FROM clientes WHERE status IN ('teste', 'pendente') OR lower(COALESCE(plano, '')) LIKE '%teste%')");
         await run("UPDATE programa_indicacoes SET status = 'ativa' WHERE status = 'aguardando_assinatura' AND indicadoClienteId IN (SELECT id FROM clientes WHERE status = 'ativo' AND lower(COALESCE(plano, '')) NOT LIKE '%teste%' AND lower(COALESCE(plano, '')) NOT LIKE '%bonus%' AND lower(COALESCE(plano, '')) NOT LIKE '%bônus%' AND COALESCE(plano, '') <> '' AND CAST(REPLACE(COALESCE(valorPlano, '0'), ',', '.') AS REAL) > 0)");
-        const ativas = await all("SELECT chave FROM modelos_mensagem WHERE plano = 'campanha' AND ativo = 1");
+        await require('./campanhaValidadeService').encerrar({run,all});
+        const ativas = await all("SELECT m.chave,e.id,e.validadeEm FROM modelos_mensagem m JOIN indicacao_campanhas e ON e.id=m.campanhaEdicaoId WHERE m.plano='campanha' AND m.ativo=1 AND e.status='ativa' AND e.validadeEm>?",[new Date().toISOString()]);
         const chave = ativas.length === 1 ? ativas[0].chave : '';
         const regra = REGRAS[chave];
         const creditos = [];
@@ -220,7 +223,7 @@ async function creditarElegiveis() {
             const itens = await all(consultaIndicacoes);
             const grupos = new Map();
             for (const item of itens) {
-                if (item.status !== 'ativa' || item.campanhaChave !== chave || item.pagamentosValidos < regra.pagamentos) continue;
+                if (item.status !== 'ativa' || Number(item.campanhaEdicaoId)!==Number(ativas[0]?.id) || item.pagamentosValidos < regra.pagamentos) continue;
                 // Protege também vínculos legados duplicados para o mesmo indicado.
                 if (itens.some(outro => outro.indicadoClienteId === item.indicadoClienteId && outro.status === 'beneficio_liberado')) continue;
                 const grupo = grupos.get(item.indicadorClienteId) || [];
@@ -231,8 +234,9 @@ async function creditarElegiveis() {
             for (const [clienteId, grupo] of grupos) {
                 const disponiveis = grupo.filter(item => !usados.has(item.indicadoClienteId));
                 while (disponiveis.length >= regra.indicados) {
+                    if(new Date().toISOString()>=ativas[0].validadeEm)break;
                     const lote = disponiveis.splice(0, regra.indicados);
-                    const credito = await run('INSERT INTO indicacao_creditos (indicadorClienteId, campanhaChave, meses) VALUES (?, ?, ?)', [clienteId, chave, regra.meses]);
+                    const credito = await run('INSERT INTO indicacao_creditos (indicadorClienteId, campanhaChave, meses,campanhaEdicaoId) VALUES (?, ?, ?, ?)', [clienteId, chave, regra.meses,ativas[0].id]);
                     for (const item of lote) {
                         await run(`UPDATE programa_indicacoes SET status = 'beneficio_liberado', creditoId = ?, beneficioMeses = ?,
                             beneficioLiberadoEm = CURRENT_TIMESTAMP, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ?`, [credito.id, regra.meses, item.id]);
