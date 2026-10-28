@@ -38,6 +38,11 @@ async function executar() {
     for (const nome of ['Assinatura E2E Casa', 'Assinatura E2E Bar']) {
         await new Promise((ok,erro)=>db.run("INSERT INTO clientes(nome,telefone,status) VALUES(?,'5511988887777','inativo')",[nome],e=>e?erro(e):ok()));
     }
+    await require('../../services/clientes').salvarCliente({
+        nome:'Cliente E2E Comprovante',telefone:'5511977776666',status:'ativo',
+        tipoPlanoId:planos.find(p=>p.nome==='Mensal').id,plano:'Mensal',diasContrato:30,
+        valorPlano:'35,00',dataInicio:'2098-12-01T23:59',dataVencimento:'2099-01-01T23:59'
+    });
     // Acoes e creditos continuam reais; apenas o disparo periodico e isolado.
     // Evita transacoes de fundo concorrendo com login e formularios do E2E.
     require('../../services/indicacoesService').iniciarCreditosIndicacoes = () => {};

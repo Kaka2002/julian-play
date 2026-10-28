@@ -584,6 +584,9 @@ router.post('/clientes/:id/renovar', async (req, res) => {
             }
         }
 
+        if (req.body.anexarComprovante === '1' && resultado.pagamentoId) {
+            return res.redirect('/clientes/' + clienteAtualizado.id + '/pagamentos/' + resultado.pagamentoId + '/editar?mensagem=' + encodeURIComponent(mensagemRetorno + ' Anexe o comprovante abaixo, se desejar.') + '#comprovantes');
+        }
         return res.redirect(montarUrlClienteMensagem(clienteAtualizado.id, mensagemRetorno));
     } catch (err) {
         renovacoesRecentes.delete(chaveRenovacao);

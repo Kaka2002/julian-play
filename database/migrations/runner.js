@@ -26,7 +26,8 @@ const migrations = [
     require('./020-historico-bonus'),
     require('./021-aviso-bonus-indicacao'),
     require('./022-status-aviso-bonus'),
-    require('./023-assinaturas-responsavel')
+    require('./023-assinaturas-responsavel'),
+    require('./024-comprovantes-pagamentos')
 ];
 
 function run(db, sql, params = []) {

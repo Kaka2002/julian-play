@@ -309,3 +309,31 @@ test('reconhece e desfaz assinaturas do mesmo responsável sem excluir cadastros
     await expect(page.getByRole('button',{name:'Mesmo responsável, assinaturas diferentes'})).toBeVisible();
     await expect(page.getByText('Nenhum vínculo reconhecido.')).toBeVisible();
 });
+
+test('comprovante pessoal pode ser anexado e removido sem salvar edição financeira',async({page})=>{
+    await autenticar(page);await page.goto('/clientes/5/editar#renovar');
+    const renovar=page.locator('#formRenovarCliente');
+    await renovar.locator('#renovarTipoPlanoId').selectOption({label:'Mensal (30 dias)'});
+    await renovar.locator('[name="enviarMensagem"]').uncheck();
+    await renovar.locator('[name="formaPagamento"]').selectOption('Pix');
+    await renovar.locator('#renovarValorPlano').fill('35,00');
+    await renovar.locator('#renovarDiasContrato').fill('30');
+    await renovar.getByLabel('Anexar comprovante após registrar este pagamento').check();
+    await renovar.locator('[name="dataPagamento"]').fill(new Date().toISOString().slice(0,16));
+    expect(await renovar.evaluate(form=>Array.from(form.elements).filter(el=>el.willValidate&&!el.validity.valid).map(el=>el.name))).toEqual([]);
+    await renovar.getByRole('button',{name:'Renovar cliente',exact:true}).click();
+    await expect(page).toHaveURL(/\/clientes\/5\/pagamentos\/\d+\/editar.*#comprovantes$/);
+    await expect(page.getByText('Nenhum comprovante anexado.',{exact:true})).toBeVisible();
+    const valor=page.getByLabel('Valor do Plano (R$)',{exact:true});const original=await valor.inputValue();await valor.fill('47,00');
+    const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jkvkAAAAASUVORK5CYII=','base64');
+    await page.getByLabel('Comprovante (opcional)',{exact:true}).setInputFiles({name:'comprovante.png',mimeType:'image/png',buffer:png});
+    await page.getByRole('button',{name:'Anexar comprovante',exact:true}).click();
+    await expect(page.getByRole('status')).toHaveText('Comprovante anexado. Pagamento e vencimento preservados.');
+    await expect(valor).toHaveValue('47,00');
+    const link=page.getByRole('link',{name:'Ver comprovante 1',exact:true});const url=await link.getAttribute('href');
+    const arquivo=await page.request.get(url);expect(arquivo.status()).toBe(200);expect(await arquivo.body()).toEqual(png);
+    const preview=await page.context().newPage();await preview.goto(url);await expect(preview.locator('img')).toBeVisible();expect(await preview.locator('img').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);await preview.close();
+    await page.reload();await expect(valor).toHaveValue(original);await expect(link).toBeVisible();
+    page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Remover comprovante 1',exact:true}).click();
+    await expect(page.getByText('Nenhum comprovante anexado.',{exact:true})).toBeVisible();await expect(valor).toHaveValue(original);
+});

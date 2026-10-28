@@ -1,3 +1,4 @@
+const { secaoComprovantesPagamento } = require('../services/comprovantesPagamentoView');
 const criarClientesAcoesRoute = require('./clientesAcoesRoute');
 const criarPendenciasRoute = require('./pendenciasRoute');
 const criarConciliacaoFinanceiraRoute = require('./conciliacaoFinanceiraRoute');
@@ -6089,6 +6090,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             </td>
             <td>
                 <div class="row-actions">
+                    <a class="button secondary" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar#comprovantes">Comprovantes</a>
                     <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
                     <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico?O vencimento atual do cliente não será alterado.');">
                         <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
@@ -6140,6 +6142,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                 <input type="checkbox" name="enviarMensagem" value="1" checked>
                 <span>Enviar confirmação da renovação pelo WhatsApp</span>
             </label>
+            <label class="toggle-line full"><input type="checkbox" name="anexarComprovante" value="1"><span>Anexar comprovante após registrar este pagamento</span></label>
             <label class="full">Observações do pagamento
                 <textarea name="observacoes" rows="3" placeholder="Opcional"></textarea>
             </label>
@@ -6236,7 +6239,7 @@ function formularioPagamentoCliente(cliente = {}, pagamento = {}) {
                 <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#renovar">Cancelar</a>
             </div>
         </form>
-    </section>`;
+    </section>${secaoComprovantesPagamento(cliente,pagamento)}`;
 }
 
 function secaoHistoricoBonus(cliente, historico = {}) {
@@ -10619,6 +10622,8 @@ router.use(criarConciliacaoFinanceiraRoute({
     escapar,
     desativarCache
 }));
+
+router.use(require('./comprovantesPagamentoRoute')());
 
 router.use(criarClientesDuplicadosRoute({
     ...require('../services/assinaturasResponsavelService'),
