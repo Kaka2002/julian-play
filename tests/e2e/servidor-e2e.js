@@ -43,6 +43,10 @@ async function executar() {
         tipoPlanoId:planos.find(p=>p.nome==='Mensal').id,plano:'Mensal',diasContrato:30,
         valorPlano:'35,00',dataInicio:'2098-12-01T23:59',dataVencimento:'2099-01-01T23:59'
     });
+    await require('../../services/crmService').salvarLead({
+        nome:'Lead E2E Layout',telefone:'5511966665555',status:'em_conversa',origem:'Teste isolado',
+        observacoes:'Aguardar retorno do interessado e conferir pagamento antes da assinatura. '.repeat(8)+'ReferenciaSemEspacos'.repeat(15)
+    });
     // Acoes e creditos continuam reais; apenas o disparo periodico e isolado.
     // Evita transacoes de fundo concorrendo com login e formularios do E2E.
     require('../../services/indicacoesService').iniciarCreditosIndicacoes = () => {};

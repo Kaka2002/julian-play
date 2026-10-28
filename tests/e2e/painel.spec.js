@@ -1,5 +1,22 @@
 const { test, expect } = require('@playwright/test');
 
+test('CRM distribui acoes sem sobrepor historico longo em desktop e celular',async({page},testInfo)=>{
+    await autenticar(page);
+    for(const largura of [1920,1280,390]){
+        await page.setViewportSize({width:largura,height:1080});await page.goto('/crm');
+        const linha=page.locator('.crm-table tbody tr').filter({hasText:'Lead E2E Layout'});
+        await expect(linha).toBeVisible();
+        const historico=linha.locator('[data-label="Histórico"] .cell-muted');
+        expect(await historico.evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
+        const area=linha.locator('[data-label="Ações"]');const limites=await area.boundingBox();
+        const botoes=area.locator('.row-actions .button');await expect(botoes).toHaveCount(7);
+        for(const botao of await botoes.all()){const r=await botao.boundingBox();expect(r.x).toBeGreaterThanOrEqual(limites.x);expect(r.x+r.width).toBeLessThanOrEqual(limites.x+limites.width+1);}
+        const texto=await historico.boundingBox(),acoes=await area.boundingBox();
+        expect(texto.x+texto.width<=acoes.x+1||texto.y+texto.height<=acoes.y+1).toBe(true);
+        await page.screenshot({path:testInfo.outputPath('crm-'+largura+'.png'),fullPage:true});
+    }
+});
+
 async function autenticar(page) {
     await page.goto('/login');
     const pergunta = await page.locator('label', { hasText: 'Confirmação humana' }).innerText();
@@ -334,6 +351,14 @@ test('comprovante pessoal pode ser anexado e removido sem salvar edição financ
     const arquivo=await page.request.get(url);expect(arquivo.status()).toBe(200);expect(await arquivo.body()).toEqual(png);
     const preview=await page.context().newPage();await preview.goto(url);await expect(preview.locator('img')).toBeVisible();expect(await preview.locator('img').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);await preview.close();
     await page.reload();await expect(valor).toHaveValue(original);await expect(link).toBeVisible();
+    const historico=await page.context().newPage();await historico.goto('/clientes/5/editar#renovar');
+    await expect(historico.locator('#renovar').getByText('1 comprovante',{exact:true})).toBeVisible();
+    const gerenciar=historico.getByRole('link',{name:'Gerenciar comprovantes',exact:true});
+    await expect(gerenciar).toHaveAttribute('href',new RegExp('/pagamentos/\\d+/editar#comprovantes$'));
+    await gerenciar.click();await expect(historico.getByRole('button',{name:'Remover comprovante 1',exact:true})).toBeVisible();
+    page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Remover comprovante 1',exact:true}).click();await expect(link).toBeVisible();
     page.once('dialog',dialog=>dialog.accept());await page.getByRole('button',{name:'Remover comprovante 1',exact:true}).click();
     await expect(page.getByText('Nenhum comprovante anexado.',{exact:true})).toBeVisible();await expect(valor).toHaveValue(original);
+    await historico.goto('/clientes/5/editar#renovar');await expect(historico.locator('#renovar').getByText('Sem comprovante',{exact:true})).toBeVisible();
+    await expect(historico.getByRole('link',{name:'Anexar comprovante',exact:true})).toBeVisible();await historico.close();
 });

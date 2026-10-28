@@ -1243,10 +1243,12 @@ async function adicionarNotaCliente(clienteId, texto) {
 
 function listarPagamentosCliente(clienteId) {
     return buscarTodos(
-        `SELECT * FROM cliente_pagamentos
-        WHERE clienteId = ?
-            AND (excluidoEm IS NULL OR excluidoEm = '')
-        ORDER BY datetime(criadoEm) DESC, id DESC`,
+        `SELECT p.*, (SELECT COUNT(*) FROM cliente_pagamento_comprovantes c
+            WHERE c.clienteId=p.clienteId AND c.pagamentoId=p.id) AS quantidadeComprovantes
+        FROM cliente_pagamentos p
+        WHERE p.clienteId = ?
+            AND (p.excluidoEm IS NULL OR p.excluidoEm = '')
+        ORDER BY datetime(p.criadoEm) DESC, p.id DESC`,
         [clienteId]
     );
 }

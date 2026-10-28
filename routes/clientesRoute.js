@@ -6090,15 +6090,16 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
             </td>
             <td>
                 <div class="row-actions">
-                    <a class="button secondary" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar#comprovantes">Comprovantes</a>
+                    <a class="button secondary" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar#comprovantes">${Number(pagamento.quantidadeComprovantes) > 0 ? 'Gerenciar comprovantes' : 'Anexar comprovante'}</a>
                     <a class="button icon-only icon-action" href="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/editar" title="Editar pagamento">${icon('edit')}</a>
                     <form method="post" action="/clientes/${escapar(cliente.id)}/pagamentos/${escapar(pagamento.id)}/excluir" onsubmit="return confirm('Apagar este pagamento do histórico?O vencimento atual do cliente não será alterado.');">
                         <button class="button icon-only icon-action" type="submit" title="Apagar pagamento">${icon('trash')}</button>
                     </form>
                 </div>
             </td>
+            <td>${Number(pagamento.quantidadeComprovantes) > 0 ? `<span class="badge green">${Number(pagamento.quantidadeComprovantes)} ${Number(pagamento.quantidadeComprovantes) === 1 ? 'comprovante' : 'comprovantes'}</span>` : '<span class="cell-muted">Sem comprovante</span>'}</td>
         </tr>`).join('')
-        : '<tr><td colspan="7" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
+        : '<tr><td colspan="8" class="empty">Nenhuma renovação registrada ainda.</td></tr>';
 
     return `<section class="panel" id="renovar" style="margin-top:24px;">
         <div class="panel-head">
@@ -6161,6 +6162,7 @@ function secaoRenovacaoCliente(cliente = {}, listas = {}, pagamentos = []) {
                     <th>Novo vencimento</th>
                     <th>Mensagem</th>
                     <th>Ações</th>
+                    <th>Comprovantes</th>
                 </tr>
             </thead>
             <tbody>${linhasHistorico}</tbody>
@@ -7690,10 +7692,13 @@ function telaCrm({ leads = [], clientes = [], planos = [], filtros = {}, resumo 
         .crm-filters input { flex:2 1 220px; min-width:0; }
         .crm-filters select { flex:1 1 180px; width:auto; min-width:0; }
         .crm-table-scroll { overflow-x:auto; }
-        .crm-table { table-layout:fixed; min-width:900px; }
+        .crm-table { width:100%; table-layout:fixed; min-width:900px; }
         .crm-table td { vertical-align:top; overflow-wrap:anywhere; padding:18px 16px; }
         .crm-table th { padding:14px 16px; }
-        .crm-table .row-actions { justify-content:flex-start; flex-wrap:wrap; gap:6px; }
+        .crm-table .cell-muted { white-space:pre-wrap; overflow-wrap:anywhere; }
+        .crm-table .row-actions { display:grid; grid-template-columns:repeat(auto-fit,36px); justify-content:start; gap:8px; width:100%; }
+        .crm-table .row-actions form { margin:0; min-width:0; }
+        .crm-table .row-actions .button.icon-only { display:flex; align-items:center; justify-content:center; width:36px; height:36px; min-width:36px; padding:8px; }
         .crm-table .badge { white-space:normal; }
         .crm-converter { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
         .crm-converter select { width:100%; min-width:0; }

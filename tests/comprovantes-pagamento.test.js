@@ -16,7 +16,11 @@ function isolado(codigo){const r=executarIsolado('(async()=>{'+fixture+codigo+";
 test('comprovante opcional preserva pagamento, contrato e mensagens; valida tipo, limite, dono, duplicidade e integridade',()=>isolado(`
  const clientes=await all('SELECT * FROM clientes ORDER BY id'),pagamentos=await all('SELECT * FROM cliente_pagamentos ORDER BY id');
  assert.deepEqual(await svc.listar(a,pa),[]);
+ const {listarPagamentosCliente}=require('./services/clientes');
+ assert.equal((await listarPagamentosCliente(a))[0].quantidadeComprovantes,0);
  const primeiro=await svc.anexar(a,pa,png(0),'image/png','operador');
+ assert.equal((await listarPagamentosCliente(a))[0].quantidadeComprovantes,1);
+ assert.equal((await listarPagamentosCliente(b))[0].quantidadeComprovantes,0);
  assert.equal((await svc.anexar(a,pa,png(0),'image/png','operador')).id,primeiro.id);
  assert.deepEqual((await svc.obter(a,pa,primeiro.id)).conteudo,png(0));
  assert.deepEqual(await svc.listar(b,pb),[]);
@@ -34,6 +38,7 @@ test('comprovante opcional preserva pagamento, contrato e mensagens; valida tipo
  await assert.rejects(svc.obter(a,pa,primeiro.id),e=>e.status===409);
  await svc.remover(a,pa,primeiro.id,'operador');
  assert.equal((await svc.listar(a,pa)).length,4);
+ assert.equal((await listarPagamentosCliente(a))[0].quantidadeComprovantes,4);
  await assert.rejects(svc.obter(a,pa,primeiro.id),e=>e.status===404);
  assert.deepEqual(await all('SELECT * FROM clientes ORDER BY id'),clientes);
  assert.deepEqual(await all('SELECT * FROM cliente_pagamentos ORDER BY id'),pagamentos);
