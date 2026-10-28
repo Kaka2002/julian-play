@@ -11,12 +11,14 @@ const {
     responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
     simularRespostaHumanizada,
-    normalizar
+    normalizar,
+    obterTelefoneClienteMensagem
 } = require('../services/conversaService');
 const { foiMensagemDoRobo, foiTextoEnviadoPeloRobo, obterResumoEnviosDoRobo, registrarMensagemDoRobo, registrarEnvioDoRobo } = require('../services/mensagensPropriasService');
 const { responderConsulta: responderAssistenteWhatsapp, obterTelefoneAssistenteAutorizado } = require('../services/assistenteWhatsappService');
 const { licencaPermiteUso } = require('../services/licencaService');
 const { roboPodeResponderMensagens } = require('../services/controleOperacaoRoboService');
+const { telefoneValido } = require('../services/assinaturasResponsavelService');
 const { registrarComprovanteWhatsapp } = require('../services/pagamentoManualService');
 const { registrarCicloWhatsApp } = require('../services/diagnosticoSessaoWhatsappService');
 
@@ -333,28 +335,32 @@ function obterTipoMensagem(message) {
 }
 
 async function obterTelefoneParaComprovante(message) {
-    const telefoneOriginal = obterTelefoneMensagem(message);
-    if (!/@lid$/i.test(String(telefoneOriginal || ''))) return telefoneOriginal;
-    try {
-        const contato = await message.getContact();
-        return contato?.number || contato?.id?.user || telefoneOriginal;
-    } catch (err) {
-        console.log(`Não foi possível resolver o contato LID do comprovante: ${err.message}`);
-        return telefoneOriginal;
-    }
+    return telefoneValido(await obterTelefoneClienteMensagem(message));
 }
 
 async function registrarComprovantePixRecebido(message) {
     if (!message?.hasMedia) return { registrado: false, motivo: 'sem_midia' };
     try {
         const media = await message.downloadMedia();
+        const telefoneReal = await obterTelefoneParaComprovante(message);
+        const escolha = obterTextoMensagem(message).match(/^\s*assinatura\s+(\d+)\s*$/i);
         const resultado = await registrarComprovanteWhatsapp({
-            telefone: await obterTelefoneParaComprovante(message),
+            clienteId: escolha ? Number(escolha[1]) : undefined,
+            telefone: telefoneReal,
             messageId: getMessageId(message),
             mimetype: media?.mimetype,
             arquivo: media?.data ? Buffer.from(media.data, 'base64') : Buffer.alloc(0)
         });
-        if (resultado.registrado) {
+        if (resultado.motivo === 'selecionar_assinatura') {
+            if (!(await licencaPermiteUso()) || !(await roboPodeResponderMensagens())) return resultado;
+            const resposta = 'Encontrei mais de uma assinatura neste WhatsApp. Para vincular o comprovante corretamente, reenvie a imagem ou PDF com uma destas legendas:\n\n'
+                + resultado.assinaturas.map(c => 'assinatura ' + c.id + ' — ' + c.nome).join('\n')
+                + '\n\nEscreva na legenda somente assinatura e o número escolhido. Nenhum pagamento foi confirmado.';
+            await simularRespostaHumanizada(message, telefoneReal ? telefoneReal + '@c.us' : '');
+            registrarEnvioDoRobo(obterTelefoneMensagem(message), resposta);
+            const enviada = await client.sendMessage(telefoneReal + '@c.us', resposta, { sendSeen: false });
+            registrarMensagemDoRobo(enviada);
+        } else if (resultado.registrado) {
             pausarParaAtendente(obterTelefoneMensagem(message), 'Comprovante PIX recebido', 'comprovante_pix');
             console.log(`[pix] Comprovante recebido pelo WhatsApp: cobrança ${resultado.cobrancaId}, cliente ${resultado.clienteId}.`);
         } else if (resultado.duplicado) {

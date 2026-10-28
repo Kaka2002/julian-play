@@ -10621,6 +10621,7 @@ router.use(criarConciliacaoFinanceiraRoute({
 }));
 
 router.use(criarClientesDuplicadosRoute({
+    ...require('../services/assinaturasResponsavelService'),
     listarGruposClientesDuplicados,
     renderizar,
     escapar,

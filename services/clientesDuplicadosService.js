@@ -1,4 +1,5 @@
 const db = require('../database/sqlite');
+const { listarVinculos } = require('./assinaturasResponsavelService');
 const { normalizarTelefone } = require('./clientes');
 
 function buscarTodos(sql, params = []) {
@@ -37,6 +38,9 @@ function telefoneCliente(cliente) {
 async function listarGruposClientesDuplicados() {
     const clientes = await buscarTodos(`SELECT id,nome,telefone,enderecoMac,acessosApp,status,dataCadastro,atualizadoEm
         FROM clientes WHERE anonimizadoEm IS NULL OR anonimizadoEm='' ORDER BY id`);
+    const vinculos = await listarVinculos();
+    const reconhecidos = new Set(vinculos.map(v => `${v.clienteA}-${v.clienteB}:${v.telefone}`));
+    const coincidenciaValida = (tipo, valor, a, b) => tipo !== 'telefone' || !reconhecidos.has(`${Math.min(a,b)}-${Math.max(a,b)}:${valor}`);
     const pai = new Map(clientes.map(cliente => [cliente.id, cliente.id]));
     const achar = id => {
         let raiz = id;
@@ -64,8 +68,9 @@ async function listarGruposClientesDuplicados() {
         registrar('telefone', telefoneCliente(cliente), cliente.id);
         macsCliente(cliente).forEach(mac => registrar('mac', mac, cliente.id));
     });
-    identificadores.forEach(ids => {
-        if (ids.length > 1) ids.slice(1).forEach(id => unir(ids[0], id));
+    identificadores.forEach((ids, chave) => {
+        const [tipo, valor] = chave.split(':');
+        ids.forEach((a,i) => ids.slice(i+1).forEach(b => { if (coincidenciaValida(tipo,valor,a,b)) unir(a,b); }));
     });
     const componentes = new Map();
     clientes.forEach(cliente => {
@@ -82,6 +87,7 @@ async function listarGruposClientesDuplicados() {
             const presentes = [...new Set(clientesDoIdentificador.filter(id => ids.has(id)))];
             if (presentes.length < 2) return;
             const [tipo, valor] = chave.split(':');
+            if (!presentes.some((a,i) => presentes.slice(i+1).some(b => coincidenciaValida(tipo,valor,a,b)))) return;
             coincidencias.push({ tipo, valor, clientesIds: presentes });
         });
         if (!coincidencias.length) return;

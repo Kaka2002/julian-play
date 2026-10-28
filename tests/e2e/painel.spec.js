@@ -297,3 +297,15 @@ test('navega entre manutencao painel e clientes sem perder a resposta', async ({
         await expect(page.locator('body')).not.toContainText('Não foi possível abrir o Painel agora.');
     }
 });
+test('reconhece e desfaz assinaturas do mesmo responsável sem excluir cadastros', async ({page})=>{
+    await autenticar(page);
+    await page.goto('/clientes/duplicados');
+    const grupo=page.locator('article').filter({hasText:'Assinatura E2E Casa × Assinatura E2E Bar'});
+    await grupo.getByRole('button',{name:'Mesmo responsável, assinaturas diferentes'}).click();
+    await expect(page.getByText('Nenhuma duplicidade forte encontrada.')).toBeVisible();
+    const vinculo=page.locator('article').filter({hasText:'Assinatura E2E Casa × Assinatura E2E Bar'});
+    await expect(vinculo.getByText('Contratos separados · mesmo responsável')).toBeVisible();
+    await vinculo.getByRole('button',{name:'Desfazer vínculo'}).click();
+    await expect(page.getByRole('button',{name:'Mesmo responsável, assinaturas diferentes'})).toBeVisible();
+    await expect(page.getByText('Nenhum vínculo reconhecido.')).toBeVisible();
+});

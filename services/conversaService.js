@@ -1536,6 +1536,7 @@ module.exports = {
     responderIndisponibilidade,
     registrarTesteLiberadoPorMensagem,
     simularRespostaHumanizada,
+    obterTelefoneClienteMensagem,
     normalizar
 };
 

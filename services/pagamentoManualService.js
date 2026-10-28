@@ -1,8 +1,9 @@
+const { listarAssinaturasTelefone } = require('./assinaturasResponsavelService');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const db = require('../database/sqlite');
-const { buscarClientePorId, buscarClientePorTelefone, renovarCliente, adicionarNotaCliente } = require('./clientes');
+const { buscarClientePorId, renovarCliente, adicionarNotaCliente } = require('./clientes');
 const { registrarEventoSistema } = require('./eventosSistema');
 
 function executar(sql, params = []) {
@@ -96,8 +97,13 @@ async function registrarComprovanteWhatsapp(dados = {}) {
         return { registrado: false, motivo: 'arquivo_invalido' };
     }
 
-    const cliente = await buscarClientePorTelefone(telefone);
-    if (!cliente) return { registrado: false, motivo: 'cliente_nao_encontrado' };
+    const assinaturas = await listarAssinaturasTelefone(telefone);
+    if (!assinaturas.length) return { registrado: false, motivo: 'cliente_nao_encontrado' };
+    const escolhido = Number(dados.clienteId || 0);
+    if ((assinaturas.length > 1 && !escolhido) || (escolhido && !assinaturas.some(c => c.id === escolhido))) {
+        return { registrado: false, motivo: 'selecionar_assinatura', assinaturas: assinaturas.map(c => ({ id: c.id, nome: c.nome })) };
+    }
+    const cliente = await buscarClientePorId(escolhido || assinaturas[0].id);
 
     const referencia = referenciaComprovanteWhatsapp(messageId);
     const existente = await buscarUm('SELECT id, status FROM cobrancas_pix WHERE referencia = ?', [referencia]);
