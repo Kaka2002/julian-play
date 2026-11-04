@@ -1,3 +1,4 @@
+const { montarMensagemAniversario } = require('../services/modelosMensagem');
 const { telaEnvioManual } = require('../services/envioManualService');
 const express = require('express');
 
@@ -71,7 +72,6 @@ function criarClientesAcoesRoute(deps = {}) {
         prepararPlanoPixPlanoAtual,
         primeiroAcessoApp,
         registrarAvisoRenovacaoProgramado,
-        registrarBonusAniversario,
         registrarEventoCliente,
         registrarPagamentoAssinaturaInicial,
         removerPagamentoCliente,
@@ -758,6 +758,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
         return res.redirect(montarUrlClienteMensagem(cliente.id, 'WhatsApp não está conectado. Bônus não aplicado.'));
     }
 
+    let bonusAniversario;
     try {
         const meses = Number.parseInt(req.body.quantidade || 1, 10);
         const aniversarioPendente = clienteAniversarioPendente(cliente);
@@ -771,7 +772,13 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             saldoRestante: saldoAplicavel - meses,
             dataVencimento: cliente.dataVencimento || cliente.vencimento
         };
-        const mensagem = montarMensagemBonusAplicado(cliente, resultadoEnvio);
+        if (aniversarioPendente) {
+            const ano = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric' }).format(new Date());
+            bonusAniversario = await aplicarBonusCliente(cliente.id, meses, ano);
+        }
+        const mensagem = bonusAniversario
+            ? await montarMensagemAniversario(bonusAniversario.cliente)
+            : montarMensagemBonusAplicado(cliente, resultadoEnvio);
         const envioWhatsApp = await enviarMensagemWhatsAppComFallback(
             client,
             cliente.telefone,
@@ -779,14 +786,7 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             'Envio de bonus aplicado'
         );
         const destino = envioWhatsApp.destino;
-        if (aniversarioPendente) {
-            const anoAtual = Number(new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'America/Sao_Paulo', year: 'numeric'
-            }).format(new Date()));
-            await registrarBonusAniversario(cliente.id, anoAtual);
-        }
-
-        const resultado = await aplicarBonusCliente(cliente.id, meses);
+        const resultado = bonusAniversario || await aplicarBonusCliente(cliente.id, meses);
         const clienteAtualizado = resultado.cliente;
         await registrarEventoCliente(cliente.id, 'bonus_aplicado', `${meses} bônus aplicado(s); saldo atual ${resultado.saldoRestante}.`, {
             responsavel: req.usuarioPainel || 'sistema', origem: 'painel_cliente', motivo: req.body.observacaoBonus || ''
@@ -813,7 +813,9 @@ router.post('/clientes/:id/aplicar-bonus', async (req, res) => {
             clienteId: cliente.id,
             erro: err.message
         });
-        return res.redirect(montarUrlClienteMensagem(cliente.id, err.message));
+        return res.redirect(montarUrlClienteMensagem(cliente.id, bonusAniversario
+            ? 'Bônus aplicado. Não foi possível confirmar o envio da mensagem. Confira o WhatsApp antes de reenviar.'
+            : err.message));
     }
 });
 

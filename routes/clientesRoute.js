@@ -8356,18 +8356,26 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
     const aniversariantesHtml = aniversariantes.length ?`<section class="panel" style="margin-bottom:24px;">
         <div class="panel-head">
             <div>
-                <h2 class="panel-title">Aniversariantes com bônus pendente</h2>
-                <div class="subtitle">Revise e salve o vencimento antes de aplicar e avisar o cliente.</div>
+                <h2 class="panel-title">Aniversariantes de hoje</h2>
+                <div class="subtitle">Envie os parabéns pelo WhatsApp. Para conceder o mês de aniversário, revise e salve o vencimento antes de aplicar o bônus.</div>
             </div>
-            <span class="badge orange">${aniversariantes.length} pendente(s)</span>
+            <span class="badge orange">${aniversariantes.length} hoje</span>
         </div>
-        ${aniversariantes.map(cliente => `<div class="client-row">
+        ${aniversariantes.map(cliente => {
+            const numero = normalizarTelefoneClienteWhatsApp(cliente);
+            const texto = `Feliz aniversário, *${cliente.nome}*! 🎉🎂\n\nQue seu novo ciclo traga saúde, boas surpresas e muitos motivos para comemorar. Aproveite muito o seu dia! Um abraço de toda a nossa equipe!`;
+            const link = /^\d{10,15}$/.test(numero) && !cliente.whatsappOptOutEm ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : '';
+            const pendente = clienteAniversarioPendente(cliente);
+            return `<div class="client-row">
             <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
             <div><div class="client-name">${escapar(cliente.nome)}</div><div class="helper">${escapar(cliente.telefone || '')}</div></div>
             <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
-            <span class="badge orange">Bônus aguardando aprovação</span>
-            <a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar e aplicar</a>
-        </div>`).join('')}
+            <span class="badge ${pendente ? 'orange' : 'green'}">${pendente ? 'Bônus aguardando aprovação' : 'Bônus de aniversário aplicado'}</span>
+            <div class="actions">
+                ${link ? `<a class="button secondary" href="${escapar(link)}" target="_blank" rel="noopener noreferrer">Enviar parabéns sem bônus</a>` : ''}
+                ${pendente ? `<a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar bônus de 1 mês</a>` : ''}
+            </div>
+        </div>`; }).join('')}
     </section>` : '';
     const acompanhamentoIndicacoesHtml = indicacoesResumo.length ?`<div class="pending-list" style="border-top:1px solid var(--border);">
         ${indicacoesResumo.map(grupo => `<article class="pending-item">
@@ -10266,7 +10274,7 @@ router.get('/clientes', responderPagina(async (req, res) => {
         listarClientes(),
         listarReceitaMensalFinanceira(),
         listarPagamentosFinanceiro({ mes: mesAtualInput(), status: 'validos' }),
-        listarClientesAniversarioHoje(anoAtual),
+        listarClientesAniversarioHoje(anoAtual, true),
         resumoAtendimentos(),
         resumoCrm(),
         listarTiposPlanos(),

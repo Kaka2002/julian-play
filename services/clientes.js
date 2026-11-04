@@ -1147,7 +1147,7 @@ function buscarClientePorId(id) {
     return buscarUm('SELECT * FROM clientes WHERE id = ?', [id]);
 }
 
-async function aplicarBonusCliente(id, quantidade = 1) {
+async function aplicarBonusCliente(id, quantidade = 1, anoAniversario = null) {
     const meses = Number.parseInt(quantidade, 10);
     if (!Number.isFinite(meses) || meses <= 0) {
         throw new Error('Informe a quantidade de bonus a aplicar.');
@@ -1159,14 +1159,21 @@ async function aplicarBonusCliente(id, quantidade = 1) {
     }
 
     const saldo = Number.parseInt(cliente.bonusMeses || 0, 10) || 0;
-    if (saldo < meses) {
+    const saldoDisponivel = saldo + (anoAniversario ? 1 : 0);
+    if (saldoDisponivel < meses) {
         throw new Error(`Saldo de bonus insuficiente. Disponivel: ${saldo}.`);
     }
 
-    const saldoRestante = saldo - meses;
+    const saldoRestante = saldoDisponivel - meses;
 
     await require('./bonusService').comTransacaoBonus(async ({ run, get }) => {
-        const resultado = await run('UPDATE clientes SET bonusMeses = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND bonusMeses = ?', [saldoRestante, id, saldo]);
+        if (anoAniversario) {
+            const credito = await run(`UPDATE clientes SET bonusMeses = COALESCE(bonusMeses, 0) + 1, ultimoAvisoAniversario = ?
+                WHERE id = ? AND nascimento = ? AND COALESCE(ultimoAvisoAniversario, '') <> ?`,
+                [anoAniversario, id, cliente.nascimento, anoAniversario]);
+            if (!credito.changes) throw new Error('O bônus de aniversário já foi aplicado ou o cadastro mudou. Atualize a ficha.');
+        }
+        const resultado = await run('UPDATE clientes SET bonusMeses = ?, atualizadoEm = CURRENT_TIMESTAMP WHERE id = ? AND bonusMeses = ?', [saldoRestante, id, saldoDisponivel]);
         if (!resultado.changes) throw new Error('O saldo foi alterado. Atualize a ficha.');
         const operacao = await get('SELECT MAX(id) AS id FROM bonus_operacoes WHERE clienteId = ?', [id]);
         await run("UPDATE bonus_operacoes SET tipo = 'uso' WHERE id = ? AND clienteId = ?", [operacao.id, id]);
@@ -1180,7 +1187,7 @@ async function aplicarBonusCliente(id, quantidade = 1) {
     return {
         cliente: await buscarClientePorId(id),
         meses,
-        saldoAnterior: saldo,
+        saldoAnterior: saldoDisponivel,
         saldoRestante,
         vencimento: cliente.vencimento,
         dataVencimento: cliente.dataVencimento || cliente.vencimento
@@ -1904,7 +1911,7 @@ function listarClientesParaAvisoAntigo(dataLimite) {
     );
 }
 
-function listarClientesAniversarioHoje(ano) {
+function listarClientesAniversarioHoje(ano, incluirBonusAplicado = false) {
     const partes = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'America/Sao_Paulo', month: '2-digit', day: '2-digit'
     }).formatToParts(new Date());
@@ -1920,12 +1927,13 @@ function listarClientesAniversarioHoje(ano) {
                 OR substr(nascimento, 6, 5) = ?
             )
             AND status NOT IN ('cancelado', 'suspenso')
+            AND COALESCE(anonimizadoEm, '') = ''
             AND (
-                ultimoAvisoAniversario IS NULL
+                ? = 1 OR ultimoAvisoAniversario IS NULL
                 OR ultimoAvisoAniversario != ?
             )
         ORDER BY nome ASC`,
-        [mesDia, mesDia, String(ano)]
+        [mesDia, mesDia, Number(incluirBonusAplicado), String(ano)]
     );
 }
 

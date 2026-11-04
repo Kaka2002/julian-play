@@ -99,7 +99,7 @@ const modelosPadrao = [
         plano: 'aniversario',
         titulo: 'Aniversário - Bônus de 1 Mês',
         cor: 'green',
-        texto: 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, adicionamos ao seu cadastro um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.'
+        texto: '🎉 Feliz aniversário, *{{nome}}*!\n\nHoje a festa é sua e o presente é nosso: você ganhou *1 mês grátis na sua assinatura* pelo seu aniversário! 🎁\n\nSeu bônus já foi aplicado. Aproveite o presente e tenha um dia incrível! 🎂'
     },
     {
         chave: 'aviso_bonus_indicacao',
@@ -275,6 +275,9 @@ async function inicializarModelosPadrao() {
         'INSERT OR IGNORE INTO modelos_mensagem (chave, plano, titulo, texto, cor, ativo) VALUES (?, ?, ?, ?, ?, 1)',
         [avisoBonusIndicacao.chave, avisoBonusIndicacao.plano, avisoBonusIndicacao.titulo, avisoBonusIndicacao.texto, avisoBonusIndicacao.cor]
     );
+    const aniversario = modelosPadrao.find(modelo => modelo.chave === 'aniversario_bonus');
+    await executar(`UPDATE modelos_mensagem SET texto = ? WHERE chave = ? AND trim(replace(texto, char(13), '')) IN (?, ?)`,
+        [aniversario.texto, aniversario.chave, 'Olá, *{{nome}}!*\n\nFeliz aniversário! Para comemorar com você, adicionamos ao seu cadastro um *bônus de 1 mês de acesso*.\n\nEntre em contato para ativar seu presente.', 'Olá, *{{nome}}!*\n\n🎁 Parabéns pelo seu dia! 🎊\n\nToda a nossa equipe te deseja um feliz aniversário, com muita saúde, felicidade e prosperidade.']);
     if (seedJaProcessado) return;
 
     for (const modelo of modelosPadrao) {
