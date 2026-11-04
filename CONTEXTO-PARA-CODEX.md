@@ -2553,3 +2553,8 @@ pm ci normalmente.
 - Implementado localmente: lembrete dos aniversariantes de hoje em horário de Brasília. O botão sem bônus abre o WhatsApp com a saudação preenchida e exige confirmação do operador. O agendamento anterior de parabéns foi retirado. A revisão do bônus permanece manual; o mês de aniversário é registrado e consumido em transação antes da confirmação por WhatsApp.
 - Administrador, comerciais no servidor e instalações locais usam o mesmo fluxo; Mestre sem acesso ao dashboard de clientes. Bancos, configurações personalizadas, vencimentos existentes, backups e sessões são preservados. Sem migração de esquema. Após atualizar, usar o card e revisar o vencimento antes de aplicar o bônus. A abertura do WhatsApp não registra entrega.
 - Validação integral interna e de navegador aprovada pelo validador oficial (código 0, comprovante emitido em 04/11/2026 às 09:46). Pacote oficial gerado com manifesto assinado e ZIP externo com SHA-256 conferido. Publicação e deploy pendentes.
+
+## Parabéns pelo robô na versão 1.4.23
+
+- Implementado no administrador, comercial e local: o botão do dashboard dispara apenas a saudação do cliente escolhido pelo WhatsApp conectado ao robô, com digitação e reserva anual no histórico. Bônus continua manual e separado. Mestre mantém seu escopo.
+- Preserva bancos, vencimentos, saldos, configurações, backups e sessões. Sem migração. Após atualizar, conectar o WhatsApp do robô se estiver desconectado. Validação integral aprovada (258 testes internos e 26 de navegador), com comprovante oficial de 48 horas. Pacote 1.4.23 gerado e SHA-256 do ZIP externo conferido. Confirmação em aparelho real e publicação pendentes.

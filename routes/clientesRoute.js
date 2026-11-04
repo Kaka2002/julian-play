@@ -8363,8 +8363,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         </div>
         ${aniversariantes.map(cliente => {
             const numero = normalizarTelefoneClienteWhatsApp(cliente);
-            const texto = `Feliz aniversário, *${cliente.nome}*! 🎉🎂\n\nQue seu novo ciclo traga saúde, boas surpresas e muitos motivos para comemorar. Aproveite muito o seu dia! Um abraço de toda a nossa equipe!`;
-            const link = /^\d{10,15}$/.test(numero) && !cliente.whatsappOptOutEm ? `https://wa.me/${numero}?text=${encodeURIComponent(texto)}` : '';
+            const podeEnviar = /^\d{10,15}$/.test(numero) && !cliente.whatsappOptOutEm;
             const pendente = clienteAniversarioPendente(cliente);
             return `<div class="client-row">
             <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
@@ -8372,7 +8371,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
             <span class="badge ${pendente ? 'orange' : 'green'}">${pendente ? 'Bônus aguardando aprovação' : 'Bônus de aniversário aplicado'}</span>
             <div class="actions">
-                ${link ? `<a class="button secondary" href="${escapar(link)}" target="_blank" rel="noopener noreferrer">Enviar parabéns sem bônus</a>` : ''}
+                ${podeEnviar ? `<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-parabens"><button class="button secondary" type="submit">Enviar parabéns sem bônus pelo robô</button></form>` : ''}
                 ${pendente ? `<a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar bônus de 1 mês</a>` : ''}
             </div>
         </div>`; }).join('')}
@@ -10263,6 +10262,18 @@ function formularioPainel(painel = {}, historico = []) {
         ${historico.length ?`<table><thead><tr><th>Protocolo</th><th>Cliente</th><th>Status</th><th>Tentativas</th><th>Erro</th><th>Atualização</th><th>Ação</th></tr></thead><tbody>${historico.map(item=>`<tr><td>${escapar(item.protocolo)}</td><td>${escapar(item.clienteNome)}</td><td><span class="badge ${item.status==='concluida'?'green':item.status==='falha'?'red':'orange'}">${escapar(item.status)}</span></td><td>${escapar(item.tentativas)}</td><td>${escapar(item.erro || '-')}</td><td>${escapar(formatarDataHoraCurta(item.atualizadoEm))}</td><td>${item.status==='falha'?`<form method="post" action="/paineis/${painel.id}/renovacoes/${item.id}/tentar"><button class="button secondary" type="submit">Tentar novamente</button></form>`:'-'}</td></tr>`).join('')}</tbody></table>`:'<div class="empty">Nenhuma solicitação registrada.</div>'}
     </section>`:''}`;
 }
+
+router.post('/clientes/:id/enviar-parabens', responderPagina(async (req, res) => {
+    const voltar = mensagem => res.redirect('/clientes?mensagem=' + encodeURIComponent(mensagem));
+    const clienteId = Number(req.params.id);
+    if (!Number.isSafeInteger(clienteId) || clienteId < 1) return voltar('Cliente inválido.');
+    if (!getStatusWhatsApp().conectado) return voltar('Conecte o WhatsApp do robô antes de enviar.');
+    const { verificarAniversarios } = require('../services/aniversarioAutomaticoService');
+    const { enviados } = await verificarAniversarios({ clienteId, getClient, getStatusWhatsApp });
+    return voltar(enviados
+        ? 'Parabéns enviados pelo robô, sem aplicar bônus.'
+        : 'Envio não confirmado. Confira a elegibilidade, o histórico e a conversa antes de tentar novamente.');
+}));
 
 router.get('/clientes', responderPagina(async (req, res) => {
     desativarCache(res);

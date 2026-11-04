@@ -36,7 +36,7 @@ Um abraço da equipe *${empresa}*! 💙
 🎊🎁 *HOJE A FESTA É SUA! PARABÉNS!* 🎁🎊`;
 }
 
-async function verificarAniversarios({ getClient, getStatusWhatsApp, agora = () => new Date(),
+async function verificarAniversarios({ getClient, getStatusWhatsApp, clienteId = null, agora = () => new Date(),
     enfileirar = enfileirarEnvio, humanizar = simularRespostaHumanizada } = {}) {
     if (executando) return { enviados: 0 };
     executando = true;
@@ -44,14 +44,14 @@ async function verificarAniversarios({ getClient, getStatusWhatsApp, agora = () 
     try {
         const hoje = relogio(agora());
         const client = getClient?.();
-        if (hoje.hora < 10 || !client || !getStatusWhatsApp?.().conectado) return { enviados };
+        if ((!clienteId && hoje.hora < 10) || !client || !getStatusWhatsApp?.().conectado) return { enviados };
         const config = await obterConfiguracoes();
         const empresa = String(config.nomeEmpresaRobo || 'nossa empresa').trim();
         const marca = `[Parabéns automático ${hoje.dia.slice(0, 4)}]`;
         const clientes = await all(`SELECT id, nome, telefone, nascimento FROM clientes
             WHERE COALESCE(anonimizadoEm, '') = '' AND COALESCE(whatsappOptOutEm, '') = ''
-            AND COALESCE(nascimento, '') <> '' AND NOT EXISTS
-            (SELECT 1 FROM cliente_notas n WHERE n.clienteId = clientes.id AND substr(n.texto, 1, length(?)) = ?)`, [marca, marca]);
+            AND COALESCE(nascimento, '') <> '' AND (? IS NULL OR (id = ? AND status NOT IN ('cancelado', 'suspenso'))) AND NOT EXISTS
+            (SELECT 1 FROM cliente_notas n WHERE n.clienteId = clientes.id AND substr(n.texto, 1, length(?)) = ?)`, [clienteId, clienteId, marca, marca]);
         for (const cliente of clientes) {
             if (mesDiaAniversario(cliente.nascimento) !== hoje.mesDia) continue;
             const telefone = normalizarTelefone(cliente.telefone);
@@ -80,9 +80,9 @@ async function verificarAniversarios({ getClient, getStatusWhatsApp, agora = () 
                         const enviada = await client.sendMessage(destino, mensagem);
                         if (enviada?.id) {
                             registrarMensagemDoRobo(enviada);
+                            enviados += 1;
                             resultado = 'Parabéns enviados. Bônus permanece independente e sujeito à aprovação.';
                         }
-                        enviados += 1;
                     } finally {
                         await run('UPDATE cliente_notas SET texto = ? WHERE clienteId = ? AND substr(texto, 1, length(?)) = ?',
                             [`${marca} ${resultado}`, cliente.id, marca, marca]);
