@@ -1,5 +1,5 @@
 const db = require('../database/sqlite');
-const { mesDiaAniversario } = require('../utils/aniversario');
+const { mesDiaAniversario, marcaEnvioAniversario } = require('../utils/aniversario');
 const { normalizarTelefone } = require('./clientes');
 const { obterConfiguracoes } = require('./configuracoesPainel');
 const { enfileirarEnvio } = require('./filaMensagensService');
@@ -47,7 +47,7 @@ async function verificarAniversarios({ getClient, getStatusWhatsApp, clienteId =
         if ((!clienteId && hoje.hora < 10) || !client || !getStatusWhatsApp?.().conectado) return { enviados };
         const config = await obterConfiguracoes();
         const empresa = String(config.nomeEmpresaRobo || 'nossa empresa').trim();
-        const marca = `[Parabéns automático ${hoje.dia.slice(0, 4)}]`;
+        const marca = marcaEnvioAniversario(hoje.dia.slice(0, 4));
         const clientes = await all(`SELECT id, nome, telefone, nascimento FROM clientes
             WHERE COALESCE(anonimizadoEm, '') = '' AND COALESCE(whatsappOptOutEm, '') = ''
             AND COALESCE(nascimento, '') <> '' AND (? IS NULL OR (id = ? AND status NOT IN ('cancelado', 'suspenso'))) AND NOT EXISTS

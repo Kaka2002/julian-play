@@ -51,7 +51,13 @@ function formatarAniversario(valor) {
     return `${dia}/${mes}`;
 }
 
+// Mantém a marca usada nas notas de aniversários já enviados.
+function marcaEnvioAniversario(ano) {
+    return `[Parabéns automático ${ano}]`;
+}
+
 module.exports = {
+    marcaEnvioAniversario,
     MENSAGEM_INVALIDA,
     mesDiaAniversario,
     normalizarAniversario,

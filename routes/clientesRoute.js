@@ -8363,7 +8363,7 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
         </div>
         ${aniversariantes.map(cliente => {
             const numero = normalizarTelefoneClienteWhatsApp(cliente);
-            const podeEnviar = /^\d{10,15}$/.test(numero) && !cliente.whatsappOptOutEm;
+            const podeEnviar = !cliente.statusParabens && /^\d{10,15}$/.test(numero) && !cliente.whatsappOptOutEm;
             const pendente = clienteAniversarioPendente(cliente);
             return `<div class="client-row">
             <div class="avatar">${escapar(iniciais(cliente.nome))}</div>
@@ -8371,6 +8371,8 @@ function dashboard(clientes, pagina = 1, porPagina = DASHBOARD_VENCIMENTOS_POR_P
             <div><div class="client-name">Vencimento atual</div><div class="helper">${escapar(formatarDataHoraCurta(cliente.dataVencimento || cliente.vencimento))}</div></div>
             <span class="badge ${pendente ? 'orange' : 'green'}">${pendente ? 'Bônus aguardando aprovação' : 'Bônus de aniversário aplicado'}</span>
             <div class="actions">
+                ${cliente.statusParabens === 'enviado' ? '<span class="badge green">Parabéns já enviados</span>' : ''}
+                ${cliente.statusParabens === 'revisar' ? '<span class="badge orange">Envio reservado · confira o histórico</span>' : ''}
                 ${podeEnviar ? `<form method="post" action="/clientes/${escapar(cliente.id)}/enviar-parabens"><button class="button secondary" type="submit">Enviar parabéns sem bônus pelo robô</button></form>` : ''}
                 ${pendente ? `<a class="button secondary" href="/clientes/${escapar(cliente.id)}/editar#bonus">Revisar bônus de 1 mês</a>` : ''}
             </div>
@@ -10269,10 +10271,23 @@ router.post('/clientes/:id/enviar-parabens', responderPagina(async (req, res) =>
     if (!Number.isSafeInteger(clienteId) || clienteId < 1) return voltar('Cliente inválido.');
     if (!getStatusWhatsApp().conectado) return voltar('Conecte o WhatsApp do robô antes de enviar.');
     const { verificarAniversarios } = require('../services/aniversarioAutomaticoService');
-    const { enviados } = await verificarAniversarios({ clienteId, getClient, getStatusWhatsApp });
-    return voltar(enviados
-        ? 'Parabéns enviados pelo robô, sem aplicar bônus.'
-        : 'Envio não confirmado. Confira a elegibilidade, o histórico e a conversa antes de tentar novamente.');
+    const envio = verificarAniversarios({ clienteId, getClient, getStatusWhatsApp }).catch(() => {
+        console.error('[aniversario] Falha ao processar saudação pelo dashboard.');
+        return { enviados: 0 };
+    });
+    let limite;
+    try {
+        const resultado = await Promise.race([
+            envio,
+            new Promise(resolve => { limite = setTimeout(resolve, 3000, null); })
+        ]);
+        if (!resultado) return voltar('O robô ainda está processando o envio. Confira o histórico do cliente e a conversa antes de tentar novamente.');
+        return voltar(resultado.enviados
+            ? 'Parabéns enviados pelo robô, sem aplicar bônus.'
+            : 'Envio não confirmado. Confira a elegibilidade, o histórico e a conversa antes de tentar novamente.');
+    } finally {
+        clearTimeout(limite);
+    }
 }));
 
 router.get('/clientes', responderPagina(async (req, res) => {

@@ -1,6 +1,6 @@
 const db = require('../database/sqlite');
 const { agoraSaoPauloInput } = require('../utils/dataHora');
-const { normalizarAniversario } = require('../utils/aniversario');
+const { normalizarAniversario, marcaEnvioAniversario } = require('../utils/aniversario');
 const { protegerCredenciais, revelarCredenciais, migrarCredenciaisExistentes, estaProtegido } = require('./credenciaisClienteService');
 const { buscarTipoPlanoPorId, ehPlanoBonusMensal, mesesPlanoBonus } = require('./tiposPlanos');
 const { registrarAlteracoesCliente, registrarEventoCliente } = require('./clienteAuditoriaService');
@@ -1918,8 +1918,14 @@ function listarClientesAniversarioHoje(ano, incluirBonusAplicado = false) {
     const valores = Object.fromEntries(partes.map(parte => [parte.type, parte.value]));
     const mesDia = `${valores.month}-${valores.day}`;
 
+    const marca = marcaEnvioAniversario(ano);
     return buscarTodos(
-        `SELECT * FROM clientes
+        `SELECT clientes.*, (
+            SELECT CASE WHEN n.texto LIKE ? THEN 'enviado' ELSE 'revisar' END
+            FROM cliente_notas n
+            WHERE n.clienteId = clientes.id AND substr(n.texto, 1, length(?)) = ?
+            ORDER BY n.id DESC LIMIT 1
+        ) AS statusParabens FROM clientes
         WHERE nascimento IS NOT NULL
             AND nascimento != ''
             AND (
@@ -1933,7 +1939,7 @@ function listarClientesAniversarioHoje(ano, incluirBonusAplicado = false) {
                 OR ultimoAvisoAniversario != ?
             )
         ORDER BY nome ASC`,
-        [mesDia, mesDia, Number(incluirBonusAplicado), String(ano)]
+        [marca + ' Parabéns enviados.%', marca, marca, mesDia, mesDia, Number(incluirBonusAplicado), String(ano)]
     );
 }
 

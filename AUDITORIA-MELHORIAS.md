@@ -1023,3 +1023,10 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 
 - Implementado no administrador, comercial e local: o botão do dashboard dispara apenas a saudação do cliente escolhido pelo WhatsApp conectado ao robô, com digitação e reserva anual no histórico. Bônus continua manual e separado. Mestre mantém seu escopo.
 - Preserva bancos, vencimentos, saldos, configurações, backups e sessões. Sem migração. Após atualizar, conectar o WhatsApp do robô se estiver desconectado. Validação integral aprovada (258 testes internos e 26 de navegador), com comprovante oficial de 48 horas. Pacote 1.4.23 gerado e SHA-256 do ZIP externo conferido. Confirmação em aparelho real e publicação pendentes.
+
+## Retorno do envio de aniversário na versão 1.4.24
+
+- Implementado localmente: após 502 reportado ao clicar no envio, o dashboard espera até três segundos pelo resultado. Se o robô ainda estiver processando, volta ao painel e orienta conferir histórico e conversa. A fila, digitação e reserva anual continuam protegendo o envio. O 502 isolado não identifica a causa nem comprova entrega; os dois painéis responderam HTTP 200 na consulta posterior.
+- Afeta administrador, comerciais e instalações locais; Mestre mantém seu escopo. Preserva bancos, sessões, backups, vencimentos e bônus. Sem migração. Validar em aparelho autorizado e conferir o histórico antes de repetir um envio incerto. Validação oficial aprovada nas fontes finais: 258 testes internos e 26 de navegador, com comprovante de 48 horas. Pacote 1.4.24 gerado e ZIP externo conferido por SHA-256. Teste em aparelho real e publicação pendentes.
+
+- Bloqueio de reenvio na 1.4.24: card consulta a reserva anual já registrada nas notas da instalação e retira o botão após confirmação ou reserva incerta. O POST continua protegido pela mesma reserva persistente, incluindo notas do envio automático legado. Revisão do bônus permanece disponível separadamente. Sem mudança de esquema ou reprocessamento de dados.
