@@ -26,6 +26,8 @@ function DeveIgnorarCaminho($item) {
         'entrega-cliente-local',
         '.agents',
         '.codex',
+        '.tools',
+        '.julian-master-install.json',
         'data'
     )
 

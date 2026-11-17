@@ -1,3 +1,8 @@
+## Parcial — notificações WhatsApp de contratos Lume — versão 1.4.25
+
+- Consumidor preparado para avisos de teste e contratos, e reenvio administrativo cifrado; testes dedicados do consumidor 9/9.
+- Corrigido isolamento de `tests/clientes-acoes.test.js`: importar a rota trazia `modelosMensagem` e inicializava SQLite no caminho padrão. Agora o teste define um banco temporário dentro de `.tools/temp` antes dos imports e fecha/remove apenas esse fixture; teste específico 11/11.
+- O consumidor aceita somente avisos cifrados da instalação Lume para teste grátis e contrato Pix aprovado; inclui código, DNS, plano, capacidade e vencimento. Validação final: 9/9 testes focados, 261/261 internos, 26/26 E2E; pacote limpo e assinatura Ed25519 válidos. Gerador exclui configuração privada e `.tools`. Deploy e teste WhatsApp real pendentes; serviço real permaneceu ativo.
 
 ## Assistente de gestão por WhatsApp na versão 1.3.47
 
@@ -1030,3 +1035,8 @@ eady ao PM2 assim que o servidor HTTP inicia, antes da inicialização do WhatsA
 - Afeta administrador, comerciais e instalações locais; Mestre mantém seu escopo. Preserva bancos, sessões, backups, vencimentos e bônus. Sem migração. Validar em aparelho autorizado e conferir o histórico antes de repetir um envio incerto. Validação oficial aprovada nas fontes finais: 258 testes internos e 26 de navegador, com comprovante de 48 horas. Pacote 1.4.24 gerado e ZIP externo conferido por SHA-256. Teste em aparelho real e publicação pendentes.
 
 - Bloqueio de reenvio na 1.4.24: card consulta a reserva anual já registrada nas notas da instalação e retira o botão após confirmação ou reserva incerta. O POST continua protegido pela mesma reserva persistente, incluindo notas do envio automático legado. Revisão do bônus permanece disponível separadamente. Sem mudança de esquema ou reprocessamento de dados.
+
+## Parcial — confirmações WhatsApp de contrato Lume — versão 1.4.25
+
+- O bot administrador aceita somente avisos cifrados da instalação Lume: teste grátis ao iniciar e contrato Pix após aprovação. Mensagens incluem código, DNS, plano, quantidade e vencimento, sem chave privada. O consumidor não envia aviso de pagamento pendente e verifica remetente autorizado e elegibilidade do job.
+- Teste dedicado do consumidor: 9/9; testes de entrega: 261/261 internos e 26/26 E2E aprovados, com comprovante de 48 horas. `test:pacote-limpo` aprovado; manifesto Ed25519 e SHA-256 do pacote 1.4.25 conferidos. O empacotador exclui `.tools` e `.julian-master-install.json`, com teste de regressão. Nenhum dado de sessão/configuração Lume foi lido ou alterado. Sem deploy nem envio real; site/deploy e teste autorizado ainda pendentes.

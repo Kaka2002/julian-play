@@ -56,6 +56,16 @@ test('atualizacao local preserva banco, WhatsApp, backups e configuracao',()=>{
  assert.ok(linhaMaster>condicao,'julian-master somente deve ser incluido dentro da configuracao master');
 });
 
+test('pacote local exclui a configuracao privada do Painel Mestre',()=>{
+ const gerador=fs.readFileSync(path.join(repoRoot,'entrega-cliente-local','USO_INTERNO_NAO_ENVIAR','CRIAR-PACOTE-APP.ps1'),'utf8');
+ assert.match(gerador,/\.julian-master-install\.json/);
+ assert.match(gerador,/\$pastasIgnoradas[\s\S]*\.julian-master-install\.json/);
+});
+
+test('pacote local exclui temporarios de desenvolvimento',()=>{
+ const gerador=fs.readFileSync(path.join(repoRoot,'entrega-cliente-local','USO_INTERNO_NAO_ENVIAR','CRIAR-PACOTE-APP.ps1'),'utf8');
+ assert.match(gerador,/\$pastasIgnoradas[\s\S]*\.tools/);
+});
 test('artefato externo de entrega tem nome fixo e nao acumula ZIPs',()=>{
  const ignorados=fs.readFileSync(path.join(repoRoot,'.gitignore'),'utf8');
  const deploy=fs.readFileSync(path.join(repoRoot,'deploy.ps1'),'utf8');

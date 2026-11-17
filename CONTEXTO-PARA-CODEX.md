@@ -1,3 +1,8 @@
+## Confirmações WhatsApp de contratos Lume — versão 1.4.25
+
+- A instalação administradora passa a aceitar os avisos cifrados de teste grátis e de contrato de servidor. Teste: resumo após cadastro; Pix: somente depois da aprovação. A mensagem informa nome, DNS, código, plano, limite e validade sem enviar chave de renovação. A conta conectada continua presa ao sender autorizado; os perfis comercial e local não consultam a fila.
+- O painel do Lume pode enfileirar uma nova confirmação de um teste ativo para um número confirmado pelo administrador, sem renovar nem alterar a licença. O payload fica cifrado até resultado terminal, é removido após envio/resultado final e expira depois de 30 dias sem processamento. Sem migração ou dados pessoais novos no banco.
+- Validação final: 9/9 testes focados, 261/261 internos e 26/26 E2E aprovados pela validação oficial; comprovante local válido por 48 horas para estas fontes e Node. `test:pacote-limpo` aprovado; manifesto Ed25519 e SHA-256 do pacote 1.4.25 conferidos. O gerador exclui `.julian-master-install.json`, `.tools`, `.lume-whatsapp*`, bancos e demais dados privados. O bot não foi reiniciado nem enviou mensagem real; deploy e teste autorizado após publicação ainda pendentes. `/ready` do administrador (10001) e do Mestre (9000) permaneceu 200.
 
 ## Assinatura do manifesto do pacote na versão 1.3.48
 

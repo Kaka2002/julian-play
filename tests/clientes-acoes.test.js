@@ -1,6 +1,20 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const tempBase = process.env.TEST_TEMP_DIR || path.resolve(__dirname, '..', '.tools', 'temp');
+fs.mkdirSync(tempBase, { recursive: true });
+const testDataDir = fs.mkdtempSync(path.join(tempBase, 'clientes-acoes-'));
+process.env.DATA_DIR = testDataDir;
+process.env.DB_PATH = path.join(testDataDir, 'clientes.db');
+process.env.BACKUP_DIR = path.join(testDataDir, 'backups');
+process.env.NODE_ENV = 'test';
 const criarRoute = require('../routes/clientesAcoesRoute');
+const db = require('../database/sqlite');
+test.after(async () => {
+    await db.encerrar();
+    fs.rmSync(testDataDir, { recursive: true, force: true });
+});
 
 test('PIX manual prepara sem consultar WhatsApp nem registrar envio', async () => {
     let tela;
