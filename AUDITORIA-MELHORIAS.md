@@ -2,7 +2,7 @@
 
 - Consumidor preparado para avisos de teste e contratos, e reenvio administrativo cifrado; testes dedicados do consumidor 9/9.
 - Corrigido isolamento de `tests/clientes-acoes.test.js`: importar a rota trazia `modelosMensagem` e inicializava SQLite no caminho padrão. Agora o teste define um banco temporário dentro de `.tools/temp` antes dos imports e fecha/remove apenas esse fixture; teste específico 11/11.
-- O consumidor aceita somente avisos cifrados da instalação Lume para teste grátis e contrato Pix aprovado; inclui código, DNS, plano, capacidade e vencimento. Validação final: 9/9 testes focados, 261/261 internos, 26/26 E2E; pacote limpo e assinatura Ed25519 válidos. Gerador exclui configuração privada e `.tools`. Deploy e teste WhatsApp real pendentes; serviço real permaneceu ativo.
+- O consumidor aceita somente avisos cifrados da instalação Lume para teste grátis e contrato Pix aprovado; inclui código, DNS, plano, capacidade e vencimento. Validação integral oficial aprovada nas fontes finais: 261/261 testes internos e 26/26 E2E; comprovante DPAPI local emitido e válido por 48 horas para este código e Node. Mensagem atualizada para “Código do servidor”, com acentos, suporte por e-mail, sem link wa.me ou menção à chave de renovação; regressões direcionadas 9/9 aprovadas. CI, pacote e deploy ainda pendentes; nenhum processo do robô foi parado ou reiniciado.
 
 ## Assistente de gestão por WhatsApp na versão 1.3.47
 

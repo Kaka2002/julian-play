@@ -6,7 +6,7 @@ const config = { enabled: true, site: 'https://ativacao.julianplay.com.br', toke
 const job = { reference: 'a'.repeat(48), receipt: 'b'.repeat(48), phone: '5511999999999', mac: 'AA:AA:AA:AA:AA:AA', plan: 'annual', expires: 1900000000 };
 function fixture(options = {}) {
     const activeJob=options.job||job;const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lume-test-'));let sends=0,requests=0;const acks=[];
-    const client = { info: { wid: { user: options.sender || config.sender } }, getNumberId: async()=>({_serialized: options.destination || `${activeJob.phone}@c.us`}), getChatById: async()=>({sendStateTyping: async()=>{}}), sendMessage: async(to,text)=> { sends++;assert.equal(to,options.destination || `${activeJob.phone}@c.us`);assert.match(text,activeJob.kind==='server_trial'?(activeJob.resend?/Confirmacao do seu teste gratis/:/Teste gratis.*iniciado/):/Pagamento (?:Pix )?confirmado/);if(options.uncertain)throw Error('falha apos envio');return { id:{_serialized:'message-id'} }; } };
+    const client = { info: { wid: { user: options.sender || config.sender } }, getNumberId: async()=>({_serialized: options.destination || `${activeJob.phone}@c.us`}), getChatById: async()=>({sendStateTyping: async()=>{}}), sendMessage: async(to,text)=> { sends++;assert.equal(to,options.destination || `${activeJob.phone}@c.us`);assert.match(text,activeJob.kind==='server_trial'?(activeJob.resend?/Confirmação do seu teste grátis/:/Teste grátis.*iniciado/):/Pagamento (?:Pix )?confirmado/);if(options.uncertain)throw Error('falha apos envio');return { id:{_serialized:'message-id'} }; } };
     const consumer = criarConsumidor({ dataDir, config, getClient: ()=>client, getStatusWhatsApp: ()=>({ conectado: options.connected!==false }), administrador: ()=>options.admin!==false,
         enfileirarEnvio: async fn=> {if(options.queueError)throw Error('pausado');return fn();},
         fetchFn: async(url,req)=>{ requests++;assert.equal(req.redirect,'error');assert.equal(req.headers.Authorization,`Bearer ${config.token}`);if(url.endsWith('/claim'))return {ok:true,text:async()=>JSON.stringify({job:activeJob})};acks.push(JSON.parse(req.body));if(options.ackError)throw Error('ack perdido');return {ok:true,text:async()=>'{"received":true}'}; }
@@ -27,13 +27,16 @@ test('diagnostico exige marcador de teste e nao afirma pagamento',()=>{
     assert.throws(()=>validarAviso({...job,test:true}));
     assert.match(mensagem(diagnostic),/TESTE/);
     assert.doesNotMatch(mensagem(diagnostic),/Pagamento confirmado/);
-    assert.match(mensagem(diagnostic),/licenca nao foi alterada/);
+    assert.match(mensagem(diagnostic),/licença não foi alterada/);
+    assert.match(mensagem(diagnostic),/Suporte: suporte@julianplay\.com\.br/);
+    assert.doesNotMatch(mensagem(diagnostic),/wa\.me\//i);
+    assert.match(mensagem(diagnostic),/período gratuito continua até/);
 });
 test('notificacoes de contrato de servidor validam e informam plano, codigo e validade',async()=>{
     const { mensagem }=require('../services/lumeAtivacaoService');
     for(const kind of ['server_trial','server_contract']){
         const serverJob={reference:'c'.repeat(48),receipt:'d'.repeat(48),phone:'5512996066569',kind,name:'Servidor teste',host:'https://lista.example',code:'MEUCODIGO',plan:kind==='server_trial'?'Teste grátis':'Plano Start',capacity:50,expires:1900000000,resend:kind==='server_trial'};
-        assert.doesNotThrow(()=>validarAviso(serverJob));const text=mensagem(serverJob);assert.match(text,/MEUCODIGO/);assert.match(text,/lista\.example/);assert.match(text,/50 aparelhos/);assert.doesNotMatch(text,/Chave de renovação|renewal secret/i);
+        assert.doesNotThrow(()=>validarAviso(serverJob));const text=mensagem(serverJob);assert.match(text,/Código do servidor: MEUCODIGO/);assert.match(text,/lista\.example/);assert.match(text,/50 aparelhos/);assert.doesNotMatch(text,/Chave de renovação|renewal secret/i);assert.match(text,/Suporte: suporte@julianplay\.com\.br/);assert.doesNotMatch(text,/wa\.me\//i);assert.match(text,/Válido até:/);if(kind==='server_trial')assert.match(text,/Confirmação do seu teste grátis/);
         const f=fixture({job:serverJob});try{await f.consumer.executar();assert.equal(f.sends(),1);assert.equal(f.acks[0].result,'sent');}finally{f.cleanup();}
     }
     assert.throws(()=>validarAviso({reference:'c'.repeat(48),receipt:'d'.repeat(48),phone:'5512996066569',kind:'server_contract',name:'x',host:'https://x',code:'OK',plan:'Start',capacity:-1,expires:1900000000}));
