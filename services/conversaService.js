@@ -27,6 +27,7 @@ const {
 const { enfileirarEnvio } = require('./filaMensagensService');
 
 const conversas = new Map();
+const telefonesResolvidosPorMensagem = new WeakMap();
 const DATA_DIR = process.env.DATA_DIR || (process.env.RENDER ?'/var/data' : path.join(__dirname, '..'));
 const ARQUIVO_CONVERSAS = path.join(DATA_DIR, 'database', 'conversas.json');
 const TEMPO_RESPOSTA_MS = Number(process.env.TEMPO_RESPOSTA_MS || 6000);
@@ -230,24 +231,65 @@ async function enviarEstadoDigitacao(client, destino, estado) {
             return true;
         }, { chatId: destino, state: estado }),
         5000,
-        `Estado ${estado === 'typing' ?'digitando' :'em pausa'}`
+        'Estado ' + (estado === 'typing' ? 'digitando' : 'em pausa')
     );
     return true;
+}
+
+async function esperarMantendoDigitacao(client, destino, tempo) {
+    let restante = Math.max(0, Number(tempo) || 0);
+    while (restante > 0) {
+        const janela = Math.min(20000, restante);
+        const inicio = Date.now();
+        await esperar(janela);
+        restante = Math.max(0, restante - (Date.now() - inicio));
+        if (restante > 0) {
+            const atualizado = await enviarEstadoDigitacao(client, destino, 'typing');
+            if (!atualizado) throw new Error('O estado de digitação não pôde ser renovado.');
+        }
+    }
+}
+
+async function esperarPromessaEnquantoDigita(promessa, client, destino) {
+    if (!promessa) return '';
+    const resultadoPromessa = Promise.resolve(promessa).then(
+        valor => ({ concluida: true, valor }),
+        () => ({ concluida: true, valor: '' })
+    );
+
+    while (true) {
+        let timer;
+        const resultado = await Promise.race([
+            resultadoPromessa,
+            new Promise(resolve => { timer = setTimeout(() => resolve({ concluida: false }), 20000); })
+        ]).finally(() => clearTimeout(timer));
+        if (resultado.concluida) return resultado.valor || '';
+        const atualizado = await enviarEstadoDigitacao(client, destino, 'typing');
+        if (!atualizado) return '';
+    }
 }
 
 async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS, destinoPreferencial = '') {
     if (!DIGITACAO_ATIVA || tempo <= 0) return;
 
+    const destinoMensagem = obterDestinoMensagem(message);
+    const telefoneRealPromise = String(destinoMensagem || '').endsWith('@lid')
+        ? obterTelefoneClienteMensagem(message).catch(() => '')
+        : null;
+
     try {
-        const telefoneReal = await obterTelefoneClienteMensagem(message);
-        const destinos = [destinoPreferencial, telefoneReal, obterDestinoMensagem(message)]
+        const destinosIniciais = [destinoPreferencial, destinoMensagem]
             .filter((destino, indice, lista) => destino && lista.indexOf(destino) === indice);
         let destinoUsado = '';
         let ultimoErro = null;
 
-        for (const destino of destinos) {
+        for (const destino of destinosIniciais) {
             try {
-                await enviarEstadoDigitacao(message.client, destino, 'typing');
+                const iniciado = await enviarEstadoDigitacao(message.client, destino, 'typing');
+                if (!iniciado) {
+                    ultimoErro = new Error('O estado de digitação não iniciou.');
+                    continue;
+                }
                 destinoUsado = destino;
                 break;
             } catch (err) {
@@ -255,14 +297,36 @@ async function simularDigitacao(message, tempo = TEMPO_RESPOSTA_MS, destinoPrefe
             }
         }
 
-        if (!destinoUsado) throw ultimoErro || new Error('Conversa não encontrada para digitação');
-        await esperar(tempo);
-        await enviarEstadoDigitacao(message.client, destinoUsado, 'stop');
+        if (!destinoUsado && telefoneRealPromise) {
+            const telefoneReal = await telefoneRealPromise;
+            if (telefoneReal && !destinosIniciais.includes(telefoneReal)) {
+                try {
+                    const iniciado = await enviarEstadoDigitacao(message.client, telefoneReal, 'typing');
+                    if (iniciado) destinoUsado = telefoneReal;
+                    else ultimoErro = new Error('O estado de digitação não iniciou.');
+                } catch (err) {
+                    ultimoErro = err;
+                }
+            }
+        }
+
+        if (!destinoUsado) {
+            if (ultimoErro) throw ultimoErro;
+            return;
+        }
+
+        try {
+            await esperarMantendoDigitacao(message.client, destinoUsado, tempo);
+            if (telefoneRealPromise) {
+                await esperarPromessaEnquantoDigita(telefoneRealPromise, message.client, destinoUsado);
+            }
+        } finally {
+            await enviarEstadoDigitacao(message.client, destinoUsado, 'stop').catch(() => {});
+        }
     } catch (err) {
         console.log('Nao foi possivel simular digitacao:', err.message);
     }
 }
-
 function tempoRespostaHumanizada(perfil = {}) {
     if (!perfil.respostaHumanizadaAtiva) return 0;
 
@@ -557,52 +621,70 @@ function obterDestinoMensagem(message) {
     return message?.fromMe && message?.to ?message.to : message.from;
 }
 
-async function obterTelefoneClienteMensagem(message) {
-    const destino = obterDestinoMensagem(message);
-
-    if (!destino) return '';
-    if (String(destino).endsWith('@c.us')) return destino;
-    if (!String(destino).endsWith('@lid')) return '';
-
-    try {
-        if (typeof message?.client?.getContactLidAndPhone === 'function') {
-            const [contatoResolvido] = await comTimeout(
-                message.client.getContactLidAndPhone([destino]),
-                7000,
-                'Busca do telefone real do contato LID'
-            );
-            if (String(contatoResolvido?.pn || '').endsWith('@c.us')) return contatoResolvido.pn;
-        }
-
-        const contato = await comTimeout(message.getContact(), 5000, 'Busca do contato LID');
-        const idContato = String(contato?.id?._serialized || '');
-        const numero = String(contato?.number || contato?.id?.user || '').replace(/\D/g, '');
-        if (idContato.endsWith('@c.us') && /^\d{10,15}$/.test(numero)) return `${numero}@c.us`;
-    } catch (err) {
-        console.log('Nao foi possivel obter contato LID:', err.message);
-    }
-
-    try {
-        const telefoneReal = await comTimeout(
-            message.client.pupPage.evaluate(async (id) => {
-                const resultado = await window.WWebJS.enforceLidAndPnRetrieval(id);
-                return resultado?.phone?._serialized || '';
-            }, destino),
-            7000,
-            'Busca do telefone real do contato LID'
-        );
-
-        if (telefoneReal && String(telefoneReal).endsWith('@c.us')) {
-            return telefoneReal;
-        }
-    } catch (err) {
-        console.log('Nao foi possivel obter telefone real do contato LID:', err.message);
-    }
-
-    console.log('Telefone real do contato LID nao encontrado:', destino);
-    return '';
+function telefoneJidValidado(valor) {
+    const jid = String(valor || '').trim();
+    if (!jid.endsWith('@c.us')) return '';
+    const numero = jid.split('@')[0].replace(/\D/g, '');
+    return /^\d{10,15}$/.test(numero) ? numero + '@c.us' : '';
 }
 
+function executarComLimiteLid(tarefa, limite, descricao) {
+    const restante = limite - Date.now();
+    if (restante <= 0) return Promise.reject(new Error(descricao + ' excedeu o tempo limite.'));
+
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(descricao + ' excedeu o tempo limite.')), restante);
+    });
+    return Promise.race([Promise.resolve().then(tarefa), timeout]).finally(() => clearTimeout(timer));
+}
+
+async function resolverTelefoneClienteMensagem(message) {
+    const destino = obterDestinoMensagem(message);
+    if (!destino) return '';
+    if (String(destino).endsWith('@c.us')) return telefoneJidValidado(destino);
+    if (!String(destino).endsWith('@lid')) return '';
+
+    const limite = Date.now() + 5000;
+    const tentar = tarefa => executarComLimiteLid(tarefa, limite, 'Busca do telefone real do contato LID');
+
+    if (typeof message?.client?.getContactLidAndPhone === 'function') {
+        try {
+            const [contatoResolvido] = await tentar(() => message.client.getContactLidAndPhone([destino]));
+            const telefone = telefoneJidValidado(contatoResolvido?.pn);
+            if (telefone) return telefone;
+        } catch (_) {}
+    }
+
+    if (typeof message?.getContact === 'function') {
+        try {
+            const contato = await tentar(() => message.getContact());
+            const idContato = String(contato?.id?._serialized || '');
+            const numero = String(contato?.number || contato?.id?.user || '').replace(/\D/g, '');
+            if (idContato.endsWith('@c.us') && /^\d{10,15}$/.test(numero)) return numero + '@c.us';
+        } catch (_) {}
+    }
+
+    try {
+        const telefoneReal = await tentar(() => message?.client?.pupPage?.evaluate(async id => {
+            const resultado = await window.WWebJS.enforceLidAndPnRetrieval(id);
+            return resultado?.phone?._serialized || '';
+        }, destino));
+        return telefoneJidValidado(telefoneReal);
+    } catch (_) {
+        return '';
+    }
+}
+
+async function obterTelefoneClienteMensagem(message) {
+    if (!message || typeof message !== 'object') return resolverTelefoneClienteMensagem(message);
+    let resolucao = telefonesResolvidosPorMensagem.get(message);
+    if (!resolucao) {
+        resolucao = resolverTelefoneClienteMensagem(message).catch(() => '');
+        telefonesResolvidosPorMensagem.set(message, resolucao);
+    }
+    return resolucao;
+}
 function primeiroNome(nome) {
     return (nome || 'cliente').trim().split(/\s+/)[0];
 }

@@ -264,7 +264,17 @@ async function ehAssistenteAutorizado(telefone) {
     return autorizado(await obterConfiguracoes(), telefone);
 }
 
-async function obterTelefoneAssistenteAutorizado({ telefone, client } = {}) {
+const TEMPO_LIMITE_RESOLUCAO_LID_MS = 5000;
+
+function comLimite(promise, ms) {
+    let timer;
+    const limite = new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Tempo limite ao resolver contato LID.')), ms);
+    });
+    return Promise.race([Promise.resolve(promise), limite]).finally(() => clearTimeout(timer));
+}
+
+async function obterTelefoneAssistenteAutorizado({ telefone, resolverTelefone, client } = {}) {
     const config = await obterConfiguracoes();
     if (String(config.assistenteWhatsappAtivo || '0') !== '1') return '';
 
@@ -272,17 +282,33 @@ async function obterTelefoneAssistenteAutorizado({ telefone, client } = {}) {
     const numeros = numerosAutorizados(config);
     const numerico = telefoneNumerico(recebido);
     if (numeros.includes(numerico)) return numerico;
-    if (!recebido.endsWith('@lid') || typeof client?.getNumberId !== 'function') return '';
+    if (!recebido.endsWith('@lid')) return '';
 
-    for (const numero of numeros) {
-        try {
-            const contato = await client.getNumberId(numero);
-            if (String(contato?._serialized || '').trim() === recebido) return numero;
-        } catch (err) {
-            console.log(`Não foi possível verificar o número autorizado do assistente: ${err.message}`);
+    try {
+        let telefoneAssociado = '';
+        if (typeof resolverTelefone === 'function') {
+            telefoneAssociado = await comLimite(
+                Promise.resolve().then(resolverTelefone),
+                TEMPO_LIMITE_RESOLUCAO_LID_MS
+            );
+        } else if (typeof client?.getContactLidAndPhone === 'function') {
+            const [contato] = await comLimite(
+                client.getContactLidAndPhone([recebido]),
+                TEMPO_LIMITE_RESOLUCAO_LID_MS
+            );
+            telefoneAssociado = contato?.pn || '';
         }
+
+        const telefoneJid = String(telefoneAssociado || '');
+        const numeroAssociado = telefoneNumerico(telefoneJid.replace(/@c\.us$/i, ''));
+        return /@c\.us$/i.test(telefoneJid) && numeros.includes(numeroAssociado)
+            ? numeroAssociado
+            : '';
+    } catch (_) {
+        // A consulta LID lenta não pode atrasar o atendimento comercial nem
+        // transformar o identificador interno em um telefone autorizado.
+        return '';
     }
-    return '';
 }
 
 module.exports = { responderConsulta, ehAssistenteAutorizado, obterTelefoneAssistenteAutorizado, autorizado, normalizar, ehPedidoResumo, ehPedidoVencimento, extrairTermoCliente };

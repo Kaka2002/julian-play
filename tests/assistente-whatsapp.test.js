@@ -31,6 +31,43 @@ test('assistente inicia desligado e só aceita números autorizados', () => {
     } finally { removerAmbiente(r.ambiente); }
 });
 
+test('assistente autoriza contato LID pelo telefone real sem consulta reversa', () => {
+    const script = [
+        "(async()=>{",
+        "const cfg=require('./services/configuracoesPainel'); const a=require('./services/assistenteWhatsappService'); const db=require('./database/sqlite');",
+        "await cfg.salvarConfiguracoesRobo({nomeEmpresaRobo:'Teste',assistenteWhatsappAtivo:'1',assistenteWhatsappNumerosAutorizados:'5511999999999',roboRespostaHumanizadaAtiva:'0'});",
+        "let consultasReversas=0;",
+        "const resultado=await a.obterTelefoneAssistenteAutorizado({telefone:'12345@lid',resolverTelefone:async()=> '5511999999999@c.us',client:{getNumberId:async()=>{consultasReversas++;return {_serialized:'12345@lid'}}}});",
+        "process.stdout.write(JSON.stringify({resultado,consultasReversas})); db.close();",
+        "})().catch(e=>{console.error(e);process.exit(1)})"
+    ].join('\n');
+    const r = executarIsolado(script);
+    try {
+        const resultado = JSON.parse(r.stdout);
+        assert.equal(resultado.resultado, '5511999999999');
+        assert.equal(resultado.consultasReversas, 0);
+    } finally { removerAmbiente(r.ambiente); }
+});
+
+test('indicador de digitação começa enquanto a associação LID ainda está sendo resolvida', () => {
+    const script = [
+        "(async()=>{",
+        "const cfg=require('./services/configuracoesPainel'); const conversa=require('./services/conversaService'); const db=require('./database/sqlite');",
+        "await cfg.salvarConfiguracoesRobo({nomeEmpresaRobo:'Teste',roboResponderMensagensAtivo:'1',roboEnviarMensagensPainelAtivo:'1',roboRespostaHumanizadaAtiva:'1',roboRespostaTempoMinimoSegundos:'1',roboRespostaTempoMaximoSegundos:'1',roboFilaMensagensAtiva:'1'});",
+        "const eventos=[];",
+        "const message={from:'12345@lid',client:{pupPage:{evaluate:async(_fn,args)=>{eventos.push(args.state);return true;}},getContactLidAndPhone:async(ids)=>{eventos.push('lookup_started');await new Promise(resolve=>setTimeout(resolve,50));eventos.push('lookup_finished');return [{lid:ids[0],pn:'5511999999999@c.us'}];}}};",
+        "await conversa.simularRespostaHumanizada(message);",
+        "process.stdout.write(JSON.stringify(eventos)); db.close();",
+        "})().catch(e=>{console.error(e);process.exit(1)})"
+    ].join('\n');
+    const r = executarIsolado(script);
+    try {
+        const eventos = JSON.parse(r.stdout);
+        assert.ok(eventos.indexOf('typing') < eventos.indexOf('lookup_finished'));
+        assert.ok(eventos.includes('stop'));
+    } finally { removerAmbiente(r.ambiente); }
+});
+
 test('assistente responde resumo e consulta sem alterar cliente ou pagamento', () => {
     const r = executarIsolado(`(async()=>{
         const db=require('./database/sqlite'); const c=require('./services/configuracoesPainel'); const a=require('./services/assistenteWhatsappService');

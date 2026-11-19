@@ -1,3 +1,11 @@
+## Resposta humanizada e digitação em contatos LID — versão 1.4.26
+
+- Em mensagens recebidas como LID, o atendimento inicia o estado “digitando…” antes de resolver a associação LID/telefone. A associação usa o vínculo real fornecido pelo WhatsApp Web, fica limitada a 5 segundos e é reutilizada durante o processamento da mesma mensagem. O estado de digitação é renovado a cada 20 segundos durante esperas maiores; se o estado não puder iniciar, o robô não simula uma espera silenciosa.
+- O assistente de gestão recebe a mesma associação validada, sem consultas reversas sem limite. Não usa o identificador interno LID como telefone.
+- Impacto: Painel Mestre sem mudança de fluxo; instalação administradora e clientes comerciais provisionados no servidor usam o fluxo atualizado; instalação local recebe o mesmo código no pacote. Lume continua opt-in e compartilha o sender da instalação administradora; esta alteração não cria outra sessão ou fila.
+- Dados preservados: bancos, configurações, DATA_DIR/DB_PATH, sessões WhatsApp, backups e processos existentes. Sem migração, seed ou alteração de configuração inicial.
+- Validação nesta entrega: `npm run test:entrega` aprovado com 264/264 testes internos e 26/26 testes de navegador; sintaxe dos três arquivos JavaScript alterados aprovada. Pacote local e ZIP externo recriados para 1.4.26, 23 entradas no ZIP e SHA-256 conferido. Os painéis Mestre e administrador responderam HTTP 200 após a suite. Falta validar em aparelho real um comando comercial e um comando de gestão depois da publicação; nenhum serviço foi reiniciado nem houve envio real nesta alteração. CI, commit e deploy permanecem pendentes.
+
 ## Confirmações WhatsApp de contratos Lume — versão 1.4.25
 
 - A instalação administradora passa a aceitar os avisos cifrados de teste grátis e de contrato de servidor. Teste: resumo após cadastro; Pix: somente depois da aprovação. A mensagem informa nome, DNS, código, plano, limite e validade sem enviar chave de renovação. A conta conectada continua presa ao sender autorizado; os perfis comercial e local não consultam a fila.

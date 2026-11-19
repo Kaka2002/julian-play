@@ -499,7 +499,11 @@ async function processarMensagemEmFila(message, options = {}) {
     }
 
     const telefoneMensagem = obterTelefoneMensagem(message);
-    const telefoneAssistente = await obterTelefoneAssistenteAutorizado({ telefone: telefoneMensagem, client });
+    const telefoneAssistente = await obterTelefoneAssistenteAutorizado({
+        telefone: telefoneMensagem,
+        client,
+        resolverTelefone: () => obterTelefoneClienteMensagem(message)
+    });
 
     if (texto && !message.fromMe && !mensagemDoRobo && await licencaPermiteUso()
         && telefoneAssistente) {
