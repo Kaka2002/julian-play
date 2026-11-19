@@ -2,7 +2,7 @@
 
 - Corrigido o caminho de atendimento por LID para começar o estado “digitando…” antes da busca do telefone associado, renovar a indicação durante espera longa e limitar a resolução ao vínculo LID/telefone real do WhatsApp Web. O assistente de gestão reutiliza a associação e não faz consultas reversas demoradas.
 - Validação de entrega: `npm run test:entrega` aprovado com 264/264 testes internos e 26/26 testes de navegador; `node --check` nos três arquivos JavaScript alterados aprovado. O teste direcionado do assistente também passou 5/5. Houve aviso de checksum divergente da migração histórica no teste, sem falha. Pacote e ZIP externo de 1.4.26 gerados, hash conferido e 23 entradas no ZIP.
-- Limitação operacional: o código local ainda não está ativo no processo em execução até atualização/deploy. Falta validar num aparelho real uma mensagem comercial e um comando de gestão. CI, commit e deploy pendentes; os painéis permaneceram HTTP 200 após testes e nenhum processo foi reiniciado.
+- Limitação operacional: o código local ainda não está ativo no processo em execução até atualização/deploy. Falta validar num aparelho real uma mensagem comercial e um comando de gestão. Commit `d7d67f34` enviado à `main`; workflow `Validacao do Julian Play` #324 aprovado. A tentativa de deploy parou no pré-requisito PM2 por `EPERM` ao acessar a sessão Windows, antes de preparar ou trocar versão. Retomar em PowerShell com acesso ao daemon PM2; painéis permaneceram HTTP 200 na 1.4.25.
 
 ## Parcial — notificações WhatsApp de contratos Lume — versão 1.4.25
 
